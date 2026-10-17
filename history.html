@@ -64,7 +64,7 @@ document.getElementById('since').textContent =
 
 let lastMonth = '';
 let html = '';
-const items = GAMES.concat([Object.assign({ opened: true }, OPENED)]);
+const items = GAMES.slice(0, OPENED.after).concat([Object.assign({ opened: true }, OPENED)], GAMES.slice(OPENED.after));
 items.forEach(g => {
   if (month(g.date) !== lastMonth) {
     lastMonth = month(g.date);

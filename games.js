@@ -1,7 +1,7 @@
 // 춘장게임즈 게임 목록 — 첫 화면과 역사관이 같이 쓴다.
 // 새 게임을 넣을 때: 아래에 한 줄 추가 + img/<slug>.webp 사진 + games/<slug>.html 파일.
 // device: 'phone' = 핸드폰도 돼요, 'pc' = 컴퓨터로 해요 / keys: 키보드가 꼭 필요하면 true
-const THEMES = { sky: '하늘', sea: '바다', make: '만들기', life: '생명', space: '우주' };
+const THEMES = { sky: '하늘', sea: '바다', make: '만들기', life: '생명', space: '우주', play: '놀이' };
 
 const GAMES = [
   { slug: 'airplane', name: '2D 비행기 게임', date: '2026-07-27', theme: 'sky', device: 'phone', keys: false,
@@ -54,8 +54,12 @@ const GAMES = [
   { slug: 'microbe-family', name: '미생물 두 집안', date: '2026-10-15', theme: 'life', device: 'pc', keys: false,
     short: '딱 두 마리로 시작해요. 두 집안이 어떻게 퍼지는지 가계도로 비교해요.',
     story: '미생물 샌드박스를 바탕으로 만들었어요. 두 마리에서 시작한 집안이 몇백 마리로 늘어나는 걸 볼 수 있어요.' },
+  { slug: 'monkey-clicker', name: '몽키 클리커', date: '2026-10-17', theme: 'play', device: 'phone', keys: false,
+    short: '큰 원숭이를 콕콕 누르면 바나나가 쏟아져요. 바나나로 센 손가락을 사서 한 번에 더 많이 모아요.',
+    story: '춘장게임즈 문을 연 날 저녁에 만들었어요. 원숭이 하나만 크게 두고, 가게에는 센 손가락만 넣었어요. 튼튼한 손가락부터 우주 손가락까지 9가지가 있고, 산 손가락이 원숭이 손에 그대로 보여요. 가끔 날아오는 황금 바나나를 누르면 바나나 파티가 열려요.',
+    quote: '몽키 클리커 게임 만들어줘' },
 ];
 GAMES.forEach((g, i) => { g.no = i + 1; });
 
-const OPENED = { date: '2026-10-17', name: '춘장게임즈 문 열기',
+const OPENED = { date: '2026-10-17', name: '춘장게임즈 문 열기', after: 14,  // 역사관에서 14번째 게임 다음에 나온다
   story: '지금까지 만든 게임 14개를 한곳에 모았어요. 이제 주소만 알면 누구나 할 수 있어요.' };
