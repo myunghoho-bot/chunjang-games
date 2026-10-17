@@ -277,6 +277,12 @@ function makeFast(){const img=fastCtx.createImageData(TW,TH),dd=img.data,grass=W
       r+=e*30;gg+=e*25;b+=e*20;let sh=(h-(i>TW?H[i-TW-1]:h))*800;sh=sh<-50?-50:sh>50?50:sh;r+=sh;gg+=sh;b+=sh}
     const k=i*4;dd[k]=r;dd[k+1]=gg;dd[k+2]=b;dd[k+3]=255}
   fastCtx.putImageData(img,0,0);fastOn=true}
+let urbB=null;const urbBack=document.createElement('canvas');urbBack.width=WW;urbBack.height=WH;const urbBackCtx=urbBack.getContext('2d');
+function urbRefresh(){ // 도시 지붕을 뒤쪽 그림에 조금씩(한 번에 3000칸) 다시 그린 다음 한꺼번에 바꿔 끼움 → 멈칫 안 함
+  if(!urbB){if(!W.urbDirty||performance.now()-(W.lastUrb||0)<1500)return;W.urbDirty=false;W.lastUrb=performance.now();
+    const L=[];for(const civ of W.civs){const c=civ.city;if(c)for(const t of c.tiles)L.push(c,t)}urbBackCtx.clearRect(0,0,WW,WH);urbB={L,i:0}}
+  const B=urbB;for(let k=0;k<3000&&B.i<B.L.length;k++,B.i+=2)drawUrbanTile(B.L[B.i],B.L[B.i+1],urbBackCtx);
+  if(B.i>=B.L.length){urbCtx.clearRect(0,0,WW,WH);urbCtx.drawImage(urbBack,0,0);urbB=null;for(const civ of W.civs){const c=civ.city;if(c&&!c.water)makeGates(c)}if(W.roads)buildRoads()}}
 function softInvalidate(){chunkCache.clear();queued.clear();genQueue=[];curJob=null;makeFast()}
 function invalidateAll(){staleCache.clear();fastOn=false;chunkCache.clear();queued.clear();genQueue=[];curJob=null;for(let y=0;y<CCY;y++)for(let x=0;x<CCX;x++)chunkCache.set(ckey(x,y,1),genChunk(x,y,1));terrDirty=false}
 function invalidateTiles(x0,y0,x1,y1){ // 칠한 곳이 걸친 조각만 다시
@@ -719,12 +725,14 @@ function driftStep(){
   {const sx=W.plates.map(()=>[0,0,0]);for(let t=0;t<TW*TH;t++)if(H[t]>WL){const q=sx[PL[t]];q[0]+=t%TW;q[1]+=t/TW|0;q[2]++}
     W.plates.forEach((pl,k)=>{const q=sx[k];if(!q[2])return;const x=q[0]/q[2],y=q[1]/q[2];if(x<45&&pl.vx<0||x>TW-45&&pl.vx>0)pl.vx=-pl.vx;if(y<30&&pl.vy<0||y>TH-30&&pl.vy>0)pl.vy=-pl.vy})} // 땅이 지도 밖으로 안 떨어지게 가장자리에서 튕김
   if(W.land0===undefined){W.land0=0;for(let t=0;t<TW*TH;t++)if(H[t]>WL)W.land0++}
-  const mv=W.plates.map(pl=>{pl.ax+=pl.vx*.18;pl.ay+=pl.vy*.18;const mx=Math.trunc(pl.ax),my=Math.trunc(pl.ay);pl.ax-=mx;pl.ay-=my;return [Math.sign(mx),Math.sign(my)]});
+  for(const pl of W.plates){pl.ax=clamp(pl.ax+pl.vx*.54,-3,3);pl.ay=clamp(pl.ay+pl.vy*.54,-3,3)} // 격렬하게: 예전의 3배 빠르기
+  const now=performance.now();if(now-(W.lastDriftT||0)<300)return;W.lastDriftT=now; // 렉 줄이기: 실제로 옮기는 건 0.3초에 한 번
+  const mv=W.plates.map(pl=>{const mx=Math.trunc(pl.ax),my=Math.trunc(pl.ay);pl.ax-=mx;pl.ay-=my;return [mx,my]});
   if(mv.every(m=>!m[0]&&!m[1]))return;
   const N=TW*TH,nH=new Float32Array(N).fill(-1),nM=new Float32Array(N),nM0=new Float32Array(N),nPL=new Uint8Array(N),nU=new Uint8Array(N);let hit=0,rift=0;const hitL=[];
   for(let t=0;t<N;t++){const [mx,my]=mv[PL[t]],x=t%TW+mx,y=(t/TW|0)+my;if(x<0||y<0||x>=TW||y>=TH)continue;const d=y*TW+x;
     if(nH[d]<0){nH[d]=H[t];nM[d]=M[t];nM0[d]=M0?M0[t]:M[t];nPL[d]=PL[t];nU[d]=URB[t]}
-    else{if(nH[d]>WL&&H[t]>WL){nH[d]=Math.min(.98,Math.max(nH[d],H[t])+.025);hit++;hitL.push(d)}else nH[d]=Math.max(nH[d],H[t]);if(!nU[d])nU[d]=URB[t]}} // 부딪히면 산맥
+    else{if(nH[d]>WL&&H[t]>WL){nH[d]=Math.min(.98,Math.max(nH[d],H[t])+.04);hit++;hitL.push(d)}else nH[d]=Math.max(nH[d],H[t]);if(!nU[d])nU[d]=URB[t]}} // 부딪히면 산맥
   for(let d=0;d<N;d++)if(nH[d]<0){if(H[d]>WL)rift++;nH[d]=H[d]>WL?WL-.12:Math.min(H[d],WL-.05);nM[d]=.5;nM0[d]=.5;nPL[d]=PL[d];nU[d]=0} // 벌어진 틈 = 새 바다 (원래 바다였으면 깊이 그대로)
   // 위에 있던 것들도 같이 움직임
   const shift=o=>{const t=tIdx(o.x,o.y),[mx,my]=mv[PL[t]];o.x=clamp(o.x+mx*TS,1,WW-1);o.y=clamp(o.y+my*TS,1,WH-1)};
@@ -736,13 +744,15 @@ function driftStep(){
   {let land=0;for(let d=0;d<N;d++)if(nH[d]>WL)land++;let need=W.land0-land; // 부딪혀 줄어든 만큼 바닷가에 새 땅(화산섬)이 솟아 땅 양이 그대로
     const nb8=d=>(nH[d-1]>WL)+(nH[d+1]>WL)+(nH[d-TW]>WL)+(nH[d+TW]>WL)+(nH[d-TW-1]>WL)+(nH[d-TW+1]>WL)+(nH[d+TW-1]>WL)+(nH[d+TW+1]>WL);
     for(let d=TW+1;d<N-TW-1;d++){const k=nb8(d);if(nH[d]<=WL&&k>=6){nH[d]=Math.max(WL+.01,(nH[d-1]+nH[d+1]+nH[d-TW]+nH[d+TW])/4);need--}else if(nH[d]>WL&&k<=1&&nH[d]<WL+.05){nH[d]=WL-.03;need++}} // 구멍 메우고 외딴 점은 없앰 (바닷가가 매끈하게)
-    if(need>0){const C=[];for(let d=TW+1;d<N-TW-1;d++)if(nH[d]<=WL&&nH[d]>WL-.15){const k=nb8(d);if(k>=3)C.push([k+Math.random()*2,d])}
+    for(let pass=0;pass<2&&need>0;pass++){const C=[];for(let d=TW+1;d<N-TW-1;d++)if(nH[d]<=WL&&nH[d]>WL-.2){const k=nb8(d);if(k>=3)C.push([k+Math.random()*2,d])}if(!C.length)break;
       C.sort((a,b)=>b[0]-a[0]);for(let k=0;k<C.length&&need>0;k++,need--){const d=C[k][1];let sh=0,n=0;for(const q of [d-1,d+1,d-TW,d+TW,d-TW-1,d-TW+1,d+TW-1,d+TW+1])if(nH[q]>WL){sh+=nH[q];n++}nH[d]=Math.max(WL+.045,n?sh/n-.01:WL+.05);nM[d]=Math.max(nM[d],nM[d-1],.4)}}} // 옆 땅과 같은 높이로 솟음 // 움푹한 바닷가부터 새 땅
   H.set(nH);M.set(nM);if(M0)M0.set(nM0);PL=nPL;URB.set(nU);
   urbCtx.clearRect(0,0,WW,WH);for(const civ of W.civs){const c=civ.city;if(!c)continue;c.tiles=[];}
   for(let t=0;t<N;t++)if(URB[t]){const civ=W.civs[URB[t]-1];if(civ&&civ.city)civ.city.tiles.push(t)}
-  for(const civ of W.civs){const c=civ.city;if(!c)continue;for(const t of c.tiles)drawUrbanTile(c,t);if(!c.water)makeGates(c)}
-  if(W.roads)buildRoads();calcTemp();softInvalidate();
+  W.urbDirty=true;calcTemp();softInvalidate();
+  if(hitL.length>40){W.quake=performance.now(); // 지진 + 화산
+    W.volc=(W.volc||[]).filter(v=>now-v.t<20000);for(let k=0;k<2;k++){const d=hitL[Math.random()*hitL.length|0];W.volc.push({x:(d%TW+.5)*TS,y:((d/TW|0)+.5)*TS,t:now})}if(W.volc.length>14)W.volc.splice(0,W.volc.length-14);
+    if(now-(W.saidQuake||0)>15000){W.saidQuake=now;addLog('지진! 대륙이 부딪히며 화산이 터졌어요');toast('쿠구궁! 지진이 나고 화산이 터졌어요')}}
   if(!W.saidDrift){W.saidDrift=1;addLog('대륙이 아주 천천히 움직이기 시작했어요');toast('대륙이 움직이고 있어요! 1억 년에 약 100~200km씩')}
   if(hit>30&&!W.saidHit){W.saidHit=1;addLog('대륙끼리 부딪혀서 높은 산맥이 솟았어요!');toast('대륙끼리 부딪혀서 산맥이 생겼어요!')}
   if(rift>30&&!W.saidRift){W.saidRift=1;addLog('대륙이 갈라져서 새 바다가 생겼어요!');toast('대륙이 갈라져서 새 바다가 생겼어요!')}
@@ -915,7 +925,8 @@ function drawPlant(c,p,z){
 function draw(){
   if(terrDirty)invalidateAll();
   if(W.follow&&W.sel&&!W.sel.dead){cam.x+=(W.sel.x-cam.x)*.15;cam.y+=(W.sel.y-cam.y)*.15}
-  const z=cam.z,ox=cv.width/2-cam.x*z,oy=cv.height/2-cam.y*z;
+  const qk=W.quake&&performance.now()-W.quake<600?(1-(performance.now()-W.quake)/600)*6*(devicePixelRatio||1):0; // 지진이면 화면이 흔들림
+  const z=cam.z,ox=cv.width/2-cam.x*z+(Math.random()-.5)*qk,oy=cv.height/2-cam.y*z+(Math.random()-.5)*qk;
   cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#0a1420';cx.fillRect(0,0,cv.width,cv.height);
   cx.setTransform(z,0,0,z,ox,oy);
   const [vx0,vy0]=toWorld(0,0),[vx1,vy1]=toWorld(cv.width,cv.height),m=30,vis=o=>o.x>vx0-m&&o.x<vx1+m&&o.y>vy0-m&&o.y<vy1+m;
@@ -926,7 +937,7 @@ function draw(){
   for(let y=cc;y<=cd;y++)for(let x=ca;x<=cb;x++){let im=chunkCache.get(ckey(x,y,L));
     if(!im){wantChunk(x,y,L);im=(L===8&&chunkCache.get(ckey(x,y,4)))||(L>=4&&chunkCache.get(ckey(x,y,2)))||chunkCache.get(ckey(x,y,1))}
     if(im){const q=(im._n-2)/CW;cx.drawImage(im,1,1,im._n-2,im._n-2,x*CW,y*CW,CW+.4/q,CW+.4/q)}}
-  pumpChunks(10);
+  const drifting=fastOn&&performance.now()-(W.lastDriftT||0)<1500;if(!drifting)pumpChunks(10);urbRefresh();
   // 굴(둥지): 구멍 + 흙더미, 문명이면 횃불
   for(const [id,n] of W.nests){const sp=spById(id);if(!sp||!sp.count||!vis(n))continue;
     cx.fillStyle='rgba(120,85,50,.9)';cx.beginPath();cx.arc(n.x+6,n.y+5,9,0,6.283);cx.fill();cx.fillStyle='#1a0f08';cx.beginPath();cx.ellipse(n.x,n.y,8,6,0,0,6.283);cx.fill();
@@ -936,6 +947,8 @@ function draw(){
   if(W.civs.some(c=>c.city&&c.city.tiles.length))drawUrban(cx,z,vx0,vy0,vx1,vy1);
   for(const civ of W.civs)if(civ.city){if(civ.city.water)drawCity(cx,civ.city,z);drawPorts(cx,civ.city,z)}
   drawGates(cx,z);
+  if(W.volc){const nw=performance.now();for(const v of W.volc){const a=1-(nw-v.t)/20000;if(a<=0)continue;cx.fillStyle=`rgba(255,90,20,${.35*a})`;cx.beginPath();cx.arc(v.x,v.y,14+Math.sin(nw/150+v.x)*3,0,6.283);cx.fill();cx.fillStyle=`rgba(255,200,60,${.9*a})`;cx.beginPath();cx.arc(v.x,v.y,4,0,6.283);cx.fill();
+    cx.fillStyle=`rgba(90,80,80,${.35*a})`;for(let k=0;k<3;k++){const u=((nw/900+k/3)%1);cx.beginPath();cx.arc(v.x+u*10,v.y-u*24,3+u*7,0,6.283);cx.fill()}}} // 화산 불빛과 연기
   if(W.boom){const u=(performance.now()-W.boom.t)/1200;if(u>1)W.boom=null;else{cx.fillStyle=`rgba(255,${180-u*120},60,${.7*(1-u)})`;cx.beginPath();cx.arc(W.boom.x,W.boom.y,20+u*90,0,6.283);cx.fill()}} // 운석 번쩍 // 땅 위 도시는 큰 건물 하나라 따로 집을 안 그림
   drawLeashes(cx,z,vis);
   for(const o of W.animals)if(vis(o))drawAnimal(cx,o,z,o.age+o.ph);
@@ -946,8 +959,8 @@ function draw(){
 }
 // 시가지 그림: 칸이 시가지가 될 때 한 번만 그려 둠
 const urbCv=document.createElement('canvas');urbCv.width=WW;urbCv.height=WH;const urbCtx=urbCv.getContext('2d');
-function drawUrbanTile(c,t){
-  const tx=t%TW,ty=t/TW|0,x=tx*TS,y=ty*TS,r1=hash2(t,7),r2=hash2(t,13),g=urbCtx;
+function drawUrbanTile(c,t,g2){
+  const tx=t%TW,ty=t/TW|0,x=tx*TS,y=ty*TS,r1=hash2(t,7),r2=hash2(t,13),g=g2||urbCtx;
   const d=rn(tx*8,ty*8,140,3),h=(c.hue+(d-.5)*80+360)%360,h2=(h+150)%360; // 구역마다 색이 다름
   if(!c.water){ // 땅 위 도시는 전부 하나로 이어진 큰 건물: 지붕 + 유리 천장 + 바깥 벽
     const S=URB[t],hh=c.hue;g.fillStyle=`hsl(${hh},14%,${30+d*6}%)`;g.fillRect(x,y,TS,TS);
