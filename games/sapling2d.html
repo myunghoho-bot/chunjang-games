@@ -265,8 +265,20 @@ function* chunkJob(ccx,ccy,L){
 function genChunk(x,y,L){const it=chunkJob(x,y,L);let r;while(!(r=it.next()).done);return r.value}
 const ckey=(x,y,L)=>(y*CCX+x)*10+L; // L: 1·2·4·8배 해상도
 let staleCache=new Map();
-function softInvalidate(){for(const [k,v] of chunkCache)staleCache.set(k,v);chunkCache.clear();queued.clear();genQueue=[];curJob=null} // 옛 그림을 보여 주면서 조금씩 새로 그림
-function invalidateAll(){staleCache.clear();chunkCache.clear();queued.clear();genQueue=[];curJob=null;for(let y=0;y<CCY;y++)for(let x=0;x<CCX;x++)chunkCache.set(ckey(x,y,1),genChunk(x,y,1));terrDirty=false}
+// 대륙이 움직이는 동안: 칸 하나를 점 하나로 빨리 그린 지도를 먼저 깔고, 자세한 그림은 조금씩 다시 그림 (부드럽게)
+const fastCv=document.createElement('canvas');fastCv.width=TW;fastCv.height=TH;const fastCtx=fastCv.getContext('2d');let fastOn=false;
+function makeFast(){const img=fastCtx.createImageData(TW,TH),dd=img.data,grass=W.o2>=6,desert=(W.dry||0)>.5;
+  for(let i=0;i<TW*TH;i++){const h=H[i],m=M[i],t=T[i];let r,gg,b;
+    if(h<WL){const dp=Math.min(1,(WL-h)/.28);r=42-dp*30;gg=128-dp*72;b=178-dp*55;if(t<.12){r+=110;gg+=100;b+=60}}
+    else{const e=h-WL;
+      if(h>.86||t<.1){r=232;gg=238;b=246}else if(h>.74){const k=(h-.74)/.12;r=118+k*36;gg=110+k*36;b=102+k*36}else if(e<.018){r=228;gg=212;b=160}
+      else if(m<.3&&(t>.55||desert)){r=216;gg=186;b=120}else if(t<.3){r=146;gg=163;b=128}else if(!grass){r=152-m*30;gg=128-m*20;b=102-m*20}
+      else{r=112-m*62;gg=168-m*42;b=80-m*36;if(m>.62){gg-=(m-.62)*50;r-=(m-.62)*20}}
+      r+=e*30;gg+=e*25;b+=e*20;let sh=(h-(i>TW?H[i-TW-1]:h))*800;sh=sh<-50?-50:sh>50?50:sh;r+=sh;gg+=sh;b+=sh}
+    const k=i*4;dd[k]=r;dd[k+1]=gg;dd[k+2]=b;dd[k+3]=255}
+  fastCtx.putImageData(img,0,0);fastOn=true}
+function softInvalidate(){chunkCache.clear();queued.clear();genQueue=[];curJob=null;makeFast()}
+function invalidateAll(){staleCache.clear();fastOn=false;chunkCache.clear();queued.clear();genQueue=[];curJob=null;for(let y=0;y<CCY;y++)for(let x=0;x<CCX;x++)chunkCache.set(ckey(x,y,1),genChunk(x,y,1));terrDirty=false}
 function invalidateTiles(x0,y0,x1,y1){ // 칠한 곳이 걸친 조각만 다시
   const a=Math.max(0,Math.floor((x0-1)*TS/CW)),b=Math.min(CCX-1,Math.floor((x1+2)*TS/CW)),c=Math.max(0,Math.floor((y0-1)*TS/CW)),d=Math.min(CCY-1,Math.floor((y1+2)*TS/CW));
   for(let y=c;y<=d;y++)for(let x=a;x<=b;x++){for(const L of[2,4,8])chunkCache.delete(ckey(x,y,L));if(curJob&&((curJob.k/10|0)===y*CCX+x))curJob=null;chunkCache.set(ckey(x,y,1),genChunk(x,y,1))}}
@@ -462,7 +474,7 @@ function step(){
   for(const b of born){let sp=b.sp;if(dist(b.g,sp.genes,AG)>SPECIATE)sp=newSpecies('a',b.g,sp);addAnimal(b.g,b.x,b.y,sp,b.e)}
   if(W.t%60===0){cityLife();zooLife();census()}
   if(W.t%250===0){guarantees();growCities();climateStep();rescueAnimals();if(W.civs.length)buildRoads()}
-  if(W.t%500===200&&!W.noDrift)driftStep(); // 대륙이동: 2천만 년마다 조금씩, 계속
+  if(W.t%125===60&&!W.noDrift)driftStep(); // 대륙이동: 5백만 년마다 조금씩, 계속 (1억 년에 2~4칸 = 약 100~200km)
   if(W.t%200===100&&W.civs.length)cityOutings();
   if(W.t%10===0&&W.civs.length)spreadCities();
   if(W.t%500===250)for(const c of W.civs)if(!c.city)foundCity(c,spById(c.id)); // 도시를 못 지었으면 다시 시도
@@ -703,11 +715,11 @@ function makePlates(){PL=new Uint8Array(TW*TH);const n=6,S=[];W.plates=[];
     for(let k=0;k<n;k++){const d=(S[k][0]-x)**2+(S[k][1]-y)**2;if(d<bd){bd=d;b=k}}PL[t]=b}}
 function driftStep(){
   if(!PL||!W.plates)makePlates();
-  if(W.t%15000<500){const pl=W.plates[Math.random()*W.plates.length|0];const a=Math.random()*6.283,v=.45+Math.random()*.55;pl.vx=Math.cos(a)*v;pl.vy=Math.sin(a)*v} // 가끔 방향이 바뀜
+  if(W.t%15000<125){const pl=W.plates[Math.random()*W.plates.length|0];const a=Math.random()*6.283,v=.45+Math.random()*.55;pl.vx=Math.cos(a)*v;pl.vy=Math.sin(a)*v} // 가끔 방향이 바뀜
   {const sx=W.plates.map(()=>[0,0,0]);for(let t=0;t<TW*TH;t++)if(H[t]>WL){const q=sx[PL[t]];q[0]+=t%TW;q[1]+=t/TW|0;q[2]++}
     W.plates.forEach((pl,k)=>{const q=sx[k];if(!q[2])return;const x=q[0]/q[2],y=q[1]/q[2];if(x<45&&pl.vx<0||x>TW-45&&pl.vx>0)pl.vx=-pl.vx;if(y<30&&pl.vy<0||y>TH-30&&pl.vy>0)pl.vy=-pl.vy})} // 땅이 지도 밖으로 안 떨어지게 가장자리에서 튕김
   if(W.land0===undefined){W.land0=0;for(let t=0;t<TW*TH;t++)if(H[t]>WL)W.land0++}
-  const mv=W.plates.map(pl=>{pl.ax+=pl.vx*.2;pl.ay+=pl.vy*.2;const mx=Math.trunc(pl.ax),my=Math.trunc(pl.ay);pl.ax-=mx;pl.ay-=my;return [Math.sign(mx),Math.sign(my)]});
+  const mv=W.plates.map(pl=>{pl.ax+=pl.vx*.18;pl.ay+=pl.vy*.18;const mx=Math.trunc(pl.ax),my=Math.trunc(pl.ay);pl.ax-=mx;pl.ay-=my;return [Math.sign(mx),Math.sign(my)]});
   if(mv.every(m=>!m[0]&&!m[1]))return;
   const N=TW*TH,nH=new Float32Array(N).fill(-1),nM=new Float32Array(N),nM0=new Float32Array(N),nPL=new Uint8Array(N),nU=new Uint8Array(N);let hit=0,rift=0;const hitL=[];
   for(let t=0;t<N;t++){const [mx,my]=mv[PL[t]],x=t%TW+mx,y=(t/TW|0)+my;if(x<0||y<0||x>=TW||y>=TH)continue;const d=y*TW+x;
@@ -731,7 +743,7 @@ function driftStep(){
   for(let t=0;t<N;t++)if(URB[t]){const civ=W.civs[URB[t]-1];if(civ&&civ.city)civ.city.tiles.push(t)}
   for(const civ of W.civs){const c=civ.city;if(!c)continue;for(const t of c.tiles)drawUrbanTile(c,t);if(!c.water)makeGates(c)}
   if(W.roads)buildRoads();calcTemp();softInvalidate();
-  if(!W.saidDrift){W.saidDrift=1;addLog('대륙이 아주 천천히 움직이기 시작했어요');toast('대륙이 아주 천천히 움직이고 있어요')}
+  if(!W.saidDrift){W.saidDrift=1;addLog('대륙이 아주 천천히 움직이기 시작했어요');toast('대륙이 움직이고 있어요! 1억 년에 약 100~200km씩')}
   if(hit>30&&!W.saidHit){W.saidHit=1;addLog('대륙끼리 부딪혀서 높은 산맥이 솟았어요!');toast('대륙끼리 부딪혀서 산맥이 생겼어요!')}
   if(rift>30&&!W.saidRift){W.saidRift=1;addLog('대륙이 갈라져서 새 바다가 생겼어요!');toast('대륙이 갈라져서 새 바다가 생겼어요!')}
 }
@@ -907,11 +919,12 @@ function draw(){
   cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#0a1420';cx.fillRect(0,0,cv.width,cv.height);
   cx.setTransform(z,0,0,z,ox,oy);
   const [vx0,vy0]=toWorld(0,0),[vx1,vy1]=toWorld(cv.width,cv.height),m=30,vis=o=>o.x>vx0-m&&o.x<vx1+m&&o.y>vy0-m&&o.y<vy1+m;
+  if(fastOn){cx.imageSmoothingEnabled=true;cx.drawImage(fastCv,0,0,WW,WH)} // 움직이는 동안 밑그림
   // 지형 조각: 확대 정도에 맞는 해상도 (없으면 있는 것 중 가장 좋은 걸 먼저 그림)
   const L=z<=1.3?1:z<=2.6?2:z<=5.2?4:8,ca=Math.max(0,vx0/CW|0),cb=Math.min(CCX-1,vx1/CW|0),cc=Math.max(0,vy0/CW|0),cd=Math.min(CCY-1,vy1/CW|0);
   genQueue=genQueue.filter(q=>q[0]>=ca&&q[0]<=cb&&q[1]>=cc&&q[1]<=cd&&q[2]===L);queued.clear();for(const q of genQueue)queued.add(q[3]);if(curJob)queued.add(curJob.k);
   for(let y=cc;y<=cd;y++)for(let x=ca;x<=cb;x++){let im=chunkCache.get(ckey(x,y,L));
-    if(!im){wantChunk(x,y,L);im=(L===8&&chunkCache.get(ckey(x,y,4)))||(L>=4&&chunkCache.get(ckey(x,y,2)))||chunkCache.get(ckey(x,y,1))||staleCache.get(ckey(x,y,L))||staleCache.get(ckey(x,y,1))}
+    if(!im){wantChunk(x,y,L);im=(L===8&&chunkCache.get(ckey(x,y,4)))||(L>=4&&chunkCache.get(ckey(x,y,2)))||chunkCache.get(ckey(x,y,1))}
     if(im){const q=(im._n-2)/CW;cx.drawImage(im,1,1,im._n-2,im._n-2,x*CW,y*CW,CW+.4/q,CW+.4/q)}}
   pumpChunks(10);
   // 굴(둥지): 구멍 + 흙더미, 문명이면 횃불
@@ -1075,11 +1088,11 @@ let tool='view',brush=4,hover=null,myA=[],myP=[],pickA=-1,pickP=-1;
 const PRESET_P=[{name:'풀',g:{max:2.5,grow:1.5,range:25,seeds:1.6,moist:.5,heat:.5,aqua:0,hue:110}},{name:'덤불',g:{max:6,grow:.8,range:40,seeds:.8,moist:.55,aqua:0,hue:95}},
   {name:'나무',g:{max:14,grow:.35,range:70,seeds:.45,moist:.65,aqua:0,hue:125}},{name:'선인장',g:{max:5,grow:.4,range:30,seeds:.5,moist:.05,heat:.9,thorns:.8,aqua:0,hue:90}},{name:'해초',g:{max:4,grow:1,range:30,seeds:1.2,aqua:1,hue:150}}];
 function buildTools(){
-  $('tools').innerHTML=(W.sandbox?TOOLS.concat(SBX_TOOLS):TOOLS).map(([k,n])=>`<button class="tb${k===tool?' on':''}" data-t="${k}">${n}</button>`).join('')+(W.sandbox?`<button class="tb" data-sb="evo">진화 ${W.noEvo?'꺼짐':'켜짐'}</button><button class="tb" data-sb="dry">${(W.dry||0)>.5?'물 되돌리기':'사막 행성 만들기'}</button><button class="tb" data-sb="drift">대륙이동 ${W.noDrift?'꺼짐':'켜짐'}</button>`:'')+`<span id="brushBox">붓 크기 <input type="range" id="brush" min="1" max="12" value="${brush}"></span>`;
+  $('tools').innerHTML=(W.sandbox?TOOLS.concat(SBX_TOOLS):TOOLS).map(([k,n])=>`<button class="tb${k===tool?' on':''}" data-t="${k}">${n}</button>`).join('')+(W.sandbox?`<button class="tb" data-sb="evo">진화 ${W.noEvo?'꺼짐':'켜짐'}</button><button class="tb" data-sb="dry">${(W.dry||0)>.5?'물 되돌리기':'사막 행성 만들기'}</button>`:'')+`<button class="tb" data-sb="drift">대륙이동 ${W.noDrift?'꺼짐':'켜짐'}</button>`+`<span id="brushBox">붓 크기 <input type="range" id="brush" min="1" max="12" value="${brush}"></span>`;
   $('brushBox').style.display=PAINT.includes(tool)?'flex':'none';$('brush').oninput=e=>brush=+e.target.value;buildPalette();
 }
 $('tools').onclick=e=>{const sb=e.target.closest('[data-sb]');if(sb){
-    if(sb.dataset.sb==='drift'){W.noDrift=!W.noDrift;toast(W.noDrift?'대륙이동을 껐어요':'대륙이동을 켰어요: 시간이 흐르면 땅이 천천히 움직여요')}
+    if(sb.dataset.sb==='drift'){W.noDrift=!W.noDrift;toast(W.noDrift?'대륙이동을 껐어요':'대륙이동을 켰어요: 1억 년에 약 100~200km씩 움직여요')}
     else if(sb.dataset.sb==='evo'){W.noEvo=!W.noEvo;toast(W.noEvo?'진화를 껐어요: 새끼가 부모와 똑같아요':'진화를 켰어요: 새끼가 조금씩 달라져요')}
     else{const d=(W.dry||0)>.5?0:1;climateStep(true,d);invalidateAll();toast(d?'사막 행성이 됐어요! 바다가 줄었어요':'물이 돌아왔어요!')}
     buildTools();return}
