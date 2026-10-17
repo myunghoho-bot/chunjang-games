@@ -96,7 +96,7 @@ aside{width:340px;border-left:1px solid var(--line);background:var(--panel);disp
       <h2>원시 수프 고르기</h2>
       <div class="sub">미생물 몇 마리만 심고, 그다음은 지켜보기만 해요. 언제든 위쪽 "창조"로 내가 만든 생물을 풀어놓을 수도 있어요.</div>
       <div class="envs" id="envs"></div>
-      <button class="btn pri" id="go">미생물 심기</button> <button class="btn" id="reroll">지형 다시 뽑기</button> <span class="sub" id="seedTxt"></span>
+      <button class="btn pri" id="go">미생물 심기</button> <button class="btn" id="reroll">지형 다시 뽑기</button> <button class="btn" id="sbxBtn">샌드박스 모드 (내가 처음부터 다 만들기)</button> <span class="sub" id="seedTxt"></span>
     </div></div>
     <div class="modal" id="edM"><div class="card">
       <h2 id="edTitle">창조</h2>
@@ -280,7 +280,8 @@ function renderTerrain(){invalidateAll()}
 const W={t:0,o2:0,speed:1,animals:[],plants:[],species:[],spMap:new Map(),nextSp:1,log:[],sel:null,selSp:null,follow:false,stage:0,civs:[],nests:new Map(),tried:{},ended:false};
 const spById=id=>W.spMap.get(id);
 const yrs=()=>W.t*TICK;
-function mutate(g,table,tr){const o={};for(const d of table){let v=g[d.k];
+function mutate(g,table,tr){if(W.noEvo)return {...g}; // 진화 꺼짐: 부모와 똑같은 새끼
+const o={};for(const d of table){let v=g[d.k];
   if(Math.random()<.5)v+=(rnd(-1,1)+(tr?tr[d.k]||0:0)*.5)*d.step;
   if(Math.random()<.008)v+=rnd(-1,1)*d.step*8;
   o[d.k]=d.wrap?((v%d.max)+d.max)%d.max:clamp(v,d.min,d.max)}return o}
@@ -489,6 +490,7 @@ function census(){
 }
 // 이때까지 안 나왔으면 핵심 진화(큰 돌연변이)로 꼭 등장 — 1억 년마다 다시 시도
 function guarantees(){
+  if(W.sandbox)return; // 샌드박스: 저절로 생기는 생물 없음
   const t=yrs(),tryOnce=k=>{if(W.tried[k]&&t-W.tried[k]<1)return false;W.tried[k]=t;return true};
   const coast=()=>{const L=[];for(let i=0;i<TW*TH;i++)if(!isWater(i)&&H[i]<WL+.06&&!isSnow(i)&&!waterAt((i%TW+.5)*TS,((i/TW|0)+.5)*TS))L.push(i);return L};
   const landA=W.animals.filter(o=>!waterAt(o.x,o.y)&&!o.sp.owner&&!o.sp.civ).length;
@@ -570,7 +572,7 @@ function seedTiles(c){
 function urbanize(c,t){URB[t]=c.ci;c.tiles.push(t);drawUrbanTile(c,t);if(!c.water)for(const n of [t-1,t+1,t-TW,t+TW])if(n>=0&&n<URB.length&&URB[n]===c.ci)drawUrbanTile(c,n)} // 옆 칸 벽도 다시 그림
 // 시가지 넓히기: 가장자리에서 한 칸씩, 클수록 빨리 → 결국 섬 전체를 덮음
 function spreadCities(){
-  for(const civ of W.civs){const c=civ.city;if(!c)continue;if(!c.tiles.length&&!seedTiles(c))continue;
+  for(const civ of W.civs){const c=civ.city;if(!c||c.manual)continue;if(!c.tiles.length&&!seedTiles(c))continue; // 내가 칠한 도시는 저절로 안 넓어짐
     if(!(c.pop>0)&&!W.animals.some(o=>o.sp.civ===civ.id))continue;
     const k=3+Math.floor(c.tiles.length/80),L=c.tiles.length;
     for(let a=0;a<k*4;a++){const t=c.tiles[L-1-(Math.random()*Math.min(L,500)|0)], /* 최근에 생긴 가장자리 칸에서 넓힘 */nb=t+[1,-1,TW,-TW][Math.random()*4|0];
@@ -593,9 +595,10 @@ function cityLife(){for(const civ of W.civs){const c=civ.city;if(!c||!(c.pop>0))
 const civSpots=civ=>{const L=W.animals.filter(o=>o.sp.civ===civ.id);return L.length?L:(civ.city?civ.city.b:[])}; // 애완동물이 나타날 곳
 // ===== 늙어 가는 행성: 50억 년부터 해가 뜨거워져 70억 년에 사막 행성. 지적생명체가 행성을 지킴 =====
 const fmtY=y=>y>=10000?(y/10000).toFixed(2)+'조 년':y.toFixed(2)+'억 년';
-function climateStep(force){
-  const y=yrs(),D=clamp((y-50)/20,0,1);
-  for(const [yy,msg] of [[50,'해가 점점 뜨거워지고 있어요… 행성이 말라 가요'],[60,'바다가 줄어들고 숲이 사라지고 있어요'],[70,'사막 행성이 됐어요! 지적생명체가 물을 만들어 행성을 지키고 있어요']])
+function climateStep(force,setD){
+  if(W.sandbox&&setD===undefined)return; // 샌드박스: 사막은 내가 버튼으로
+  const y=yrs(),D=setD!==undefined?setD:clamp((y-50)/20,0,1);
+  if(setD===undefined)for(const [yy,msg] of [[50,'해가 점점 뜨거워지고 있어요… 행성이 말라 가요'],[60,'바다가 줄어들고 숲이 사라지고 있어요'],[70,'사막 행성이 됐어요! 지적생명체가 물을 만들어 행성을 지키고 있어요']])
     if(y>=yy&&!W['cl'+yy]){W['cl'+yy]=1;addLog(msg);toast(msg)}
   if(!force&&Math.abs(D-(W.dry||0))<.04&&!(D===1&&W.dry<1))return;
   W.dry=D;WL=.42-D*.22;
@@ -656,7 +659,7 @@ function cityOutings(){
       if(!c.saidOut){c.saidOut=1;addLog(`${sp.name} 몇 명이 산책하러 나왔어요`);toast(`${sp.name} 몇 명이 산책하러 나왔어요`)}}}
 }
 // 땅 위 도시 건물이 섬 땅 전체를 덮음 (섬과 1대1)
-function fillIsland(c){if(c.water||!c.tiles.length)return;
+function fillIsland(c){if(c.water||!c.tiles.length)return;if(W.sandbox){if(!c.gates)makeGates(c);return} // 샌드박스: 도시는 내가 칠한 만큼만
   const seen=new Uint8Array(TW*TH),Q=[];for(const t of c.tiles){if(!seen[t]){seen[t]=1;Q.push(t)}}let add=0;
   for(let qi=0;qi<Q.length;qi++){const t=Q[qi],tx=t%TW,ty=t/TW|0;
     for(const n of [tx>0?t-1:-1,tx<TW-1?t+1:-1,ty>0?t-TW:-1,ty<TH-1?t+TW:-1]){if(n<0||seen[n])continue;seen[n]=1;
@@ -674,6 +677,7 @@ function makeGates(c){const G=[]; // 바닷가 쪽 벽에 입구(문 + 나무 �
     if(G.length>=14)break}
   for(let ty=6;ty<TH;ty+=30)for(let tx=6+(ty/30%2)*20;tx<TW;tx+=40){const t=ty*TW+tx;if(URB[t]!==c.ci)continue;const x=(tx+.5)*TS,y=(ty+.5)*TS; // 지붕 위 옥상 입구
     if(G.every(g=>(g.x-x)**2+(g.y-y)**2>170*170))G.push({x,y,dx:0,dy:0,px:x,py:y,roof:true})}
+  if(!G.length&&c.tiles.length){let bt=c.tiles[0],bd=1e18;for(const t of c.tiles){const d=((t%TW+.5)*TS-c.x)**2+(((t/TW|0)+.5)*TS-c.y)**2;if(d<bd){bd=d;bt=t}}const x=(bt%TW+.5)*TS,y=((bt/TW|0)+.5)*TS;G.push({x,y,dx:0,dy:0,px:x,py:y,roof:true})} // 입구가 하나도 없으면 가운데에 옥상 입구
   c.gates=G}
 const landCity=(x,y)=>{const u=URB[tIdx(x,y)],cc=u&&W.civs[u-1];return cc&&cc.city&&!cc.city.water?cc.city:null};
 function nearPier(x,y){for(const civ of W.civs){const c=civ.city;if(!c||!c.gates)continue;for(const g of c.gates)if((g.x+g.dx*10-x)**2+(g.y+g.dy*10-y)**2<64)return true}return false}
@@ -875,7 +879,8 @@ function draw(){
   drawRoads(cx,z); // 길은 건물 지붕 아래로
   if(W.civs.some(c=>c.city&&c.city.tiles.length))drawUrban(cx,z,vx0,vy0,vx1,vy1);
   for(const civ of W.civs)if(civ.city){if(civ.city.water)drawCity(cx,civ.city,z);drawPorts(cx,civ.city,z)}
-  drawGates(cx,z); // 땅 위 도시는 큰 건물 하나라 따로 집을 안 그림
+  drawGates(cx,z);
+  if(W.boom){const u=(performance.now()-W.boom.t)/1200;if(u>1)W.boom=null;else{cx.fillStyle=`rgba(255,${180-u*120},60,${.7*(1-u)})`;cx.beginPath();cx.arc(W.boom.x,W.boom.y,20+u*90,0,6.283);cx.fill()}} // 운석 번쩍 // 땅 위 도시는 큰 건물 하나라 따로 집을 안 그림
   drawLeashes(cx,z,vis);
   for(const o of W.animals)if(vis(o))drawAnimal(cx,o,z,o.age+o.ph);
   {const P=W.player;if(P&&!W.inside&&waterAt(P.x,P.y)&&!nearPier(P.x,P.y)){const tt=performance.now()/400;cx.strokeStyle='rgba(220,245,255,.7)';cx.lineWidth=.6;for(let k=0;k<2;k++){cx.beginPath();cx.arc(P.x,P.y,4+((tt+k*.5)%1)*6,0,6.283);cx.stroke()}}} // 헤엄칠 때 물결
@@ -920,7 +925,7 @@ function drawUrban(c,z,vx0,vy0,vx1,vy1){
 }
 // 공항: 활주로를 달려 날아오르는 외계 비행기 / 우주버스장: 둥근 발사대에서 불꽃을 뿜으며 떠나는 우주버스
 function drawRoads(c,z){
-  if(!W.roads)return;const tt=performance.now()/1000;
+  if(!W.roads||W.sandbox)return;const tt=performance.now()/1000;
   c.strokeStyle='rgba(40,40,50,.85)';c.lineWidth=4;c.beginPath();for(const r of W.roads){c.moveTo(r[0],r[1]);c.lineTo(r[2],r[3])}c.stroke();
   c.strokeStyle=`rgba(140,240,255,${.55+.25*Math.sin(tt*2)})`;c.lineWidth=1.1;c.setLineDash([6,5]);c.lineDashOffset=-tt*20;c.beginPath();for(const r of W.roads){c.moveTo(r[0],r[1]);c.lineTo(r[2],r[3])}c.stroke();c.setLineDash([])
 }
@@ -1021,15 +1026,20 @@ function endIntro(){if(!intro)return;intro=null;$('intro').style.display='none';
 $('intro').onclick=endIntro; // 누르면 건너뛰기
 // ===================== 도구 · 조작 =====================
 const TOOLS=[['view','보기'],['animal','창조 · 풀어놓기'],['plant','씨앗 심기'],['raise','땅 올리기'],['lower','땅 깎기(물)'],['sand','모래'],['wet','물기 더하기'],['dry','메마르게'],['erase','없애기']];
-const PAINT=['raise','lower','sand','wet','dry','erase'];
+const PAINT=['raise','lower','sand','wet','dry','erase','city','uncity'];
+const SBX_TOOLS=[['city','도시 짓기'],['uncity','도시 지우기'],['under','땅속 도시 놓기'],['meteor','운석 떨어뜨리기']];
 let tool='view',brush=4,hover=null,myA=[],myP=[],pickA=-1,pickP=-1;
 const PRESET_P=[{name:'풀',g:{max:2.5,grow:1.5,range:25,seeds:1.6,moist:.5,heat:.5,aqua:0,hue:110}},{name:'덤불',g:{max:6,grow:.8,range:40,seeds:.8,moist:.55,aqua:0,hue:95}},
   {name:'나무',g:{max:14,grow:.35,range:70,seeds:.45,moist:.65,aqua:0,hue:125}},{name:'선인장',g:{max:5,grow:.4,range:30,seeds:.5,moist:.05,heat:.9,thorns:.8,aqua:0,hue:90}},{name:'해초',g:{max:4,grow:1,range:30,seeds:1.2,aqua:1,hue:150}}];
 function buildTools(){
-  $('tools').innerHTML=TOOLS.map(([k,n])=>`<button class="tb${k===tool?' on':''}" data-t="${k}">${n}</button>`).join('')+`<span id="brushBox">붓 크기 <input type="range" id="brush" min="1" max="12" value="${brush}"></span>`;
+  $('tools').innerHTML=(W.sandbox?TOOLS.concat(SBX_TOOLS):TOOLS).map(([k,n])=>`<button class="tb${k===tool?' on':''}" data-t="${k}">${n}</button>`).join('')+(W.sandbox?`<button class="tb" data-sb="evo">진화 ${W.noEvo?'꺼짐':'켜짐'}</button><button class="tb" data-sb="dry">${(W.dry||0)>.5?'물 되돌리기':'사막 행성 만들기'}</button>`:'')+`<span id="brushBox">붓 크기 <input type="range" id="brush" min="1" max="12" value="${brush}"></span>`;
   $('brushBox').style.display=PAINT.includes(tool)?'flex':'none';$('brush').oninput=e=>brush=+e.target.value;buildPalette();
 }
-$('tools').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;tool=b.dataset.t;buildTools();if(tool==='animal'&&!myA.length)openEditor(true)};
+$('tools').onclick=e=>{const sb=e.target.closest('[data-sb]');if(sb){
+    if(sb.dataset.sb==='evo'){W.noEvo=!W.noEvo;toast(W.noEvo?'진화를 껐어요: 새끼가 부모와 똑같아요':'진화를 켰어요: 새끼가 조금씩 달라져요')}
+    else{const d=(W.dry||0)>.5?0:1;climateStep(true,d);invalidateAll();toast(d?'사막 행성이 됐어요! 바다가 줄었어요':'물이 돌아왔어요!')}
+    buildTools();return}
+  const b=e.target.closest('[data-t]');if(!b)return;tool=b.dataset.t;buildTools();if(tool==='animal'&&!myA.length)openEditor(true)};
 function thumb(t,isA){const c=document.createElement('canvas');c.width=120;c.height=88;const x=c.getContext('2d');x.fillStyle=isA&&t.g.fins>.5&&Math.round(t.g.legs)<1?'#1d4a6b':'#2b4a2a';x.fillRect(0,0,120,88);
   const sc=isA?Math.min(6,25/t.g.size):Math.min(9,34/Math.max(1,t.g.max));x.setTransform(sc,0,0,sc,60,44);
   if(isA)drawAnimal(x,{x:0,y:0,vx:1,vy:0,g:t.g,size:t.g.size,vk:1},9,3);else drawPlant(x,{x:0,y:0,g:t.g,size:t.g.max,kind:t.g.aqua>.5?0:t.g.max<4?1:t.g.max<9?2:3,thorn:t.g.thorns||0,ph:0},9);return c}
@@ -1040,6 +1050,9 @@ function buildPalette(){
   const add=document.createElement('div');add.className='pc';add.innerHTML='<div style="font-size:26px;line-height:44px">+</div>'+(isA?'창조하기':'새 식물');add.onclick=()=>openEditor(isA);pal.appendChild(add);
 }
 function paint(wx,wy){
+  if(tool==='city'||tool==='uncity'){sbxCity(wx,wy,tool==='city');return}
+  if(tool==='under'){sbxUnder(wx,wy);return}
+  if(tool==='meteor'){meteor(wx,wy);return}
   const cxT=wx/TS,cyT=wy/TS,r=brush;
   if(tool==='erase'){const rr=(r*TS)**2;for(const o of W.animals){const dx=o.x-wx,dy=o.y-wy;if(dx*dx+dy*dy<rr)o.dead=true}for(const p of W.plants){const dx=p.x-wx,dy=p.y-wy;if(dx*dx+dy*dy<rr)p.dead=true}
     W.animals=W.animals.filter(o=>!o.dead);W.plants=W.plants.filter(p=>!p.dead);return}
@@ -1079,7 +1092,7 @@ cv.addEventListener('pointermove',e=>{const d=devicePixelRatio||1,p=[e.offsetX*d
   if(!drag)return;const dx=p[0]-drag.sx,dy=p[1]-drag.sy;if(Math.abs(dx)+Math.abs(dy)>6)drag.moved=true;
   if(tool==='view'){cam.x=drag.cx-dx/cam.z;cam.y=drag.cy-dy/cam.z;clampCam();if(drag.moved){W.follow=false;markFollow()}}
   else if(PAINT.includes(tool))paint(hover[0],hover[1])});
-cv.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=0;if(drag&&!drag.moved&&tool==='view')pickAt(drag.wx,drag.wy);drag=null});
+cv.addEventListener('pointerup',e=>{if(tool==='city'||tool==='uncity'){const c=sbxCityObj();if(c)makeGates(c)}ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=0;if(drag&&!drag.moved&&tool==='view')pickAt(drag.wx,drag.wy);drag=null});
 cv.addEventListener('pointerleave',()=>hover=null);
 cv.addEventListener('wheel',e=>{e.preventDefault();const d=devicePixelRatio||1,[wx,wy]=toWorld(e.offsetX*d,e.offsetY*d);cam.z*=Math.exp(-e.deltaY*.0015);clampCam();
   const [nx,ny]=toWorld(e.offsetX*d,e.offsetY*d);cam.x+=wx-nx;cam.y+=wy-ny;clampCam()},{passive:false});
@@ -1193,8 +1206,42 @@ $('tree').onclick=e=>{const r=e.target.getBoundingClientRect(),i=Math.round((e.c
 let envSel=ENVS[2];
 $('envs').innerHTML=ENVS.map(e=>`<div class="env${e===envSel?' on':''}" data-id="${e.id}"><b>${e.n}</b><br><small>${e.d}</small></div>`).join('');
 $('envs').onclick=e=>{const el=e.target.closest('.env');if(!el)return;envSel=ENVS.find(x=>x.id===el.dataset.id);document.querySelectorAll('.env').forEach(x=>x.classList.toggle('on',x===el))};
+// ===== 샌드박스 모드: 빈 바다에서 내가 땅·생물·도시·사건을 다 만듦 =====
+function startSandbox(){
+  URB=new Uint8Array(TW*TH);urbCtx.clearRect(0,0,WW,WH);Object.assign(W,{cl50:0,cl60:0,cl70:0,roads:null,dry:0,t:0,o2:0,animals:[],plants:[],species:[],spMap:new Map(),nextSp:1,log:[],sel:null,selSp:null,follow:false,stage:0,civs:[],nests:new Map(),tried:{},ended:true,moon:true,sandbox:true,noEvo:false,myHome:null,bag:[]});
+  for(const k in nameCnt)delete nameCnt[k];
+  WL=.42;tempOff=0;for(let i=0;i<TW*TH;i++){H[i]=.3+((i*7919)%13)/500;M[i]=.55;if(M0)M0[i]=.55} // 테두리만 있는 빈 바다
+  calcTemp();invalidateAll();
+  myA=[];myP=PRESET_P.map(t=>({name:t.name,g:full(t.g,PG)}));pickA=-1;pickP=0;
+  census();$('startM').style.display='none';tool='raise';brush=6;buildTools();fitCam();dirtyTree=true;dirtyLog=true;W.speed=1;markSpeed();
+  addLog('샌드박스 모드: 빈 바다에서 시작해요');toast('샌드박스 모드! "땅 올리기"로 섬부터 그려 봐요');
+}
+$('sbxBtn').onclick=()=>startSandbox();
+const sbxCityObj=()=>{const v=W.civs.find(v=>v.city&&v.city.manual);return v?v.city:null};
+function sbxCiv(){let c=sbxCityObj();if(c)return c;
+  const t=myA[pickA],g=t?full(t.g,AG):full({size:6,speed:.5,legs:4,arms:2,eyes:3,social:.8,hue:200},AG);g.intel=1;g.arms=Math.max(g.arms,1);if(Math.round(g.legs)<1)g.legs=2;
+  const nm=prompt('내 도시에 살 외계인 종족 이름을 지어 줘!',t?t.name+'족':'우리 외계인족')||'우리 외계인족';
+  const sp=newSpecies('a',g,null,nm);sp.civ=sp.id;sp.stage=STAGES.length-1;sp.land=1;
+  const civ={id:sp.id,t:W.t,wild:null,breeds:[],city:null};W.civs.push(civ);
+  c={pop:60,x:0,y:0,water:false,manual:true,b:[],r:30,hue:sp.hue,tiles:[],ci:W.civs.length,island:0,airport:null,spaceport:null,under:null,gates:[],zoo:{},pets:{}};civ.city=c;
+  addLog(`${nm}이(가) 내가 지은 도시에 살기 시작했어요`);toast(`${nm}의 도시! 칠한 곳이 전부 하나로 이어진 건물이 돼요`);dirtyTree=true;return c}
+function sbxCity(wx,wy,add){const c=add?sbxCiv():sbxCityObj();if(!c)return;
+  if(add&&!c.b.length){c.x=wx;c.y=wy;c.b.push({x:wx,y:wy,type:'plaza',p:-1,s:9,ph:0})}
+  const cxT=wx/TS,cyT=wy/TS,r=brush,rm=[];
+  for(let y=Math.floor(cyT-r);y<=cyT+r;y++)for(let x=Math.floor(cxT-r);x<=cxT+r;x++){if(x<0||y<0||x>=TW||y>=TH||Math.hypot(x+.5-cxT,y+.5-cyT)>r)continue;const t=y*TW+x;
+    if(add){if(!URB[t])urbanize(c,t)}else if(URB[t]===c.ci){URB[t]=0;urbCtx.clearRect(x*TS,y*TS,TS,TS);rm.push(t)}}
+  if(rm.length){c.tiles=c.tiles.filter(t=>URB[t]===c.ci);for(const t of rm)for(const n of [t-1,t+1,t-TW,t+TW])if(n>=0&&n<URB.length&&URB[n]===c.ci)drawUrbanTile(c,n)}}
+function sbxUnder(wx,wy){const c=landCity(wx,wy);if(!c){toast('땅속 도시는 도시 건물 위에 놓아야 해요');return}c.under={x:wx,y:wy,r:90,ph:0};c.zoo=c.zoo||{};toast('여기 밑에 땅속 도시를 만들었어요!');addLog('땅속 도시를 지었어요')}
+function meteor(wx,wy){const cxT=wx/TS,cyT=wy/TS,r=7;
+  for(let y=Math.floor(cyT-r);y<=cyT+r;y++)for(let x=Math.floor(cxT-r);x<=cxT+r;x++){if(x<0||y<0||x>=TW||y>=TH)continue;const d=Math.hypot(x+.5-cxT,y+.5-cyT)/r;if(d>1)continue;const i=y*TW+x;
+    H[i]=Math.max(.05,H[i]-.22*(1-d*d));if(d>.8)H[i]=Math.min(.98,H[i]+.05); // 가운데는 움푹, 가장자리는 볼록
+    if(URB[i]){const c=W.civs[URB[i]-1]&&W.civs[URB[i]-1].city;URB[i]=0;urbCtx.clearRect(x*TS,y*TS,TS,TS);if(c)c.tiles=c.tiles.filter(t=>t!==i)}}
+  const rr=(r*TS)**2;for(const o of W.animals)if(!o.player&&(o.x-wx)**2+(o.y-wy)**2<rr)o.dead=true;for(const p of W.plants)if((p.x-wx)**2+(p.y-wy)**2<rr)p.dead=true;
+  W.animals=W.animals.filter(o=>!o.dead);W.plants=W.plants.filter(p=>!p.dead);
+  calcTemp(Math.floor(cxT-r),Math.floor(cyT-r),Math.ceil(cxT+r),Math.ceil(cyT+r));invalidateAll();for(const v of W.civs)if(v.city&&!v.city.water&&v.city.gates)makeGates(v.city);
+  W.boom={x:wx,y:wy,t:performance.now()};addLog('쾅! 운석이 떨어졌어요');toast('쾅! 운석이 떨어졌어요')}
 function startWorld(env){
-  URB=new Uint8Array(TW*TH);urbCtx.clearRect(0,0,WW,WH);Object.assign(W,{cl50:0,cl60:0,cl70:0,roads:null,dry:0,t:0,o2:0,animals:[],plants:[],species:[],spMap:new Map(),nextSp:1,log:[],sel:null,selSp:null,follow:false,stage:0,civs:[],nests:new Map(),tried:{},ended:false,moon:false});
+  URB=new Uint8Array(TW*TH);urbCtx.clearRect(0,0,WW,WH);Object.assign(W,{cl50:0,cl60:0,cl70:0,roads:null,dry:0,t:0,o2:0,animals:[],plants:[],species:[],spMap:new Map(),nextSp:1,log:[],sel:null,selSp:null,follow:false,stage:0,civs:[],nests:new Map(),tried:{},ended:false,moon:false,sandbox:false,noEvo:false});
   for(const k in nameCnt)delete nameCnt[k];
   WL=.42;W.dry=0;if(M0)M.set(M0);tempOff=env.temp;calcTemp();
   myA=[];myP=PRESET_P.map(t=>({name:t.name,g:full(t.g,PG)}));pickA=-1;pickP=0;
