@@ -1,0 +1,2957 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>회사 공장 게임</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #171a21;
+    color: #e8ecf2;
+    font-family: "맑은 고딕", "Malgun Gothic", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+  #wrap { display: flex; flex-direction: column; height: 100%; }
+
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: linear-gradient(#2b3140, #222734);
+    border-bottom: 3px solid #f0a13a;
+    flex: 0 0 auto;
+  }
+  header .logo { font-size: 22px; }
+  #coName {
+    background: #1a1e27; border: 2px solid #3d4557; color: #ffd479;
+    font: bold 17px "맑은 고딕", sans-serif; border-radius: 8px;
+    padding: 4px 8px; width: 130px;
+  }
+  .stat { background: #1a1e27; border-radius: 10px; padding: 4px 12px; font-size: 15px; white-space: nowrap; }
+  .stat b { font-size: 19px; }
+  .money b { color: #ffd479; }
+  .total b { color: #7fd6a0; }
+  .rank b { color: #ff9de0; }
+  .make b { color: #9fd0ff; }
+  header .sp { flex: 1; }
+  header button {
+    background: #39405a; color: #e8ecf2; border: 0; border-radius: 8px;
+    padding: 7px 12px; font: bold 14px "맑은 고딕", sans-serif; cursor: pointer; white-space: nowrap;
+  }
+  header button:hover { background: #4a5375; }
+  #bOffice { background: #f0a13a; color: #241a06; font-size: 15px; }
+  #bOffice:hover { background: #ffc16a; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  #stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; min-width: 0; }
+  canvas#cv { background: #2c4a2e; border-radius: 10px; box-shadow: 0 6px 22px #0008; cursor: pointer; }
+  #hint { margin-top: 7px; font-size: 15px; color: #ffd479; height: 22px; text-align: center; }
+
+  aside {
+    width: 272px; flex: 0 0 272px; background: #1c202b;
+    border-left: 2px solid #2e3547; overflow-y: auto; padding: 8px;
+  }
+  aside::-webkit-scrollbar { width: 8px; }
+  aside::-webkit-scrollbar-thumb { background: #3d4557; border-radius: 4px; }
+  .panel { background: #232838; border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+  .panel h3 { margin: 0 0 6px; font-size: 14px; color: #9fb0c9; }
+
+  .item {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: #2e3547; border: 2px solid #2e3547; border-radius: 9px;
+    padding: 6px 8px; margin-bottom: 5px; cursor: pointer; color: #e8ecf2;
+    font: 14px "맑은 고딕", sans-serif; text-align: left;
+  }
+  .item:hover { background: #3a4258; }
+  .item.on { border-color: #f0a13a; background: #46402c; }
+  .item.no { opacity: .45; cursor: not-allowed; }
+  .item .ic { font-size: 21px; width: 26px; text-align: center; }
+  .item .nm { flex: 1; font-weight: bold; }
+  .item .cost { color: #ffd479; font-size: 13px; text-align: right; }
+  .item .key { color: #8894ab; font-size: 11px; font-weight: normal; }
+  .tip { font-size: 12px; color: #9fb0c9; line-height: 1.55; }
+
+  #missionBox { font-size: 14px; line-height: 1.5; }
+  #missionBox .now { color: #ffd479; font-weight: bold; }
+  #missionBox .done { color: #7fd6a0; }
+
+  /* ===== 회사 사옥 화면 ===== */
+  #office { position: fixed; inset: 0; background: #0b0d12f5; display: none; z-index: 20; padding: 10px; }
+  #office.show { display: flex; }
+  #officeCard {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    background: #232838; border: 3px solid #f0a13a; border-radius: 16px; padding: 10px 14px;
+  }
+  #oTop { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; margin-bottom: 8px; }
+  #officeCard h2 { margin: 0; font-size: 22px; }
+  #oTop .sp { flex: 1; }
+  #oTop .sub { color: #9fb0c9; font-size: 13px; }
+  #closeOffice { background: #a33; color: #fff; border: 0; border-radius: 9px; padding: 9px 16px; font: bold 15px "맑은 고딕", sans-serif; cursor: pointer; }
+  #zTitle { color: #9fb0c9; }
+  .oflex { flex: 1; display: flex; gap: 14px; align-items: stretch; min-height: 0; }
+  .bwrap { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .bcanvasbox { flex: 1; min-height: 0; position: relative; }
+  #bcv { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; border-radius: 10px; }
+  .bctl { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #9fb0c9; }
+  .bctl button { background: #39405a; color: #e8ecf2; border: 0; border-radius: 8px; padding: 6px 12px; font: bold 13px "맑은 고딕", sans-serif; cursor: pointer; }
+  .bctl button:hover { background: #4a5375; }
+  .fpanel { flex: 0 0 380px; overflow-y: auto; padding-right: 4px; }
+  .fpanel::-webkit-scrollbar { width: 8px; }
+  .fpanel::-webkit-scrollbar-thumb { background: #3d4557; border-radius: 4px; }
+  .fcard { background: #2e3547; border: 2px solid #4a5f8a; border-radius: 14px; padding: 14px; }
+  .fcard .fic { font-size: 44px; text-align: center; }
+  .fcard h3 { margin: 4px 0 2px; font-size: 21px; text-align: center; }
+  .fcard .what { color: #9fb0c9; font-size: 14px; text-align: center; margin-bottom: 10px; }
+  .fline { background: #232838; border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; font-size: 14px; line-height: 1.5; }
+  .fline b { color: #ffd479; }
+  .fline .eff { color: #7fd6a0; }
+  .stars { color: #ffd479; letter-spacing: 2px; }
+
+  button.big {
+    width: 100%; border: 0; border-radius: 10px; padding: 10px;
+    font: bold 15px "맑은 고딕", sans-serif; cursor: pointer;
+    background: #4a6aa3; color: #fff; margin-top: 4px;
+  }
+  button.big:hover { filter: brightness(1.15); }
+  button.big.hire { background: #2f8d5b; }
+  button.big.grow { background: #f0a13a; color: #241a06; margin-top: 8px; }
+  button.big.poor { background: #444b5e; color: #8894ab; }
+  .brow { display: flex; gap: 6px; }
+  .brow button.big { margin-top: 4px; }
+
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; }
+  /* 카드 높이를 고정해서 버튼이 절대 밀리지 않게 (밀리면 엉뚱한 버튼이 눌린다) */
+  .card {
+    width: 210px; min-height: 220px; background: #2e3547; border: 2px solid #3d4557;
+    border-radius: 12px; padding: 10px; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .card .cbtns { margin-top: auto; }
+  .card .ren {
+    position: absolute; top: 5px; right: 5px; width: 32px; margin: 0; padding: 5px 0;
+    font-size: 13px; background: #5a4a7a; z-index: 2;
+  }
+  .card.on { border-color: #6ad06a; background: #2c3d31; }
+  .card.lock { opacity: .6; }
+  .card .cic { font-size: 32px; text-align: center; }
+  .card .cnm { font-weight: bold; font-size: 16px; text-align: center; margin: 2px 0 6px; }
+  .card .row { font-size: 13px; color: #c3ccda; margin-bottom: 3px; }
+  .card .row b { color: #ffd479; }
+  .card button { width: 100%; margin-top: 6px; border: 0; border-radius: 8px; padding: 7px; font: bold 14px "맑은 고딕", sans-serif; cursor: pointer; background: #4a6aa3; color: #fff; }
+  .card button.go { background: #2f8d5b; }
+  .card button.ren { background: #5a4a7a; margin-top: 4px; font-size: 12px; padding: 5px; }
+  .card button.poor { background: #444b5e; color: #8894ab; }
+  .card button:disabled { background: #444b5e; color: #8894ab; cursor: default; }
+  .flag { width: 46px; height: 31px; border-radius: 4px; border: 1px solid #0008; margin: 2px auto 4px; box-shadow: 0 2px 6px #0006; }
+  .bar { height: 10px; background: #1a1e27; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: #f0a13a; }
+  h3.sec { margin: 16px 0 8px; font-size: 17px; color: #ffd479; }
+
+  /* ===== 공장 단면도 화면 ===== */
+  #plant { position: fixed; inset: 0; background: #0b0d12f5; display: none; z-index: 21; padding: 10px; }
+  #plant.show { display: flex; }
+  #plantCard {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    background: #232838; border: 3px solid #6ad06a; border-radius: 16px; padding: 10px 14px;
+  }
+  #pTop { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; margin-bottom: 8px; }
+  #pTop h2 { margin: 0; font-size: 22px; }
+  #pTop .sp { flex: 1; }
+  #pInfo { font-size: 14px; color: #9fb0c9; font-weight: normal; }
+  #closePlant { background: #a33; color: #fff; border: 0; border-radius: 9px; padding: 9px 16px; font: bold 15px "맑은 고딕", sans-serif; cursor: pointer; }
+  .pflex { flex: 1; display: flex; gap: 14px; min-height: 0; }
+  .pcanvasbox { flex: 1; min-height: 0; position: relative; }
+  #pcv { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; }
+  .ppanel { flex: 0 0 330px; overflow-y: auto; padding-right: 4px; }
+  .ppanel::-webkit-scrollbar { width: 8px; }
+  .ppanel::-webkit-scrollbar-thumb { background: #3d4557; border-radius: 4px; }
+
+  /* ===== 해외 지사 단면도 ===== */
+  #branch { position: fixed; inset: 0; background: #0b0d12f5; display: none; z-index: 22; padding: 10px; }
+  #branch.show { display: flex; }
+  #branchCard {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    background: #232838; border: 3px solid #5fb0e0; border-radius: 16px; padding: 10px 14px;
+  }
+  #brTop { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; margin-bottom: 8px; }
+  #brTop h2 { margin: 0; font-size: 22px; }
+  #brTop .sp { flex: 1; }
+  #brInfo { font-size: 14px; color: #9fb0c9; font-weight: normal; }
+  #closeBranch { background: #a33; color: #fff; border: 0; border-radius: 9px; padding: 9px 16px; font: bold 15px "맑은 고딕", sans-serif; cursor: pointer; }
+  .brcanvasbox { flex: 1; min-height: 0; position: relative; }
+  #brcv { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; }
+  #brTabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+  #brTabs button {
+    background: #2e3547; color: #cfd7e0; border: 2px solid #3d4557; border-radius: 8px;
+    padding: 4px 9px; font: bold 13px "맑은 고딕", sans-serif; cursor: pointer;
+  }
+  #brTabs button.on { border-color: #5fb0e0; background: #2b3f52; color: #fff; }
+  #brTabs button.no { opacity: .4; }
+
+  #toast {
+    position: fixed; left: 50%; top: 28%; transform: translate(-50%, -50%);
+    background: #f0a13aee; color: #241a06; font: bold 26px "맑은 고딕", sans-serif;
+    padding: 16px 28px; border-radius: 14px; pointer-events: none; z-index: 50;
+    opacity: 0; transition: opacity .3s; white-space: pre-line; text-align: center;
+  }
+  #toast.show { opacity: 1; }
+</style>
+
+<div id="wrap">
+  <header>
+    <span class="logo">🏭</span>
+    <input id="coName" maxlength="10" value="우리회사">
+    <span class="stat money">💰 <b id="uMoney">0</b>원</span>
+    <span class="stat total">📈 <b id="uTotal">0</b>원</span>
+    <span class="stat rank">🏅 <b id="uRank">구멍가게</b></span>
+    <span class="stat make">🛠️ <b id="uMake">-</b></span>
+    <span class="sp"></span>
+    <button id="bMap">🌾 농장 가기 (E)</button>
+    <button id="bOffice">🏢 회사 가기 (Q)</button>
+    <button id="bPause">⏸</button>
+    <button id="bMute">🔊</button>
+    <button id="bReset">🔄</button>
+  </header>
+
+  <main>
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div id="hint"></div>
+    </div>
+
+    <aside>
+      <div class="panel">
+        <h3>🏗️ 건물 짓기 (숫자키)</h3>
+        <div id="shop"></div>
+        <button class="item" id="bRot"><span class="ic">🔄</span><span class="nm">방향 돌리기</span><span class="key">R</span></button>
+      </div>
+
+      <div class="panel">
+        <h3>⚡ 생산 속도 (돈 내고 레벨업)</h3>
+        <button class="item" id="bSpeed" style="background:#3a4a2c;border-color:#6ad06a">
+          <span class="ic">⚡</span>
+          <span class="nm">속도 레벨업<br><span class="key" id="spInfo"></span></span>
+          <span class="cost" id="spCost"></span>
+        </button>
+      </div>
+
+      <div class="panel">
+        <h3>🏢 우리 회사</h3>
+        <div id="staffBox" class="tip"></div>
+        <button class="item" id="bOffice2" style="margin-top:6px;background:#46402c;border-color:#f0a13a">
+          <span class="ic">🏢</span><span class="nm">회사 건물 들어가기</span><span class="key">Q</span>
+        </button>
+        <button class="item" id="bMap2" style="background:#2c4633;border-color:#6ad06a">
+          <span class="ic">🌾</span><span class="nm" id="bMap2nm">농장으로 가기</span><span class="key">E</span>
+        </button>
+        <button class="item" id="bPlan2" style="background:#3a2c46;border-color:#a07ad0">
+          <span class="ic">📐</span><span class="nm">제품·음식 기획하기</span>
+        </button>
+        <button class="item" id="bPlant" style="background:#2c4636;border-color:#6ad06a">
+          <span class="ic">🏭</span><span class="nm" id="bPlantNm">공장 건물 들여다보기</span><span class="key">W</span>
+        </button>
+      </div>
+
+      <div class="panel">
+        <h3>📋 미션</h3>
+        <div id="missionBox"></div>
+      </div>
+
+      <div class="panel">
+        <h3>❓ 하는 법</h3>
+        <div class="tip">
+          재료는 <b>🪨철</b>과 <b>🪵나무</b> 딱 두 개!<br><br>
+          1. <b>채굴기</b>(광산 위)·<b>벌목기</b>(나무 위) 놓기<br>
+          2. <b>컨베이어</b>를 끌어서 <b>조립기</b>까지 잇기<br>
+          &nbsp;&nbsp;&nbsp;(조립기는 <b>옆·뒤 아무 쪽</b>에 붙어도 돼!)<br>
+          3. <b>조립기</b>가 회사에서 기획한 제품을 <b>자동으로</b> 만들어!<br>
+          4. <b>판매대</b>를 조립기에 <b>딱 붙이면 바로 팔려</b><br>
+          &nbsp;&nbsp;&nbsp;(컨베이어 끝에 놓아도 팔려)<br>
+          5. 돈으로 <b>직원·시설·증축</b>을 하면 회사가 커져<br><br>
+          🖱️ 왼쪽 클릭 = 짓기 (끌면 쭉)<br>
+          🖱️ 오른쪽 클릭 = 부수기 (돈 반 돌려줌)<br>
+          ✨ 방향은 <b>알아서</b> 옆 기계 쪽으로 맞춰져<br>
+          ⌨️ R = 방향 돌리기 / Q = 회사 / E = 농장<br><br>
+          🏢 회사가 <b>클수록</b> 등급이 올라가 (돈 아님!)<br>
+          🌾 <b>10층</b>이 되면 농장이 열려 (밀·우유 → 음식)<br>
+          🏗️ <b>30층</b>부터 건설·통신사 같은 다른 사업<br>
+          ↔️ 건물을 <b>옆으로</b> 넓힐 수도 있어<br><br>
+          기계 위 <span style="color:#ffd94a">노란 점</span> = 재료 없음<br>
+          기계 위 <span style="color:#ff6a6a">빨간 점</span> = 앞이 막힘
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="office">
+  <div id="officeCard">
+    <div id="oTop">
+      <h2>🏢 <span id="oName">우리회사</span> 사옥 <span id="oLv" style="font-size:16px;color:#9fb0c9"></span></h2>
+      <button id="bPlan" style="background:#6a4a8a;color:#fff;border:0;border-radius:9px;padding:9px 14px;font:bold 15px '맑은 고딕',sans-serif;cursor:pointer">📐 제품·음식 기획하기</button>
+      <span class="sub">층을 <b>클릭</b>하면 그 층에서 할 수 있는 게 나와!</span>
+      <span class="sp"></span>
+      <span class="stat money" style="font-size:15px">💰 <b id="oMoney" style="color:#ffd479">0</b>원</span>
+      <button id="closeOffice">✖ 나가기 (Q)</button>
+    </div>
+    <div class="oflex">
+      <div class="bwrap">
+        <div class="bcanvasbox"><canvas id="bcv"></canvas></div>
+        <div class="bctl">
+          <button id="bDown">▼ 아래층</button>
+          <button id="bUp">▲ 위층</button>
+          <span id="zTitle">🖱️ 마우스 휠로 오르내리기 · 층을 클릭!</span>
+        </div>
+      </div>
+      <div class="fpanel" id="fPanel"></div>
+    </div>
+  </div>
+</div>
+
+<div id="plant">
+  <div id="plantCard">
+    <div id="pTop">
+      <h2>🏭 <span id="pName">우리회사</span> 공장 <span id="pInfo"></span></h2>
+      <span class="sp"></span>
+      <span class="stat money" style="font-size:15px">💰 <b id="pMoney" style="color:#ffd479">0</b>원</span>
+      <button id="closePlant">✖ 나가기 (W)</button>
+    </div>
+    <div class="pflex">
+      <div class="pcanvasbox"><canvas id="pcv"></canvas></div>
+      <div class="ppanel" id="pPanel"></div>
+    </div>
+  </div>
+</div>
+
+<div id="branch">
+  <div id="branchCard">
+    <div id="brTop">
+      <h2>🌏 <span id="brName">지사</span> <span id="brInfo"></span></h2>
+      <span class="sp"></span>
+      <button id="closeBranch">✖ 나가기</button>
+    </div>
+    <div id="brTabs"></div>
+    <div class="brcanvasbox"><canvas id="brcv"></canvas></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ===================== 기본 설정 ===================== */
+const W = 22, H = 14;
+const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];   // 0:→ 1:↓ 2:← 3:↑
+const DIRCH = ['→','↓','←','↑'];
+const SAVE_KEY = 'factory_save_v2';
+
+/* --- 회사에서 기획하는 공장 제품 --- */
+const PROD = [
+  { id:'ntoy',  name:'나무 장난감', ic:'🪆', col:'#d9a05b', inp:{wood:2},          price:40,   plan:0,     rd:0,  time:6  },
+  { id:'itoy',  name:'로봇 인형',   ic:'🧸', col:'#e0a53a', inp:{iron:1,wood:1},   price:90,   plan:400,   rd:14, time:7  },
+  { id:'bike',  name:'자전거',      ic:'🚲', col:'#5fb0e0', inp:{iron:3,wood:1},   price:200,  plan:1500,  rd:22, time:8  },
+  { id:'car',   name:'자동차',      ic:'🚗', col:'#e06a6a', inp:{iron:6,wood:2},   price:520,  plan:5000,  rd:32, time:10 },
+  { id:'robot', name:'로봇',        ic:'🤖', col:'#b07ae0', inp:{iron:8,wood:4},   price:1200, plan:15000, rd:44, time:12 },
+  { id:'rocket',name:'로켓',        ic:'🚀', col:'#ff9de0', inp:{iron:20,wood:10}, price:3800, plan:50000, rd:60, time:16 },
+];
+/* --- 농장에서 만드는 음식 (10층부터) --- */
+const FOOD = [
+  { id:'bread', name:'빵',     ic:'🍞', col:'#d9a05b', inp:{wheat:2},        price:70,  plan:0,     rd:0,  time:6  },
+  { id:'cheese',name:'치즈',   ic:'🧀', col:'#e0c04a', inp:{milk:2},         price:130, plan:1000,  rd:18, time:7  },
+  { id:'snack', name:'과자',   ic:'🍪', col:'#c98a4a', inp:{wheat:2,milk:1}, price:220, plan:2000,  rd:20, time:8  },
+  { id:'ramen', name:'라면',   ic:'🍜', col:'#e07a4a', inp:{wheat:3,milk:1}, price:320, plan:3500,  rd:24, time:9  },
+  { id:'cake',  name:'케이크', ic:'🍰', col:'#ff9de0', inp:{wheat:2,milk:2}, price:420, plan:6000,  rd:28, time:9  },
+  { id:'pizza', name:'피자',   ic:'🍕', col:'#e06a6a', inp:{wheat:3,milk:2}, price:640, plan:12000, rd:36, time:10 },
+];
+const prodOf = id => PROD.find(p => p.id === id) || PROD[0];
+const foodOf = id => FOOD.find(p => p.id === id) || FOOD[0];
+const anyOf  = id => PROD.find(p => p.id === id) || FOOD.find(p => p.id === id) || PROD[0];
+const isFood = id => !!FOOD.find(p => p.id === id);
+
+/* --- 공장·농장 건물 --- */
+const B = {
+  belt:    { name:'컨베이어', ic:'➡️', cost:5,   col:'#4a5060', key:'1', tip:'물건을 화살표 쪽으로 옮겨' },
+  miner:   { name:'채굴기',   ic:'⛏️', cost:40,  col:'#8a6a3a', key:'2', land:'iron', out:'iron', inp:null, time:6, tip:'광산 위에만! 철을 캔다' },
+  chopper: { name:'벌목기',   ic:'🪓', cost:40,  col:'#3f7a45', key:'3', land:'tree', out:'wood', inp:null, time:6, tip:'나무 위에만! 나무를 벤다' },
+  factory: { name:'조립기',   ic:'🔧', cost:250, col:'#3f5f9a', key:'4', mk:1, tip:'옆·뒤 아무 데나 붙이면 된다' },
+  seller:  { name:'판매대',   ic:'🚚', cost:25,  col:'#2f7d5b', key:'5', tip:'조립기·요리기에 붙이면 바로 팔린다' },
+  erase:   { name:'부수기',   ic:'🧹', cost:0,   col:'#7a3a3a', key:'6', tip:'건물을 부순다 (돈 반 돌려받음)' },
+  // 농장 전용
+  farmer:  { name:'농사기계', ic:'🚜', cost:60,  col:'#9a7a3a', key:'2', land:'soil',    out:'wheat', inp:null, time:6, tip:'밭 위에만! 밀을 키운다' },
+  cow:     { name:'젖소 목장', ic:'🐄', cost:90,  col:'#5f7a4a', key:'3', land:'pasture', out:'milk',  inp:null, time:7, tip:'풀밭 위에만! 우유를 짠다' },
+  cook:    { name:'요리기',   ic:'🍳', cost:250, col:'#a3552a', key:'4', mkF:1, tip:'회사가 정한 음식을 자동으로 만든다' },
+  // (옛날 저장 파일용 — 지금은 짓지 않는다)
+  smelter: { name:'용광로',   ic:'🔥', cost:120, col:'#a34a2a', key:'',  inp:{iron:2}, out:'plate', time:5, tip:'' },
+  big:     { name:'큰 조립기',ic:'🏗️', cost:1200,col:'#7a3ea3', key:'',  mk:2, tip:'' },
+};
+const ORDERS = {
+  factory: ['belt','miner','chopper','factory','seller','erase'],
+  farm:    ['belt','farmer','cow','cook','seller','erase'],
+};
+const ORDER = () => ORDERS[S.map] || ORDERS.factory;
+
+/* --- 물건 --- */
+const IT = {
+  iron:  { name:'철',   ic:'🪨', price:6,  col:'#9aa3ad' },
+  wood:  { name:'나무', ic:'🪵', price:5,  col:'#b07a3e' },
+  wheat: { name:'밀',   ic:'🌾', price:7,  col:'#e0c46a' },
+  milk:  { name:'우유', ic:'🥛', price:9,  col:'#eef2f7' },
+  plate: { name:'철판', ic:'🔩', price:15, col:'#cfd7e0' },
+};
+for (const p of PROD) IT[p.id] = { name:p.name, ic:p.ic, price:p.price, col:p.col };
+for (const p of FOOD) IT[p.id] = { name:p.name, ic:p.ic, price:p.price, col:p.col };
+
+/* --- 직원 --- */
+const STAFF = {
+  norm:  { ic:'🧑‍💼', name:'일반 직원', base:20,  mul:1,   max:30 },   // 값이 안 오른다! 언제나 20원
+  sales: { ic:'💼', name:'영업사원',  base:250, mul:2.0 },
+  eng:   { ic:'🔧', name:'기술자',    base:150, mul:1.9 },
+  res:   { ic:'🔬', name:'연구원',    base:400, mul:1.8 },
+};
+
+/* --- 회사 건물의 층 (아래부터 위로) — 1층부터 차례대로 --- */
+const NAMED = [
+  { id:'lobby',  ic:'🚪', name:'로비',     minLv:1, base:300,   col:'#4a5f8a',
+    what:'손님이 들어오는 곳',   fac:'손님이 많아져서 물건값이 오른다 (+5%)' },
+  { id:'office', ic:'💻', name:'사무실',   minLv:1, base:200,   col:'#5f7a9a', staff:'norm', facName:'컴퓨터',
+    what:'일반 직원들이 일하는 곳', fac:'컴퓨터를 더 놓는다 → 일반 직원이 일을 더 잘한다' },
+  { id:'sales',  ic:'💼', name:'영업부',   minLv:1, base:500,   col:'#3f7a6a', staff:'sales',
+    what:'물건을 파는 곳',       fac:'좋은 책상 → 물건값이 더 오른다 (+6%)' },
+  { id:'eng',    ic:'🔧', name:'기술부',   minLv:1, base:500,   col:'#7a5f3a', staff:'eng',
+    what:'공장 기계를 돌보는 곳', fac:'좋은 공구 → 공장이 더 빨라진다' },
+  { id:'plan',   ic:'📐', name:'기획실',   minLv:1, base:800,   col:'#6a4a8a',
+    what:'사장님이 제품을 기획하는 곳', fac:'기획하는 값이 싸진다 (-10%)' },
+  { id:'lab',    ic:'🔬', name:'연구소',   minLv:2, base:1200,  col:'#3f6a8a', staff:'res',
+    what:'제품을 연구하는 곳',   fac:'기획이 더 빨리 끝난다' },
+  { id:'ware',   ic:'📦', name:'창고',     minLv:3, base:2000,  col:'#7a6a3a',
+    what:'재료를 쌓아두는 곳',   fac:'공장 기계가 재료를 더 많이 담는다 (+3칸)' },
+  { id:'pr',     ic:'📣', name:'홍보부',   minLv:4, base:3500,  col:'#8a4a5f',
+    what:'우리 제품을 자랑하는 곳', fac:'물건값이 확 오른다 (+10%)' },
+  { id:'cafe',   ic:'🍱', name:'구내식당', minLv:5, base:6000,  col:'#6a7a3a',
+    what:'직원들이 밥 먹는 곳',  fac:'직원을 2명씩 더 뽑을 수 있다' },
+  { id:'design', ic:'🎨', name:'디자인실', minLv:6, base:10000, col:'#8a5f7a',
+    what:'제품을 예쁘게 꾸미는 곳', fac:'제품이 더 비싸게 팔린다 (+6%)' },
+  { id:'auto',   ic:'🤖', name:'자동화실', minLv:7, base:18000, col:'#4a4a8a',
+    what:'로봇이 일을 돕는 곳',  fac:'조립기가 더 빨라진다 (+15%)' },
+  { id:'garden', ic:'🌱', name:'정원층',   minLv:8, base:30000, col:'#3f8a4a',
+    what:'직원들이 쉬는 곳',     fac:'직원들이 힘이 나서 더 잘 판다 (+5%)' },
+  { id:'ceo',    ic:'👑', name:'회장실',   minLv:9, base:60000, col:'#8a7a3a',
+    what:'회장님 방!',           fac:'회사 전체 수입이 오른다 (+10%)' },
+];
+const MAXLV = 60, MAXFAC = 5, MAXSPD = 30, MAXWIDE = 5, MAXUP = 10;
+
+/* --- 공장 기계 업그레이드 (공장 단면도 화면 W) --- */
+const UPS = {
+  factory: [
+    { t:'miner',   ic:'⛏️', name:'채굴기',   base:300, what:'철을 더 빨리 캔다' },
+    { t:'chopper', ic:'🪓', name:'벌목기',   base:300, what:'나무를 더 빨리 벤다' },
+    { t:'factory', ic:'🔧', name:'조립기',   base:600, what:'제품을 더 빨리 만든다' },
+    { t:'belt',    ic:'➡️', name:'컨베이어', base:800, what:'물건이 한 번에 더 멀리 간다' },
+    { t:'seller',  ic:'🚚', name:'판매대',   base:500, what:'물건을 더 비싸게 판다' },
+  ],
+  farm: [
+    { t:'farmer',  ic:'🚜', name:'농사기계', base:300, what:'밀을 더 빨리 키운다' },
+    { t:'cow',     ic:'🐄', name:'젖소 목장', base:300, what:'우유를 더 빨리 짠다' },
+    { t:'cook',    ic:'🍳', name:'요리기',   base:600, what:'음식을 더 빨리 만든다' },
+    { t:'belt',    ic:'➡️', name:'컨베이어', base:800, what:'물건이 한 번에 더 멀리 간다' },
+    { t:'seller',  ic:'🚚', name:'판매대',   base:500, what:'물건을 더 비싸게 판다' },
+  ],
+};
+const upDefOf = t => (UPS.factory.concat(UPS.farm)).find(u => u.t === t);
+const FARM_FLOOR = 10;          // 이 층이 되면 농장 맵이 열린다
+const BIZ_FLOOR  = 30;          // 이 층부터 다른 사업을 할 수 있다
+
+/* --- 30층부터 하는 다른 사업 --- */
+const BIZ = [
+  { id:'build',   at:30, ic:'🏗️', name:'건설회사',     col:'#8a6a3a', cost:80000,   inc:80,
+    what:'다른 회사 건물을 지어 준다',   fac:'공사팀을 늘린다 → 수입이 오른다' },
+  { id:'telecom', at:34, ic:'📡', name:'통신사',       col:'#3f6a8a', cost:300000,  inc:260,
+    what:'전화랑 인터넷을 파는 곳',      fac:'안테나를 늘린다 → 수입이 오른다' },
+  { id:'elec',    at:38, ic:'📱', name:'전자제품 사업', col:'#5f5f9a', cost:1000000, inc:800,
+    what:'휴대폰·TV를 만들어 파는 곳',   fac:'생산 라인을 늘린다 → 수입이 오른다' },
+  { id:'space',   at:44, ic:'🛰️', name:'우주선 개발',   col:'#6a3f8a', cost:4000000, inc:2600,
+    what:'진짜 우주선을 만드는 곳!',     fac:'발사대를 늘린다 → 수입이 오른다' },
+];
+const bizAt = i => BIZ.find(b => b.at === i);
+
+/* --- 50층 해외사업부: 나라별 지사 --- */
+const BRANCH_FLOOR = 50;
+const COUNTRY = [
+  { id:'vn', name:'베트남',     cost:300000,  inc:200,  f1:'#da251d', f2:'#ffcd00', dot:1,
+    css:'radial-gradient(circle at 50% 50%, #ffcd00 0 24%, #da251d 24%)' },
+  { id:'th', name:'태국',       cost:420000,  inc:270,  f1:'#a51931', f2:'#2d2a4a', dot:0,
+    css:'linear-gradient(#a51931 22%, #f4f5f8 22% 34%, #2d2a4a 34% 66%, #f4f5f8 66% 78%, #a51931 78%)' },
+  { id:'bd', name:'방글라데시', cost:560000,  inc:360,  f1:'#006a4e', f2:'#f42a41', dot:1,
+    css:'radial-gradient(circle at 45% 50%, #f42a41 0 32%, #006a4e 32%)' },
+  { id:'in', name:'인도',       cost:820000,  inc:530,  f1:'#ff9933', f2:'#138808', dot:2,
+    css:'radial-gradient(circle at 50% 50%, #054b9f 0 13%, transparent 13%), linear-gradient(#ff9933 33%, #fff 33% 66%, #138808 66%)' },
+  { id:'mx', name:'멕시코',     cost:1050000, inc:680,  f1:'#006847', f2:'#ce1126', dot:0,
+    css:'linear-gradient(90deg,#006847 33%,#fff 33% 66%,#ce1126 66%)' },
+  { id:'br', name:'브라질',     cost:1350000, inc:880,  f1:'#009c3b', f2:'#ffdf00', dot:1,
+    css:'radial-gradient(circle at 50% 50%, #002776 0 15%, #ffdf00 15% 34%, #009c3b 34%)' },
+  { id:'sa', name:'사우디',     cost:1750000, inc:1150, f1:'#165d31', f2:'#f4f5f8', dot:0,
+    css:'linear-gradient(#165d31, #165d31)' },
+  { id:'ru', name:'러시아',     cost:2250000, inc:1450, f1:'#f4f5f8', f2:'#0039a6', dot:0,
+    css:'linear-gradient(#f4f5f8 33%,#0039a6 33% 66%,#d52b1e 66%)' },
+  { id:'cn', name:'중국',       cost:2900000, inc:1900, f1:'#de2910', f2:'#ffde00', dot:1,
+    css:'radial-gradient(circle at 22% 30%, #ffde00 0 20%, #de2910 20%)' },
+  { id:'fr', name:'프랑스',     cost:3600000, inc:2350, f1:'#0055a4', f2:'#ef4135', dot:0,
+    css:'linear-gradient(90deg,#0055a4 33%,#fff 33% 66%,#ef4135 66%)' },
+  { id:'de', name:'독일',       cost:4400000, inc:2850, f1:'#000', f2:'#ffce00', dot:0,
+    css:'linear-gradient(#000 33%,#dd0000 33% 66%,#ffce00 66%)' },
+  { id:'jp', name:'일본',       cost:5300000, inc:3450, f1:'#f4f5f8', f2:'#bc002d', dot:1,
+    css:'radial-gradient(circle at 50% 50%, #bc002d 0 30%, #f4f5f8 30%)' },
+  { id:'us', name:'미국',       cost:7000000, inc:4600, f1:'#b22234', f2:'#3c3b6e', dot:3,
+    css:'repeating-linear-gradient(#b22234 0 14%, #fff 14% 28%), linear-gradient(#3c3b6e,#3c3b6e) 0 0/45% 55% no-repeat' },
+];
+const countryOf = id => COUNTRY.find(c => c.id === id);
+
+/* --- 나라마다 대표 음식 (그 나라 지사를 세우면 만들 수 있다) --- */
+const CFOOD = [
+  ['vn','쌀국수',  '🍜','#e0a35b',{wheat:3,milk:1},  700,  22],
+  ['th','팟타이',  '🍤','#e07a4a',{wheat:3,milk:2},  900,  23],
+  ['bd','커리',    '🍛','#e0b04a',{wheat:2,milk:3},  1100, 24],
+  ['in','난',      '🫓','#d9a05b',{wheat:4,milk:2},  1400, 25],
+  ['mx','타코',    '🌮','#e09a4a',{wheat:3,milk:3},  1700, 26],
+  ['br','슈하스코','🍖','#c0664a',{wheat:5,milk:3},  2100, 27],
+  ['sa','케밥',    '🥙','#d9a86a',{wheat:4,milk:4},  2600, 28],
+  ['ru','보르시',  '🥣','#c04a5a',{wheat:4,milk:5},  3200, 30],
+  ['cn','만두',    '🥟','#e8dcc0',{wheat:6,milk:3},  3900, 32],
+  ['fr','크루아상','🥐','#e0b46a',{wheat:5,milk:5},  4700, 34],
+  ['de','소시지',  '🌭','#d97a5a',{wheat:6,milk:5},  5600, 36],
+  ['jp','초밥',    '🍣','#f0a0a0',{wheat:7,milk:5},  6800, 38],
+  ['us','햄버거',  '🍔','#e0a04a',{wheat:8,milk:6},  8500, 40],
+];
+for (const [cid, nm, ic, col, inp, price, rd] of CFOOD) {
+  const c = countryOf(cid);
+  const f = { id:'f_'+cid, name:nm, ic:ic, col:col, inp:inp, price:price,
+              plan:Math.round(c.cost*0.12), rd:rd, time:11, need:cid, country:c.name };
+  c.foodId = f.id;
+  FOOD.push(f);
+  IT[f.id] = { name:f.name, ic:f.ic, price:f.price, col:f.col };
+}
+// 그 나라 음식을 만들고 있으면 그 지사가 더 잘 번다
+const foodVisible = f => !f.need || (S.br[f.need] > 0);
+const cFoodOn = c => c.foodId && S.foods.indexOf(c.foodId) >= 0;
+
+/* --- 그 밖의 층 (14층부터 번갈아 나온다) --- */
+const GEN = [
+  { g:'work', ic:'🗄️', name:'사무 층', col:'#5f6f8a', what:'서류를 처리하는 층',   fac:'회사 수입이 오른다 (+2%)' },
+  { g:'ware', ic:'📦', name:'창고 층', col:'#7a6a3a', what:'재료를 더 쌓아두는 층', fac:'기계가 재료를 더 담는다 (+2칸)' },
+  { g:'lab',  ic:'🔭', name:'연구 층', col:'#3f6a8a', what:'조용히 연구하는 층',   fac:'기획이 더 빨라진다' },
+  { g:'rest', ic:'🛋️', name:'휴게 층', col:'#6a7a5a', what:'직원들이 쉬는 층',     fac:'직원을 1명 더 뽑을 수 있다' },
+];
+
+/* i층의 정보 (1층부터) */
+function floorAt(i) {
+  if (i <= NAMED.length) return NAMED[i-1];
+  if (i === BRANCH_FLOOR) return { id:'branch', ic:'🌏', name:'해외사업부', col:'#3f7a8a', num:i,
+    base:400000, what:'다른 나라에 지사를 내는 곳', fac:'통역·출장팀이 늘어난다 (모든 지사 수입 +8%)' };
+  const b = bizAt(i);
+  if (b) return { id:'biz_'+b.id, biz:b, ic:b.ic, name:b.name, col:b.col, base:Math.round(b.cost*0.35),
+                  what:b.what, fac:b.fac, num:i };
+  const g = GEN[i % GEN.length];
+  return { id:'g'+i, gen:g.g, ic:g.ic, name:g.name, col:g.col, base:Math.round(1200*Math.pow(1.13, i)),
+           what:g.what, fac:g.fac, num:i };
+}
+function floorOf(id) {
+  const n = NAMED.find(f => f.id === id);
+  if (n) return n;
+  if (id === 'branch') return floorAt(BRANCH_FLOOR);
+  if (id && id.indexOf('biz_') === 0) { const b = BIZ.find(v => 'biz_'+v.id === id); return b ? floorAt(b.at) : NAMED[0]; }
+  if (id && id[0] === 'g') return floorAt(+id.slice(1));
+  return NAMED[0];
+}
+function floorNum(id) {                      // 그 층이 몇 층인지
+  const n = NAMED.findIndex(f => f.id === id);
+  if (n >= 0) return n + 1;
+  const f = floorOf(id);
+  return f.num || 1;
+}
+
+/* 층마다 방에 놓인 물건 (단면도용) */
+const ROOM = {
+  lobby:  ['🪴','🛋️','🕐'],
+  office: [],                 // 사무실은 이모티콘 대신 직접 그린다 (drawOfficeRoom)
+  sales:  ['🖥️','📞','📈'],
+  eng:    ['🛠️','⚙️','🔩'],
+  plan:   ['📋','✏️','💡'],
+  lab:    ['🧪','🔭','📚'],
+  ware:   ['📦','📦','📦'],
+  pr:     ['📣','📺','🎈'],
+  cafe:   ['🍚','🍜','🥤'],
+  design: ['🎨','🖼️','✂️'],
+  auto:   ['🦾','🤖','💻'],
+  garden: ['🌳','🪑','🌷'],
+  ceo:    ['🛋️','🏆','🗺️'],
+};
+const GENPROPS = {
+  work: ['🗄️','📄','☕'],
+  ware: ['📦','📦','🧰'],
+  lab:  ['🔭','🧪','📚'],
+  rest: ['🛋️','🪴','📺'],
+};
+
+/* 회사 등급 — 돈이 아니라 "회사 크기(층수+옆으로 확장)"로 정해진다 */
+const RANKS = [
+  [0,'구멍가게'],[8,'동네 회사'],[12,'작은 회사'],[18,'중소기업'],
+  [26,'중견기업'],[36,'대기업'],[48,'재벌 그룹'],[62,'세계 1등 회사'],
+];
+
+const MISSIONS = [
+  { t:'채굴기를 회색 광산 위에 놓아 보자',              ok:()=>cnt('miner')>=1,     gold:50 },
+  { t:'판매대까지 컨베이어로 이어서 철 10개 팔기',       ok:()=>S.sold.iron>=10,     gold:150 },
+  { t:'벌목기로 나무 5개 팔기',                         ok:()=>S.sold.wood>=5,      gold:250 },
+  { t:'조립기를 지어서 제품 3개 만들어 팔기',           ok:()=>soldProd()>=3,       gold:800 },
+  { t:'회사(Q)에서 직원을 3명 뽑기',                    ok:()=>staffTotal()>=3,     gold:1200 },
+  { t:'회사 시설을 3번 업그레이드하기',                 ok:()=>facTotal()>=3,       gold:1800 },
+  { t:'⚡ 생산 속도를 Lv.3까지 올리기',                  ok:()=>S.speedLv>=3,        gold:2000 },
+  { t:'🔧 공장(W) 기계를 3번 업그레이드하기',             ok:()=>upTotal()>=3,        gold:2500 },
+  { t:'사무실에 컴퓨터를 놓고 일반 직원 5명 뽑기',        ok:()=>F('office')>=1 && S.staff.norm>=5, gold:2200 },
+  { t:'회사에서 새 제품을 기획하기',                    ok:()=>planned()>=2,        gold:1500 },
+  { t:'회사를 6층으로 증축하기',                        ok:()=>S.lv>=6,             gold:2500 },
+  { t:'자전거 5개 팔기',                                ok:()=>(S.sold.bike||0)>=5, gold:4000 },
+  { t:'🌾 회사를 10층으로 올려서 농장 열기',             ok:()=>S.lv>=FARM_FLOOR,    gold:8000 },
+  { t:'🌾 농장에서 빵 10개 팔기',                        ok:()=>(S.sold.bread||0)>=10, gold:9000 },
+  { t:'건물을 옆으로 한 번 넓히기',                     ok:()=>S.wide>=1,           gold:12000 },
+  { t:'자동차 1개 팔기',                                ok:()=>(S.sold.car||0)>=1,  gold:9000 },
+  { t:'회사를 18층으로 키워서 중소기업 되기',            ok:()=>S.lv>=18,            gold:30000 },
+  { t:'🏢 회사를 30층으로! (다른 사업이 열린다)',        ok:()=>S.lv>=BIZ_FLOOR,     gold:120000 },
+  { t:'🏗️ 다른 사업을 하나 시작하기',                    ok:()=>bizCount()>=1,       gold:200000 },
+  { t:'회사를 36층으로 키워서 대기업 되기',              ok:()=>S.lv>=36,            gold:400000 },
+  { t:'🛰️ 우주선 개발까지 시작하기',                     ok:()=>(S.biz.space||0)>=1, gold:2000000 },
+  { t:'🌏 회사를 50층으로! (해외사업부가 생긴다)',        ok:()=>S.lv>=BRANCH_FLOOR,  gold:3000000 },
+  { t:'🌏 다른 나라에 지사 3개 세우기',                   ok:()=>brCount()>=3,        gold:5000000 },
+  { t:'🍜 나라 음식을 하나 만들어 팔기',                  ok:()=>CFOOD.some(f=>(S.sold['f_'+f[0]]||0)>=1), gold:8000000 },
+  { t:'🏆 60층 세계 1등 회사 만들기! (마지막 미션)',      ok:()=>S.lv>=60,            gold:10000000 },
+];
+
+/* ===================== 상태 ===================== */
+let S = null;
+let sel = 'belt', selFloor = 'plan';
+let paused = false, officeOpen = false;
+let lastStep = 0;
+let pops = [];
+let dragging = false, dragBtn = 0, lastTile = null, mouseTile = null;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const bcv = document.getElementById('bcv');
+let bx = bcv.getContext('2d');
+let TS = 44;
+
+function emptyGrid() {
+  const g = [];
+  for (let y=0; y<H; y++) { g[y] = []; for (let x=0; x<W; x++) g[y][x] = null; }
+  return g;
+}
+function newState() {
+  const st = {
+    co:'우리회사', money:300, total:0, dir:0, mute:false,
+    sold:{}, mi:0,
+    lv:5,                          // 층수 (5 ~ 60)
+    wide:0,                        // 옆으로 확장한 횟수 (0 ~ 5)
+    speedLv:1,                     // 생산 속도 레벨
+    up:{},                         // 공장 기계 업그레이드 레벨
+    fac:{},                        // 층별 시설 레벨
+    biz:{},                        // 30층부터 하는 사업 (0=안 함, 1~5=시설 레벨)
+    br:{},                         // 50층 해외 지사 (0=없음, 1~5=지사 규모)
+    staff:{ norm:0, sales:0, eng:0, res:0 },
+    prod:'ntoy', food:'bread',
+    prods:['ntoy'], foods:['bread'],      // 한꺼번에 만드는 제품·음식들
+    done:{ ntoy:true, bread:true }, names:{}, rd:null,
+    map:'factory',
+    maps: { factory:{ land:genLand(), grid:emptyGrid() }, farm:{ land:genFarm(), grid:emptyGrid() } },
+    v2:true,
+  };
+  st.land = st.maps.factory.land; st.grid = st.maps.factory.grid;
+  return st;
+}
+function blobLand(land, kind, n) {
+  let x = 2 + ((Math.random()*(W-5))|0), y = 2 + ((Math.random()*(H-5))|0);
+  for (let i=0; i<n; i++) {
+    if (x>0 && x<W-1 && y>0 && y<H-1) land[y][x] = kind;
+    const d = DIRS[(Math.random()*4)|0];
+    x = Math.max(1, Math.min(W-2, x + d[0]));
+    y = Math.max(1, Math.min(H-2, y + d[1]));
+  }
+}
+function blankLand() {
+  const land = [];
+  for (let y=0; y<H; y++) { land[y] = []; for (let x=0; x<W; x++) land[y][x] = 'grass'; }
+  return land;
+}
+function genLand() {
+  const land = blankLand();
+  for (let i=0; i<3; i++) blobLand(land, 'iron', 10 + ((Math.random()*6)|0));
+  for (let i=0; i<3; i++) blobLand(land, 'tree', 10 + ((Math.random()*6)|0));
+  return land;
+}
+function genFarm() {
+  const land = blankLand();
+  for (let i=0; i<3; i++) blobLand(land, 'soil',    12 + ((Math.random()*7)|0));
+  for (let i=0; i<3; i++) blobLand(land, 'pasture', 12 + ((Math.random()*7)|0));
+  return land;
+}
+
+function save() {
+  try {
+    const o = Object.assign({}, S);
+    delete o.land; delete o.grid;                 // maps 안에 들어 있으므로 두 번 저장하지 않는다
+    localStorage.setItem(SAVE_KEY, JSON.stringify(o));
+  } catch(e) {}
+}
+function fixGrid(grid) {   // 옛날 저장 파일 고치기 — 용광로·큰조립기·철판을 없앴다
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const c = grid[y][x];
+    if (!c) continue;
+    if (c.t === 'smelter') { grid[y][x] = null; continue; }
+    if (c.t === 'big') c.t = 'factory';
+    if (c.item && c.item.k === 'plate') c.item.k = 'iron';
+    if (c.out && c.out.k === 'plate') c.out.k = 'iron';
+    if (c.buf && c.buf.plate) { c.buf.iron = (c.buf.iron||0) + c.buf.plate; delete c.buf.plate; }
+  }
+}
+function load() {
+  try {
+    const st = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!st || !st.staff) return null;
+    if (!st.sold) st.sold = {};
+    if (!st.done) st.done = {};
+    st.done.ntoy = true; st.done.bread = true;
+    if (!st.names) st.names = {};
+    if (!st.speedLv) st.speedLv = 1;
+    if (!st.staff.norm) st.staff.norm = 0;
+    if (!st.fac) st.fac = {};
+    if (!st.up) st.up = {};
+    if (!st.biz) st.biz = {};
+    if (!st.br) st.br = {};
+    if (!st.food) st.food = 'bread';
+    if (!st.prods || !st.prods.length) st.prods = [st.prod || 'ntoy'];
+    if (!st.foods || !st.foods.length) st.foods = [st.food || 'bread'];
+    if (st.rd && st.done[st.rd.id]) st.rd = null;      // 옛날 버그로 이미 있는 걸 기획 중이면 지운다
+    if (!st.map) st.map = 'factory';
+    if (st.wide === undefined) st.wide = 0;
+    // 예전에는 회사 레벨(1~9)이었고 층수 = 4 + 레벨이었다 → 이제 lv이 곧 층수
+    if (!st.v2) { st.lv = 4 + (st.lv || 1); st.v2 = true; }
+    if (!st.maps) {
+      st.maps = { factory:{ land:st.land, grid:st.grid }, farm:{ land:genFarm(), grid:emptyGrid() } };
+      st.map = 'factory';
+    }
+    if (!st.maps.farm) st.maps.farm = { land:genFarm(), grid:emptyGrid() };
+    if (!st.maps.factory || !st.maps.factory.grid || st.maps.factory.grid.length !== H) return null;
+    fixGrid(st.maps.factory.grid); fixGrid(st.maps.farm.grid);
+    st.land = st.maps[st.map].land; st.grid = st.maps[st.map].grid;
+    return st;
+  } catch(e) { return null; }
+}
+
+/* ===================== 도우미 ===================== */
+const inb = (x,y) => x>=0 && y>=0 && x<W && y<H;
+let CUR = null;                                    // 지금 계산 중인 맵 (없으면 보고 있는 맵)
+const at  = (x,y) => inb(x,y) ? (CUR || S.grid)[y][x] : null;
+function cnt(t) {
+  let n=0;
+  for (const k in S.maps) { const g = S.maps[k].grid;
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) if (g[y][x] && g[y][x].t===t) n++; }
+  return n;
+}
+function soldProd() { let n=0; for (const p of PROD) n += (S.sold[p.id]||0); return n; }
+function soldFood() { let n=0; for (const p of FOOD) n += (S.sold[p.id]||0); return n; }
+function planned()  { let n=0; for (const p of PROD) if (S.done[p.id]) n++; for (const p of FOOD) if (S.done[p.id]) n++; return n; }
+function staffTotal(){ return S.staff.sales + S.staff.eng + S.staff.res; }
+function facTotal() { let n=0; for (const k in S.fac) n += S.fac[k]; return n; }
+function bizCount() { let n=0; for (const b of BIZ) if ((S.biz[b.id]||0) > 0) n++; return n; }
+
+const F = id => S.fac[id] || 0;
+const visFloors = () => { const a=[]; for (let i=1; i<=S.lv; i++) a.push(floorAt(i)); return a; };
+const hasFloor  = id => floorNum(id) <= S.lv;
+const farmOpen  = () => S.lv >= FARM_FLOOR;
+
+/* 14층 위쪽 층들의 시설 효과를 모아 둔다 (층이 많아서 미리 세어 둔다) */
+let GB = { work:0, ware:0, lab:0, rest:0 };
+function recalcGen() {
+  GB = { work:0, ware:0, lab:0, rest:0 };
+  for (let i = NAMED.length + 1; i <= S.lv; i++) {
+    const f = floorAt(i);
+    if (!f.gen) continue;
+    const lv = F(f.id);
+    if (lv) GB[f.gen] += lv;
+  }
+}
+function bizIncome() {                       // 1초에 버는 돈 (다른 사업 + 해외 지사)
+  let n = 0;
+  for (const b of BIZ) { const lv = S.biz[b.id] || 0; if (lv) n += b.inc * (1 + 0.6*(lv-1)); }
+  n += branchIncome();
+  return n;
+}
+function branchIncome() {
+  let n = 0;
+  for (const c of COUNTRY) {
+    const lv = S.br[c.id] || 0;
+    if (lv) n += c.inc * (1 + 0.6*(lv-1)) * (cFoodOn(c) ? 1.4 : 1);   // 그 나라 음식을 만들면 +40%
+  }
+  return n * (1 + 0.08*F('branch'));         // 해외사업부 시설이 올려 준다
+}
+function brCount() { let n=0; for (const c of COUNTRY) if ((S.br[c.id]||0) > 0) n++; return n; }
+const brCost   = c => Math.round(c.cost);
+const brUpCost = c => Math.round(c.cost * 0.45 * Math.pow(2.1, (S.br[c.id]||1) - 1));
+const bizCost    = b => Math.round(b.cost);
+const bizUpCost  = b => Math.round(b.cost * 0.4 * Math.pow(2.1, (S.biz[b.id]||1) - 1));
+const sizeScore  = () => S.lv + S.wide*2;
+const wideCost   = () => Math.round(5000 * Math.pow(4, S.wide));
+
+/* 공장 기계 업그레이드 */
+const upLv   = t => S.up[t] || 0;
+const upMul  = t => 1 + 0.2 * upLv(t);                 // 레벨당 20% 빨라진다
+const upCost = t => Math.round(upDefOf(t).base * Math.pow(1.8, upLv(t)));
+const beltMove = () => 1 + Math.floor(upLv('belt') / 3);   // 컨베이어가 한 박자에 갈 수 있는 칸
+function upTotal() { let n = 0; for (const k in S.up) n += S.up[k]; return n; }
+
+/* 시설 효과 */
+// 일반 직원은 싼 대신 조금씩 도와준다 (컴퓨터가 많을수록 더)
+const normBonus = () => 0.003 * S.staff.norm * (1 + 0.5*F('office'));
+const priceMul = () => 1 + 0.2*S.staff.sales + normBonus() + 0.05*F('lobby') + 0.06*F('sales')
+                         + 0.10*F('pr') + 0.06*F('design') + 0.05*F('garden') + 0.10*F('ceo')
+                         + 0.02*GB.work + 0.05*upLv('seller');
+const speedMul = () => 1 + 0.15*(S.speedLv - 1);
+const stepMs   = () => Math.max(70, (520 - 42*S.staff.eng - 25*F('eng')) / speedMul());
+const speedCost = () => Math.round(300 * Math.pow(1.45, S.speedLv - 1));
+const rdSpeed  = () => 1 + 0.5*S.staff.res + 0.3*F('lab') + 0.15*GB.lab;
+const planMul  = () => Math.max(0.5, 1 - 0.1*F('plan'));
+const bufBonus = () => 3*F('ware') + 2*GB.ware;
+const autoMul  = () => 1 + 0.15*F('auto');
+const staffMax = () => 9 + 2*F('cafe') + GB.rest;
+// 일반 직원은 층마다 사무실 칸이 있어서 한 층에 15명씩 들어간다
+const maxOf = k => k === 'norm' ? 15 * S.lv : (STAFF[k].max || staffMax());
+
+const staffCost = k => Math.round(STAFF[k].base * Math.pow(STAFF[k].mul, S.staff[k]));
+const facCost   = id => Math.round(floorOf(id).base * Math.pow(2.2, F(id)));
+const growCost  = () => Math.round(1500 * Math.pow(1.13, S.lv - 5));
+const planCost  = p => Math.round(p.plan * planMul());
+
+function prodName(id) { return S.names[id] || anyOf(id).name; }
+function rankName() { let r = RANKS[0][1]; for (const [n,nm] of RANKS) if (sizeScore() >= n) r = nm; return r; }
+function won(n) { return Math.round(n).toLocaleString('ko-KR'); }
+function matText(inp) { return Object.keys(inp).map(k => IT[k].ic + IT[k].name + ' ' + inp[k] + '개').join(' + '); }
+
+// 그 기계가 만드는 것 (조립기·요리기는 회사가 고른 목록에서 자기 순번 것)
+function makeList(c) { return B[c.t].mkF ? (S.foods.length ? S.foods : ['bread']) : (S.prods.length ? S.prods : ['ntoy']); }
+function makeIdOf(c)  { const l = makeList(c); return l[(c.pi||0) % l.length]; }
+
+function recipeOf(c) {
+  const d = B[c.t];
+  if (d.mk || d.mkF) {
+    const p = anyOf(makeIdOf(c));
+    return { inp:p.inp, out:p.id, time:Math.max(2, Math.round(p.time / ((d.mk||d.mkF) * autoMul() * upMul(c.t)))) };
+  }
+  if (!d.out) return null;
+  return { inp:d.inp, out:d.out, time:Math.max(2, Math.round(d.time / upMul(c.t))) };
+}
+
+/* ===================== 소리 ===================== */
+let AC = null, lastBeep = 0;
+function beep(freq, dur, type, vol) {
+  if (S.mute) return;
+  const now = performance.now();
+  if (now - lastBeep < 55) return;
+  lastBeep = now;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square'; o.frequency.value = freq; g.gain.value = vol || 0.045;
+    o.connect(g); g.connect(AC.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + (dur||0.08));
+    o.stop(AC.currentTime + (dur||0.08) + 0.02);
+  } catch(e) {}
+}
+
+/* ===================== 공장 한 박자 ===================== */
+// 공장과 농장은 보고 있지 않아도 둘 다 돌아간다
+function tick() {
+  for (const k in S.maps) {
+    CUR = S.maps[k].grid;
+    curMapKey = k;
+    moveItems(); workMachines();
+  }
+  CUR = null; curMapKey = S.map;
+  const inc = bizIncome() * (stepMs()/1000);
+  if (inc) { S.money += inc; S.total += inc; }
+  doResearch(); checkMission();
+}
+let curMapKey = 'factory';
+
+// 기계는 앞·옆·뒤 아무 쪽으로나 내보낸다 (붙어 있기만 하면 됨)
+//  - 조립기가 만든 제품은 판매대 > 컨베이어 순으로
+//  - 채굴기·벌목기가 캔 재료는 조립기 > 컨베이어 순으로 (재료를 그냥 팔아버리지 않게)
+function outDir(x, y, c, kind) {
+  const isProd = !!(B[c.t].mk || B[c.t].mkF);
+  let best = -1, bs = 0;
+  for (let k = 0; k < 4; k++) {
+    const d = (c.dir + k) % 4;
+    const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+    const t = at(nx, ny);
+    if (!t || !canAccept(t, kind)) continue;
+    let s;
+    if (t.t === 'seller')            s = isProd ? 100 : 30;
+    else if (B[t.t].mk || B[t.t].mkF) s = isProd ? 40  : 90;
+    else                             s = 60;
+    s -= k * 0.5;                       // 점수가 같으면 보고 있는 쪽 먼저
+    if (s > bs) { bs = s; best = d; }
+  }
+  return best;
+}
+
+function moveItems() {
+  const G = CUR || S.grid, list = [];
+  const maxMove = beltMove();                       // 컨베이어 업그레이드하면 한 박자에 여러 칸
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const c = G[y][x];
+    if (!c) continue;
+    if (c.t === 'belt' && c.item) list.push({x,y,ox:x,oy:y,c,belt:true,n:0});
+    else if (c.out) list.push({x,y,ox:x,oy:y,c,belt:false,n:0});
+  }
+  const done = new Set();
+  let moved = true, guard = 0;
+  while (moved && guard++ < W*H*2) {
+    moved = false;
+    for (const e of list) {
+      if (done.has(e)) continue;
+      const it = e.belt ? e.c.item : e.c.out;
+      if (!it) { done.add(e); continue; }
+      const dir = e.belt ? e.c.dir : outDir(e.x, e.y, e.c, it.k);
+      if (dir < 0) continue;
+      const d = DIRS[dir];
+      const nx = e.x + d[0], ny = e.y + d[1];
+      const t = at(nx, ny);
+      if (!t || !canAccept(t, it.k)) continue;
+      accept(t, nx, ny, it, e.ox, e.oy);            // 미끄러지는 그림은 처음 칸부터
+      if (e.belt) e.c.item = null; else e.c.out = null;
+      e.n++; moved = true;
+      if (t.t === 'belt' && e.n < maxMove) { e.c = t; e.x = nx; e.y = ny; e.belt = true; }
+      else done.add(e);
+    }
+  }
+}
+function canAccept(c, k) {
+  if (c.t === 'belt') return !c.item;
+  if (c.t === 'seller') return true;
+  const r = recipeOf(c);
+  if (!r || !r.inp || !(k in r.inp)) return false;
+  return (c.buf[k]||0) < Math.max(6, r.inp[k] * 3) + bufBonus();
+}
+function accept(c, x, y, it, fx, fy) {
+  if (c.t === 'belt') { c.item = {k:it.k, fx, fy}; return; }
+  if (c.t === 'seller') { sell(it.k, x, y); return; }
+  c.buf[it.k] = (c.buf[it.k]||0) + 1;
+}
+function sell(k, x, y) {
+  const gain = Math.round(IT[k].price * priceMul());
+  S.money += gain; S.total += gain; S.sold[k] = (S.sold[k]||0) + 1;
+  pops.push({ x, y, txt:'+'+won(gain), born:performance.now(), map:curMapKey });
+  if (curMapKey === S.map) beep(760 + Math.min(500, gain), 0.06, 'triangle', 0.04);
+}
+function workMachines() {
+  const G = CUR || S.grid;
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const c = G[y][x];
+    if (!c) continue;
+    const r = recipeOf(c);
+    if (!r) continue;
+    if (c.out) { c.blocked = true; continue; }
+    c.blocked = false;
+    if (c.work === 0 && r.inp) {
+      let ready = true;
+      for (const k in r.inp) if ((c.buf[k]||0) < r.inp[k]) ready = false;
+      if (!ready) { c.wait = true; continue; }
+      for (const k in r.inp) c.buf[k] -= r.inp[k];
+    }
+    c.wait = false;
+    c.work++;
+    if (c.work >= r.time) { c.work = 0; c.out = { k:r.out }; }
+  }
+}
+function doResearch() {
+  if (!S.rd) return;
+  if (S.done[S.rd.id]) { S.rd = null; return; }     // 이미 있는 걸 기획 중이면 그냥 없앤다 (옛날 버그 뒷정리)
+  S.rd.p += rdSpeed();
+  const p = anyOf(S.rd.id);
+  if (S.rd.p >= p.rd) {
+    const id = S.rd.id;
+    S.rd = null; S.done[id] = true;
+    beep(1300, 0.2, 'square', 0.07);
+    toast((isFood(id) ? '새 음식 완성! 🎉\n' : '새 제품 완성! 🎉\n') + p.ic + ' ' + prodName(id));
+    const nm = prompt((isFood(id) ? '새 음식' : '새 제품') + ' 이름을 지어 줘!\n(그냥 두려면 취소)', prodName(id));
+    if (nm && nm.trim()) S.names[id] = nm.trim().slice(0, 12);
+    // 새로 기획한 건 바로 만들기 목록에 넣어 준다
+    const L = isFood(id) ? S.foods : S.prods;
+    if (L.indexOf(id) < 0) L.push(id);
+    if (isFood(id)) S.food = S.foods[0]; else S.prod = S.prods[0];
+    resetFactories();
+    drawUI(); drawOffice();
+  }
+}
+/* 기계를 눌러 만드는 제품 바꾸기 */
+function cycleProduct(c) {
+  const list = makeList(c);
+  if (list.length <= 1) {
+    toast('📐 기획실에서 제품을 여러 개\n골라 놓으면 바꿀 수 있어!');
+    return;
+  }
+  c.pi = ((c.pi||0) + 1) % list.length;
+  c.work = 0; c.wait = false;
+  beep(760, 0.07, 'square', 0.04);
+  const id = makeIdOf(c);
+  toast(anyOf(id).ic + ' ' + prodName(id) + '\n을(를) 만든다!');
+}
+
+function resetFactories() {
+  for (const k in S.maps) {
+    const g = S.maps[k].grid;
+    for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+      const c = g[y][x];
+      if (c && (B[c.t].mk || B[c.t].mkF)) { c.work = 0; c.wait = false; }
+    }
+  }
+}
+
+/* ===================== 생산 속도 레벨업 ===================== */
+function buySpeed() {
+  if (S.speedLv >= MAXSPD) { toast('생산 속도가\n이미 최고야! ⚡'); return; }
+  const c = speedCost();
+  if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+  S.money -= c; S.speedLv++;
+  beep(1000, 0.13, 'square', 0.06);
+  toast('⚡ 생산 속도 Lv.' + S.speedLv + '!\n공장이 ' + speedMul().toFixed(2) + '배 빨라졌다');
+  drawUI(); drawOffice(); save();
+}
+
+/* ===================== 미션 ===================== */
+function checkMission() {
+  if (S.mi >= MISSIONS.length) return;
+  if (MISSIONS[S.mi].ok()) {
+    const m = MISSIONS[S.mi];
+    S.money += m.gold; S.total += m.gold; S.mi++;
+    toast('미션 성공! 🎉\n+' + won(m.gold) + '원');
+    beep(1200, 0.16, 'square', 0.07);
+    drawUI();
+  }
+}
+let toastTimer = 0;
+function toast(txt) {
+  const el = document.getElementById('toast');
+  el.textContent = txt; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1900);
+}
+
+/* ===================== 짓기 / 부수기 ===================== */
+// 물건을 받아 줄 수 있는 칸인가
+const canReceive = c => !!c && (c.t === 'belt' || c.t === 'seller' || !!B[c.t].mk || !!B[c.t].mkF);
+
+// 그 방향으로 쭉 따라가면 뭘 만나나
+function leadsTo(x, y, dir) {
+  let cx = x, cy = y, d = dir;
+  for (let i = 0; i < 14; i++) {
+    cx += DIRS[d][0]; cy += DIRS[d][1];
+    const c = at(cx, cy);
+    if (!c) return 'none';
+    if (c.t === 'seller') return 'seller';
+    if (B[c.t].mk || B[c.t].mkF) return 'factory';
+    if (c.t === 'belt') { d = c.dir; continue; }
+    return 'none';
+  }
+  return 'none';
+}
+
+// 방향을 알아서 정해 준다 (판매대·조립기 쪽으로)
+function autoDir(x, y) {
+  let best = -1, bestScore = 0;
+  for (let d = 0; d < 4; d++) {
+    const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+    const c = at(nx, ny);
+    let s = 0;
+    if (c) {
+      if (c.t === 'seller') s = 100;
+      else if (B[c.t].mk || B[c.t].mkF) s = 90;
+      else if (c.t === 'belt') {
+        const cd = DIRS[c.dir];
+        if (nx + cd[0] === x && ny + cd[1] === y) s = -50;        // 나를 향한 벨트로는 안 보냄
+        else { const g = leadsTo(x, y, d); s = (g === 'none') ? 30 : 70; }
+      } else s = -100;                                            // 채굴기 등은 못 받는다
+    }
+    const back = at(x - DIRS[d][0], y - DIRS[d][1]);              // 뒤에서 오던 흐름 잇기
+    if (back && back.t === 'belt' && back.dir === d) s += 35;
+    if (s > bestScore) { bestScore = s; best = d; }
+  }
+  return best >= 0 ? best : null;
+}
+
+// 옆에 있는데 아무 데도 못 보내고 있던 기계·벨트를 새로 놓은 칸 쪽으로 돌려준다
+function fixNeighbors(x, y) {
+  if (!canReceive(at(x,y))) return;
+  for (let d = 0; d < 4; d++) {
+    const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+    const c = at(nx, ny);
+    if (!c || c.t === 'seller') continue;
+    const td = DIRS[c.dir];
+    if (canReceive(at(nx + td[0], ny + td[1]))) continue;         // 이미 잘 보내고 있으면 둔다
+    c.dir = (d + 2) % 4;
+  }
+}
+
+let lastPlaced = null;
+
+function place(x, y, dir, auto) {
+  if (!inb(x,y)) return;
+  if (sel === 'erase') { remove(x,y); return; }
+  const d = B[sel], c = S.grid[y][x];
+  if (c) {
+    if (c.t === sel) { if (d.mk || d.mkF) cycleProduct(c); else c.dir = dir; }
+    return;
+  }
+  if (auto) {
+    const ad = autoDir(x, y);
+    if (ad !== null) dir = ad;
+    // 방금 놓은 칸 옆에 이어 놓으면 그 흐름대로 (연달아 클릭해도 드래그처럼)
+    const nowT = performance.now();
+    if (lastPlaced && nowT - lastPlaced.t < 8000) {
+      const dx = x - lastPlaced.x, dy = y - lastPlaced.y;
+      if (Math.abs(dx) + Math.abs(dy) === 1) {
+        const cd = DIRS.findIndex(v => v[0]===dx && v[1]===dy);
+        const prev = at(lastPlaced.x, lastPlaced.y);
+        if (prev && prev.t !== 'seller') prev.dir = cd;
+        const tgt = ad !== null ? at(x + DIRS[ad][0], y + DIRS[ad][1]) : null;
+        dir = (tgt && (tgt.t === 'seller' || B[tgt.t].mk || B[tgt.t].mkF)) ? ad : cd;   // 앞에 판매대·조립기가 있으면 그쪽 우선
+      }
+    }
+  }
+  if (d.lock && S.total < d.lock) { toast('아직 못 지어!\n총수입 ' + won(d.lock) + '원부터'); return; }
+  if (d.land && S.land[y][x] !== d.land) {
+    const where = { iron:'회색 광산', tree:'나무', soil:'갈색 밭', pasture:'풀밭' }[d.land];
+    toast(d.name + '는(은)\n' + where + ' 위에만 놓을 수 있어!'); return;
+  }
+  if (S.money < d.cost) { toast('돈이 모자라!'); return; }
+  S.money -= d.cost;
+  // 조립기·요리기는 놓을 때마다 다른 제품을 맡는다 (여러 개를 한꺼번에 만들 수 있게)
+  const pi = (d.mk || d.mkF) ? cntMap(sel, S.map) : 0;
+  S.grid[y][x] = { t:sel, dir, item:null, out:null, buf:{}, work:0, wait:false, blocked:false, pi };
+  fixNeighbors(x, y);
+  lastPlaced = { x, y, t:performance.now() };
+  beep(sel === 'belt' ? 420 : 560, 0.05, 'square', 0.035);
+  drawUI();
+}
+function remove(x, y) {
+  const c = at(x,y);
+  if (!c) return;
+  S.money += Math.floor(B[c.t].cost / 2);
+  S.grid[y][x] = null;
+  beep(240, 0.06, 'sawtooth', 0.03);
+  drawUI();
+}
+
+/* ===================== 맵 바꾸기 (공장 ↔ 농장) ===================== */
+function switchMap(m) {
+  if (m === S.map) return;
+  if (m === 'farm' && !farmOpen()) { toast('농장은 회사가\n' + FARM_FLOOR + '층이 되면 열려!'); return; }
+  S.map = m;
+  S.land = S.maps[m].land; S.grid = S.maps[m].grid;
+  curMapKey = m;
+  sel = 'belt'; lastPlaced = null; pops = [];
+  buildPanels(); drawUI();
+  beep(700, 0.1, 'square', 0.05);
+  toast(m === 'farm' ? '🌾 농장에 왔다!\n밭에 농사기계를 놔 봐' : '🏭 공장에 왔다!');
+  save();
+}
+
+/* ===================== 공장 그리기 ===================== */
+function resize() {
+  const st = document.getElementById('stage');
+  const availW = st.clientWidth - 16, availH = st.clientHeight - 40;
+  TS = Math.max(20, Math.min(54, Math.floor(Math.min(availW / W, availH / H))));
+  cv.width = TS * W; cv.height = TS * H;
+}
+function rrectC(c2, x, y, w, h, r) {
+  c2.beginPath();
+  c2.moveTo(x+r, y);
+  c2.arcTo(x+w, y, x+w, y+h, r);
+  c2.arcTo(x+w, y+h, x, y+h, r);
+  c2.arcTo(x, y+h, x, y, r);
+  c2.arcTo(x, y, x+w, y, r);
+  c2.closePath();
+}
+const rrect = (x,y,w,h,r) => rrectC(ctx, x, y, w, h, r);
+function iconC(c2, txt, cx, cy, size) {
+  c2.font = size + 'px "Segoe UI Emoji","맑은 고딕",sans-serif';
+  c2.textAlign = 'center'; c2.textBaseline = 'middle';
+  c2.fillText(txt, cx, cy);
+}
+const icon = (t,x,y,s) => iconC(ctx, t, x, y, s);
+
+function draw() {
+  const now = performance.now();
+  const p = paused ? 0 : Math.min(1, (now - lastStep) / stepMs());
+
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const L = S.land[y][x], px = x*TS, py = y*TS;
+    ctx.fillStyle = ((x+y)&1) ? '#33562f' : '#2f4f2c';
+    if (L === 'iron') ctx.fillStyle = ((x+y)&1) ? '#6b7079' : '#63686f';
+    if (L === 'tree') ctx.fillStyle = ((x+y)&1) ? '#20401f' : '#1d3a1c';
+    if (L === 'soil') ctx.fillStyle = ((x+y)&1) ? '#7a5535' : '#6e4c2f';
+    if (L === 'pasture') ctx.fillStyle = ((x+y)&1) ? '#4a7f3a' : '#437636';
+    ctx.fillRect(px, py, TS, TS);
+    if (L === 'soil') {                       // 밭 — 고랑
+      ctx.strokeStyle = '#00000033'; ctx.lineWidth = Math.max(1, TS*0.05);
+      for (let r=1; r<=3; r++) {
+        ctx.beginPath(); ctx.moveTo(px+2, py+TS*r/4); ctx.lineTo(px+TS-2, py+TS*r/4); ctx.stroke();
+      }
+      ctx.fillStyle = '#9a7a45';
+      ctx.fillRect(px+TS*0.2, py+TS*0.12, TS*0.08, TS*0.1);
+      ctx.fillRect(px+TS*0.66, py+TS*0.62, TS*0.08, TS*0.1);
+    } else if (L === 'pasture') {             // 풀밭 — 풀과 꽃
+      ctx.fillStyle = '#5f9a4a';
+      for (let g=0; g<3; g++) ctx.fillRect(px+TS*(0.2+g*0.27), py+TS*0.6, TS*0.06, TS*0.18);
+      ctx.fillStyle = '#ffe27a';
+      ctx.beginPath(); ctx.arc(px+TS*0.72, py+TS*0.3, TS*0.06, 0, 7); ctx.fill();
+    }
+    if (L === 'iron') {
+      ctx.fillStyle = '#8d939c';
+      ctx.beginPath(); ctx.arc(px+TS*0.34, py+TS*0.36, TS*0.11, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(px+TS*0.66, py+TS*0.62, TS*0.09, 0, 7); ctx.fill();
+    } else if (L === 'tree') {
+      ctx.fillStyle = '#2f6b2c';
+      ctx.beginPath();
+      ctx.moveTo(px+TS*0.5, py+TS*0.18); ctx.lineTo(px+TS*0.78, py+TS*0.72); ctx.lineTo(px+TS*0.22, py+TS*0.72);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5a3a1e'; ctx.fillRect(px+TS*0.45, py+TS*0.7, TS*0.1, TS*0.14);
+    }
+  }
+  ctx.strokeStyle = '#00000022'; ctx.lineWidth = 1;
+  for (let x=0; x<=W; x++) { ctx.beginPath(); ctx.moveTo(x*TS+.5, 0); ctx.lineTo(x*TS+.5, H*TS); ctx.stroke(); }
+  for (let y=0; y<=H; y++) { ctx.beginPath(); ctx.moveTo(0, y*TS+.5); ctx.lineTo(W*TS, y*TS+.5); ctx.stroke(); }
+
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const c = S.grid[y][x];
+    if (!c) continue;
+    if (c.t === 'belt') drawBelt(c, x*TS, y*TS, p); else drawMachine(c, x, y);
+  }
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const c = S.grid[y][x];
+    if (!c || c.t !== 'belt' || !c.item) continue;
+    const it = c.item;
+    const fx = (it.fx === undefined) ? x : it.fx, fy = (it.fy === undefined) ? y : it.fy;
+    drawItem((fx + (x-fx)*p)*TS + TS/2, (fy + (y-fy)*p)*TS + TS/2, it.k);
+  }
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+    const c = S.grid[y][x];
+    if (!c || !c.out) continue;
+    const od = outDir(x, y, c, c.out.k);
+    const d = od >= 0 ? DIRS[od] : [0,0];
+    drawItem(x*TS + TS/2 + d[0]*TS*0.28, y*TS + TS/2 + d[1]*TS*0.28, c.out.k);
+  }
+
+  if (mouseTile && !dragging && !officeOpen) {
+    const [mx, my] = mouseTile, px = mx*TS, py = my*TS, d = B[sel];
+    let ok = true;
+    if (sel !== 'erase') {
+      if (S.grid[my][mx] && S.grid[my][mx].t !== sel) ok = false;
+      if (d.land && S.land[my][mx] !== d.land) ok = false;
+      if (S.money < d.cost) ok = false;
+      if (d.lock && S.total < d.lock) ok = false;
+    }
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = ok ? '#ffffff' : '#ff5a5a';
+    ctx.fillRect(px+2, py+2, TS-4, TS-4);
+    ctx.globalAlpha = 0.9;
+    icon(sel === 'erase' ? '🧹' : (sel === 'belt' ? DIRCH[S.dir] : B[sel].ic), px+TS/2, py+TS/2, TS*0.55);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.strokeRect(px+1.5, py+1.5, TS-3, TS-3);
+  }
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = pops.length-1; i >= 0; i--) {
+    const q = pops[i], age = (now - q.born) / 950;
+    if (age >= 1) { pops.splice(i,1); continue; }
+    if (q.map && q.map !== S.map) continue;
+    ctx.globalAlpha = 1 - age;
+    ctx.font = 'bold ' + Math.round(TS*0.42) + 'px "맑은 고딕",sans-serif';
+    ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = '#00000099'; ctx.lineWidth = 3;
+    const tx = q.x*TS + TS/2, ty = q.y*TS + TS/2 - age*TS*1.1;
+    ctx.strokeText(q.txt, tx, ty); ctx.fillText(q.txt, tx, ty);
+    ctx.globalAlpha = 1;
+  }
+  if (paused) {
+    ctx.fillStyle = '#0007'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 34px "맑은 고딕",sans-serif';
+    ctx.fillText('⏸ 멈춤 (스페이스)', cv.width/2, cv.height/2);
+  }
+}
+function drawBelt(c, px, py, p) {
+  ctx.fillStyle = '#3c4250'; ctx.fillRect(px+1, py+1, TS-2, TS-2);
+  ctx.fillStyle = '#5c6474'; ctx.fillRect(px+2, py+2, TS-4, TS-4);
+  const d = DIRS[c.dir], cx = px+TS/2, cy = py+TS/2;
+  ctx.strokeStyle = '#98a3b5'; ctx.lineWidth = Math.max(2, TS*0.07); ctx.lineCap = 'round';
+  for (let i=0; i<2; i++) {
+    const off = ((p + i*0.5) % 1 - 0.5) * TS;
+    const ax = cx + d[0]*off, ay = cy + d[1]*off, s = TS*0.17;
+    ctx.beginPath();
+    ctx.moveTo(ax - d[0]*s + d[1]*s, ay - d[1]*s + d[0]*s);
+    ctx.lineTo(ax + d[0]*s*0.6, ay + d[1]*s*0.6);
+    ctx.lineTo(ax - d[0]*s - d[1]*s, ay - d[1]*s - d[0]*s);
+    ctx.stroke();
+  }
+}
+function drawMachine(c, gx, gy) {
+  const px = gx*TS, py = gy*TS;
+  const d = B[c.t], r = recipeOf(c);
+  ctx.fillStyle = '#00000055'; rrect(px+2, py+4, TS-4, TS-4, TS*0.18); ctx.fill();
+  ctx.fillStyle = d.col;       rrect(px+2, py+2, TS-4, TS-4, TS*0.18); ctx.fill();
+  ctx.strokeStyle = '#00000066'; ctx.lineWidth = 2; rrect(px+2, py+2, TS-4, TS-4, TS*0.18); ctx.stroke();
+  if (d.mk || d.mkF) {
+    icon(IT[r.out].ic, px+TS/2, py+TS*0.44, TS*0.46);
+    icon(d.mkF ? '🍳' : '🔧', px+TS*0.78, py+TS*0.76, TS*0.2);
+  } else {
+    icon(d.ic, px+TS/2, py+TS*0.46, TS*0.5);
+  }
+  // 물건이 실제로 나가는 쪽에 화살표 (앞·옆·뒤 어디든 붙어 있으면 그쪽으로)
+  if (r) {
+    const od = outDir(gx, gy, c, r.out);
+    if (od >= 0) {
+      const dd = DIRS[od];
+      const ax = px+TS/2 + dd[0]*TS*0.4, ay = py+TS/2 + dd[1]*TS*0.4;
+      ctx.fillStyle = '#ffe27a';
+      ctx.beginPath();
+      ctx.moveTo(ax + dd[0]*TS*0.08, ay + dd[1]*TS*0.08);
+      ctx.lineTo(ax - dd[0]*TS*0.06 + dd[1]*TS*0.1, ay - dd[1]*TS*0.06 + dd[0]*TS*0.1);
+      ctx.lineTo(ax - dd[0]*TS*0.06 - dd[1]*TS*0.1, ay - dd[1]*TS*0.06 - dd[0]*TS*0.1);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  if (r) {
+    ctx.fillStyle = '#00000066'; ctx.fillRect(px+5, py+TS-9, TS-10, 5);
+    ctx.fillStyle = '#7fd6a0';   ctx.fillRect(px+5, py+TS-9, (TS-10)*(c.work / r.time), 5);
+    if (c.blocked || c.wait) {
+      ctx.fillStyle = c.blocked ? '#ff6a6a' : '#ffd94a';
+      ctx.beginPath(); ctx.arc(px+TS-8, py+8, TS*0.075, 0, 7); ctx.fill();
+    }
+  }
+  if (r && r.inp) {
+    let i = 0;
+    ctx.font = 'bold ' + Math.round(TS*0.2) + 'px "맑은 고딕",sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    for (const k in r.inp) {
+      ctx.fillStyle = IT[k].col; ctx.fillRect(px+4, py+4 + i*TS*0.22, TS*0.12, TS*0.16);
+      ctx.fillStyle = '#fff';    ctx.fillText((c.buf[k]||0) + '/' + r.inp[k], px+4+TS*0.15, py+3 + i*TS*0.22);
+      i++;
+    }
+  }
+}
+function drawItem(cx, cy, k) {
+  const it = IT[k];
+  ctx.fillStyle = '#00000055'; ctx.beginPath(); ctx.arc(cx, cy+2, TS*0.2, 0, 7); ctx.fill();
+  ctx.fillStyle = it.col;      ctx.beginPath(); ctx.arc(cx, cy, TS*0.2, 0, 7); ctx.fill();
+  icon(it.ic, cx, cy, TS*0.26);
+}
+
+/* ===================== 회사 건물 그리기 (단면도) ===================== */
+let floorRects = [], growRect = null, personS = 1;
+const lerp = (a,b,u) => a + (b-a)*u;
+
+/* 일반 직원은 층마다 있는 사무실 칸에 골고루 들어간다 (한 층에 15명까지) */
+const NORMCOL = '#5f7a9a', PERFLOOR = 15;
+function normOn(idx, n) {                       // idx번째 층에 몇 명?
+  const tot = S.staff.norm;
+  if (!tot || n < 1) return 0;
+  const per = Math.floor(tot / n), extra = tot % n;
+  return per + (idx < extra ? 1 : 0);
+}
+
+/* 그 층에 있는 사람들 */
+function peopleOn(f, idx, n) {
+  const P = [];
+  if (f.staff) {
+    for (let i=0; i<Math.min(S.staff[f.staff], 8); i++) P.push({ col:f.col });
+  } else if (f.id === 'lobby') {
+    P.push({ col:'#4a5f8a' });
+    P.push({ col:'#8a7a6a', stay:true });
+    if (S.lv >= 3) P.push({ col:'#6a8a7a', stay:true });
+  } else if (f.id === 'plan')   P.push({ col:'#6a4a8a', boss:true });
+  else if (f.id === 'cafe')   { for (let i=0; i<Math.min(3, staffTotal()); i++) P.push({ col:'#6a7a3a' }); }
+  else if (f.id === 'garden') { for (let i=0; i<Math.min(2, staffTotal()); i++) P.push({ col:'#3f8a4a', stay:true }); }
+  else if (f.id === 'ceo')    P.push({ col:'#8a7a3a', boss:true, crown:true });
+  // 사무실 칸에서 일하는 일반 직원 (창고 층엔 없다)
+  if (f.id !== 'ware' && f.gen !== 'ware') {
+    const v = Math.min(normOn(idx, n), PERFLOOR - P.length);
+    for (let i=0; i<v; i++) P.push({ col:NORMCOL, office:true });
+  }
+  return P.slice(0, PERFLOOR);
+}
+
+/* 사무실 안을 직접 그린다 (이모티콘 없이) */
+function drawMiniMonitor(cx, cy, s) {
+  s = s || 1;
+  bx.fillStyle = '#2b3242'; rrectC(bx, cx-6*s, cy-5*s, 12*s, 9*s, 1.5*s); bx.fill();
+  bx.fillStyle = '#7fd6ff'; bx.fillRect(cx-4.6*s, cy-3.6*s, 9.2*s, 6.2*s);
+  bx.fillStyle = '#2b3242'; bx.fillRect(cx-1.5*s, cy+4*s, 3*s, 2*s);
+  bx.fillRect(cx-3.5*s, cy+5.5*s, 7*s, 1.5*s);
+}
+
+/* 컴퓨터 책상 한 세트 (책상 + 모니터 + 키보드 + 의자) */
+function drawDesk(dx, floorY, u, q, t) {
+  // 의자 (옆에서 본 모습)
+  bx.fillStyle = '#3a4a5f';
+  bx.fillRect(dx + 13, floorY - 15*u, 3, 13*u);            // 등받이
+  bx.fillRect(dx + 8,  floorY - 8*u,  9, 2.5);             // 앉는 곳
+  bx.fillRect(dx + 11, floorY - 6*u,  2, 6*u);             // 기둥
+  bx.fillRect(dx + 8,  floorY - 1,    9, 1.5);             // 바퀴
+  // 책상
+  bx.fillStyle = '#a8834f'; bx.fillRect(dx - 14, floorY - 14*u, 27, 3);
+  bx.fillStyle = '#7a5f38'; bx.fillRect(dx - 13, floorY - 11*u, 2, 11*u);
+  bx.fillRect(dx + 10, floorY - 11*u, 2, 11*u);
+  bx.fillStyle = '#8a6a45'; bx.fillRect(dx - 12, floorY - 9*u, 9, 8*u);   // 서랍
+  bx.fillStyle = '#cfd7e0'; bx.fillRect(dx - 10, floorY - 7*u, 5, 1);
+  // 모니터
+  const my = floorY - 14*u - 12*u;
+  bx.fillStyle = '#232a36'; rrectC(bx, dx - 8, my, 16, 12*u, 2); bx.fill();
+  const on = ((q + Math.floor(t * 0.7)) % 4) !== 3;                        // 가끔 화면이 바뀐다
+  bx.fillStyle = on ? '#6fc8ff' : '#4a7fa8';
+  bx.fillRect(dx - 6.5, my + 1.5, 13, 12*u - 3);
+  bx.fillStyle = '#ffffffaa';
+  for (let ln = 0; ln < 3; ln++) {
+    const ly = my + 3 + ln * ((12*u - 6) / 3);
+    if (ly > my + 12*u - 3) break;
+    bx.fillRect(dx - 5, ly, (ln === 1 ? 7 : 10), 1);
+  }
+  bx.fillStyle = '#232a36';
+  bx.fillRect(dx - 1.5, my + 12*u, 3, 2.5*u);
+  bx.fillRect(dx - 4, my + 14*u, 8, 1.5);
+  // 키보드 + 마우스
+  bx.fillStyle = '#d5dce6'; bx.fillRect(dx - 7, floorY - 15*u, 12, 2);
+  bx.fillStyle = '#b9c2cf'; bx.fillRect(dx + 6, floorY - 15*u, 3, 2);
+  // 커피컵
+  if (u > 0.8 && q % 2 === 0) {
+    bx.fillStyle = '#e8ecf2'; bx.fillRect(dx - 12, floorY - 18*u, 4, 4);
+    bx.fillStyle = '#7a4a2a'; bx.fillRect(dx - 11.5, floorY - 18*u, 3, 1);
+  }
+}
+
+function drawOfficeRoom(L, R, fy, fh, floorY, lv, full) {
+  const u = Math.min(1, Math.max(0.55, (fh - 20) / 36));   // 층이 얇으면 가구도 작게
+  const t = performance.now() / 1000;
+
+  // 벽지 줄무늬 + 걸레받이 + 카펫 (이름표 아래쪽만)
+  bx.fillStyle = '#00000018';
+  for (let wx = L + 6; wx < R - 4; wx += 14) bx.fillRect(wx, fy + 21, 1, fh - 27);
+  bx.fillStyle = '#59637a'; bx.fillRect(L, floorY - 3, R - L, 3);
+  bx.fillStyle = '#3f4d63'; bx.fillRect(L + 4, floorY - 2, R - L - 8, 2);
+
+  if (!full) {                       // 부서 층의 사무실 칸 — 책상만 쭉
+    for (let q = 0; ; q++) {
+      const dx = L + 20 + q * 32;
+      if (dx + 18 > R) break;
+      drawDesk(dx, floorY, u, q, t);
+    }
+    return;
+  }
+
+  // 책장 (책 꽂혀 있음)
+  const bsX = L + 8, bsH = 30*u, bsW = 17;
+  bx.fillStyle = '#5f4630'; bx.fillRect(bsX, floorY - bsH, bsW, bsH);
+  bx.fillStyle = '#3d2c1c'; bx.fillRect(bsX + 1, floorY - bsH + 1, bsW - 2, bsH - 2);
+  const bookCol = ['#c05a4a','#4a80c0','#c0a54a','#5ac07a','#a45ac0'];
+  for (let sh = 0; sh < 3; sh++) {
+    const sy = floorY - bsH + 2 + sh * ((bsH - 3) / 3);
+    const bh = (bsH - 4) / 3 - 1;
+    if (bh < 3) break;
+    for (let b = 0; b < 5; b++) {
+      bx.fillStyle = bookCol[(sh*5 + b*3) % 5];
+      bx.fillRect(bsX + 2 + b*3, sy, 2.2, bh);
+    }
+    bx.fillStyle = '#5f4630'; bx.fillRect(bsX + 1, sy + bh, bsW - 2, 1);
+  }
+
+  // 컴퓨터 책상 (컴퓨터 시설 ★ 만큼 늘어난다)
+  for (let q = 0; q < 1 + lv; q++) {
+    const dx = L + 44 + q * 32;
+    if (dx + 20 > R - 26) break;
+    drawDesk(dx, floorY, u, q, t);
+  }
+
+  // 프린터 (종이가 나온다)
+  const pX = R - 22;
+  bx.fillStyle = '#7a828f'; rrectC(bx, pX - 9, floorY - 16*u, 18, 11*u, 2); bx.fill();
+  bx.fillStyle = '#5a626f'; bx.fillRect(pX - 7, floorY - 16*u + 2, 14, 3);
+  bx.fillStyle = '#f2f4f7';
+  bx.fillRect(pX - 5, floorY - 16*u - 3 - Math.abs(Math.sin(t*1.3))*3, 10, 5);
+  bx.fillStyle = '#6a7280'; bx.fillRect(pX - 8, floorY - 5*u, 16, 5*u);
+
+  // 화분
+  const gX = R - 42;
+  bx.fillStyle = '#3f8a4a';
+  for (let lf = 0; lf < 3; lf++) {
+    bx.beginPath();
+    bx.ellipse(gX + (lf-1)*4, floorY - 12*u - lf*2, 3.5, 6*u, (lf-1)*0.5, 0, 7);
+    bx.fill();
+  }
+  bx.fillStyle = '#b0663f'; bx.fillRect(gX - 5, floorY - 7*u, 10, 7*u);
+  bx.fillStyle = '#8a4e2f'; bx.fillRect(gX - 6, floorY - 8*u, 12, 2);
+}
+
+/* 사람 한 명 그리기 (발이 baseY) */
+function drawPerson(px, baseY, col, moving, opt) {
+  const s = personS, t = performance.now()/1000;
+  const sw = moving ? Math.sin(t*7 + px*0.4) * 2.6 * s : 0;
+  bx.strokeStyle = '#2a3040'; bx.lineWidth = 2.2*s; bx.lineCap = 'round';
+  bx.beginPath(); bx.moveTo(px-1.7*s, baseY-8*s);  bx.lineTo(px-1.7*s-sw, baseY-0.5); bx.stroke();
+  bx.beginPath(); bx.moveTo(px+1.7*s, baseY-8*s);  bx.lineTo(px+1.7*s+sw, baseY-0.5); bx.stroke();
+  bx.strokeStyle = col; bx.lineWidth = 2.1*s;
+  bx.beginPath(); bx.moveTo(px-4.4*s, baseY-15*s); bx.lineTo(px-6.6*s, baseY-9*s+sw*0.4); bx.stroke();
+  bx.beginPath(); bx.moveTo(px+4.4*s, baseY-15*s); bx.lineTo(px+6.6*s, baseY-9*s-sw*0.4); bx.stroke();
+  bx.fillStyle = col; rrectC(bx, px-4.6*s, baseY-17*s, 9.2*s, 10*s, 2.4*s); bx.fill();
+  bx.fillStyle = '#ffd9b0'; bx.beginPath(); bx.arc(px, baseY-21*s, 4.3*s, 0, 7); bx.fill();
+  bx.fillStyle = (opt && opt.boss) ? '#5f4a33' : '#33281c';
+  bx.beginPath(); bx.arc(px, baseY-21.4*s, 4.3*s, Math.PI, 0); bx.fill();
+  bx.fillStyle = '#2b2b2b';
+  bx.fillRect(px-2.1*s, baseY-21.6*s, 1.4*s, 1.4*s);
+  bx.fillRect(px+0.8*s, baseY-21.6*s, 1.4*s, 1.4*s);
+  if (opt && opt.crown) iconC(bx, '👑', px, baseY-28*s, 10*s);
+}
+
+let bScroll = 0;                       // 맨 아래에 보이는 층 (0부터)
+let bScale = 1, bVis = 8;              // 건물을 몇 배로 크게 그리는지 / 한 화면에 보이는 층 수
+function maxScroll(vis) { return Math.max(0, S.lv - vis); }
+function scrollTo(floorNum1) {         // 그 층이 보이게 스크롤
+  bScroll = Math.max(0, Math.min(maxScroll(bVis), floorNum1 - Math.ceil(bVis/2)));
+}
+
+function drawBuilding() {
+  const n = S.lv;
+  const bodyW = 356 + S.wide*52;
+  const fh = 56;
+  personS = 1;
+  const canGrow = S.lv < MAXLV;
+  // 캔버스를 화면(패널 뺀 자리)에 꽉 차게
+  const box = bcv.parentElement;
+  const wantW = Math.max(300, box.clientWidth), wantH = Math.max(260, box.clientHeight);
+  if (bcv.width !== wantW || bcv.height !== wantH) { bcv.width = wantW; bcv.height = wantH; }
+  // 건물이 자리에 꽉 차도록 확대해서 그린다 (단, 한 번에 7층쯤은 보이게)
+  const scW = wantW / (bodyW + 24);
+  const scH = wantH / (fh * Math.min(n, 7) + 96);
+  bScale = Math.max(1, Math.min(4, scW, scH));
+  const sc = bScale;
+  const cw = wantW / sc, ch = wantH / sc;      // 확대 전 좌표계 크기
+  const now = performance.now(), t = now/1000;
+  bx.setTransform(1, 0, 0, 1, 0, 0);
+  bx.clearRect(0, 0, wantW, wantH);
+  bx.setTransform(sc, 0, 0, sc, 0, 0);
+
+  const vis = Math.max(3, Math.floor((ch - 92) / fh));
+  bVis = vis;
+  bScroll = Math.max(0, Math.min(maxScroll(vis), bScroll));
+  const first = bScroll, last = Math.min(n, first + vis);      // 보이는 층 (1-based로 first+1 ~ last)
+  const atBottom = first === 0, atTop = last === n;
+
+  const sky = bx.createLinearGradient(0, 0, 0, ch);
+  sky.addColorStop(0, '#121a2c'); sky.addColorStop(1, '#2b3a52');
+  bx.fillStyle = sky; bx.fillRect(0, 0, cw, ch);
+  // 구름·별 (높이 올라가면 하늘이 예뻐진다)
+  bx.fillStyle = '#ffffff22';
+  for (let s2=0; s2<14; s2++) {
+    const sx = ((s2*97 + first*31) % cw), sy = ((s2*53) % (ch-60));
+    bx.fillRect(sx, sy, 2, 2);
+  }
+
+  const groundY = atBottom ? ch - 46 : ch - 6;
+  if (atBottom) {
+    bx.fillStyle = '#3a4a35'; bx.fillRect(0, ch-46, cw, 46);
+    bx.fillStyle = '#4a4a52'; bx.fillRect(0, ch-30, cw, 30);
+    bx.fillStyle = '#6a6a72';
+    for (let x=10; x<cw; x+=40) bx.fillRect(x, ch-16, 20, 3);
+  }
+
+  const x0 = (cw - bodyW)/2;
+  const shown = last - first;
+  const topY = groundY - shown*fh;
+
+  // 증축 자리(점선) — 꼭대기가 보일 때만
+  growRect = null;
+  if (canGrow && atTop) {
+    const gy = topY - 42;
+    bx.setLineDash([7, 6]); bx.strokeStyle = '#f0a13a'; bx.lineWidth = 2;
+    bx.strokeRect(x0+6, gy, bodyW-12, 36);
+    bx.setLineDash([]);
+    bx.fillStyle = '#f0a13a';
+    bx.font = 'bold 15px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    bx.fillText('＋ ' + (n+1) + '층 증축하기', x0 + bodyW/2, gy + 18);
+    growRect = { x:x0+6, y:gy, w:bodyW-12, h:36 };
+  }
+  // 간판 — 꼭대기가 보일 때만
+  if (atTop) {
+    const signY = topY - (canGrow ? 82 : 40);
+    bx.fillStyle = '#f0a13a'; rrectC(bx, x0+20, signY, bodyW-40, 30, 8); bx.fill();
+    bx.fillStyle = '#241a06';
+    bx.font = 'bold 19px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    bx.fillText((S.co || '우리회사') + ' 🏢', x0 + bodyW/2, signY + 16);
+    bx.fillStyle = '#2b3242'; bx.fillRect(x0-8, topY-10, bodyW+16, 10);
+  } else {
+    // 위로 더 있다는 표시
+    bx.fillStyle = '#2b3242'; bx.fillRect(x0-4, topY-8, bodyW+8, 8);
+    bx.fillStyle = '#f0a13a'; bx.font = 'bold 13px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    bx.fillText('▲ 위로 ' + (n - last) + '층 더 (마우스 휠)', x0 + bodyW/2, topY - 20);
+  }
+
+  // 엘리베이터 통로
+  const EL = 30;
+  bx.fillStyle = '#20252f'; bx.fillRect(x0, topY, EL, shown*fh);
+
+  floorRects = [];
+  for (let vi = 0; vi < shown; vi++) {
+    const i = first + vi;                 // 0-based 층 번호
+    const fy = groundY - (vi+1)*fh;
+    drawOneFloor(floorAt(i+1), i, fy, x0, bodyW, fh, t);
+    floorRects.push({ id:floorAt(i+1).id, x:x0, y:fy, w:bodyW, h:fh });
+  }
+
+  // 엘리베이터 칸 (위아래로 움직인다)
+  const elX = x0;
+  const carF = (Math.sin(t*0.22) * 0.5 + 0.5) * Math.max(0, shown-1);
+  const carY = groundY - (carF+1)*fh;
+  bx.strokeStyle = '#4a5060'; bx.lineWidth = 1;
+  bx.beginPath(); bx.moveTo(elX+EL/2, topY); bx.lineTo(elX+EL/2, carY); bx.stroke();
+  bx.fillStyle = '#5c6474'; bx.fillRect(elX+3, carY+4, EL-6, fh-9);
+  bx.fillStyle = '#20252f'; bx.fillRect(elX+5, carY+6, EL-10, fh-13);
+  if (Math.sin(t*0.22) > 0) drawPerson(elX+EL/2, carY+fh-7, '#7a8296', false, {});
+
+  // 아래로 더 있다는 표시 (건물 위에 겹쳐 그린다)
+  if (!atBottom) {
+    bx.fillStyle = '#0b0d12cc'; rrectC(bx, x0 + bodyW/2 - 80, ch - 26, 160, 20, 10); bx.fill();
+    bx.fillStyle = '#f0a13a'; bx.font = 'bold 13px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    bx.fillText('▼ 아래로 ' + first + '층 더', x0 + bodyW/2, ch - 16);
+  }
+
+  // 1층 정문
+  if (atBottom) {
+    bx.fillStyle = '#f0a13a'; bx.fillRect(x0 + bodyW*0.42, groundY-26, 30, 26);
+    bx.fillStyle = '#241a06';
+    bx.fillRect(x0 + bodyW*0.42+3, groundY-22, 10, 22);
+    bx.fillRect(x0 + bodyW*0.42+16, groundY-22, 10, 22);
+  }
+  bx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* 층 하나 그리기 (건물에서도, 확대해서 볼 때도 이 함수를 쓴다) */
+function drawOneFloor(f, i, fy, x0, bodyW, fh, t) {
+    const EL = 30, wcW = 52 + S.wide*4, meetW = 92 + S.wide*10;
+    const elX = x0, roomL = x0 + EL, meetL = x0 + bodyW - wcW - meetW, wcL = x0 + bodyW - wcW;
+    const on = selFloor === f.id;
+    const floorY = fy + fh - 5;          // 바닥 윗면 (사람 발 높이)
+    const lv = F(f.id), n = S.lv;
+
+    bx.fillStyle = on ? '#4c4636' : '#414a5e'; bx.fillRect(roomL, fy, meetL-roomL, fh);   // 부서 방
+    bx.fillStyle = on ? '#454031' : '#3a4356'; bx.fillRect(meetL, fy, meetW, fh);          // 회의실
+    bx.fillStyle = on ? '#414734' : '#374a52'; bx.fillRect(wcL, fy, wcW, fh);              // 화장실
+    // 바닥
+    bx.fillStyle = '#2a3040'; bx.fillRect(x0, fy+fh-5, bodyW, 5);
+    // 방 사이 벽
+    bx.fillStyle = '#2a3040';
+    bx.fillRect(meetL-2, fy, 2, fh); bx.fillRect(wcL-2, fy, 2, fh); bx.fillRect(roomL-2, fy, 2, fh);
+    // 부서 색 띠
+    bx.fillStyle = f.col; bx.fillRect(roomL, fy, 5, fh-5);
+
+    // 이름 + 시설 별
+    bx.textAlign = 'left'; bx.textBaseline = 'middle';
+    if (f.id === 'office') drawMiniMonitor(roomL+17, fy+11, 1);   // 사무실은 이모티콘 대신 작은 모니터
+    else iconC(bx, f.ic, roomL+17, fy+13, 15);
+    bx.textAlign = 'left'; bx.textBaseline = 'middle';
+    bx.fillStyle = '#e8ecf2'; bx.font = 'bold 12px "맑은 고딕",sans-serif';
+    const nameW = bx.measureText(f.name).width;
+    bx.fillText(f.name, roomL+29, fy+13);
+    bx.fillStyle = '#ffd479'; bx.font = '10px "맑은 고딕",sans-serif';
+    bx.fillText('★'.repeat(lv) + '☆'.repeat(MAXFAC-lv), roomL+35 + nameW, fy+14);
+
+    // 기획실 화이트보드 (지금 만드는 제품 / 기획 중인 제품)
+    if (f.id === 'plan') {
+      const bw = 54, bxx = meetL - bw - 10;
+      bx.fillStyle = '#e8ecf2'; rrectC(bx, bxx, fy+8, bw, fh-22, 3); bx.fill();
+      const pl = S.prods.length ? S.prods : ['ntoy'];
+      const pp = S.rd ? anyOf(S.rd.id) : anyOf(pl[Math.floor(t/2) % pl.length]);
+      iconC(bx, pp.ic, bxx+bw/2, fy+8+(fh-22)/2 - 3, Math.min(20, fh*0.36));
+      bx.fillStyle = '#2b3242'; bx.font = 'bold 9px "맑은 고딕",sans-serif';
+      bx.textAlign = 'center'; bx.textBaseline = 'middle';
+      bx.fillText(S.rd ? (Math.min(99, Math.floor(S.rd.p / pp.rd * 100)) + '%') : '생산중', bxx+bw/2, fy+fh-20);
+      bx.textAlign = 'left';
+    }
+    // 이 층에도 사무실 칸이 있나? (창고 층만 없다)
+    const isWare = f.id === 'ware' || f.gen === 'ware';
+    const officeL = (f.id === 'office') ? roomL + 5 : roomL + Math.round((meetL - roomL) * 0.5);
+    const hasOff = !isWare;
+
+    // 방 안 물건 (사무실 칸 왼쪽에만)
+    const propR = hasOff ? officeL - 6 : meetL;
+    const props = ROOM[f.id] || (f.gen ? GENPROPS[f.gen] : (f.biz ? [f.biz.ic, (S.biz[f.biz.id] ? '💰' : '🚧'), '📋'] : []));
+    for (let q = 0; q < props.length; q++) {
+      const qx = roomL + 22 + q*30;
+      if (qx > propR - 12) break;
+      iconC(bx, props[q], qx, floorY - 11, Math.min(19, fh*0.34));
+    }
+    // 창고는 시설만큼 상자가 더 쌓인다
+    if (isWare) for (let q = 0; q < lv; q++) iconC(bx, '📦', roomL + 110 + q*18, floorY - 10, 15);
+    // 해외사업부: 지사를 세운 나라의 깃발이 걸린다
+    if (f.id === 'branch') {
+      let q = 0;
+      for (const c of COUNTRY) {
+        if (!S.br[c.id]) continue;
+        const fx2 = roomL + 20 + q*17;
+        if (fx2 > propR - 14) break;
+        bx.strokeStyle = '#8a939f'; bx.lineWidth = 1;
+        bx.beginPath(); bx.moveTo(fx2, fy+22); bx.lineTo(fx2, floorY-4); bx.stroke();
+        bx.fillStyle = c.f1; bx.fillRect(fx2, fy+24, 13, 9);
+        bx.fillStyle = c.f2;
+        if (c.dot === 1) { bx.beginPath(); bx.arc(fx2+6.5, fy+28.5, 3, 0, 7); bx.fill(); }
+        else if (c.dot === 2) { bx.fillRect(fx2, fy+30, 13, 3); }
+        else if (c.dot === 3) { bx.fillRect(fx2, fy+24, 6, 4); }
+        else bx.fillRect(fx2, fy+27, 13, 3);
+        q++;
+      }
+      if (!q) {
+        bx.fillStyle = '#8894ab'; bx.font = '10px "맑은 고딕",sans-serif';
+        bx.textAlign = 'left'; bx.textBaseline = 'middle';
+        bx.fillText('아직 지사가 없어', roomL+20, fy+30);
+      }
+    }
+    // 사무실 칸 — 층마다 절반쯤 (이모티콘 없이 직접 그린다)
+    if (f.id === 'office') drawOfficeRoom(roomL + 5, meetL - 2, fy, fh, floorY, lv, true);
+    else if (hasOff) {
+      bx.fillStyle = on ? '#48453a' : '#3d4757';                 // 사무실 칸 바닥색
+      bx.fillRect(officeL, fy+1, meetL - officeL - 1, fh-6);
+      bx.fillStyle = '#2a3040'; bx.fillRect(officeL-2, fy+18, 2, fh-23);   // 칸막이
+      drawOfficeRoom(officeL, meetL - 2, fy, fh, floorY, 0, false);
+      bx.fillStyle = '#9fb0c9'; bx.font = 'bold 9px "맑은 고딕",sans-serif';
+      bx.textAlign = 'left'; bx.textBaseline = 'middle';
+      bx.fillText('사무실', officeL + 4, fy + 24);
+    }
+
+    // 회의실 (탁자 + 안내판)
+    bx.fillStyle = '#8a6a45'; rrectC(bx, meetL+16, floorY-13, meetW-32, 5, 2); bx.fill();
+    bx.fillStyle = '#6a5236'; bx.fillRect(meetL+meetW/2-2, floorY-9, 4, 9);
+    bx.fillStyle = '#cfd7e0'; bx.fillRect(meetL+10, fy+8, meetW-20, 13);
+    bx.fillStyle = '#4a5f8a'; bx.font = 'bold 10px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    bx.fillText('회의실', meetL+meetW/2, fy+15);
+
+    // 화장실 (변기 + 세면대)
+    iconC(bx, '🚽', wcL+wcW*0.38, floorY-11, Math.min(19, fh*0.34));
+    bx.fillStyle = '#cfd7e0'; rrectC(bx, wcL+wcW-20, floorY-20, 13, 7, 2); bx.fill();
+    bx.fillStyle = '#9fd0ff'; bx.font = 'bold 10px "맑은 고딕",sans-serif';
+    bx.fillText('🚻 화장실', wcL+wcW/2, fy+13);
+    bx.textAlign = 'left';
+
+    // 사람들
+    const P = peopleOn(f, i, n);
+    for (let e = 0; e < P.length; e++) {
+      const ph = ((i*37 + e*61) % 100) / 100;
+      // 사무실 직원은 사무실 칸에서, 부서 직원은 부서 칸에서 왔다갔다
+      const inOff = P[e].office && hasOff;
+      const wl = inOff ? officeL + 8 : roomL + 26;
+      const wr = inOff ? meetL - 14 : (hasOff ? officeL - 14 : meetL - 20);
+      const wanderW = Math.max(14, wr - wl);
+      const slot = P.length > 1 ? (e % 8) / 7 : 0.5;
+      const wander = wl + slot*wanderW*0.75 + (Math.sin(t*0.5 + ph*6.283) * 0.5 + 0.5) * wanderW*0.25;
+      const meetC = meetL + meetW/2 + ((e % 3) - 1) * 22;
+      const wcC = wcL + wcW*0.62;
+      let px = wander, moving = true;
+      if (!P[e].stay) {
+        const u = (t*0.045 + ph) % 1;
+        if (u < 0.60) { px = wander; }
+        else if (u < 0.68) { px = lerp(wander, meetC, (u-0.60)/0.08); }
+        else if (u < 0.80) { px = meetC; moving = false; }
+        else if (u < 0.86) { px = lerp(meetC, wcC, (u-0.80)/0.06); }
+        else if (u < 0.92) { px = wcC; moving = false; }
+        else { px = lerp(wcC, wander, (u-0.92)/0.08); }
+      }
+      drawPerson(px, floorY, P[e].col, moving, P[e]);
+    }
+    if (f.id === 'office' && S.staff.norm > 0) {
+      bx.fillStyle = '#cfe0f5'; bx.font = 'bold 11px "맑은 고딕",sans-serif';
+      bx.textAlign = 'right'; bx.textBaseline = 'middle';
+      bx.fillText('직원 ' + S.staff.norm + '명', meetL-6, fy+14);
+    } else if (f.staff && S.staff[f.staff] > 8) {
+      bx.fillStyle = '#e8ecf2'; bx.font = 'bold 11px "맑은 고딕",sans-serif';
+      bx.textAlign = 'right'; bx.textBaseline = 'middle';
+      bx.fillText('+' + (S.staff[f.staff]-8) + '명', meetL-6, fy+14);
+    }
+
+    // 엘리베이터 문
+    bx.fillStyle = '#3a4356'; bx.fillRect(elX+5, fy+fh-30, EL-10, 25);
+    bx.strokeStyle = '#20252f'; bx.lineWidth = 1;
+    bx.beginPath(); bx.moveTo(elX+EL/2, fy+fh-30); bx.lineTo(elX+EL/2, fy+fh-5); bx.stroke();
+
+    // 층 테두리 + 층수
+    bx.strokeStyle = on ? '#f0a13a' : '#00000044';
+    bx.lineWidth = on ? 3 : 1;
+    bx.strokeRect(x0+1, fy+1, bodyW-2, fh-2);
+    bx.fillStyle = '#8894ab'; bx.font = '10px "맑은 고딕",sans-serif';
+    bx.textAlign = 'right'; bx.textBaseline = 'middle';
+    bx.fillText((i+1) + 'F', x0 + bodyW - 5, fy + fh - 12);
+}
+
+/* 지금 고른 층을 아래 안내줄에 알려준다 */
+function zoomTitle() {
+  const f = floorOf(selFloor);
+  document.getElementById('zTitle').textContent =
+    '🔍 지금 고른 층: ' + floorNum(selFloor) + '층 ' + f.name + ' · 🖱️ 휠로 오르내리기';
+}
+
+/* ===================== 공장 단면도 (옆에서 본 진짜 공장) ===================== */
+const pcv = document.getElementById('pcv');
+const pctx = pcv.getContext('2d');
+let plantOpen = false;
+
+function cntMap(t, k) {
+  const g = S.maps[k].grid; let n = 0;
+  for (let y=0; y<H; y++) for (let x=0; x<W; x++) if (g[y][x] && g[y][x].t === t) n++;
+  return n;
+}
+/* 톱니바퀴 */
+function drawGear(cx, cy, r, teeth, ang, col) {
+  bx.save(); bx.translate(cx, cy); bx.rotate(ang);
+  bx.fillStyle = col;
+  for (let i=0; i<teeth; i++) {
+    bx.save(); bx.rotate(i * 2*Math.PI/teeth);
+    bx.fillRect(-r*0.17, -r-r*0.24, r*0.34, r*0.32);
+    bx.restore();
+  }
+  bx.beginPath(); bx.arc(0, 0, r, 0, 7); bx.fill();
+  bx.fillStyle = '#252b38'; bx.beginPath(); bx.arc(0, 0, r*0.34, 0, 7); bx.fill();
+  bx.restore();
+}
+
+function drawPlant() {
+  const box = pcv.parentElement;
+  const cw = Math.max(320, box.clientWidth), chh = Math.max(240, box.clientHeight);
+  if (pcv.width !== cw || pcv.height !== chh) { pcv.width = cw; pcv.height = chh; }
+  const LW = 700, LH = 400;
+  const sc = Math.min(cw/LW, chh/LH);
+  const old = bx; bx = pctx;
+  personS = 1.15;
+  const t = performance.now()/1000;
+  const farm = S.map === 'farm';
+
+  pctx.setTransform(1,0,0,1,0,0);
+  pctx.clearRect(0, 0, cw, chh);
+  pctx.setTransform(sc, 0, 0, sc, (cw - LW*sc)/2, (chh - LH*sc)/2);
+
+  // --- 공장에 뭐가 있나 (진짜 맵에서 세어 온다) ---
+  const mapK = S.map;
+  const nMach  = farm ? cntMap('cook', mapK)   : cntMap('factory', mapK);
+  const nGetA  = farm ? cntMap('farmer', mapK) : cntMap('miner', mapK);
+  const nGetB  = farm ? cntMap('cow', mapK)    : cntMap('chopper', mapK);
+  const nSell  = cntMap('seller', mapK);
+  const nBelt  = cntMap('belt', mapK);
+  const mlist  = (farm ? S.foods : S.prods).length ? (farm ? S.foods : S.prods) : [farm ? 'bread' : 'ntoy'];
+  const prod   = anyOf(mlist[0]);
+  const matA   = farm ? IT.wheat : IT.iron;
+  const matB   = farm ? IT.milk  : IT.wood;
+  const spd    = 520 / stepMs();                    // 빠를수록 크다
+  const работ  = nMach > 0;
+
+  // --- 하늘 ---
+  const sky = bx.createLinearGradient(0,0,0,LH);
+  sky.addColorStop(0, farm ? '#2a4a6a' : '#1b2740'); sky.addColorStop(1, '#3a4a5c');
+  bx.fillStyle = sky; bx.fillRect(0, 0, LW, LH);
+  bx.fillStyle = '#ffffff18';
+  for (let s2=0; s2<12; s2++) bx.fillRect((s2*83)%LW, (s2*47)%120, 2, 2);
+
+  const GY = 344, X0 = 24, X1 = LW-24, TOP = 96;
+
+  // --- 굴뚝 + 연기 ---
+  const chX = X1 - 92;
+  bx.fillStyle = '#5a6270'; bx.fillRect(chX, TOP-58, 26, 62);
+  bx.fillStyle = '#48505c'; bx.fillRect(chX, TOP-58, 26, 8);
+  if (работ) for (let s2=0; s2<5; s2++) {
+    const u = (t*0.34 + s2*0.2) % 1;
+    bx.globalAlpha = 0.34*(1-u);
+    bx.fillStyle = '#dfe6ef';
+    bx.beginPath(); bx.arc(chX+13 + Math.sin(u*6)*10, TOP-62 - u*70, 7 + u*16, 0, 7); bx.fill();
+    bx.globalAlpha = 1;
+  }
+
+  // --- 톱니 지붕 ---
+  bx.fillStyle = '#3c4553';
+  bx.beginPath(); bx.moveTo(X0-8, TOP);
+  for (let r2=0; r2<6; r2++) {
+    const w2 = (X1-X0+16)/6, sx = X0-8 + r2*w2;
+    bx.lineTo(sx, TOP-26); bx.lineTo(sx+w2, TOP);
+  }
+  bx.lineTo(X1+8, TOP); bx.closePath(); bx.fill();
+  bx.fillStyle = '#7fd6ff55';
+  for (let r2=0; r2<6; r2++) {
+    const w2 = (X1-X0+16)/6, sx = X0-8 + r2*w2;
+    bx.beginPath(); bx.moveTo(sx+3, TOP-3); bx.lineTo(sx+3, TOP-22); bx.lineTo(sx+w2*0.42, TOP-3);
+    bx.closePath(); bx.fill();
+  }
+  bx.fillStyle = '#2b3242'; bx.fillRect(X0-10, TOP, X1-X0+20, 8);
+
+  // --- 벽 · 바닥 ---
+  bx.fillStyle = '#39424f'; bx.fillRect(X0, TOP+8, X1-X0, GY-TOP-8);
+  bx.fillStyle = '#00000022';
+  for (let wx = X0+18; wx < X1-10; wx += 26) bx.fillRect(wx, TOP+50, 2, GY-TOP-58);
+
+  // --- 천장 파이프 + 매달린 전등 ---
+  bx.fillStyle = '#5a6270'; bx.fillRect(X0+8, TOP+16, X1-X0-16, 7);
+  bx.fillStyle = '#6a7280'; bx.fillRect(X0+8, TOP+16, X1-X0-16, 2);
+  for (let lx = X0+90; lx < X1-90; lx += 150) {
+    bx.strokeStyle = '#5a6270'; bx.lineWidth = 2;
+    bx.beginPath(); bx.moveTo(lx, TOP+23); bx.lineTo(lx, TOP+52); bx.stroke();
+    bx.fillStyle = '#7a828f';
+    bx.beginPath(); bx.moveTo(lx-16, TOP+66); bx.lineTo(lx+16, TOP+66); bx.lineTo(lx+7, TOP+52); bx.lineTo(lx-7, TOP+52);
+    bx.closePath(); bx.fill();
+    bx.fillStyle = '#ffe9a8'; bx.fillRect(lx-13, TOP+64, 26, 4);
+    const g2 = bx.createLinearGradient(0, TOP+66, 0, GY-20);
+    g2.addColorStop(0, '#ffe9a833'); g2.addColorStop(1, '#ffe9a800');
+    bx.fillStyle = g2;
+    bx.beginPath(); bx.moveTo(lx-14, TOP+66); bx.lineTo(lx+14, TOP+66); bx.lineTo(lx+52, GY-20); bx.lineTo(lx-52, GY-20);
+    bx.closePath(); bx.fill();
+  }
+  // --- 벽 시계 + 안전 게시판 ---
+  const clX = X0+60, clY = TOP+92;
+  bx.fillStyle = '#cfd7e0'; bx.beginPath(); bx.arc(clX, clY, 13, 0, 7); bx.fill();
+  bx.fillStyle = '#2b3242'; bx.beginPath(); bx.arc(clX, clY, 11, 0, 7); bx.fill();
+  bx.strokeStyle = '#e8ecf2'; bx.lineWidth = 2; bx.lineCap = 'round';
+  bx.beginPath(); bx.moveTo(clX, clY); bx.lineTo(clX + Math.cos(t*0.4)*7, clY + Math.sin(t*0.4)*7); bx.stroke();
+  bx.beginPath(); bx.moveTo(clX, clY); bx.lineTo(clX, clY-9); bx.stroke();
+  bx.fillStyle = '#2f7d5b'; rrectC(bx, clX+34, clY-16, 74, 34, 4); bx.fill();
+  bx.fillStyle = '#e8ecf2'; bx.font = 'bold 11px "맑은 고딕",sans-serif';
+  bx.textAlign = 'center'; bx.textBaseline = 'middle';
+  bx.fillText('안전 제일', clX+71, clY-6);
+  bx.fillText('무사고 ' + Math.max(1, S.lv) + '일', clX+71, clY+8);
+
+  // --- 간판 (벽 위에) ---
+  bx.fillStyle = '#6ad06a'; rrectC(bx, LW/2-150, TOP+18, 300, 32, 8); bx.fill();
+  bx.fillStyle = '#0e2410'; bx.font = 'bold 20px "맑은 고딕",sans-serif';
+  bx.textAlign = 'center'; bx.textBaseline = 'middle';
+  bx.fillText((S.co||'우리회사') + (farm ? ' 식품공장' : ' 공장'), LW/2, TOP+34);
+  bx.fillStyle = '#4a5464'; bx.fillRect(X0, GY-18, X1-X0, 18);       // 바닥
+  bx.fillStyle = '#3d4653'; bx.fillRect(X0, GY-18, X1-X0, 3);
+  bx.fillStyle = '#2b3242'; bx.fillRect(0, GY, LW, LH-GY);           // 땅
+  bx.fillStyle = '#5a6270';
+  for (let gx = 10; gx < LW; gx += 44) bx.fillRect(gx, GY+16, 24, 3);
+
+  const FY = GY - 18;                                                // 사람 발 높이
+
+  // --- 왼쪽: 원료 더미 ---
+  bx.fillStyle = '#2f3846'; bx.fillRect(X0+6, FY-96, 118, 96);
+  bx.fillStyle = '#9fb0c9'; bx.font = 'bold 12px "맑은 고딕",sans-serif';
+  bx.textAlign = 'left'; bx.textBaseline = 'middle';
+  bx.fillText('원료 창고', X0+14, FY-86);
+  for (let p2=0; p2<Math.min(6, Math.max(1, nGetA)); p2++) {
+    const px2 = X0+26 + (p2%3)*24, py2 = FY-14 - Math.floor(p2/3)*22;
+    bx.fillStyle = matA.col; rrectC(bx, px2-11, py2-16, 22, 16, 3); bx.fill();
+    iconC(bx, matA.ic, px2, py2-8, 13);
+  }
+  for (let p2=0; p2<Math.min(6, Math.max(1, nGetB)); p2++) {
+    const px2 = X0+26 + (p2%3)*24, py2 = FY-58 - Math.floor(p2/3)*22;
+    bx.fillStyle = matB.col; rrectC(bx, px2-11, py2-16, 22, 16, 3); bx.fill();
+    iconC(bx, matB.ic, px2, py2-8, 13);
+  }
+
+  // --- 가운데: 기계들 ---
+  const mL = X0+140, mR = X1-150;
+  const shownM = Math.max(1, Math.min(4, nMach));
+  const mw = Math.min(150, (mR-mL)/shownM);
+  const gx0 = (mL+mR)/2 - mw*shownM/2;
+  for (let m2=0; m2<shownM; m2++) {
+    const mx = gx0 + m2*mw + mw/2, my = FY-40;
+    const busy = работ && ((m2 + Math.floor(t*1.4*spd)) % 5) !== 4;
+    // 몸체
+    bx.fillStyle = '#00000044'; rrectC(bx, mx-mw*0.36+3, my-58+4, mw*0.72, 74, 8); bx.fill();
+    bx.fillStyle = farm ? '#a3552a' : '#3f5f9a'; rrectC(bx, mx-mw*0.36, my-58, mw*0.72, 74, 8); bx.fill();
+    bx.fillStyle = '#00000033'; bx.fillRect(mx-mw*0.36, my-24, mw*0.72, 6);
+    // 톱니바퀴 2개
+    drawGear(mx-mw*0.16, my-34, 13, 8,  t*(busy?2.2:0)*spd, '#cfd7e0');
+    drawGear(mx+mw*0.08, my-42, 9,  7, -t*(busy?3.0:0)*spd, '#9fb0c9');
+    // 로봇 팔
+    bx.save(); bx.translate(mx+mw*0.24, my-52);
+    bx.rotate(Math.sin(t*2.4*spd + m2)* (busy?0.5:0.05) - 0.4);
+    bx.strokeStyle = '#ffd479'; bx.lineWidth = 5; bx.lineCap='round';
+    bx.beginPath(); bx.moveTo(0,0); bx.lineTo(0,26); bx.stroke();
+    bx.fillStyle = '#ffd479'; bx.fillRect(-5, 24, 10, 6);
+    bx.restore();
+    // 창(기계 이름이 뜬다)
+    bx.fillStyle = busy ? '#ffe27a' : '#5a6270';
+    bx.fillRect(mx-mw*0.3, my-18, mw*0.6, 14);
+    bx.fillStyle = busy ? '#5a4a10' : '#2b3242';
+    bx.font = 'bold 11px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    const mUp = upLv(farm ? 'cook' : 'factory');
+    bx.fillText((farm ? '요리기' : '조립기') + (mUp ? ' Lv.' + mUp : ''), mx, my-11);
+    // 나오는 제품 (기계마다 다른 걸 만들 수 있다)
+    if (busy) iconC(bx, anyOf(mlist[m2 % mlist.length]).ic, mx, my-70 - (Math.sin(t*3*spd+m2)*0.5+0.5)*8, 20);
+  }
+  if (nMach === 0) {
+    bx.fillStyle = '#ff9a6a'; bx.font = 'bold 15px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center';
+    bx.fillText('아직 ' + (farm ? '요리기' : '조립기') + '가 없어! 맵에서 지어 봐', (mL+mR)/2, FY-120);
+  }
+
+  // --- 컨베이어 벨트 ---
+  const bL = X0+134, bR = X1-118, bY = FY-10;
+  bx.fillStyle = '#4a5060'; rrectC(bx, bL, bY-9, bR-bL, 12, 5); bx.fill();
+  bx.fillStyle = '#6a7280';
+  for (let rx = bL+8; rx < bR-4; rx += 16) { bx.beginPath(); bx.arc(rx, bY-3, 4, 0, 7); bx.fill(); }
+  bx.strokeStyle = '#98a3b5'; bx.lineWidth = 2;
+  for (let cxp = bL; cxp < bR; cxp += 18) {
+    const off = (t*60*spd) % 18;
+    bx.beginPath(); bx.moveTo(cxp+off, bY-9); bx.lineTo(cxp+off+5, bY-3); bx.stroke();
+  }
+  bx.fillStyle = '#3a4250'; bx.fillRect(bL, bY+3, 6, 10); bx.fillRect(bR-6, bY+3, 6, 10);
+  // 벨트 위 제품
+  if (работ) {
+    const cntI = Math.max(4, Math.min(9, 3 + Math.floor(nBelt/3)));
+    for (let k2=0; k2<cntI; k2++) {
+      const u = ((t*0.22*spd) + k2/cntI) % 1;
+      const ix = bL + 14 + u*(bR-bL-28);
+      const pk = anyOf(mlist[k2 % mlist.length]);
+      bx.fillStyle = '#00000044'; bx.beginPath(); bx.arc(ix, bY-15, 11, 0, 7); bx.fill();
+      bx.fillStyle = pk.col;      bx.beginPath(); bx.arc(ix, bY-17, 11, 0, 7); bx.fill();
+      iconC(bx, pk.ic, ix, bY-17, 15);
+    }
+  }
+
+  // --- 오른쪽: 트럭이 싣고 나간다 ---
+  const tX = X1-104;
+  bx.fillStyle = '#2f3846'; bx.fillRect(tX-14, FY-92, 118, 92);
+  bx.fillStyle = '#9fb0c9'; bx.font = 'bold 12px "맑은 고딕",sans-serif';
+  bx.textAlign = 'left'; bx.fillText('출하장', tX-6, FY-82);
+  const bump = Math.abs(Math.sin(t*2.2))*1.5;
+  bx.fillStyle = '#2f7d5b'; rrectC(bx, tX, FY-46-bump, 62, 30, 4); bx.fill();     // 짐칸
+  bx.fillStyle = '#39a06f'; rrectC(bx, tX+58, FY-40-bump, 26, 24, 4); bx.fill();  // 운전석
+  bx.fillStyle = '#9fd0ff'; bx.fillRect(tX+64, FY-36-bump, 14, 10);
+  bx.fillStyle = '#20252f';
+  bx.beginPath(); bx.arc(tX+16, FY-12, 8, 0, 7); bx.fill();
+  bx.beginPath(); bx.arc(tX+66, FY-12, 8, 0, 7); bx.fill();
+  bx.fillStyle = '#6a7280';
+  bx.beginPath(); bx.arc(tX+16, FY-12, 3.5, 0, 7); bx.fill();
+  bx.beginPath(); bx.arc(tX+66, FY-12, 3.5, 0, 7); bx.fill();
+  if (работ && nSell > 0) {
+    const u = (t*0.6) % 1;
+    iconC(bx, prod.ic, tX + 10 + u*24, FY-56 - Math.sin(u*Math.PI)*26, 18);
+    if (u > 0.9) { bx.fillStyle = '#ffe27a'; bx.font = 'bold 16px "맑은 고딕",sans-serif';
+      bx.textAlign='center'; bx.fillText('+' + won(prod.price*priceMul()), tX+30, FY-70); }
+  }
+  if (nSell === 0) {
+    bx.fillStyle = '#ff9a6a'; bx.font = 'bold 12px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.fillText('판매대가 없어!', tX+40, FY-64);
+  }
+
+  // --- 2층 관제실 ---
+  const oX = X1-190, oY = TOP+52;
+  bx.fillStyle = '#2f3846'; bx.fillRect(oX, oY, 150, 62);
+  bx.fillStyle = '#20252f'; bx.fillRect(oX+8, oY+8, 134, 30);
+  bx.fillStyle = '#7fd6ff'; bx.fillRect(oX+12, oY+12, 126, 22);
+  bx.fillStyle = '#20252f'; bx.font = 'bold 11px "맑은 고딕",sans-serif';
+  bx.textAlign = 'center'; bx.textBaseline = 'middle';
+  bx.fillText('관제실', oX+75, oY+23);
+  drawPerson(oX+40, oY+58, '#5f7a9a', false, {});
+  drawPerson(oX+108, oY+58, '#3f7a6a', false, {});
+  bx.fillStyle = '#4a5464'; bx.fillRect(oX-4, oY+62, 158, 5);
+
+  // --- 일하는 사람들 ---
+  const nWork = Math.max(1, Math.min(7, 1 + Math.floor(S.staff.norm/6) + Math.floor(nMach/2)));
+  for (let w2=0; w2<nWork; w2++) {
+    const ph = (w2*37 % 100)/100;
+    const wl = X0+150, wr = X1-170;
+    const wx = wl + (Math.sin(t*0.42 + ph*6.283)*0.5+0.5)*(wr-wl);
+    drawPerson(wx, FY, w2%3===0 ? '#7a5f3a' : (w2%3===1 ? '#5f7a9a' : '#3f7a6a'), true, {});
+  }
+
+  bx.setTransform(1,0,0,1,0,0);
+  bx = old; personS = 1;
+
+  document.getElementById('pName').textContent = S.co || '우리회사';
+  document.getElementById('pInfo').textContent =
+    '— ' + (farm ? '농장' : '공장') + ' · ' + (farm ? '요리기' : '조립기') + ' ' + nMach + '대 · 컨베이어 ' + nBelt +
+    '칸 · 판매대 ' + nSell + '개 · 지금 만드는 것 ' + mlist.map(id => anyOf(id).ic + prodName(id)).join(', ');
+}
+
+/* 공장 업그레이드 패널 */
+function drawPlantPanel() {
+  const farm = S.map === 'farm';
+  let h = '<div class="fcard"><h3 style="margin-top:0">🔧 공장 업그레이드</h3>' +
+    '<div class="what">돈을 내면 기계가 더 좋아져! (최고 Lv.' + MAXUP + ')</div></div>';
+  for (const u of UPS[farm ? 'farm' : 'factory']) {
+    const lv = upLv(u.t), maxed = lv >= MAXUP, cost = upCost(u.t);
+    let eff;
+    if (u.t === 'belt')        eff = '한 박자에 <b>' + beltMove() + '칸</b>씩 이동';
+    else if (u.t === 'seller') eff = '물건값 <b>+' + (5*lv) + '%</b>';
+    else                       eff = '만드는 속도 <b>' + upMul(u.t).toFixed(1) + '배</b>';
+    h += '<div class="fcard" style="margin-bottom:8px">' +
+      '<div class="fline" style="margin-bottom:6px">' + u.ic + ' <b>' + u.name + ' Lv.' + lv + '</b>' +
+      ' <span class="stars">' + '★'.repeat(Math.min(5, lv)) + (lv > 5 ? '+' + (lv-5) : '') + '</span><br>' +
+      '<span class="eff">' + u.what + ' → 지금 ' + eff + '</span></div>' +
+      (maxed ? '<button class="big poor">최고 레벨! ⭐</button>'
+             : '<button class="big" data-up="' + u.t + '" data-cost="' + cost + '">⬆️ ' + u.name +
+               ' 업그레이드 — ' + won(cost) + '원</button>') +
+      '</div>';
+  }
+  h += '<div class="fcard"><div class="fline">⚡ <b>생산 속도 Lv.' + S.speedLv + '</b> (' + speedMul().toFixed(2) + '배)<br>' +
+       '<span class="eff">공장 전체가 빨라진다</span></div>' +
+       (S.speedLv >= MAXSPD ? '<button class="big poor">속도가 최고야! ⚡</button>'
+        : '<button class="big" data-speed="1" data-cost="' + speedCost() + '">⚡ 생산 속도 레벨업 — ' + won(speedCost()) + '원</button>') +
+       '</div>';
+  document.getElementById('pPanel').innerHTML = h;
+  refreshPlant();
+}
+function refreshPlant() {
+  if (!plantOpen) return;
+  document.getElementById('pMoney').textContent = won(S.money);
+  document.querySelectorAll('#pPanel [data-cost]').forEach(b => {
+    b.classList.toggle('poor', S.money < +b.dataset.cost);
+  });
+}
+document.getElementById('pPanel').addEventListener('click', e => {
+  const t = e.target;
+  if (!t.dataset) return;
+  if (t.dataset.up) {
+    const k = t.dataset.up, c = upCost(k);
+    if (upLv(k) >= MAXUP) return;
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.up[k] = upLv(k) + 1;
+    beep(1150, 0.15, 'square', 0.06);
+    toast(upDefOf(k).ic + ' ' + upDefOf(k).name + '\nLv.' + S.up[k] + '이 됐다!');
+  } else if (t.dataset.speed) {
+    buySpeed();
+  } else return;
+  drawUI(); drawPlantPanel(); save();
+});
+
+function openPlant(on) {
+  plantOpen = on;
+  document.getElementById('plant').classList.toggle('show', on);
+  if (on) { drawPlant(); drawPlantPanel(); }
+}
+
+/* ===================== 해외 지사 단면도 ===================== */
+const brcv = document.getElementById('brcv');
+const brctx = brcv.getContext('2d');
+let branchOpen = false, branchId = 'vn';
+
+/* 나라마다 하늘색 + 배경 명소 */
+const SKY = {
+  vn:['#2a6a8a','#8ac0c0'], th:['#2a5a8a','#e0b46a'], bd:['#2a6a7a','#9ad0b0'],
+  in:['#3a5a8a','#e0a86a'], mx:['#3a6a9a','#e0c48a'], br:['#2a7a8a','#8ad0c0'],
+  sa:['#4a5a7a','#e0c090'], ru:['#3a4a6a','#c0d0e0'], cn:['#4a4a7a','#e0a0a0'],
+  fr:['#3a5a8a','#c0c8e0'], de:['#3a4a6a','#b0c0d0'], jp:['#3a5a8a','#ffc0c8'],
+  us:['#2a4a7a','#a0c0e0'],
+};
+/* 그 나라 하면 떠오르는 것 (뒷배경에 그린다) */
+function drawMark(id, cx, gy) {
+  const B2 = '#00000055';
+  const tri = (x1,y1,x2,y2,x3,y3,col) => { bx.fillStyle=col; bx.beginPath(); bx.moveTo(x1,y1); bx.lineTo(x2,y2); bx.lineTo(x3,y3); bx.closePath(); bx.fill(); };
+  const palm = (px,py,h,col) => {
+    bx.strokeStyle=col; bx.lineWidth=5; bx.lineCap='round';
+    bx.beginPath(); bx.moveTo(px,py); bx.quadraticCurveTo(px+6,py-h*0.6,px+2,py-h); bx.stroke();
+    bx.fillStyle=col;
+    for (let a=0;a<5;a++){ bx.save(); bx.translate(px+2,py-h); bx.rotate(-1.6+a*0.65);
+      bx.beginPath(); bx.ellipse(16,0,17,5,0,0,7); bx.fill(); bx.restore(); }
+  };
+  if (id==='vn' || id==='th' || id==='bd') {                       // 야자수 · 논 · 배
+    bx.fillStyle='#3f7a5a'; bx.fillRect(cx-120, gy-14, 240, 14);
+    palm(cx-70, gy-10, 74, '#2f6a4a'); palm(cx+62, gy-10, 58, '#2f6a4a');
+    if (id==='th') {                                               // 사원 첨탑
+      tri(cx, gy-150, cx-34, gy-14, cx+34, gy-14, '#c8a04a');
+      tri(cx, gy-186, cx-14, gy-120, cx+14, gy-120, '#e0c46a');
+      bx.fillStyle='#a07a2a'; bx.fillRect(cx-40, gy-22, 80, 10);
+    } else if (id==='bd') {                                        // 강 위의 배
+      bx.fillStyle='#4a7a9a'; bx.fillRect(cx-130, gy-12, 260, 12);
+      bx.fillStyle='#8a5f3a'; bx.beginPath(); bx.moveTo(cx-30,gy-16); bx.lineTo(cx+30,gy-16); bx.lineTo(cx+18,gy-4); bx.lineTo(cx-18,gy-4); bx.closePath(); bx.fill();
+      bx.fillStyle='#e8ecf2'; tri(cx-2, gy-70, cx-2, gy-18, cx+30, gy-18, '#e8ecf2');
+      bx.fillStyle='#8a5f3a'; bx.fillRect(cx-4, gy-72, 4, 56);
+    }
+  } else if (id==='in') {                                          // 타지마할
+    bx.fillStyle='#e0dcd0'; bx.fillRect(cx-70, gy-70, 140, 70);
+    bx.beginPath(); bx.arc(cx, gy-70, 40, Math.PI, 0); bx.fill();
+    bx.beginPath(); bx.moveTo(cx-3, gy-118); bx.lineTo(cx+3, gy-118); bx.lineTo(cx, gy-128); bx.closePath(); bx.fill();
+    bx.fillStyle='#d0ccc0'; bx.fillRect(cx-92, gy-58, 12, 58); bx.fillRect(cx+80, gy-58, 12, 58);
+    bx.beginPath(); bx.arc(cx-86, gy-58, 7, Math.PI, 0); bx.fill();
+    bx.beginPath(); bx.arc(cx+86, gy-58, 7, Math.PI, 0); bx.fill();
+    bx.fillStyle='#8a7a6a'; bx.fillRect(cx-14, gy-34, 28, 34);
+  } else if (id==='mx') {                                          // 계단 피라미드 + 선인장
+    bx.fillStyle='#c8b088';
+    for (let s2=0;s2<5;s2++) bx.fillRect(cx-70+s2*13, gy-16-s2*16, 140-s2*26, 16);
+    bx.fillStyle='#a89068'; bx.fillRect(cx-10, gy-96, 20, 16);
+    bx.fillStyle='#3f8a5a'; bx.fillRect(cx+96, gy-54, 12, 54);
+    bx.fillRect(cx+82, gy-42, 14, 9); bx.fillRect(cx+82, gy-42, 9, 26);
+  } else if (id==='br') {                                          // 산 + 예수상
+    tri(cx, gy-140, cx-110, gy, cx+110, gy, '#3a6a5a');
+    bx.fillStyle='#e0e4e8'; bx.fillRect(cx-4, gy-176, 8, 40);
+    bx.fillRect(cx-24, gy-168, 48, 7);
+    bx.beginPath(); bx.arc(cx, gy-180, 6, 0, 7); bx.fill();
+  } else if (id==='sa') {                                          // 사막 + 낙타
+    bx.fillStyle='#e0c48a';
+    bx.beginPath(); bx.ellipse(cx-60, gy+10, 110, 40, 0, 0, 7); bx.fill();
+    bx.beginPath(); bx.ellipse(cx+80, gy+14, 90, 32, 0, 0, 7); bx.fill();
+    palm(cx-96, gy-4, 62, '#4a7a4a');
+    bx.fillStyle='#a8804a';
+    bx.fillRect(cx+10, gy-30, 46, 16);
+    bx.beginPath(); bx.arc(cx+22, gy-32, 9, Math.PI, 0); bx.fill();
+    bx.beginPath(); bx.arc(cx+44, gy-32, 9, Math.PI, 0); bx.fill();
+    bx.fillRect(cx+14, gy-16, 5, 16); bx.fillRect(cx+48, gy-16, 5, 16);
+    bx.fillRect(cx+52, gy-46, 6, 20); bx.beginPath(); bx.arc(cx+58, gy-46, 6, 0, 7); bx.fill();
+  } else if (id==='ru') {                                          // 양파 돔
+    const dome = (dx, dh, col) => {
+      bx.fillStyle=col;
+      bx.beginPath(); bx.moveTo(dx-16, gy-dh); bx.quadraticCurveTo(dx-24, gy-dh-30, dx, gy-dh-44);
+      bx.quadraticCurveTo(dx+24, gy-dh-30, dx+16, gy-dh); bx.closePath(); bx.fill();
+      bx.fillStyle='#d8dce4'; bx.fillRect(dx-15, gy-dh, 30, dh);
+    };
+    dome(cx-52, 54, '#c04a5a'); dome(cx+52, 54, '#4a7ac0'); dome(cx, 76, '#e0c04a');
+    bx.fillStyle='#e0c04a'; bx.fillRect(cx-2, gy-132, 4, 12);
+  } else if (id==='cn') {                                          // 탑(파고다)
+    for (let s2=0;s2<3;s2++) {
+      const w2 = 90-s2*22, yy = gy-30-s2*38;
+      bx.fillStyle='#c04a3a';
+      bx.beginPath(); bx.moveTo(cx-w2, yy); bx.quadraticCurveTo(cx, yy-26, cx+w2, yy);
+      bx.lineTo(cx+w2-14, yy+6); bx.lineTo(cx-w2+14, yy+6); bx.closePath(); bx.fill();
+      bx.fillStyle='#e0c46a'; bx.fillRect(cx-w2+20, yy+6, (w2-20)*2, 32);
+    }
+    bx.fillStyle='#c04a3a'; bx.fillRect(cx-3, gy-158, 6, 16);
+  } else if (id==='fr') {                                          // 에펠탑
+    bx.strokeStyle='#8a7a5a'; bx.lineWidth=7; bx.lineCap='round';
+    bx.beginPath(); bx.moveTo(cx-46, gy); bx.lineTo(cx-6, gy-170); bx.stroke();
+    bx.beginPath(); bx.moveTo(cx+46, gy); bx.lineTo(cx+6, gy-170); bx.stroke();
+    bx.lineWidth=6;
+    bx.beginPath(); bx.moveTo(cx-32, gy-56); bx.lineTo(cx+32, gy-56); bx.stroke();
+    bx.beginPath(); bx.moveTo(cx-20, gy-108); bx.lineTo(cx+20, gy-108); bx.stroke();
+    bx.beginPath(); bx.moveTo(cx-40, gy-22); bx.lineTo(cx+40, gy-22); bx.stroke();
+    bx.fillStyle='#8a7a5a'; bx.fillRect(cx-3, gy-186, 6, 20);
+  } else if (id==='de') {                                          // 성 · 시계탑
+    bx.fillStyle='#b0b8c4'; bx.fillRect(cx-80, gy-80, 160, 80);
+    bx.fillRect(cx-100, gy-110, 34, 110); bx.fillRect(cx+66, gy-110, 34, 110);
+    tri(cx-83, gy-140, cx-100, gy-110, cx-66, gy-110, '#7a4a4a');
+    tri(cx+83, gy-140, cx+66, gy-110, cx+100, gy-110, '#7a4a4a');
+    tri(cx, gy-130, cx-80, gy-80, cx+80, gy-80, '#7a4a4a');
+    bx.fillStyle='#e8ecf2'; bx.beginPath(); bx.arc(cx, gy-100, 13, 0, 7); bx.fill();
+    bx.strokeStyle='#2b3242'; bx.lineWidth=2;
+    bx.beginPath(); bx.moveTo(cx,gy-100); bx.lineTo(cx+7,gy-104); bx.stroke();
+  } else if (id==='jp') {                                          // 후지산 + 토리이
+    tri(cx, gy-150, cx-130, gy, cx+130, gy, '#5a6a8a');
+    bx.fillStyle='#f0f4f8';
+    bx.beginPath(); bx.moveTo(cx, gy-150); bx.lineTo(cx-38, gy-106); bx.lineTo(cx-20,gy-112);
+    bx.lineTo(cx-6,gy-102); bx.lineTo(cx+10,gy-112); bx.lineTo(cx+26,gy-104); bx.lineTo(cx+38, gy-106); bx.closePath(); bx.fill();
+    bx.fillStyle='#c0342a';
+    bx.fillRect(cx-52, gy-56, 9, 56); bx.fillRect(cx+43, gy-56, 9, 56);
+    bx.fillRect(cx-66, gy-62, 132, 9); bx.fillRect(cx-58, gy-44, 116, 7);
+  } else if (id==='us') {                                          // 마천루 + 자유의 여신상
+    bx.fillStyle='#5a6a8a';
+    bx.fillRect(cx-120, gy-120, 40, 120); bx.fillRect(cx-72, gy-170, 44, 170); bx.fillRect(cx-20, gy-96, 34, 96);
+    bx.fillStyle='#ffe27a88';
+    for (let wy=gy-160; wy<gy-16; wy+=18) for (let wx2=cx-66; wx2<cx-36; wx2+=14) bx.fillRect(wx2, wy, 7, 8);
+    bx.fillStyle='#4aa08a';
+    bx.fillRect(cx+70, gy-70, 20, 70); bx.fillRect(cx+60, gy, 40, 6);
+    bx.beginPath(); bx.arc(cx+80, gy-78, 11, 0, 7); bx.fill();
+    bx.fillRect(cx+90, gy-118, 7, 44);
+    bx.beginPath(); bx.arc(cx+93, gy-124, 8, 0, 7); bx.fill();
+    for (let a=0;a<7;a++){ bx.save(); bx.translate(cx+80,gy-80); bx.rotate(-1.2+a*0.4);
+      bx.fillRect(-2,-24,4,10); bx.restore(); }
+  }
+}
+
+function drawBranch() {
+  const c = countryOf(branchId) || COUNTRY[0];
+  const lv = S.br[c.id] || 0;
+  const box = brcv.parentElement;
+  const cw = Math.max(320, box.clientWidth), chh = Math.max(240, box.clientHeight);
+  if (brcv.width !== cw || brcv.height !== chh) { brcv.width = cw; brcv.height = chh; }
+  const LW = 700, LH = 400, sc = Math.min(cw/LW, chh/LH);
+  const old = bx; bx = brctx;
+  personS = 1.1;
+  const t = performance.now()/1000;
+
+  document.getElementById('brName').textContent = c.name + ' 지사';
+  document.getElementById('brInfo').textContent = lv
+    ? ('— 규모 ★' + lv + ' · 1초에 ' + won(c.inc*(1+0.6*(lv-1))*(cFoodOn(c)?1.4:1)*(1+0.08*F('branch'))) + '원' +
+       (c.foodId ? (' · 대표 음식 ' + anyOf(c.foodId).ic + prodName(c.foodId)) : ''))
+    : '— 아직 지사가 없어 (50층 해외사업부에서 세울 수 있어)';
+
+  brctx.setTransform(1,0,0,1,0,0);
+  brctx.clearRect(0,0,cw,chh);
+  brctx.setTransform(sc,0,0,sc,(cw-LW*sc)/2,(chh-LH*sc)/2);
+
+  // 하늘
+  const sk = SKY[c.id] || ['#2a4a7a','#a0c0e0'];
+  const sky = bx.createLinearGradient(0,0,0,LH);
+  sky.addColorStop(0, sk[0]); sky.addColorStop(1, sk[1]);
+  bx.fillStyle = sky; bx.fillRect(0,0,LW,LH);
+  // 해/구름
+  bx.fillStyle = '#ffffff33';
+  bx.beginPath(); bx.arc(90, 60, 26, 0, 7); bx.fill();
+  for (let k2=0;k2<3;k2++) {
+    const cxx = ((t*8 + k2*260) % (LW+200)) - 100;
+    bx.fillStyle = '#ffffff22';
+    bx.beginPath(); bx.arc(cxx, 60+k2*26, 20, 0, 7); bx.arc(cxx+24, 60+k2*26, 26, 0, 7); bx.arc(cxx+52, 60+k2*26, 18, 0, 7); bx.fill();
+  }
+
+  const GY = 336;
+  // 뒷배경 명소
+  bx.globalAlpha = 0.55; drawMark(c.id, 150, GY); bx.globalAlpha = 1;
+  // 땅
+  bx.fillStyle = '#4a6a4a'; bx.fillRect(0, GY, LW, LH-GY);
+  bx.fillStyle = '#3f5c40'; bx.fillRect(0, GY, LW, 5);
+  bx.fillStyle = '#5a5f68'; bx.fillRect(0, LH-26, LW, 26);
+  bx.fillStyle = '#7a808a';
+  for (let rx=10; rx<LW; rx+=46) bx.fillRect(rx, LH-15, 26, 3);
+
+  if (!lv) {                                    // 아직 지사가 없는 나라
+    bx.fillStyle = '#00000066'; rrectC(bx, 200, 150, 300, 96, 12); bx.fill();
+    bx.fillStyle = '#ffd479'; bx.font = 'bold 20px "맑은 고딕",sans-serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'middle';
+    bx.fillText(c.name + ' 지사가 아직 없어', 350, 182);
+    bx.fillStyle = '#e8ecf2'; bx.font = 'bold 15px "맑은 고딕",sans-serif';
+    bx.fillText('50층 해외사업부에서 세울 수 있어!', 350, 212);
+    bx.setTransform(1,0,0,1,0,0); bx = old; personS = 1;
+    return;
+  }
+
+  // ---- 지사 건물 (규모가 클수록 층이 늘어난다) ----
+  const floors = 1 + lv;                         // 1층 매장 + 사무실 층
+  const fh = 54, bw = 286, x0 = 302;
+  const topY = GY - floors*fh;
+
+  // 국기 게양대
+  bx.strokeStyle = '#b0b8c4'; bx.lineWidth = 3;
+  bx.beginPath(); bx.moveTo(x0-40, GY); bx.lineTo(x0-40, GY-150); bx.stroke();
+  const wav = Math.sin(t*2)*3;
+  bx.fillStyle = c.f1; bx.fillRect(x0-38, GY-148+wav, 52, 34);
+  bx.fillStyle = c.f2;
+  if (c.dot === 1) { bx.beginPath(); bx.arc(x0-12, GY-131+wav, 11, 0, 7); bx.fill(); }
+  else if (c.dot === 2) bx.fillRect(x0-38, GY-125+wav, 52, 11);
+  else if (c.dot === 3) bx.fillRect(x0-38, GY-148+wav, 24, 15);
+  else bx.fillRect(x0-38, GY-137+wav, 52, 12);
+
+  // 건물 몸통
+  bx.fillStyle = '#00000044'; bx.fillRect(x0+6, topY+6, bw, floors*fh);
+  bx.fillStyle = '#3a4356'; bx.fillRect(x0, topY, bw, floors*fh);
+  bx.fillStyle = '#2b3242'; bx.fillRect(x0-10, topY-12, bw+20, 12);
+  // 간판
+  bx.fillStyle = '#5fb0e0'; rrectC(bx, x0+20, topY-46, bw-40, 30, 7); bx.fill();
+  bx.fillStyle = '#08202e'; bx.font = 'bold 17px "맑은 고딕",sans-serif';
+  bx.textAlign = 'center'; bx.textBaseline = 'middle';
+  bx.fillText((S.co||'우리회사') + ' ' + c.name + ' 지사', x0+bw/2, topY-31);
+
+  for (let i=0; i<floors; i++) {
+    const fy = GY - (i+1)*fh, floorY = fy + fh - 4;
+    bx.fillStyle = (i%2) ? '#414a5e' : '#454e63'; bx.fillRect(x0+3, fy, bw-6, fh-3);
+    bx.fillStyle = '#2a3040'; bx.fillRect(x0, fy+fh-4, bw, 4);
+    if (i === 0) {
+      // 1층 = 그 나라 음식 매장
+      bx.fillStyle = '#20252f'; bx.fillRect(x0+14, fy+8, bw-100, fh-16);
+      bx.fillStyle = '#7fd6ff33'; bx.fillRect(x0+16, fy+10, bw-104, fh-20);
+      const fd = c.foodId ? anyOf(c.foodId) : null;
+      if (fd) {
+        iconC(bx, fd.ic, x0+56, fy+26, 26);
+        bx.fillStyle = '#e8ecf2'; bx.font = 'bold 12px "맑은 고딕",sans-serif';
+        bx.textAlign = 'left'; bx.textBaseline = 'middle';
+        bx.fillText(prodName(fd.id), x0+76, fy+22);
+        bx.fillStyle = cFoodOn(c) ? '#7fd6a0' : '#8894ab'; bx.font = '11px "맑은 고딕",sans-serif';
+        bx.fillText(cFoodOn(c) ? '팔고 있어요! +40%' : '아직 안 만들어요', x0+76, fy+38);
+      }
+      bx.fillStyle = '#8a6a45'; bx.fillRect(x0+bw-80, floorY-16, 60, 5);   // 계산대
+      bx.fillStyle = '#6a5236'; bx.fillRect(x0+bw-56, floorY-12, 4, 12);
+      drawPerson(x0+bw-64, floorY, '#3f7a6a', false, {});                   // 점원
+      drawPerson(x0+bw-30 + Math.sin(t*0.6)*8, floorY, '#8a7a6a', true, {});// 손님
+      bx.fillStyle = '#f0a13a'; bx.fillRect(x0+bw-14, floorY-26, 12, 26);   // 문
+    } else {
+      // 사무실 층
+      for (let q=0; q<2; q++) {
+        const dx = x0 + 60 + q*110;
+        drawDesk(dx, floorY, 0.95, q+i, t);
+      }
+      const people = Math.min(4, 1 + lv);
+      for (let e=0; e<people; e++) {
+        const ph = ((i*31 + e*57) % 100)/100;
+        const px2 = x0 + 30 + ((e + Math.sin(t*0.5 + ph*6.283)*0.35) / Math.max(1,people)) * (bw-70);
+        drawPerson(px2, floorY, e%2 ? '#5f7a9a' : '#3f7a6a', true, {});
+      }
+    }
+    // 층 테두리
+    bx.strokeStyle = '#00000044'; bx.lineWidth = 1; bx.strokeRect(x0+3.5, fy+0.5, bw-7, fh-4);
+  }
+
+  // 지사 앞 트럭
+  const tx2 = Math.min(x0 + bw + 20, LW - 92);
+  bx.fillStyle = '#2f7d5b'; rrectC(bx, tx2, GY-40, 56, 26, 4); bx.fill();
+  bx.fillStyle = '#39a06f'; rrectC(bx, tx2+52, GY-34, 24, 20, 4); bx.fill();
+  bx.fillStyle = '#9fd0ff'; bx.fillRect(tx2+58, GY-30, 12, 8);
+  bx.fillStyle = '#20252f';
+  bx.beginPath(); bx.arc(tx2+14, GY-8, 7, 0, 7); bx.fill();
+  bx.beginPath(); bx.arc(tx2+58, GY-8, 7, 0, 7); bx.fill();
+  if (c.foodId) iconC(bx, anyOf(c.foodId).ic, tx2+26, GY-52 - (Math.sin(t*1.4)*0.5+0.5)*8, 18);
+
+  // 돈 올라가는 글자
+  bx.fillStyle = '#ffe27a'; bx.font = 'bold 17px "맑은 고딕",sans-serif';
+  bx.textAlign = 'center'; bx.textBaseline = 'middle';
+  const u2 = (t*0.5) % 1;
+  bx.globalAlpha = 1-u2;
+  bx.fillText('+' + won(c.inc*(1+0.6*(lv-1))*(cFoodOn(c)?1.4:1)*(1+0.08*F('branch'))) + '원',
+              x0+bw/2, Math.max(18, topY-58) - u2*20);
+  bx.globalAlpha = 1;
+
+  bx.setTransform(1,0,0,1,0,0);
+  bx = old; personS = 1;
+}
+
+function drawBranchTabs() {
+  const box = document.getElementById('brTabs');
+  box.innerHTML = '';
+  for (const c of COUNTRY) {
+    const b = document.createElement('button');
+    const lv = S.br[c.id] || 0;
+    b.className = (c.id === branchId ? 'on' : '') + (lv ? '' : ' no');
+    b.textContent = c.name + (lv ? ' ★'+lv : '');
+    b.onclick = () => { branchId = c.id; drawBranch(); drawBranchTabs(); };
+    box.appendChild(b);
+  }
+}
+function openBranch(id) {
+  if (id) branchId = id;
+  branchOpen = !!id || branchOpen;
+  document.getElementById('branch').classList.toggle('show', branchOpen);
+  if (branchOpen) { drawBranch(); drawBranchTabs(); }
+}
+document.getElementById('closeBranch').onclick = () => {
+  branchOpen = false;
+  document.getElementById('branch').classList.remove('show');
+};
+
+/* ===================== 옆 화면(UI) ===================== */
+let shopEls = {};
+function buildPanels() {
+  const shop = document.getElementById('shop');
+  shop.innerHTML = ''; shopEls = {};
+  for (const key of ORDER()) {
+    const d = B[key];
+    const el = document.createElement('button');
+    el.className = 'item'; el.title = d.tip;
+    el.innerHTML =
+      '<span class="ic">' + d.ic + '</span>' +
+      '<span class="nm">' + d.name + '<br><span class="key">' + d.tip + '</span></span>' +
+      '<span class="cost"><span class="c1"></span><br><span class="key">' + d.key + '번</span></span>';
+    el.onclick = () => { sel = key; drawUI(); };
+    shop.appendChild(el);
+    shopEls[key] = el;
+  }
+}
+function drawUI() {
+  document.getElementById('uMoney').textContent = won(S.money);
+  document.getElementById('uTotal').textContent = won(S.total);
+  document.getElementById('uRank').textContent  = rankName() + ' (' + S.lv + '층)';
+  const mlist = S.map === 'farm' ? S.foods : S.prods;
+  document.getElementById('uMake').textContent = mlist.length === 1
+    ? (anyOf(mlist[0]).ic + ' ' + prodName(mlist[0]))
+    : (mlist.map(id => anyOf(id).ic).join('') + ' ' + mlist.length + '가지');
+  const bm = document.getElementById('bMap');
+  bm.textContent = S.map === 'farm' ? '🏭 공장 가기 (E)' : (farmOpen() ? '🌾 농장 가기 (E)' : '🔒 농장 (10층부터)');
+  bm.style.background = S.map === 'farm' ? '#4a7a3a' : '#39405a';
+  document.getElementById('bMap2nm').textContent = S.map === 'farm'
+    ? '공장으로 가기' : (farmOpen() ? '농장으로 가기' : '농장 (10층부터 열려)');
+  document.getElementById('bPlantNm').textContent = S.map === 'farm'
+    ? '식품공장 들여다보기' : '공장 건물 들여다보기';
+
+  for (const key of ORDER()) {
+    const d = B[key], el = shopEls[key];
+    if (!el) continue;
+    const locked = d.lock && S.total < d.lock;
+    const poor = !locked && S.money < d.cost;
+    el.className = 'item' + (sel===key ? ' on' : '') + ((locked||poor) ? ' no' : '');
+    el.querySelector('.c1').textContent = locked ? ('🔒'+won(d.lock)) : (d.cost ? won(d.cost)+'원' : '무료');
+  }
+  document.getElementById('bRot').querySelector('.nm').textContent = '방향 돌리기  ' + DIRCH[S.dir];
+
+  const maxed = S.speedLv >= MAXSPD;
+  document.getElementById('spInfo').textContent =
+    '지금 Lv.' + S.speedLv + ' · ' + speedMul().toFixed(2) + '배 (' + (stepMs()/1000).toFixed(2) + '초에 한 번)';
+  document.getElementById('spCost').textContent = maxed ? '최고!' : won(speedCost()) + '원';
+  document.getElementById('bSpeed').className = 'item' + ((maxed || S.money < speedCost()) ? ' no' : '');
+
+  let h = '🏢 <b>' + S.lv + '층</b> 건물 · 옆으로 <b>' + S.wide + '</b>번 확장 → <b>' + rankName() + '</b><br>';
+  for (const k in STAFF) h += STAFF[k].ic + STAFF[k].name + ' <b>' + S.staff[k] + '</b>명 ';
+  h += '<br>🛠️ 시설 업그레이드 <b>' + facTotal() + '</b>번';
+  if (bizIncome() > 0) h += '<br>💼 사업·지사 수입 <b>+' + won(bizIncome()) + '원</b>/초' +
+    (brCount() ? ' (🌏 지사 ' + brCount() + '개)' : '');
+  if (S.rd) {
+    const p = anyOf(S.rd.id);
+    h += '<br>🔬 ' + p.ic + p.name + ' 기획 중… ' + Math.min(99, Math.floor(S.rd.p / p.rd * 100)) + '%';
+  }
+  document.getElementById('staffBox').innerHTML = h;
+
+  const mb = document.getElementById('missionBox');
+  if (S.mi >= MISSIONS.length) {
+    mb.innerHTML = '<div class="done">미션 전부 성공! 🏆<br>이제 마음대로 회사를 키워 보자!</div>';
+  } else {
+    mb.innerHTML = '<div class="now">지금: ' + MISSIONS[S.mi].t + '<br>👉 상금 ' + won(MISSIONS[S.mi].gold) + '원</div>' +
+      '<div class="done" style="margin-top:6px;font-size:12px">끝낸 미션 ' + S.mi + ' / ' + MISSIONS.length + '</div>';
+  }
+  document.getElementById('hint').textContent =
+    S.mi < MISSIONS.length ? ('📋 ' + MISSIONS[S.mi].t) : '🏆 자유롭게 회사를 키워 봐!';
+}
+
+/* ===================== 회사 화면 ===================== */
+function drawOffice() {
+  document.getElementById('oName').textContent = S.co || '우리회사';
+  document.getElementById('oLv').textContent = '— ' + S.lv + '층 · ' + rankName();
+
+  // 고른 층 패널
+  if (!hasFloor(selFloor)) selFloor = 'plan';
+  const f = floorOf(selFloor), lv = F(f.id), idx = floorNum(f.id);
+  let h = '<div class="fcard"><div class="fic">' + f.ic + '</div>' +
+    '<h3>' + f.name + ' <span style="font-size:14px;color:#8894ab">' + idx + '층</span></h3>' +
+    '<div class="what">' + f.what + '</div>';
+
+  // 30층부터 하는 다른 사업
+  if (f.biz) {
+    const b = f.biz, blv = S.biz[b.id] || 0;
+    if (!blv) {
+      h += '<div class="fline">아직 시작하지 않은 사업이야.<br><span class="eff">시작하면 가만히 있어도 <b>1초에 ' + won(b.inc) + '원</b>씩 벌어!</span></div>';
+      h += '<button class="big hire" data-biz="' + b.id + '" data-cost="' + bizCost(b) + '">🚀 ' + b.name + ' 시작하기 — ' + won(bizCost(b)) + '원</button>';
+    } else {
+      const inc = b.inc * (1 + 0.6*(blv-1));
+      h += '<div class="fline">✅ <b>사업 중!</b> 규모 <span class="stars">' + '★'.repeat(blv) + '☆'.repeat(MAXFAC-blv) + '</span><br>' +
+           '<span class="eff">1초에 <b>' + won(inc) + '원</b>씩 들어온다</span></div>';
+      h += blv >= MAXFAC
+        ? '<button class="big poor">사업이 최고로 컸어! ⭐</button>'
+        : '<button class="big" data-bizup="' + b.id + '" data-cost="' + bizUpCost(b) + '">⬆️ ' + b.fac + ' — ' + won(bizUpCost(b)) + '원</button>';
+    }
+    h += '</div>' + growPanel();
+    document.getElementById('fPanel').innerHTML = h;
+    refreshOffice();
+    return;
+  }
+
+  if (f.staff) {
+    const k = f.staff, num = S.staff[k], cost = staffCost(k), full = num >= maxOf(k);
+    h += '<div class="fline">' + STAFF[k].ic + ' <b>' + STAFF[k].name + ' ' + num + '명</b> (최대 ' + maxOf(k) + '명)<br>' +
+         '<span class="eff">' + staffEffectText(k) + '</span></div>';
+    h += full
+      ? '<button class="big poor">자리가 꽉 찼어!' + (k === 'norm' ? ' (증축하면 더 뽑을 수 있어)' : ' (구내식당을 지으면 늘어나)') + '</button>'
+      : '<button class="big hire" data-hire="' + k + '" data-cost="' + cost + '">🙋 ' + STAFF[k].name + ' 뽑기 — ' + won(cost) + '원</button>';
+  }
+  // 층마다 있는 사무실 칸 — 어느 층에서든 일반 직원을 뽑을 수 있다
+  if (f.id !== 'ware' && f.gen !== 'ware') h += normHireHtml(idx);
+  h += '<div class="fline">🛠️ ' + (f.facName || '시설') + ' <span class="stars">' + '★'.repeat(lv) + '☆'.repeat(MAXFAC-lv) + '</span> (Lv.' + lv + ')<br>' +
+       '<span class="eff">' + f.fac + '</span></div>';
+  h += lv >= MAXFAC
+    ? '<button class="big poor">' + (f.facName || '시설') + ' 최고! 더 못 올려 ⭐</button>'
+    : '<button class="big" data-fac="' + f.id + '" data-cost="' + facCost(f.id) + '">⬆️ ' +
+      (f.id === 'office' ? '컴퓨터 더 놓기' : '시설 좋게 하기') + ' — ' + won(facCost(f.id)) + '원</button>';
+
+  if (f.id === 'eng') {
+    const sm = S.speedLv >= MAXSPD;
+    h += '<div class="fline" style="margin-top:8px">⚡ <b>생산 속도 Lv.' + S.speedLv + '</b> (' + speedMul().toFixed(2) + '배)<br>' +
+         '<span class="eff">돈만 내면 바로 올릴 수 있어. 공장 전체가 빨라진다</span></div>';
+    h += sm ? '<button class="big poor">속도가 최고야! ⚡</button>'
+            : '<button class="big" id="bSpeed2" data-cost="' + speedCost() + '">⚡ 생산 속도 레벨업 — ' + won(speedCost()) + '원</button>';
+  }
+  h += '</div>';
+
+  // 해외사업부면 나라별 지사 카드
+  if (f.id === 'branch') {
+    h += '<h3 class="sec">🌏 다른 나라 지사 <span style="font-size:12px;color:#9fb0c9">— 세우면 1초마다 돈이 들어와</span></h3>';
+    h += '<div class="fline">지금 <b>' + brCount() + ' / ' + COUNTRY.length + '</b>개 나라에 지사가 있어 · 지사 수입 <b>+' +
+         won(branchIncome()) + '원</b>/초</div>';
+    h += '<div class="cards">' + COUNTRY.map(brCard).join('') + '</div>';
+  }
+
+  // 기획실이면 제품·음식 카드를 여기 보여준다
+  if (f.id === 'plan') {
+    h += '<h3 class="sec">🏭 공장 제품 <span style="font-size:12px;color:#9fb0c9">— ➕를 누르면 <b>여러 개를 한꺼번에</b>! 조립기가 하나씩 나눠 맡는다 (기계를 눌러 바꿔도 돼)</span></h3>';
+    h += '<div class="cards">' + PROD.map(p => prodCard(p, false)).join('') + '</div>';
+    if (farmOpen()) {
+      h += '<h3 class="sec">🌾 농장 음식 <span style="font-size:12px;color:#9fb0c9">— 요리기가 자동으로 만든다</span></h3>';
+      h += '<div class="cards">' + FOOD.filter(p => !p.need).map(p => prodCard(p, true)).join('') + '</div>';
+      const cf = FOOD.filter(p => p.need && foodVisible(p));
+      h += '<h3 class="sec">🌏 나라 음식 <span style="font-size:12px;color:#9fb0c9">— 지사를 세운 나라의 음식! 만들면 그 지사 수입 <b>+40%</b></span></h3>';
+      h += cf.length
+        ? '<div class="cards">' + cf.map(p => prodCard(p, true)).join('') + '</div>'
+        : '<div class="fline">아직 없어. <b>50층 해외사업부</b>에서 다른 나라에 <b>지사</b>를 세우면 그 나라 음식이 여기 생겨!<br>' +
+          '<span class="eff">🇻🇳쌀국수 🇹🇭팟타이 🇧🇩커리 🇮🇳난 🇲🇽타코 🇧🇷슈하스코 🇸🇦케밥 🇷🇺보르시 🇨🇳만두 🇫🇷크루아상 🇩🇪소시지 🇯🇵초밥 🇺🇸햄버거</span></div>';
+    } else {
+      h += '<div class="fline" style="margin-top:10px">🌾 회사가 <b>' + FARM_FLOOR + '층</b>이 되면 <b>농장</b>이 열려서 음식도 만들 수 있어!</div>';
+    }
+  }
+  h += growPanel();
+  document.getElementById('fPanel').innerHTML = h;
+  refreshOffice();
+}
+
+/* 나라 지사 카드 하나 */
+function brCard(c) {
+  const lv = S.br[c.id] || 0;
+  let h = '<div class="flag" style="background:' + c.css + '"></div>' +
+          '<div class="cnm">' + c.name + '</div>' +
+          '<div class="row" style="min-height:19px">' +
+            (lv ? ('규모 <span class="stars">' + '★'.repeat(lv) + '☆'.repeat(MAXFAC-lv) + '</span>') : '') + '</div>' +
+          '<div class="row">1초에 <b>' +
+            won(lv ? c.inc * (1 + 0.6*(lv-1)) * (cFoodOn(c)?1.4:1) * (1 + 0.08*F('branch')) : c.inc) + '원</b></div>' +
+          '<div class="row" style="min-height:17px;color:' + (cFoodOn(c) ? '#7fd6a0' : '#8894ab') + '">' +
+            (lv ? (anyOf(c.foodId).ic + ' ' + anyOf(c.foodId).name + (cFoodOn(c) ? ' 만드는 중 +40%' : ' 만들면 +40%')) : '') + '</div>';
+  let btn = !lv
+    ? '<button data-br="' + c.id + '" data-cost="' + brCost(c) + '">🌏 지사 세우기<br>' + won(brCost(c)) + '원</button>'
+    : (lv >= MAXFAC ? '<button disabled>✅ 제일 큰 지사!</button>'
+       : '<button class="go" data-brup="' + c.id + '" data-cost="' + brUpCost(c) + '">⬆️ 지사 키우기<br>' + won(brUpCost(c)) + '원</button>');
+  btn += '<button class="ren" style="position:static;width:100%;margin-top:4px;font-size:12px;padding:5px 0" data-view="' + c.id + '">🔍 지사 구경하기</button>';
+  return '<div class="card' + (lv ? ' on' : ' lock') + '" style="width:158px;min-height:186px">' +
+         h + '<div class="cbtns">' + btn + '</div></div>';
+}
+
+/* 어느 층에서든 쓰는 "일반 직원 뽑기" 칸 (그 층 사무실에 몇 명 있는지도 보여준다) */
+function normHireHtml(idx) {
+  const c = staffCost('norm'), mx = maxOf('norm'), now = S.staff.norm;
+  const here = normOn(idx - 1, S.lv);
+  let h = '<div class="fline">🧑‍💼 <b>이 층 사무실에 ' + here + '명</b> (회사 전체 ' + now + ' / ' + mx + '명)<br>' +
+          '<span class="eff">한 층에 15명까지 · 뽑으면 층마다 골고루 들어간다</span></div>';
+  if (now >= mx) return h + '<button class="big poor">자리가 꽉 찼어! (증축하면 더)</button>';
+  h += '<div class="brow">' +
+    '<button class="big hire" data-hire="norm" data-cost="' + c + '">🙋 1명 — ' + won(c) + '원</button>' +
+    '<button class="big hire" data-hire="norm" data-many="10" data-cost="' + (c*10) + '">🙋‍♂️ 10명 — ' + won(c*10) + '원</button>' +
+    '</div>';
+  return h;
+}
+
+/* 제품/음식 카드 하나 */
+function machinesMaking(id) {                 // 그 제품을 만드는 기계 수
+  let n = 0;
+  for (const k in S.maps) {
+    const g = S.maps[k].grid;
+    for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+      const c = g[y][x];
+      if (c && (B[c.t].mk || B[c.t].mkF) && makeIdOf(c) === id) n++;
+    }
+  }
+  return n;
+}
+function prodCard(p, food) {
+  const done = !!S.done[p.id], ing = S.rd && S.rd.id === p.id;
+  const list = food ? S.foods : S.prods;
+  const now = list.indexOf(p.id) >= 0;
+  // 윗부분(설명)과 아랫부분(버튼)을 나눠서, 카드 높이가 바뀌어도 버튼 자리가 안 움직이게 한다
+  let ch = '<div class="cic">' + p.ic + '</div><div class="cnm">' + prodName(p.id) + '</div>' +
+    '<div class="row">재료: ' + matText(p.inp) + '</div>' +
+    '<div class="row">값: <b>' + won(p.price * priceMul()) + '원</b></div>' +
+    '<div class="row" style="color:#7fd6a0;min-height:19px">' +
+      (done && now ? ('🔧 기계 ' + machinesMaking(p.id) + '대가 만드는 중') : '') + '</div>';
+  let btn = '';
+  if (done) {
+    btn = now ? '<button class="go" data-mk="' + p.id + '">✅ 만드는 중 (빼기)</button>'
+              : '<button data-mk="' + p.id + '">➕ 같이 만들기</button>';
+    ch += '<button class="ren" data-ren="' + p.id + '" title="이름 바꾸기">✏️</button>';
+  } else if (ing) {
+    const pct = Math.min(99, Math.floor(S.rd.p / p.rd * 100));
+    btn = '<div class="row pct">기획 중… ' + pct + '%</div><div class="bar"><i style="width:' + pct + '%"></i></div>';
+  } else {
+    btn = '<button data-rd="' + p.id + '" data-cost="' + planCost(p) + '">📐 기획하기 ' + won(planCost(p)) + '원</button>' +
+          '<div class="row" style="color:#8894ab;min-height:17px">' + (S.rd ? '지금 다른 걸 기획 중' : '') + '</div>';
+  }
+  return '<div class="card' + (now ? ' on' : '') + ((!done && !ing) ? ' lock' : '') + '">' +
+         ch + '<div class="cbtns">' + btn + '</div></div>';
+}
+
+/* 증축 · 옆으로 넓히기 (항상 패널 맨 아래) */
+function growPanel() {
+  let h = '<div class="fcard" style="margin-top:10px;border-color:#f0a13a">' +
+    '<div class="fline">🏢 지금 <b>' + S.lv + '층</b> · 옆으로 <b>' + S.wide + '</b>번 넓힘 → 등급 <b>' + rankName() + '</b><br>' +
+    '<span class="eff">회사가 <b>커질수록</b> 등급이 올라가! (돈이 아니라 크기!)</span></div>';
+  if (S.lv >= MAXLV) h += '<button class="big poor">🏆 60층! 더 못 올려</button>';
+  else {
+    const nf = floorAt(S.lv + 1);
+    h += '<button class="big grow" data-grow="1" data-cost="' + growCost() + '">🏗️ ' + (S.lv+1) + '층 ' +
+         nf.ic + nf.name + ' 올리기 — ' + won(growCost()) + '원</button>';
+  }
+  if (S.wide >= MAXWIDE) h += '<button class="big poor">↔️ 옆으로 최대로 넓혔어!</button>';
+  else h += '<button class="big" data-wide="1" data-cost="' + wideCost() + '">↔️ 건물 옆으로 넓히기 — ' + won(wideCost()) + '원</button>';
+  return h + '</div>';
+}
+
+// 돈에 따라 색만 바꾸고 진행바만 움직인다 (버튼을 새로 만들면 클릭이 씹히니까)
+function refreshOffice() {
+  if (!officeOpen) return;
+  document.querySelectorAll('#office [data-cost]').forEach(b => {
+    b.classList.toggle('poor', S.money < +b.dataset.cost);
+  });
+  if (S.rd) {
+    const p = anyOf(S.rd.id);
+    const pct = Math.min(99, Math.floor(S.rd.p / p.rd * 100));
+    const bar = document.querySelector('#fPanel .bar i'), t = document.querySelector('#fPanel .pct');
+    if (bar) bar.style.width = pct + '%';
+    if (t) t.textContent = '기획 중… ' + pct + '%';
+  }
+}
+
+document.getElementById('office').addEventListener('click', e => {
+  const t = e.target;
+  if (!t.dataset) return;
+  if (t.id === 'bSpeed2') { buySpeed(); return; }
+  if (t.dataset.rd) {
+    const p = anyOf(t.dataset.rd), c = planCost(p);   // 음식도 있으니 anyOf! (prodOf면 나무 장난감으로 튕긴다)
+    if (S.rd) { toast('지금 다른 제품을\n기획하고 있어!'); return; }
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.rd = { id:p.id, p:0 };
+    beep(600, 0.12, 'square', 0.05);
+    toast('기획 시작! 📐\n' + p.ic + ' ' + p.name);
+  } else if (t.dataset.mk) {
+    const id = t.dataset.mk, food = isFood(id);
+    const list = food ? S.foods : S.prods;
+    const at2 = list.indexOf(id);
+    if (at2 >= 0) {                                   // 빼기
+      if (list.length <= 1) { toast('하나는 남겨 둬야 해!'); return; }
+      list.splice(at2, 1);
+      toast(anyOf(id).ic + ' ' + prodName(id) + '\n그만 만든다');
+    } else {                                          // 같이 만들기
+      list.push(id);
+      toast(anyOf(id).ic + ' ' + prodName(id) + '\n도 같이 만든다! (기계를 눌러 바꿔도 돼)');
+    }
+    if (food) S.food = S.foods[0]; else S.prod = S.prods[0];
+    resetFactories();
+    beep(880, 0.1, 'square', 0.05);
+  } else if (t.dataset.ren) {
+    const id = t.dataset.ren;
+    const nm = prompt('제품 이름을 지어 줘!', prodName(id));
+    if (nm && nm.trim()) S.names[id] = nm.trim().slice(0, 12);
+  } else if (t.dataset.hire) {
+    const k = t.dataset.hire;
+    const many = Math.min(+(t.dataset.many || 1), maxOf(k) - S.staff[k]);
+    const c = staffCost(k) * Math.max(1, many);
+    if (S.staff[k] >= maxOf(k)) { toast('자리가 꽉 찼어!\n' + (k === 'norm' ? '증축하면 더 뽑을 수 있어' : '구내식당을 지으면 늘어나')); return; }
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.staff[k] += Math.max(1, many);
+    beep(1000, 0.12, 'square', 0.05);
+    toast(STAFF[k].ic + ' ' + STAFF[k].name + ' ' + Math.max(1, many) + '명 들어왔다!');
+  } else if (t.dataset.fac) {
+    const id = t.dataset.fac, c = facCost(id);
+    if (F(id) >= MAXFAC) return;
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.fac[id] = F(id) + 1; recalcGen();
+    beep(1100, 0.14, 'square', 0.06);
+    toast(floorOf(id).ic + ' ' + floorOf(id).name + ' 시설\n★' + S.fac[id] + '단계가 됐다!');
+  } else if (t.dataset.biz) {
+    const b = BIZ.find(v => v.id === t.dataset.biz), c = bizCost(b);
+    if (S.biz[b.id]) return;
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.biz[b.id] = 1;
+    beep(1500, 0.3, 'square', 0.08);
+    toast(b.ic + ' ' + b.name + ' 시작! 🎉\n이제 가만히 있어도 돈이 들어와');
+  } else if (t.dataset.bizup) {
+    const b = BIZ.find(v => v.id === t.dataset.bizup), c = bizUpCost(b);
+    if ((S.biz[b.id]||0) >= MAXFAC) return;
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.biz[b.id]++;
+    beep(1200, 0.16, 'square', 0.06);
+    toast(b.ic + ' ' + b.name + '\n★' + S.biz[b.id] + '단계로 커졌다!');
+  } else if (t.dataset.view) {
+    openBranch(t.dataset.view);
+    return;
+  } else if (t.dataset.br) {
+    const c = countryOf(t.dataset.br), cost = brCost(c);
+    if (S.br[c.id]) return;
+    if (S.money < cost) { toast('돈이 모자라!\n' + won(cost) + '원 필요해'); return; }
+    S.money -= cost; S.br[c.id] = 1;
+    beep(1500, 0.3, 'square', 0.08);
+    toast('🌏 ' + c.name + ' 지사 완성! 🎉\n이제 세계로 나간다!');
+  } else if (t.dataset.brup) {
+    const c = countryOf(t.dataset.brup), cost = brUpCost(c);
+    if ((S.br[c.id]||0) >= MAXFAC) return;
+    if (S.money < cost) { toast('돈이 모자라!\n' + won(cost) + '원 필요해'); return; }
+    S.money -= cost; S.br[c.id]++;
+    beep(1250, 0.18, 'square', 0.06);
+    toast('🌏 ' + c.name + ' 지사가\n★' + S.br[c.id] + '단계로 커졌다!');
+  } else if (t.dataset.grow) {
+    if (S.lv >= MAXLV) return;
+    const c = growCost();
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.lv++; recalcGen();
+    const nf = floorAt(S.lv);
+    selFloor = nf.id; scrollTo(S.lv);
+    beep(1400, 0.25, 'square', 0.08);
+    let msg = '🏗️ 증축 완성!\n' + S.lv + '층 ' + nf.ic + nf.name + ' 생겼다!';
+    if (S.lv === FARM_FLOOR) msg = '🌾 농장이 열렸다!\n' + S.lv + '층! E키로 농장에 가 봐';
+    if (S.lv === BIZ_FLOOR)  msg = '🏢 30층 달성!\n이제 다른 사업도 할 수 있어';
+    toast(msg);
+  } else if (t.dataset.wide) {
+    if (S.wide >= MAXWIDE) return;
+    const c = wideCost();
+    if (S.money < c) { toast('돈이 모자라!\n' + won(c) + '원 필요해'); return; }
+    S.money -= c; S.wide++;
+    beep(900, 0.25, 'square', 0.07);
+    toast('↔️ 건물이 옆으로 넓어졌다!\n방이 커지고 등급도 올라가');
+  } else return;
+  drawUI(); drawOffice(); save();
+});
+
+bcv.addEventListener('click', e => {
+  const r = bcv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (bcv.width / r.width) / bScale;
+  const y = (e.clientY - r.top) * (bcv.height / r.height) / bScale;
+  if (growRect && x>=growRect.x && x<=growRect.x+growRect.w && y>=growRect.y && y<=growRect.y+growRect.h) {
+    const b = document.querySelector('#office [data-grow]');
+    if (b) b.click();
+    return;
+  }
+  for (const fr of floorRects) {
+    if (x>=fr.x && x<=fr.x+fr.w && y>=fr.y && y<=fr.y+fr.h) {
+      selFloor = fr.id; beep(520, 0.05, 'square', 0.03); drawOffice(); zoomTitle(); return;
+    }
+  }
+});
+// 마우스 휠로 건물 오르내리기
+bcv.addEventListener('wheel', e => {
+  e.preventDefault();
+  bScroll += (e.deltaY > 0 ? -1 : 1) * (e.shiftKey ? 5 : 1);
+  bScroll = Math.max(0, Math.min(maxScroll(bVis), bScroll));
+}, { passive:false });
+document.getElementById('bUp').onclick   = () => { bScroll = Math.min(maxScroll(bVis), bScroll + Math.max(1, bVis-1)); };
+document.getElementById('bDown').onclick = () => { bScroll = Math.max(0, bScroll - Math.max(1, bVis-1)); };
+
+function staffEffectText(k) {
+  if (k === 'norm') return '싸게 많이! 지금 수입 +' + Math.round(normBonus()*100) + '% · 건물을 돌아다닌다';
+  if (k === 'sales') return '지금 물건값 ' + Math.round(priceMul()*100) + '% (많을수록 비싸게 팔려)';
+  if (k === 'eng')   return '지금 공장 한 박자 ' + (stepMs()/1000).toFixed(2) + '초 (짧을수록 빨라)';
+  return '지금 기획 속도 ' + rdSpeed().toFixed(1) + '배';
+}
+
+function openOffice(on) {
+  officeOpen = on;
+  document.getElementById('office').classList.toggle('show', on);
+  if (on) { drawBuilding(); scrollTo(floorNum(selFloor)); drawOffice(); zoomTitle(); }
+}
+document.getElementById('bOffice').onclick  = () => openOffice(true);
+document.getElementById('bOffice2').onclick = () => openOffice(true);
+document.getElementById('closeOffice').onclick = () => openOffice(false);
+document.getElementById('bMap2').onclick = () => switchMap(S.map === 'farm' ? 'factory' : 'farm');
+document.getElementById('bPlant').onclick = () => openPlant(true);
+document.getElementById('closePlant').onclick = () => openPlant(false);
+// 📐 기획하기 — 기획실 층으로 바로 간다
+document.getElementById('bPlan').onclick = () => {
+  selFloor = 'plan'; scrollTo(floorNum('plan'));
+  drawOffice();
+  document.getElementById('fPanel').scrollTop = 0;
+};
+// 공장 화면에서 바로 기획실 열기
+document.getElementById('bPlan2').onclick = () => {
+  openOffice(true);
+  document.getElementById('bPlan').click();
+};
+
+/* ===================== 마우스 / 키보드 ===================== */
+function tileOf(ev) {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - r.left) / TS), y = Math.floor((ev.clientY - r.top) / TS);
+  return inb(x,y) ? [x,y] : null;
+}
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('mousedown', e => {
+  const t = tileOf(e); if (!t) return;
+  dragging = true; dragBtn = e.button; lastTile = t;
+  if (e.button === 2) remove(t[0], t[1]); else place(t[0], t[1], S.dir, true);
+});
+cv.addEventListener('mousemove', e => {
+  const t = tileOf(e);
+  mouseTile = t;
+  if (!dragging || !t) return;
+  if (lastTile && t[0]===lastTile[0] && t[1]===lastTile[1]) return;
+  if (dragBtn === 2) { remove(t[0], t[1]); lastTile = t; return; }
+  if (lastTile && sel === 'belt') {
+    const dx = t[0]-lastTile[0], dy = t[1]-lastTile[1];
+    if (Math.abs(dx) + Math.abs(dy) === 1) {
+      const nd = DIRS.findIndex(d => d[0]===dx && d[1]===dy);
+      if (nd >= 0) {
+        const prev = at(lastTile[0], lastTile[1]);
+        if (prev && prev.t === 'belt') prev.dir = nd;
+        S.dir = nd;
+      }
+    }
+  }
+  place(t[0], t[1], S.dir);
+  lastTile = t;
+});
+window.addEventListener('mouseup', () => { dragging = false; lastTile = null; });
+cv.addEventListener('mouseleave', () => { mouseTile = null; });
+
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === 'escape') {
+    if (branchOpen) { branchOpen = false; document.getElementById('branch').classList.remove('show'); return; }
+    openOffice(false); openPlant(false); return;
+  }
+  if (branchOpen) return;
+  if (k === 'w' || k === 'ㅈ') { openPlant(!plantOpen); e.preventDefault(); return; }
+  if (plantOpen) return;
+  if (k === 'q' || k === 'ㅂ') { openOffice(!officeOpen); e.preventDefault(); return; }
+  if (officeOpen) return;
+  if (k === 'e' || k === 'ㄷ') { switchMap(S.map === 'farm' ? 'factory' : 'farm'); e.preventDefault(); return; }
+  if (k === 'r' || k === 'ㄱ') { S.dir = (S.dir+1) % 4; drawUI(); e.preventDefault(); return; }
+  if (k === ' ') { togglePause(); e.preventDefault(); return; }
+  for (const key of ORDER()) if (e.key === B[key].key) { sel = key; drawUI(); return; }
+});
+document.getElementById('bMap').onclick = () => switchMap(S.map === 'farm' ? 'factory' : 'farm');
+document.getElementById('bRot').onclick = () => { S.dir = (S.dir+1) % 4; drawUI(); };
+document.getElementById('bSpeed').onclick = buySpeed;
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('bPause').textContent = paused ? '▶' : '⏸';
+  lastStep = performance.now();
+}
+document.getElementById('bPause').onclick = togglePause;
+document.getElementById('bMute').onclick = () => {
+  S.mute = !S.mute;
+  document.getElementById('bMute').textContent = S.mute ? '🔇' : '🔊';
+};
+document.getElementById('bReset').onclick = () => {
+  if (!confirm('정말 처음부터 다시 할까? 지금 공장이랑 회사가 다 사라져!')) return;
+  S = newState(); selFloor = 'plan'; bScroll = 0; recalcGen();
+  document.getElementById('coName').value = S.co;
+  buildPanels(); save(); drawUI(); drawOffice();
+};
+document.getElementById('coName').oninput = e => {
+  S.co = e.target.value;
+  document.getElementById('oName').textContent = S.co || '우리회사';
+};
+window.addEventListener('resize', resize);
+window.addEventListener('beforeunload', save);
+
+/* ===================== 시작! ===================== */
+S = load() || newState();
+curMapKey = S.map;
+recalcGen();
+document.getElementById('coName').value = S.co || '우리회사';
+document.getElementById('bMute').textContent = S.mute ? '🔇' : '🔊';
+resize();
+buildPanels();
+drawUI();
+drawOffice();
+lastStep = performance.now();
+setInterval(save, 5000);
+
+function loop() {
+  const now = performance.now();
+  if (!paused && now - lastStep >= stepMs()) {
+    lastStep = now;
+    tick();
+    drawUI();
+    refreshOffice();
+    refreshPlant();
+  }
+  if (branchOpen) drawBranch();
+  else if (plantOpen) drawPlant();
+  else if (officeOpen) drawBuilding();
+  else draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>

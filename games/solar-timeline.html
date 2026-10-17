@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>태양계 타임라인 - 궤도 버전</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #02030a; color: #eef; overflow: hidden;
+    font-family: "Malgun Gothic", "맑은 고딕", sans-serif; user-select: none; }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; cursor: grab; }
+  canvas.drag { cursor: grabbing; }
+
+  #top { position: fixed; top: 12px; left: 0; right: 0; text-align: center; pointer-events: none; }
+  #year { font-size: 40px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 14px #000, 0 0 4px #000; }
+  #era { font-size: 17px; color: #ffd98a; margin-top: 2px; text-shadow: 0 0 6px #000; }
+
+  #caption { position: fixed; top: 96px; left: 50%; transform: translateX(-50%); width: min(560px, 92vw);
+    background: rgba(10, 14, 40, .82); border: 2px solid #5a6cff; border-radius: 16px; padding: 12px 16px;
+    text-align: center; pointer-events: none; transition: opacity .5s; }
+  #caption.hide { opacity: 0; }
+  #caption .t { font-size: 22px; font-weight: 800; }
+  #caption .d { font-size: 15px; color: #cfd6ff; margin-top: 6px; line-height: 1.5; }
+
+  #bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 14px 12px;
+    background: linear-gradient(transparent, rgba(0,0,0,.85) 40%); }
+  #btns { display: flex; gap: 6px; align-items: center; justify-content: center; margin-bottom: 8px; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 15px; font-weight: 700; color: #fff; background: #26305e;
+    border: 2px solid #4a5aa8; border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: #34417c; }
+  button.on { background: #e0a020; border-color: #ffd36a; color: #221; }
+  #play { font-size: 20px; min-width: 60px; background: #2a7a3a; border-color: #5fd27a; }
+  #bar { position: relative; height: 34px; margin: 0 8px; cursor: pointer; }
+  #track { position: absolute; left: 0; right: 0; top: 20px; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, #6a2a6a, #2a3a8a 30%, #2a7a4a 50%, #ffcc44 62%, #ff4422 75%, #9ab0ff 82%, #333 100%); }
+  #fill { position: absolute; left: 0; top: 20px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.35); }
+  #knob { position: absolute; top: 14px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 10px #8cf; }
+  .tick { position: absolute; top: 0; width: 18px; margin-left: -9px; text-align: center; font-size: 13px; line-height: 16px; }
+  .tick.got { filter: none; }
+  .tick.no { filter: grayscale(1) opacity(.45); }
+  #nowmark { position: absolute; top: 16px; width: 2px; height: 16px; background: #7dff9a; }
+
+  #side { position: fixed; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  #side button { font-size: 13px; text-align: left; padding: 5px 9px; }
+  #sysgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  canvas.place { cursor: crosshair; }
+  #side .syshead { font-size: 12px; color: #9fb0ff; text-align: center; }
+  #side button.sys.on { background: #3a5ad0; border-color: #9fb8ff; color: #fff; }
+
+  #info { position: fixed; left: 12px; top: 12px; width: 270px; background: rgba(10,14,40,.9); border: 2px solid #4a5aa8;
+    border-radius: 14px; padding: 12px; display: none; }
+  #info h3 { margin: 0 0 6px; font-size: 22px; }
+  #info .st { color: #ffd98a; font-weight: 700; margin-bottom: 6px; }
+  #info .fx { font-size: 14px; line-height: 1.5; color: #d6dcff; }
+  #info .row { display: flex; gap: 6px; margin-top: 10px; }
+
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; }
+  #mbox { width: min(820px, 94vw); max-height: 86vh; overflow: auto; background: #0e1430; border: 3px solid #5a6cff;
+    border-radius: 18px; padding: 16px 18px; }
+  #mbox h2 { margin: 0 0 10px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .card { background: #1b2350; border: 2px solid #3d4b99; border-radius: 12px; padding: 8px; font-size: 13px; line-height: 1.4; cursor: pointer; }
+  .card b { display: block; font-size: 15px; margin: 2px 0; }
+  .card .y { color: #9fb0ff; font-size: 12px; }
+  .card.lock { opacity: .5; cursor: default; }
+  .card .e { font-size: 26px; }
+  .q { font-size: 20px; font-weight: 800; margin: 10px 0 14px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opts button { font-size: 17px; padding: 12px; }
+  .opts button.ok { background: #2a8a3a; border-color: #7fe08f; }
+  .opts button.bad { background: #8a2a2a; border-color: #ff8080; }
+  #toast { position: fixed; right: 14px; bottom: 110px; background: #e0a020; color: #221; font-weight: 800;
+    padding: 8px 14px; border-radius: 12px; opacity: 0; transition: opacity .4s; pointer-events: none; }
+  #help { position: fixed; left: 12px; bottom: 96px; font-size: 12px; color: #8a93c0; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top"><div id="year">-</div><div id="era">-</div></div>
+<div id="caption" class="hide"><div class="t"></div><div class="d"></div></div>
+
+<div id="side">
+  <div class="syshead">별 고르기</div>
+  <div id="sysgrid">
+  <div class="syshead">별 고르기</div>
+  <button class="sys on" data-sys="solar">🌞 태양계</button>
+  <button class="sys" data-sys="tauceti">🟡 타우 세티</button>
+  <button class="sys" data-sys="trappist">🔴 트라피스트-1</button>
+  <button class="sys" data-sys="kepler70">🔵 케플러-70</button>
+  <button class="sys" data-sys="tabby">👽 태비의 별</button>
+  <button class="sys" data-sys="betel">💥 베텔게우스</button>
+  <button class="sys" data-sys="alphacen">👯 알파 센타우리</button>
+  <button class="sys" data-sys="sirius">🐶 시리우스</button>
+  </div>
+  <div style="height:8px"></div>
+  <button id="bDex">📖 사건 도감 <span id="dexN">0</span></button>
+  <button id="bQuiz">❓ 퀴즈</button>
+  <button id="bName" class="on">🏷️ 이름</button>
+  <button id="bOrbit" class="on">⭕ 궤도선</button>
+  <button id="bFit">🎯 화면 맞추기</button>
+  <button id="bAlien" style="display:none">👽 괴담 모드</button>
+  <button id="bMine">🪐 내 행성 넣기</button>
+  <button id="bTilt">👀 기울여 보기</button>
+  <button id="bSound" class="on">🔊 소리</button>
+</div>
+
+<div id="info">
+  <h3 id="iName"></h3>
+  <div class="st" id="iState"></div>
+  <div class="fx" id="iFact"></div>
+  <div class="row"><button id="iFollow">📌 따라가기</button><button id="iClose">닫기</button></div>
+</div>
+
+<div id="help">끌기: 화면 움직이기 · 휠: 확대/축소 · 행성 클릭: 정보 · 스페이스: 재생/멈춤 · ←→: 사건 이동</div>
+
+<div id="bottom">
+  <div id="btns">
+    <button id="bStart" title="처음으로">⏮</button>
+    <button id="bPrev">◀ 사건</button>
+    <button id="play">▶</button>
+    <button id="bNext">사건 ▶</button>
+    <span style="width:10px"></span>
+    <button class="spd" data-s="0.5">느리게</button>
+    <button class="spd on" data-s="1">x1</button>
+    <button class="spd" data-s="2">x2</button>
+    <button class="spd" data-s="4">x4</button>
+  </div>
+  <div id="bar"><div id="track"></div><div id="fill"></div><div id="nowmark"></div><div id="knob"></div></div>
+</div>
+
+<div id="modal"><div id="mbox"></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ================================================================
+//  태양계 타임라인 - 궤도 버전
+//  위에서 내려다본 태양계가 46억 년 전 ~ 아주 먼 미래까지 변하는 모습.
+//  거리는 "제곱근 눈금"(sqrt AU)이라 해왕성까지 한 화면에 들어온다.
+// ================================================================
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth || 1200; H = window.innerHeight || 800;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------- 도우미 ----------
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const lerp = (a, b, t) => a + (b - a) * t;
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const rnd = (a, b) => a + Math.random() * (b - a);
+function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function mixHex(a, b, t) { const A = hexRgb(a), B = hexRgb(b);
+  return [0, 1, 2].map(i => Math.round(lerp(A[i], B[i], t))); }
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+// ---------- 시간 축 ----------
+// [연도, 이 구간을 x1 속도로 지나가는 데 걸리는 초]
+// 연도: 음수 = 지금보다 전, 양수 = 지금보다 후
+const SOLAR_NODES = [
+  [-4.6e9, 5], [-4.59e9, 5], [-4.57e9, 4], [-4.567e9, 7], [-4.555e9, 5], [-4.54e9, 7],
+  [-4.51e9, 5], [-4.4e9, 5], [-4.1e9, 9], [-3.8e9, 5], [-2.4e9, 5], [-7.2e8, 4], [-5.4e8, 5],
+  [-6.6e7, 6], [0, 7], [1e9, 5], [3.5e9, 4], [5e9, 5], [7e9, 5], [7.5e9, 6], [7.59e9, 5],
+  [7.7e9, 5], [7.9e9, 6], [8e9, 5], [1e12, 5], [1e15, 7], [1e17, 0]
+];
+let NODES, CUM, TOTAL;
+function setNodes(n) {
+  NODES = n; CUM = []; TOTAL = 0;
+  for (const x of n) { CUM.push(TOTAL); TOTAL += x[1]; }
+  TOTAL -= n[n.length - 1][1];
+}
+const isLogSeg = (y0, y1) => y0 > 0 && y1 / y0 > 50;
+
+function yearAt(p) {
+  p = clamp(p, 0, TOTAL);
+  for (let i = 0; i < NODES.length - 1; i++) {
+    if (p <= CUM[i + 1] || i === NODES.length - 2) {
+      const f = clamp((p - CUM[i]) / NODES[i][1], 0, 1), y0 = NODES[i][0], y1 = NODES[i + 1][0];
+      return isLogSeg(y0, y1) ? y0 * Math.pow(y1 / y0, f) : lerp(y0, y1, f);
+    }
+  }
+  return NODES[NODES.length - 1][0];
+}
+function pAt(y) {
+  if (y <= NODES[0][0]) return 0;
+  for (let i = 0; i < NODES.length - 1; i++) {
+    const y0 = NODES[i][0], y1 = NODES[i + 1][0];
+    if (y <= y1) {
+      const f = isLogSeg(y0, y1) ? Math.log(y / y0) / Math.log(y1 / y0) : (y - y0) / (y1 - y0);
+      return CUM[i] + f * NODES[i][1];
+    }
+  }
+  return TOTAL;
+}
+// 표(연도→값)를 "시간 막대 위치" 기준으로 부드럽게 보간 (아주 먼 미래도 자연스럽게)
+function makeTab(rows) { return rows.map(r => [pAt(r[0]), r[1]]); }
+function tab(T, p) {
+  if (p <= T[0][0]) return T[0][1];
+  for (let i = 0; i < T.length - 1; i++)
+    if (p <= T[i + 1][0]) return lerp(T[i][1], T[i + 1][1], (p - T[i][0]) / (T[i + 1][0] - T[i][0] || 1));
+  return T[T.length - 1][1];
+}
+function tabColor(T, p) {
+  if (p <= T[0][0]) return hexRgb(T[0][1]);
+  for (let i = 0; i < T.length - 1; i++)
+    if (p <= T[i + 1][0]) return mixHex(T[i][1], T[i + 1][1], (p - T[i][0]) / (T[i + 1][0] - T[i][0] || 1));
+  return hexRgb(T[T.length - 1][1]);
+}
+
+// 한국어 숫자: 45억 6700만
+function korNum(n) {
+  if (n < 1e4) return Math.round(n).toLocaleString();
+  const d = Math.pow(10, Math.floor(Math.log10(n)) - 2);
+  n = Math.round(n / d) * d;
+  const U = [[1e16, '경'], [1e12, '조'], [1e8, '억'], [1e4, '만']], parts = [];
+  for (const [u, s] of U) { const q = Math.floor(n / u + 1e-9); if (q > 0) { parts.push(q + s); n -= q * u; } if (parts.length === 2) break; }
+  return parts.join(' ');
+}
+function fmtYear(y) {
+  const a = Math.abs(y);
+  if (a < 3000) return '지금!';
+  return korNum(a) + ' 년 ' + (y < 0 ? '전' : '후');
+}
+
+// ---------- 별·행성·사건 (지금 고른 별에 따라 바뀜) ----------
+let T_SUNR, T_SUNC, T_SUNL, T_MASS, PLANETS = [], PL = {}, EVENTS = [], GBELTS = [];
+let REF = 1; // 공전 속도 기준 거리
+let GEXTRA = null;
+// 생명 가능 지대 [안쪽 AU, 바깥쪽 AU, 언제부터, 언제까지]
+const HZT = { solar: [0.95, 1.67, -4.5e9, 1e9], tauceti: [0.55, 1.6, -5.78e9, 9e9], trappist: [0.023, 0.05, -6.6e9, 4e12],
+  alphacen: [1.2, 2.1, -5.29e9, 3.5e9], sirius: [4.8, 8.4, -2.29e8, 1e9] }; // 별마다 따로 있는 특별 장면 (태비의 별 먼지 덩어리 등)
+const omega = a => Math.min(3.2, 1.1 / Math.pow(Math.max(a / REF, 0.15), 1.05)); // 화면용 공전 속도 (진짜보다 훨씬 빠름)
+
+function loadSolar() {
+  setNodes(SOLAR_NODES);
+  // ---------- 태양 ----------
+  T_SUNR = makeTab([ // 태양 반지름(AU). 지금 = 0.00465
+    [-4.6e9, 0], [-4.592e9, 0], [-4.585e9, 0.03], [-4.567e9, 0.006], [0, 0.00465], [5e9, 0.0075],
+    [7e9, 0.012], [7.3e9, 0.06], [7.45e9, 0.3], [7.5e9, 0.56], [7.55e9, 1.02], [7.59e9, 1.2],
+    [7.594e9, 0.06], [7.7e9, 0.05], [7.8e9, 0.3], [7.88e9, 0.95], [7.9e9, 0.4], [7.92e9, 0.002], [7.95e9, 0.0000425]
+  ]);
+  T_SUNC = makeTab([
+    [-4.59e9, '#7a2010'], [-4.58e9, '#ff5a2a'], [-4.567e9, '#fff0b0'], [0, '#fff3c4'], [5e9, '#ffe08a'],
+    [7.3e9, '#ffa850'], [7.5e9, '#ff6a3a'], [7.59e9, '#ff4a28'], [7.594e9, '#ffd27a'], [7.7e9, '#ffc070'],
+    [7.8e9, '#ff7040'], [7.88e9, '#ff5030'], [7.9e9, '#ffffff'], [7.95e9, '#cfe0ff'], [1e10, '#e8f0ff'],
+    [1e12, '#fff0d0'], [1e14, '#ffb070'], [3e15, '#c04020'], [3e16, '#501810'], [1e17, '#1a1212']
+  ]);
+  T_SUNL = makeTab([ // 밝기(빛 번짐 크기)
+    [-4.592e9, 0], [-4.585e9, 1.6], [-4.567e9, 0.8], [0, 1], [1e9, 1.1], [3.5e9, 1.4], [5e9, 1.6], [7e9, 2.4],
+    [7.59e9, 6], [7.594e9, 2], [7.7e9, 2], [7.88e9, 5], [7.9e9, 3], [7.95e9, 1.2], [1e12, 0.5], [1e15, 0.15], [1e17, 0]
+  ]);
+  T_MASS = makeTab([[-1, 1], [7.3e9, 1], [7.59e9, 0.68], [7.8e9, 0.65], [7.95e9, 0.54]]);
+
+  // ---------- 행성 ----------
+  PLANETS = [
+    // 수성: 처음엔 더 컸는데 충돌로 겉껍질이 날아가 작아졌다 (sz0 → sz)
+    { id: 'mercury', n: '수성', col: '#b8b2aa', sz: 3.4, sz0: 4.4, shrink: -3.9e9, a0: 0.387, form: [-4.56e9, -4.54e9], engulf: 7.50e9 },
+    { id: 'venus', n: '금성', col: '#e9c784', sz: 5, a0: 0.723, form: [-4.56e9, -4.54e9], engulf: 7.55e9 },
+    // 수성 충돌 행성: 수성 바깥을 돌다가 궤도가 찌그러져 수성과 충돌
+    { id: 'mimpact', n: '수성 충돌 행성', full: '수성 충돌 행성', col: '#8c7f9a', col2: '#5e5468', sz: 4.6, a0: 0.56,
+      form: [-4.556e9, -4.546e9], crash: -3.9e9, hit: 'mercury', win: 0.025e9, deadMsg: '💥 수성과 부딪혀 부서졌어요',
+      eT: makeTab([[-4.05e9, 0], [-3.93e9, 0.3]]), w: 0.5 },
+    { id: 'earth', n: '지구', col: '#2e7bd1', sz: 5.5, a0: 1, form: [-4.56e9, -4.54e9], engulf: 7.59e9 },
+    // 테이아: 지구 앞 60도 자리(트로이 자리)에서 돌다가 -45.1억 년에 지구와 충돌 → 달
+    { id: 'theia', n: '테이아', full: '테이아', col: '#a07a60', col2: '#6a4a3a', sz: 4.3, a0: 1, form: [-4.556e9, -4.546e9],
+      crash: -4.51e9, hit: 'earth', trojan: true, deadMsg: '💥 지구와 부딪혀서 달이 되었어요' },
+    { id: 'mars', n: '화성', col: '#d4683f', sz: 3.9, a0: 1.524, form: [-4.562e9, -4.55e9], eject: 6e16 },
+    // 5번째 암석행성(행성 V): 화성과 소행성대 사이 → 궤도가 흔들리다 태양으로 떨어짐
+    { id: 'planetv', n: '행성 V', full: '5번째 암석행성 (행성 V)', col: '#9a8f86', col2: '#6f5f55', sz: 3.6, a0: 1.9,
+      form: [-4.556e9, -4.546e9], crash: -3.95e9, hit: 'venus', win: 0.035e9, deadMsg: '💥 금성과 부딪혀 사라졌어요',
+      eT: makeTab([[-4.1e9, 0], [-3.97e9, 0.55]]) },
+    { id: 'jupiter', n: '목성', col: '#d8a56e', sz: 12, form: [-4.5695e9, -4.566e9], eject: 3e16,
+      aT: makeTab([[-4.566e9, 3.5], [-4.562e9, 1.5], [-4.556e9, 5.45], [-4.1e9, 5.45], [-3.85e9, 5.2]]) },
+    { id: 'saturn', n: '토성', col: '#e4cc8e', sz: 10, form: [-4.569e9, -4.565e9], eject: 1e16,
+      aT: makeTab([[-4.566e9, 4.6], [-4.562e9, 2.0], [-4.556e9, 7.6], [-4.1e9, 7.6], [-3.85e9, 9.54]]) },
+    { id: 'uranus', n: '천왕성', col: '#a4e2ea', sz: 7, form: [-4.567e9, -4.56e9], eject: 5e15,
+      aT: makeTab([[-4.1e9, 14], [-3.95e9, 16.5], [-3.85e9, 19.2]]) },
+    { id: 'neptune', n: '해왕성', col: '#4f72f0', sz: 7, form: [-4.567e9, -4.56e9], eject: 2e15,
+      aT: makeTab([[-4.1e9, 11], [-3.98e9, 23], [-3.85e9, 30.1]]) },
+    // 9번째 행성: 원래 5번째 얼음 거인 → 니스 모형 때 저 멀리 쫓겨남 (아직 못 찾은 행성)
+    { id: 'planet9', n: '9번째 행성', full: '9번째 행성 (플래닛 나인)', col: '#8fb3d9', sz: 6, form: [-4.567e9, -4.56e9],
+      // 거대 행성들이 궤도를 방해 → 점점 밀려나다 결국 태양계를 떠난다
+      leave: [-3.88e9, -3.8e9], deadMsg: '👋 궤도 방해로 태양계를 떠나 떠돌이 행성이 됐어요',
+      aT: makeTab([[-4.1e9, 17.5], [-4.03e9, 40], [-3.97e9, 200], [-3.9e9, 450], [-3.8e9, 3000]]),
+      eT: makeTab([[-4.1e9, 0], [-4.03e9, 0.5], [-3.9e9, 0.55], [-3.82e9, 0.85]]), w: 2.2 },
+  ];
+  // ---------- 사건 (= 도감 카드) ----------
+  EVENTS = [
+    { y: -4.6e9, e: '☁️', t: '분자구름이 무너져요', d: '거대한 가스·먼지 구름이 근처 초신성 충격 등으로 자기 무게에 쪼그라들기 시작해요.' },
+    { y: -4.585e9, e: '🔴', t: '원시 태양 탄생', d: '구름 한가운데가 눌려 뜨거워지며 빨갛게 빛나요. 아직 진짜 별은 아니에요.' },
+    { y: -4.575e9, e: '💿', t: '원시행성 원반', d: '남은 먼지가 납작한 원반이 되어 빙글빙글 돌며 서로 뭉치기 시작해요.' },
+    { y: -4.5685e9, e: '🪐', t: '목성이 제일 먼저 태어나요', d: '눈선(얼음이 얼 만큼 추운 곳) 바깥에서 목성이 가스를 빨아들여 엄청 커져요.' },
+    { y: -4.567e9, e: '☀️', t: '태양에 불이 붙었어요!', d: '가운데에서 수소가 헬륨으로 바뀌는 핵융합이 시작! 진짜 별이 되었어요.' },
+    { y: -4.5625e9, e: '↩️', t: '그랜드 택 (목성 들어오기)', d: '목성이 태양 쪽으로 쭉 들어와요. 안쪽 재료를 휩쓸어서 화성이 작아졌대요.' },
+    { y: -4.559e9, e: '🧊', t: '얼음 거인이 하나 더!', d: '처음엔 천왕성·해왕성 같은 얼음 거인이 하나 더 있었을지도 몰라요. 나중에 "9번째 행성"이 되는 아이예요.' },
+    { y: -4.557e9, e: '↪️', t: '그랜드 택 (목성 나가기)', d: '토성이 붙잡아 줘서 목성이 다시 바깥으로 나가요. 요트가 방향을 트는 것 같아서 "택"!' },
+    { y: -4.552e9, e: '🪨', t: '5번째 암석행성', d: '화성과 소행성대 사이에 암석행성이 하나 더 있었을지도 몰라요. 이름은 "행성 V"!' },
+    { y: -4.55e9, e: '🌑', t: '수성 충돌 행성', d: '수성 바로 바깥에 수성보다 조금 큰 행성이 하나 더 돌고 있었을지도 몰라요.' },
+    { y: -4.548e9, e: '🟤', t: '테이아 탄생', d: '지구 궤도 위, 지구보다 60도 앞자리에서 화성만 한 행성 테이아가 자라요.' },
+    { y: -4.545e9, e: '🌋', t: '지구 탄생', d: '돌멩이들이 부딪히고 뭉쳐서 지구가 돼요. 겉은 펄펄 끓는 마그마 바다예요.' },
+    { y: -4.51e9, e: '💥', t: '테이아 충돌 → 달 탄생', d: '화성만 한 행성 "테이아"가 지구와 쾅! 튀어나간 조각들이 모여 달이 되었어요.' },
+    { y: -4.4e9, e: '🌊', t: '첫 바다', d: '지구가 식으며 수증기가 비가 되어 내려 바다가 생겨요.' },
+    { y: -4.1e9, e: '☄️', t: '후기 대폭격 (니스 모형)', d: '거대 행성들이 자리를 바꾸며 얼음 덩어리들을 마구 흩어요. 천왕성과 해왕성 순서가 바뀌었을지도! ☄️ 날아오는 혜성을 눌러서 지구를 지켜 봐!' },
+    { y: -4.0e9, e: '🚀', t: '9번째 행성이 밀려나요', d: '목성·토성·해왕성이 자리를 바꾸면서 9번째 행성의 궤도를 방해해요. 점점 더 먼 곳으로 밀려나요!' },
+    { y: -3.95e9, e: '💥', t: '5번째 암석행성 → 금성 충돌!', d: '궤도가 찌그러지던 행성 V가 금성과 쾅! 부딪혀 사라졌어요. 금성이 다른 행성과 반대로 거꾸로 도는 게 이런 큰 충돌 때문일지도 몰라요.' },
+    { y: -3.9e9, e: '☄️', t: '수성 충돌!', d: '수성 충돌 행성이 수성과 쾅! 바깥 돌 껍질이 날아가서 수성은 쇠로 된 커다란 심장(핵)만 남았어요. 그래서 수성은 작은데 엄청 무거워요.' },
+    { y: -3.82e9, e: '👋', t: '9번째 행성이 떠나요', d: '계속 궤도를 방해받던 9번째 행성이 결국 태양계를 떠나 혼자 우주를 떠도는 떠돌이 행성이 됐어요.' },
+    { y: -3.8e9, e: '🦠', t: '첫 생명', d: '바닷속에서 아주 작은 미생물이 처음 나타나요.' },
+    { y: -3.5e9, e: '🏜️', t: '화성의 바다가 사라져요', d: '화성은 자기장을 잃고 공기가 우주로 날아가 바다도 말라 버렸어요.' },
+    { y: -2.4e9, e: '🫧', t: '산소 대폭발', d: '남세균이 광합성으로 산소를 잔뜩 만들어요. 공기가 바뀌었어요!' },
+    { y: -7.2e8, e: '⛄', t: '눈덩이 지구', d: '지구 전체가 얼음으로 꽁꽁 언 시기가 있었어요.' },
+    { y: -5.4e8, e: '🦐', t: '캄브리아 대폭발', d: '눈·다리·껍데기를 가진 동물이 갑자기 엄청 많아져요.' },
+    { y: -2.3e8, e: '🦕', t: '공룡 등장', d: '공룡이 나타나 1억 6천만 년 넘게 지구를 차지해요.' },
+    { y: -6.6e7, e: '🌠', t: '공룡 멸종 소행성', d: '지름 10km 소행성이 멕시코 칙술루브에 쾅! 공룡이 사라져요.' },
+    { y: 0, e: '🧒', t: '지금!', d: '바로 우리가 사는 때예요. 태양은 일생의 딱 중간쯤이에요.' },
+    { y: 1e9, e: '🔥', t: '바다가 끓어요', d: '태양이 지금보다 10% 밝아지면 지구 바다가 증발하기 시작해요. 생명이 살기 힘들어져요.' },
+    { y: 3.5e9, e: '🥵', t: '지구가 금성처럼', d: '바다가 모두 사라지고 지구는 뜨거운 바위 행성이 돼요.' },
+    { y: 4.5e9, e: '🌌', t: '안드로메다 은하와 합체', d: '우리 은하와 안드로메다 은하가 합쳐져 "밀코메다"가 돼요. 별은 너무 띄엄띄엄 있어서 서로 거의 안 부딪혀요.' },
+    { y: 5e9, e: '⏳', t: '태양의 수소가 바닥나요', d: '태양 가운데 수소 연료가 다 떨어져서 점점 부풀기 시작해요.' },
+    { y: 7.3e9, e: '🎈', t: '적색거성이 돼요', d: '태양이 빨갛고 엄청 커져요. 무게는 빛과 바람으로 날아가 가벼워지고, 그래서 행성들 궤도가 넓어져요.' },
+    { y: 7.5e9, e: '😱', t: '수성을 삼켜요', d: '부푼 태양이 수성을 꿀꺽!' },
+    { y: 7.55e9, e: '😱', t: '금성을 삼켜요', d: '이번엔 금성도 꿀꺽!' },
+    { y: 7.59e9, e: '🌍', t: '지구도 삼켜질까?', d: '가장 크게 부푼 태양에 지구가 끌려 들어가요. (살아남을 수도 있다는 과학자도 있어요!)' },
+    { y: 7.5935e9, e: '⚡', t: '헬륨 섬광', d: '중심에서 헬륨이 한순간에 불붙어요. 태양이 다시 작아져서 헬륨을 태워요.' },
+    { y: 7.8e9, e: '🎈', t: '두 번째로 부풀어요', d: '헬륨도 바닥나면 태양이 또 부풀어요 (점근거성).' },
+    { y: 7.9e9, e: '🌈', t: '행성상 성운', d: '태양의 겉껍질이 우주로 날아가 알록달록한 구름이 돼요.' },
+    { y: 7.95e9, e: '⚪', t: '백색왜성', d: '남은 심장만 남아요. 지구만 한 크기인데, 각설탕 하나가 자동차만큼 무거워요!' },
+    { y: 1e12, e: '🌡️', t: '천천히 식어요', d: '백색왜성은 더 이상 불을 태우지 않고 조금씩 식어 가요.' },
+    { y: 2e15, e: '👋', t: '행성들이 떠나요', d: '가끔 지나가는 다른 별 때문에 남은 행성들이 하나씩 끌려 나가 떠돌이 행성이 돼요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성', d: '빛을 다 잃은 차가운 흑색왜성. 우주 나이가 너무 젊어서 아직 하나도 없는 별이에요. 끝!' },
+  ];
+}
+
+// 지구 모습
+function earthLook(y) {
+  if (y < -4.4e9) return ['#ff6a2a', '#ffb347', '마그마 바다! 땅이 녹아 출렁여요'];
+  if (y < -3.8e9) return ['#2a4d8f', '#6d5a4a', '첫 바다가 생겼어요 (생명은 아직)'];
+  if (y < -2.4e9) return ['#2c5aa0', '#7a6650', '바닷속에 작은 미생물만 살아요'];
+  if (y < -7.2e8) return ['#2f68b8', '#8a7a5a', '남세균 덕분에 공기에 산소가 생겼어요'];
+  if (y < -6.35e8) return ['#e8f2ff', '#c9dcef', '눈덩이 지구! 온 땅과 바다가 꽁꽁'];
+  if (y < -5.4e8) return ['#2f6fc0', '#7f7a55', '얼음이 녹고 몸이 여러 개인 생물이 나타나요'];
+  if (y < -2.3e8) return ['#2f72c4', '#4f8a3c', '바다와 땅에 동물과 식물이 가득'];
+  if (y < -6.6e7) return ['#2f74c8', '#3f8a38', '공룡 시대!'];
+  if (y < -3000) return ['#2f78cc', '#3c9440', '포유류가 세상을 차지했어요'];
+  if (y < 3000) return ['#2e7bd1', '#3fa046', '사람이 사는 지금의 지구!'];
+  if (y < 1e9) return ['#3b7bc0', '#8a9a50', '태양이 조금씩 밝아져 점점 더워져요'];
+  if (y < 3.5e9) return ['#a08a6a', '#c8a678', '바다가 다 끓어 사라진 사막 지구'];
+  if (y < 7.4e9) return ['#8a4a2a', '#c46a3a', '금성처럼 뜨거운 바위 행성'];
+  return ['#d04a20', '#ffb050', '태양이 너무 가까워 녹아내리는 중...'];
+}
+
+
+
+// ================================================================
+//  다른 별들 (타우 세티 / 트라피스트-1 / 케플러-70)
+//  def 하나로 별·행성·사건을 다 적는다. 표의 연도는 그 별 기준이 아니라 "지금으로부터".
+// ================================================================
+function loadGeneric(d) {
+  setNodes(d.nodes);
+  T_SUNR = makeTab(d.R); T_SUNC = makeTab(d.C); T_SUNL = makeTab(d.L);
+  T_MASS = makeTab(d.M || [[-1, 1]]);
+  PLANETS = d.planets.map(p => Object.assign({}, p, { aT: p.aT ? makeTab(p.aT) : null, eT: p.eT ? makeTab(p.eT) : null }));
+  EVENTS = d.events.map(e => Object.assign({}, e));
+  GEXTRA = d.extra ? d.extra() : null;
+  GBELTS = (d.belts || []).map(b => {
+    const pts = [];
+    for (let i = 0; i < b.n; i++) pts.push({ a: b.a0 + (b.a1 - b.a0) * Math.pow(Math.random(), b.pw || 1), th: Math.random() * 6.283, s: Math.random() });
+    return Object.assign({}, b, { pts });
+  });
+}
+
+const TAU = {
+  nodes: [[-5.8e9, 5], [-5.79e9, 5], [-5.77e9, 5], [-5.5e9, 5], [-4.6e9, 5], [-1e9, 4], [0, 7], [5e9, 4], [9e9, 5],
+    [1.03e10, 6], [1.06e10, 5], [1.08e10, 5], [1.1e10, 6], [1.2e10, 5], [1e12, 5], [1e15, 7], [1e17, 0]],
+  R: [[-5.8e9, 0], [-5.797e9, 0.02], [-5.79e9, 0.004], [0, 0.0037], [9e9, 0.006], [1.03e10, 0.05], [1.045e10, 0.3],
+    [1.057e10, 0.75], [1.06e10, 0.85], [1.0605e10, 0.05], [1.08e10, 0.05], [1.09e10, 0.6], [1.098e10, 0.5],
+    [1.1e10, 0.002], [1.105e10, 0.00006]],
+  C: [[-5.797e9, '#ff7a3a'], [-5.79e9, '#ffe2a0'], [0, '#ffdf9c'], [9e9, '#ffc070'], [1.03e10, '#ff8a40'], [1.06e10, '#ff4a28'],
+    [1.0605e10, '#ffd27a'], [1.08e10, '#ffc070'], [1.09e10, '#ff6030'], [1.1e10, '#ffffff'], [1.105e10, '#cfe0ff'],
+    [1e12, '#fff0d0'], [1e14, '#ffb070'], [3e15, '#c04020'], [3e16, '#501810'], [1e17, '#1a1212']],
+  L: [[-5.8e9, 0], [-5.797e9, 1.4], [-5.79e9, 0.6], [0, 0.6], [9e9, 1.0], [1.03e10, 2.2], [1.06e10, 5.5], [1.0605e10, 2],
+    [1.08e10, 2], [1.09e10, 4.5], [1.1e10, 3], [1.105e10, 1.2], [1e12, 0.5], [1e15, 0.15], [1e17, 0]],
+  M: [[-6e9, 1], [1.03e10, 1], [1.06e10, 0.85], [1.09e10, 0.8], [1.105e10, 0.68]],
+  belts: [
+    { a0: 0.1, a1: 25, n: 900, col: [255, 190, 130], on: [-5.8e9, -5.795e9], off: [-5.78e9, -5.6e9] }, // 원시 원반
+    { a0: 6.2, a1: 52, n: 1300, pw: 2.2, col: [120, 190, 255], on: [-5.79e9, -5.77e9], off: [1e15, 1e16] },     // 엄청난 먼지 원반
+  ],
+  planets: [
+    { id: 'tg', n: 'g', full: '타우 세티 g', col: '#c9a27a', col2: '#9a6a4a', sz: 4.5, a0: 0.133, form: [-5.79e9, -5.775e9], engulf: 1.05e10, ew: 0.008e9,
+      fact: '지구보다 1.75배쯤 무거운 뜨거운 행성. 20일에 한 바퀴 돌아요. (후보 행성)', st: y => '너무 뜨거운 바위 행성' },
+    { id: 'th', n: 'h', full: '타우 세티 h', col: '#d8b08a', col2: '#a07850', sz: 4.6, a0: 0.243, form: [-5.79e9, -5.775e9], engulf: 1.052e10, ew: 0.008e9,
+      fact: '49일에 한 바퀴. 여기도 너무 뜨거워요. (후보 행성)', st: y => '뜨거운 바위 행성' },
+    { id: 'te', n: 'e', full: '타우 세티 e', col: '#c79a6a', col2: '#8a6a4a', sz: 6, a0: 0.538, form: [-5.79e9, -5.775e9], engulf: 1.057e10, ew: 0.008e9,
+      fact: '지구 4배 무게의 슈퍼지구. 생명 가능 지대 안쪽 끝이라 금성처럼 뜨거울 수도 있어요. (후보 행성)',
+      st: y => y < 9e9 ? '생명 가능 지대 안쪽 끝 (좀 더워요)' : '별이 부풀어서 점점 뜨거워져요' },
+    { id: 'tf', n: 'f', full: '타우 세티 f', col: '#7fa0c8', col2: '#c8d8f0', sz: 6, a0: 1.334, form: [-5.79e9, -5.775e9], eject: 3e15,
+      fact: '지구 4배 무게의 슈퍼지구. 생명 가능 지대 바깥쪽 끝이라 추울 수 있어요. 642일에 한 바퀴. (후보 행성)',
+      st: y => y < 9e9 ? '생명 가능 지대 바깥쪽 끝 (좀 추워요)' : y < 1.1e10 ? '별이 커져서 얼음이 녹아요!' : '백색왜성 옆 꽁꽁 언 행성' },
+  ],
+  events: [
+    { y: -5.8e9, e: '☁️', t: '타우 세티 탄생', d: '우리 태양보다 약 12억 년 먼저 가스 구름에서 별이 태어나요. 쇠·돌 재료가 태양보다 적은 구름이었어요.' },
+    { y: -5.795e9, e: '🟡', t: '불이 붙었어요', d: '태양보다 조금 작고(무게 78%) 조금 더 주황빛인 별이에요.' },
+    { y: -5.78e9, e: '🪐', t: '슈퍼지구 4형제', d: '지구보다 큰 암석행성 g, h, e, f가 생겨요. 아직 "후보" 행성이라 진짜 있는지 더 확인해야 해요.' },
+    { y: -5.5e9, e: '☄️', t: '엄청난 먼지 원반', d: '바깥에 태양계 카이퍼 띠보다 먼지가 10배쯤 많은 원반이 있어요. 그래서 행성에 혜성이 훨씬 자주 떨어져요!' },
+    { y: -4.6e9, e: '☀️', t: '저 멀리 태양이 태어나요', d: '이때 12광년 떨어진 곳에서 우리 태양이 막 태어났어요. 타우 세티가 형님이에요!' },
+    { y: -1e9, e: '🌡️', t: 'e와 f, 살 수 있을까?', d: 'e는 생명 가능 지대 안쪽 끝이라 덥고, f는 바깥쪽 끝이라 추워요. 혜성도 자주 떨어져서 생명이 살기 어려울지도.' },
+    { y: 0, e: '📡', t: '지금! 12광년 이웃', d: '맨눈으로 보이는 가까운 별. 1960년 "오즈마 계획"에서 처음으로 외계인 전파를 찾아 귀 기울인 별이에요.' },
+    { y: 4.5e9, e: '🌌', t: '안드로메다 은하와 합체', d: '타우 세티도 우리 은하에 있어서 같이 "밀코메다" 은하가 돼요.' },
+    { y: 9e9, e: '⏳', t: '수소가 바닥나요', d: '타우 세티는 가벼워서 태양보다 오래 살지만, 결국 연료가 떨어져 부풀기 시작해요.' },
+    { y: 1.03e10, e: '🎈', t: '적색거성', d: '빨갛고 커다란 별이 돼요. 무게가 줄어서 행성 궤도가 넓어져요.' },
+    { y: 1.05e10, e: '😱', t: 'g와 h를 삼켜요', d: '부푼 별이 안쪽 행성 g와 h를 꿀꺽!' },
+    { y: 1.057e10, e: '😱', t: 'e도 삼켜요', d: '슈퍼지구 e도 별 속으로…' },
+    { y: 1.0603e10, e: '⚡', t: '헬륨 섬광', d: '중심에서 헬륨에 확 불이 붙어요. 별이 다시 작아져요.' },
+    { y: 1.098e10, e: '🌈', t: '행성상 성운', d: '겉껍질이 날아가 알록달록한 구름이 돼요. 먼지 원반도 빛을 받아 반짝여요.' },
+    { y: 1.105e10, e: '⚪', t: '백색왜성', d: '작고 무거운 백색왜성이 돼요. 슈퍼지구 f와 먼지 원반만 남았어요.' },
+    { y: 1e12, e: '🌡️', t: '천천히 식어요', d: '백색왜성이 조금씩 식어 가요.' },
+    { y: 3e15, e: '👋', t: 'f가 떠나요', d: '지나가는 다른 별 때문에 f가 끌려 나가 떠돌이 행성이 돼요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성', d: '빛을 다 잃은 차가운 별. 끝!' },
+  ],
+};
+
+const TRAP = {
+  nodes: [[-7.6e9, 5], [-7.598e9, 5], [-7.59e9, 6], [-7.5e9, 5], [-7.45e9, 5], [-6.6e9, 5], [-4.6e9, 5], [-1e9, 4], [0, 7],
+    [1e9, 4], [1e12, 6], [4e12, 5], [1e13, 6], [1.2e13, 6], [1.25e13, 5], [1e15, 6], [1e17, 0]],
+  R: [[-7.6e9, 0], [-7.599e9, 0.004], [-7.5e9, 0.0012], [-6.6e9, 0.0006], [0, 0.000554], [4e12, 0.0006], [1e13, 0.0005],
+    [1.2e13, 0.0003], [1.21e13, 0.0001]],
+  C: [[-7.599e9, '#ff5a2a'], [0, '#ff6a3a'], [1e12, '#ff7a40'], [4e12, '#ffb070'], [1e13, '#a8c4ff'], [1.2e13, '#9ab8ff'],
+    [1.21e13, '#e8f0ff'], [1e14, '#ffe0b0'], [1e15, '#ff9050'], [1e16, '#602010'], [1e17, '#1a1212']],
+  L: [[-7.6e9, 0], [-7.599e9, 2.2], [-7.5e9, 1.2], [-6.6e9, 0.5], [0, 0.45], [1e12, 0.5], [4e12, 0.9], [1e13, 2.2],
+    [1.2e13, 1.6], [1.21e13, 1], [1e14, 0.5], [1e15, 0.2], [1e17, 0]],
+  belts: [{ a0: 0.004, a1: 0.25, n: 900, col: [255, 160, 120], on: [-7.6e9, -7.599e9], off: [-7.59e9, -7.5e9] }],
+  planets: [],
+  events: [
+    { y: -7.6e9, e: '☁️', t: '아기 별 탄생', d: '가스 구름에서 아주 작은 별이 태어나요. 무게가 태양의 9%밖에 안 되는 "울트라쿨 적색왜성"!' },
+    { y: -7.595e9, e: '🪐', t: '행성 7개가 태어나요', d: '별에서 조금 먼 곳에서 지구만 한 행성 7개가 생겨요. 얼음도 많이 섞였을지 몰라요.' },
+    { y: -7.55e9, e: '↘️', t: '다 같이 안쪽으로 이사', d: '원반에 끌려 행성들이 줄줄이 별 쪽으로 미끄러져 들어와요.' },
+    { y: -7.5e9, e: '🎵', t: '박자 맞추기 (공명)', d: '7개 행성이 딱딱 박자를 맞춰 돌아요. b가 8바퀴 돌 때 c는 5바퀴! 이 박자로 노래를 만든 사람도 있어요.' },
+    { y: -7.45e9, e: '🔥', t: '너무 밝은 아기 별', d: '어린 적색왜성은 지금보다 훨씬 밝고 플레어(폭발)도 많아요. 안쪽 행성들의 물과 공기가 날아가요.' },
+    { y: -6.6e9, e: '🔴', t: '조용한 적색왜성', d: '별이 자리를 잡고 아주 천천히, 아껴 가며 수소를 태워요.' },
+    { y: -4.6e9, e: '☀️', t: '저 멀리 태양 탄생', d: '40광년 떨어진 곳에서 태양이 태어나요. 트라피스트-1이 30억 살 형님!' },
+    { y: 0, e: '🔭', t: '지금! 2017년 발견', d: '40광년 떨어진 별. 지구만 한 행성이 7개나 한꺼번에 발견돼서 엄청 유명해졌어요. 제임스 웹 망원경이 지금도 살펴보고 있어요.' },
+    { y: 4.5e9, e: '🌌', t: '안드로메다 은하와 합체', d: '트라피스트-1도 우리 은하에 있어서 같이 합쳐져요.' },
+    { y: 1e12, e: '⏳', t: '1조 년이 지나도 쌩쌩', d: '작은 별은 연료를 엄청 아껴 써서 10조 년 넘게 빛나요. 태양은 벌써 백색왜성인데!' },
+    { y: 4e12, e: '🌡️', t: '점점 뜨거워져요', d: '수소를 오래 태우면서 별이 조금씩 더 뜨겁고 밝아져요.' },
+    { y: 1e13, e: '🔵', t: '파란 왜성', d: '작은 별은 적색거성이 되지 않고 더 뜨겁고 파랗게 빛나요. 우주에 아직 하나도 없는 별이에요! 바깥 행성들 얼음이 녹을지도.' },
+    { y: 1.21e13, e: '⚪', t: '백색왜성', d: '헬륨으로 된 작은 백색왜성이 돼요. 부풀지 않으니까 행성 7개가 모두 살아남아요!' },
+    { y: 1e15, e: '❄️', t: '식어 가요', d: '백색왜성이 점점 식고 행성들도 꽁꽁 얼어요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성', d: '빛을 다 잃은 별 둘레를 차가운 행성 7개가 여전히 돌아요. 끝!' },
+  ],
+};
+{
+  // [이름, 거리(AU), 크기, 색, 무늬색, 설명, 기본 상태]
+  const L = [
+    ['b', 0.01154, 5.6, '#b06a4a', '#7a4030', '가장 안쪽. 1.5일에 한 바퀴! 제임스 웹 망원경으로 보니 공기가 거의 없는 뜨거운 바위래요.', '400도가 넘는 맨 바위'],
+    ['c', 0.0158, 5.5, '#a88070', '#6a5048', '2.4일에 한 바퀴. 두꺼운 공기는 없는 것 같아요.', '뜨거운 바위 행성'],
+    ['d', 0.02227, 4.0, '#8fa7bf', '#c9b48a', '가장 작은 행성. 생명 가능 지대 안쪽 끝이에요.', '생명 가능 지대 안쪽 끝'],
+    ['e', 0.02925, 4.6, '#3f7fbf', '#d8e6f2', '생명 가능 지대 한가운데! 바다가 있을지도 모르는 가장 유력한 후보예요. 6일에 한 바퀴.', '⭐ 생명 가능 지대 한가운데! 바다가 있을지도'],
+    ['f', 0.03849, 5.2, '#a8c8e0', '#5a8cc0', '생명 가능 지대. 얼음으로 덮인 바다 행성일지도 몰라요.', '얼음 바다 행성일지도'],
+    ['g', 0.04683, 5.6, '#d0e4f2', '#8ab0d0', '생명 가능 지대 바깥쪽 끝. 7개 중 가장 커요.', '얼음이 많은 차가운 행성'],
+    ['h', 0.06189, 3.8, '#e6eef6', '#b8c8d8', '가장 바깥. 19일에 한 바퀴. 꽁꽁 언 행성이에요.', '꽁꽁 언 얼음 행성'],
+  ];
+  for (const [n, a, sz, col, col2, fact, base] of L) TRAP.planets.push({
+    id: 'tr' + n, n, full: '트라피스트-1 ' + n, col, col2, sz, form: [-7.597e9, -7.592e9],
+    aT: [[-7.59e9, a * 3.2], [-7.5e9, a]],
+    fact: fact + ' 늘 한쪽 면만 별을 봐요(조석 고정).',
+    st: y => y < -7.5e9 ? '별 쪽으로 이사하는 중' : y < -6.6e9 ? '아기 별이 너무 밝아서 물이 날아가는 중!'
+      : y < 4e12 ? base : y < 1.21e13 ? '별이 뜨거워져서 따뜻해지는 중!' : '백색왜성 옆에서 식어 가요',
+  });
+}
+
+const KEP = {
+  nodes: [[-1e10, 5], [-9.99e9, 5], [-9.9e9, 5], [-4.6e9, 5], [-1.2e8, 5], [-3e7, 6], [-1.92e7, 6], [-1.86e7, 7],
+    [-1.84e7, 6], [-1e7, 5], [0, 7], [5e7, 4], [1e8, 5], [1.2e8, 5], [1e12, 5], [1e15, 6], [1e17, 0]],
+  R: [[-1e10, 0], [-9.997e9, 0.02], [-9.99e9, 0.0047], [-1.2e8, 0.008], [-3e7, 0.1], [-1.92e7, 0.55], [-1.86e7, 0.85],
+    [-1.845e7, 0.85], [-1.84e7, 0.00094], [0, 0.00094], [1e8, 0.0008], [1.2e8, 0.00006]],
+  C: [[-9.997e9, '#ff6a3a'], [-9.99e9, '#fff3c4'], [-1.2e8, '#ffd890'], [-3e7, '#ff9a50'], [-1.92e7, '#ff5a30'],
+    [-1.845e7, '#ff4a28'], [-1.84e7, '#bcd0ff'], [0, '#a8c0ff'], [1e8, '#c0d4ff'], [1.2e8, '#e8f0ff'], [1e12, '#fff0d0'],
+    [1e14, '#ffb070'], [3e15, '#c04020'], [3e16, '#501810'], [1e17, '#1a1212']],
+  L: [[-1e10, 0], [-9.997e9, 1.5], [-9.99e9, 0.9], [-1.2e8, 1.4], [-3e7, 2.5], [-1.86e7, 6], [-1.845e7, 6], [-1.84e7, 4],
+    [0, 3.5], [1e8, 3], [1.2e8, 1.3], [1e12, 0.5], [1e15, 0.15], [1e17, 0]],
+  belts: [{ a0: 0.1, a1: 8, n: 800, col: [255, 190, 130], on: [-1e10, -9.997e9], off: [-9.99e9, -9.9e9] }],
+  nebulas: [{ y0: -1.842e7, y1: 0, au: 20 }],
+  planets: [],
+  events: [
+    { y: -1e10, e: '☁️', t: '케플러-70 탄생', d: '약 100억 년 전, 태양 같은 별이 태어나요. (정확한 나이는 아직 몰라요)' },
+    { y: -9.993e9, e: '🪐', t: '가스 행성들', d: '별 가까이에 목성 같은 커다란 가스 행성들이 돌고 있었을 거래요.' },
+    { y: -4.6e9, e: '☀️', t: '저 멀리 태양 탄생', d: '이때 우리 태양이 태어나요. 케플러-70은 벌써 50억 살이 넘었어요.' },
+    { y: -1.2e8, e: '⏳', t: '수소가 바닥나요', d: '별 중심의 수소 연료가 떨어져서 부풀기 시작해요.' },
+    { y: -3e7, e: '🎈', t: '적색거성', d: '별이 빨갛고 크게 부풀어요. 우리 태양이 75억 년 뒤에 겪을 일을 먼저 겪는 중!' },
+    { y: -1.92e7, e: '😱', t: '행성을 삼켜요', d: '부푼 별 속으로 가스 행성들이 빨려 들어가요. 별 속에서 빙글빙글 돌며 가스가 벗겨져요.' },
+    { y: -1.86e7, e: '🌀', t: '별 속에서 살아남기', d: '행성들이 별 속을 돌며 별 겉껍질을 휘저어 날려 보내요. 쇠·돌로 된 심장(핵)만 남아요.' },
+    { y: -1.842e7, e: '💨', t: '겉껍질이 날아가요', d: '별의 바깥 가스가 다 날아가고 엄청 뜨거운 파란 속심만 남아요. "뜨거운 준왜성(sdB)"이라는 별이에요.' },
+    { y: 0, e: '🔭', t: '지금! 가장 뜨거운 행성', d: '3,800광년 떨어진 별. b는 5시간 46분마다 한 바퀴 돌고 표면이 약 7,000도! 가장 뜨거운 행성 중 하나예요. (진짜 행성인지 아직 확인 중이에요)' },
+    { y: 1e8, e: '⏳', t: '헬륨도 바닥나요', d: '이 별은 두 번째로 부풀지 않고 바로 백색왜성으로 가요.' },
+    { y: 1.2e8, e: '⚪', t: '백색왜성', d: '작은 백색왜성 바로 옆을 타 버린 행성 핵들이 돌아요.' },
+    { y: 1e12, e: '🌡️', t: '천천히 식어요', d: '백색왜성이 조금씩 식어 가요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성', d: '빛을 다 잃은 차가운 별. 끝!' },
+  ],
+};
+{
+  // [이름, 처음 거리, 마지막 거리, 삼켜지기 시작, 핵만 남음, 핵 크기, 한 바퀴, 표면 온도]
+  const L = [
+    ['b', 0.5, 0.0060, -1.92e7, -1.85e7, 2.6, '5시간 46분', '약 7,000도'],
+    ['c', 0.75, 0.0076, -1.9e7, -1.846e7, 3.6, '8시간 14분', '약 6,000도'],
+    ['d', 1.05, 0.0065, -1.88e7, -1.843e7, 2.2, '약 6시간', '아주 뜨거움'],
+  ];
+  for (const [n, a1, a2, in0, in1, core, per, temp] of L) KEP.planets.push({
+    id: 'kp' + n, n, full: '케플러-70 ' + n + (n === 'd' ? ' (후보)' : ''), col: '#d8a86e', sz: 9.5,
+    form: [-9.997e9, -9.991e9], aT: [[in0, a1], [in1, a2]],
+    look: y => {
+      const f = ss(in0, in1, y);
+      return { sz: lerp(9.5, core, f), col: f < 0.5 ? '#d8a86e' : y < 1.2e8 ? '#ff9a50' : '#8a6a5a', col2: f < 0.5 ? '#b07a48' : '#c04020' };
+    },
+    fact: '원래 목성 같은 가스 행성이었는데 별에 삼켜졌다가 쇠·돌 심장(핵)만 살아남았대요. ' + per + '에 한 바퀴!',
+    st: y => y < in0 ? '목성 같은 가스 행성' : y < in1 ? '별 속을 도는 중! 가스가 벗겨져요' : y < 1.2e8 ? '타 버린 행성 핵. 표면 ' + temp + '!' : '백색왜성 옆을 도는 식은 핵',
+  });
+}
+
+// ---------- 태비의 별 (KIC 8462852) : 이상하게 어두워지는 별 + 외계인 괴담 ----------
+let TABBY_ALIEN = false; // 👽 괴담 모드 (상상)
+const TABBY = {
+  nodes: [[-1e9, 5], [-9.9e8, 5], [-1e8, 4], [-1e5, 6], [-1500, 5], [-20, 10], [0, 6], [1.5e9, 5], [1.9e9, 5],
+    [2.05e9, 5], [2.06e9, 5], [2.15e9, 6], [2.2e9, 5], [1e12, 5], [1e15, 5], [1e17, 0]],
+  R: [[-1e9, 0], [-9.97e8, 0.02], [-9.9e8, 0.0065], [0, 0.00735], [1.5e9, 0.01], [1.9e9, 0.05], [2.05e9, 0.8],
+    [2.06e9, 0.05], [2.1e9, 0.5], [2.15e9, 0.3], [2.16e9, 0.002], [2.2e9, 0.00006]],
+  C: [[-9.97e8, '#ff8a50'], [-9.9e8, '#f6f4ff'], [0, '#f4f2ff'], [1.5e9, '#fff0c0'], [1.9e9, '#ffb060'], [2.05e9, '#ff4a28'],
+    [2.06e9, '#ffd27a'], [2.1e9, '#ff6030'], [2.15e9, '#ffffff'], [2.2e9, '#cfe0ff'], [1e12, '#fff0d0'], [1e14, '#ffb070'],
+    [3e15, '#c04020'], [3e16, '#501810'], [1e17, '#1a1212']],
+  L: [[-1e9, 0], [-9.97e8, 1.5], [-9.9e8, 1.2], [0, 1.4], [1.5e9, 1.8], [2.05e9, 5.5], [2.06e9, 2], [2.1e9, 4], [2.15e9, 3],
+    [2.2e9, 1.2], [1e12, 0.5], [1e15, 0.15], [1e17, 0]],
+  M: [[-2e9, 1], [1.9e9, 1], [2.06e9, 0.75], [2.2e9, 0.42]],
+  belts: [{ a0: 0.05, a1: 6, n: 700, col: [255, 190, 130], on: [-1e9, -9.97e8], off: [-9.92e8, -5e8] }],
+  planets: [
+    { id: 'tbp', n: '부서진 행성?', full: '부서진 행성 (상상)', col: '#9a8a7a', col2: '#6a5a4a', sz: 5, a0: 0.9,
+      form: [-9.95e8, -9.9e8], crash: -1e5, deadMsg: '💥 부서져서 먼지 덩어리가 됐을지도 몰라요 (상상)',
+      fact: '태비의 별에 행성이 있는지는 아직 몰라요. "행성이 부서져서 먼지가 생겼다"는 생각을 그림으로 보여 주는 상상 속 행성이에요.',
+      st: y => '태비의 별을 도는 행성 (진짜 있는지는 몰라요)' },
+  ],
+  events: [
+    { y: -1e9, e: '☁️', t: '태비의 별 탄생', d: '약 10억 년 전쯤(정확한 나이는 몰라요) 가스 구름에서 별이 태어나요. 이때 우리 태양은 벌써 36억 살!' },
+    { y: -9.93e8, e: '⭐', t: '하얗고 뜨거운 F형 별', d: '태양보다 1.4배 무겁고 1.6배 크고, 더 뜨겁고 하얗게 빛나는 별이에요.' },
+    { y: -1e5, e: '💥', t: '행성이 부서졌을까?', d: '(상상) 행성이 부서지거나 혜성 떼가 몰려와서 커다란 먼지 덩어리들이 별 주위를 돌게 됐을지도 몰라요.' },
+    { y: -1470, e: '💡', t: '지금 보는 빛이 출발', d: '1,470광년 떨어져 있어서, 우리가 지금 보는 태비의 별 빛은 약 1,470년 전에 출발한 빛이에요.' },
+    { y: -11, e: '📉', t: '이상하게 어두워지는 별!', d: '2015년 시민 과학자들(플래닛 헌터스)이 찾았어요. 별빛이 최대 22%나 불규칙하게 줄어들어요. 행성이 가리면 1%쯤만 줄어드는데! 왼쪽 아래 밝기 그래프를 봐요.' },
+    { y: -7, e: '👽', t: '외계인 거대 구조물 괴담', d: '"외계 문명이 별을 둘러싸는 거대한 태양광 패널(다이슨 구)을 짓고 있다!"는 소문이 퍼졌어요. 오른쪽 👽 괴담 모드 버튼으로 상상해 봐요.' },
+    { y: -3, e: '🔬', t: '정답은 먼지?', d: '2017년에 보니 파란빛이 빨간빛보다 더 많이 가려졌어요. 단단한 구조물이면 모든 색이 똑같이 가려져야 하니까 → 작은 먼지일 가능성이 커요!' },
+    { y: 1.5e9, e: '⏳', t: '수소가 바닥나요', d: '무거운 별은 연료를 빨리 써요. 태비의 별은 태양보다 훨씬 짧게 살아요.' },
+    { y: 1.95e9, e: '🎈', t: '적색거성', d: '빨갛고 커다란 별이 돼요. 먼지 덩어리들도 다 날아가요.' },
+    { y: 2.055e9, e: '⚡', t: '헬륨에 불이 붙어요', d: '중심에서 헬륨을 태우기 시작해요.' },
+    { y: 2.15e9, e: '🌈', t: '행성상 성운', d: '겉껍질이 날아가 알록달록한 구름이 돼요.' },
+    { y: 2.2e9, e: '⚪', t: '백색왜성', d: '작고 무거운 백색왜성이 돼요.' },
+    { y: 1e12, e: '🌡️', t: '천천히 식어요', d: '백색왜성이 조금씩 식어 가요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성', d: '빛을 다 잃은 차가운 별. 끝!' },
+  ],
+  // 먼지 덩어리, 밝기 그래프, 괴담 모드
+  extra: () => {
+    const clumps = [];
+    for (let i = 0; i < 9; i++) {
+      const pts = [];
+      const n = 40 + (Math.random() * 50 | 0), big = rnd(0.5, 1.6);
+      for (let k = 0; k < n; k++) pts.push([rnd(-1, 1) * 26 * big, rnd(-1, 1) * 10 * big, Math.random()]);
+      clumps.push({ a: rnd(0.55, 1.8), e: rnd(0.2, 0.6), w: rnd(0, 6.283), th: rnd(0, 6.283), big, op: rnd(0.25, 0.9), pts });
+    }
+    const panels = [];
+    for (let i = 0; i < 140; i++) panels.push({ a: rnd(0.12, 0.3), th: rnd(0, 6.283), ring: i % 5, s: rnd(0.6, 1.2) });
+    const hist = [];
+    let dipNow = 0;
+    const rAt = (c, th) => c.a * (1 - c.e * c.e) / (1 + c.e * Math.cos(th - c.w));
+    return {
+      update(dt, y) {
+        const on = y > -1e5 && y < 1.95e9;
+        let block = 0;
+        const Rw = sunDisp(tab(T_SUNR, P)) / S; // 별 반지름(화면 세계 단위)
+        if (on) for (const c of clumps) {
+          const r = rAt(c, c.th);
+          c.th += omega(c.a) * dt * Math.pow(c.a / r, 2) * 0.6;
+          c.x = wx(r, c.th); c.y = wy(r, c.th);
+          // 지구는 화면 아래쪽 방향 → 별보다 아래(y>0)에서 별 앞을 지나가면 빛을 가린다
+          const half = 0.12 * c.big + Rw;
+          if (c.y > 0 && Math.abs(c.x) < half) block += c.op * 0.22 * c.big * (1 - Math.abs(c.x) / half);
+        }
+        if (TABBY_ALIEN && y < 1.95e9) for (const p of panels) {
+          p.th += omega(p.a) * dt * 0.5;
+          const x = wx(p.a, p.th + p.ring * 0.4), yy = wy(p.a, p.th + p.ring * 0.4);
+          if (yy > 0 && Math.abs(x) < Rw) block += 0.012 * p.s;
+        }
+        dipNow = clamp(block, 0, 0.6);
+        hist.push(1 - dipNow + (Math.random() - 0.5) * 0.004);
+        if (hist.length > 360) hist.shift();
+      },
+      draw(y) {
+        if (y > -1e5 && y < 1.95e9) {
+          const al = ss(-1e5, -5e4, y);
+          for (const c of clumps) {
+            const X = sx(c.x), Y = sy(c.y), z = Math.sqrt(zoom), ang = Math.atan2(c.y, c.x) + Math.PI / 2;
+            const ca = Math.cos(ang), sa = Math.sin(ang);
+            for (const [dx, dy, s] of c.pts) {
+              ctx.fillStyle = `rgba(${150 + s * 60 | 0},${120 + s * 40 | 0},${100 + s * 30 | 0},${al * c.op * (0.35 + s * 0.4)})`;
+              ctx.fillRect(X + (dx * ca - dy * sa) * z, Y + (dx * sa + dy * ca) * z, 2, 2);
+            }
+          }
+        }
+        if (TABBY_ALIEN && y < 1.95e9) {
+          for (const p of panels) {
+            const th = p.th + p.ring * 0.4, X = sx(wx(p.a, th)), Y = sy(wy(p.a, th));
+            ctx.save(); ctx.translate(X, Y); ctx.rotate(th);
+            const glint = 0.5 + 0.5 * Math.sin(clock * 3 + p.a * 40);
+            ctx.fillStyle = `rgba(${150 + glint * 100 | 0},${170 + glint * 80 | 0},255,.9)`;
+            const w = 7 * p.s * Math.sqrt(zoom), h = 3 * p.s * Math.sqrt(zoom);
+            ctx.fillRect(-w / 2, -h / 2, w, h);
+            ctx.restore();
+          }
+          label('👽 상상 모드: 외계인 거대 구조물 (진짜 증거는 없어요!)', W / 2, 92, '#9fffb0');
+        }
+        // 지구로 가는 빛길 (여기를 지나가는 것이 별빛을 가린다)
+        const Rs = Math.max(sunDisp(tab(T_SUNR, P)), 3);
+        const g = ctx.createLinearGradient(0, sy(0), 0, H);
+        g.addColorStop(0, 'rgba(160,200,255,.10)'); g.addColorStop(1, 'rgba(160,200,255,0)');
+        ctx.fillStyle = g; ctx.fillRect(sx(0) - Rs, sy(0), Rs * 2, H - sy(0));
+        // 지구 방향 표시
+        label('↓ 지구는 이쪽 (1,470광년)', sx(0), Math.min(H - 140, sy(0) + dist(fitAU) * S * 0.95), '#9fc8ff');
+      },
+      drawUI(y) {
+        // 왼쪽 아래 밝기 그래프
+        const x0 = 12, y0 = H - 240, w = 290, h = 96;
+        ctx.fillStyle = 'rgba(8,12,34,.85)'; ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = '#4a5aa8'; ctx.lineWidth = 1.5; ctx.strokeRect(x0, y0, w, h);
+        ctx.font = 'bold 12px "Malgun Gothic"'; ctx.textAlign = 'left'; ctx.fillStyle = '#cfd6ff';
+        ctx.fillText('📉 지구에서 본 별빛 밝기  지금 ' + Math.round((1 - dipNow) * 100) + '%', x0 + 8, y0 + 16);
+        const gy = v => y0 + 26 + (1 - v) / 0.35 * (h - 34);
+        ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.beginPath(); ctx.moveTo(x0 + 6, gy(1)); ctx.lineTo(x0 + w - 6, gy(1)); ctx.stroke();
+        ctx.fillStyle = 'rgba(160,170,220,.7)'; ctx.font = '10px "Malgun Gothic"';
+        ctx.fillText('100%', x0 + w - 32, gy(1) - 3); ctx.fillText('78%', x0 + w - 28, gy(0.78) - 3);
+        ctx.strokeStyle = TABBY_ALIEN ? '#9fffb0' : '#ffd36a'; ctx.lineWidth = 1.6; ctx.beginPath();
+        hist.forEach((v, i) => { const X = x0 + 6 + i / 360 * (w - 12), Y = gy(clamp(v, 0.65, 1.01)); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+        ctx.stroke();
+      },
+    };
+  },
+};
+
+// ---------- 베텔게우스 : 적색 초거성 → 초신성 → 중성자별 ----------
+const BETEL = {
+  nodes: [[-1e7, 5], [-9.98e6, 5], [-9.9e6, 4], [-1e6, 5], [-9e5, 6], [-4e4, 5], [-20, 9], [0, 6], [1e4, 5], [1e5, 7],
+    [1.00003e5, 6], [1.001e5, 6], [1e6, 5], [1e9, 5], [1e12, 5], [1e17, 0]],
+  R: [[-1e7, 0], [-9.99e6, 0.06], [-9.98e6, 0.04], [-1e6, 0.06], [-9.5e5, 0.6], [-9e5, 2.6], [0, 3.6], [1e5, 4.1],
+    [1.00001e5, 4.1], [1.00003e5, 1e-7]],
+  C: [[-9.99e6, '#9ab8ff'], [-1e6, '#b8ccff'], [-9.5e5, '#ffd0a0'], [-9e5, '#ff7040'], [0, '#ff6a3a'], [1e5, '#ff5a30'],
+    [1.00001e5, '#ffffff'], [1.00003e5, '#cfe0ff'], [1e9, '#a0b0ff'], [1e12, '#806080'], [1e17, '#151018']],
+  L: [[-1e7, 0], [-9.99e6, 3], [-1e6, 4], [-9e5, 6], [0, 6], [1e5, 6], [1.00001e5, 20], [1.00003e5, 1.5], [1e6, 1],
+    [1e9, 0.5], [1e12, 0.2], [1e17, 0]],
+  M: [[-1e7, 1], [0, 0.9], [1e5, 0.85]],
+  belts: [
+    { a0: 0.1, a1: 20, n: 700, col: [180, 200, 255], on: [-1e7, -9.995e6], off: [-9.99e6, -9.9e6] },
+    { a0: 5, a1: 30, n: 900, pw: 1.6, col: [255, 140, 90], on: [-9e5, -5e5], off: [1e5, 1.00001e5] }, // 내뿜은 먼지
+  ],
+  nebulas: [{ y0: 1e5, y1: 1e6, au: 40, cols: [[0, 1, 0.8, '255,120,60'], [0.9, 0.9, 1, '120,180,255'], [2.0, 1, 0.85, '255,220,120']] }],
+  planets: [
+    { id: 'siw', n: '시와르하', full: '시와르하 (짝꿍 별)', col: '#dfe8ff', sz: 4, star: true, glow: 0.8, a0: 8,
+      form: [-9.99e6, -9.98e6], engulf: 1e4, ew: 6e3, deadMsg: '😢 베텔게우스 속으로 빨려 들어갔어요',
+      fact: '2025년에 베텔게우스 바로 옆에서 찾았다고 발표된 작은 짝꿍 별(태양 1.5배 무게쯤). 약 6년에 한 바퀴 돌아요.',
+      st: y => y < 0 ? '베텔게우스 곁을 도는 작은 짝꿍 별' : '점점 베텔게우스 쪽으로 끌려 들어가요!' },
+  ],
+  events: [
+    { y: -1e7, e: '☁️', t: '베텔게우스 탄생', d: '약 1000만 년 전, 태양보다 20배쯤 무거운 아기 별이 태어나요. 공룡이 사라지고 한참 뒤예요!' },
+    { y: -9.99e6, e: '🔵', t: '파랗고 뜨거운 별', d: '무거운 별은 엄청 뜨겁고 파랗게 빛나요. 연료를 펑펑 써서 빨리 늙어요.' },
+    { y: -1e6, e: '⏳', t: '수소가 벌써 바닥!', d: '태양은 100억 년 쓰는 연료를 겨우 900만 년 만에 다 썼어요.' },
+    { y: -9e5, e: '🎈', t: '적색 초거성', d: '엄청나게 부풀어요. 태양 자리에 놓으면 목성 궤도 가까이까지 닿을 만큼 커요! 먼지도 잔뜩 내뿜어요.' },
+    { y: -4e4, e: '🏹', t: '오리온자리의 어깨', d: '사람들이 하늘을 볼 때부터 베텔게우스는 오리온자리 어깨에서 붉게 빛났어요.' },
+    { y: -6, e: '😮', t: '대감광 (2019년)', d: '2019~2020년에 베텔게우스가 갑자기 엄청 어두워졌어요. "곧 터지나?" 했는데, 별이 내뿜은 먼지 구름이 가린 거였어요.' },
+    { y: -1.5, e: '👯', t: '짝꿍 별 발견 (2025년)', d: '베텔게우스 바로 옆을 도는 작은 짝꿍 별 "시와르하"를 찾았다는 발표가 나왔어요.' },
+    { y: 0, e: '🔭', t: '지금! 언제 터질까?', d: '약 550광년 떨어져 있어요. 언제 터질지는 몰라요. 내일일 수도, 10만 년 뒤일 수도!' },
+    { y: 1e4, e: '😱', t: '짝꿍 별을 삼켜요', d: '짝꿍 별이 점점 끌려가서 베텔게우스의 큰 몸속으로 빨려 들어가요.' },
+    { y: 1e5, e: '💥', t: '초신성 폭발!!!', d: '철로 된 중심이 무너지면서 펑! 지구에서도 반달만큼 밝게, 낮에도 몇 달 동안 보여요. (지구는 멀어서 안전해요)', fx: 'super' },
+    { y: 1.00002e5, e: '⚪', t: '중성자별 탄생', d: '남은 중심은 지름 20km쯤의 중성자별! 각설탕 하나가 산만큼 무거워요. 빙글빙글 돌며 빛을 쏘는 "펄서"가 될지도. (블랙홀이 될 수도 있어요)' },
+    { y: 1.0005e5, e: '🌈', t: '초신성 잔해', d: '날아간 가스가 알록달록 구름이 돼요. 이 속의 원소로 언젠가 새 별과 행성이 생겨요. 우리 몸의 철도 옛날 초신성에서 왔어요!' },
+    { y: 1e6, e: '🌫️', t: '잔해가 흩어져요', d: '초신성 구름이 점점 퍼져서 우주로 사라져요.' },
+    { y: 1e9, e: '❄️', t: '식어 가는 중성자별', d: '펄서도 점점 느려지고 중성자별은 식어 가요.' },
+    { y: 1e17, e: '⚫', t: '차가운 중성자별', d: '빛도 열도 거의 없는 차가운 중성자별만 남아요. 끝!' },
+  ],
+  extra: () => ({
+    update() {},
+    draw(y) {
+      const X = sx(0), Y = sy(0);
+      // 대감광: 남쪽이 먼지에 가려 어두워짐
+      if (y > -10 && y < -1) {
+        const R = sunDisp(tab(T_SUNR, P)), al = ss(-10, -7, y) * (1 - ss(-3, -1, y));
+        const g = ctx.createRadialGradient(X, Y + R * 0.5, 0, X, Y + R * 0.5, R * 0.9);
+        g.addColorStop(0, `rgba(20,10,10,${0.85 * al})`); g.addColorStop(1, 'rgba(20,10,10,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y + R * 0.5, R * 0.9, 0, 6.283); ctx.fill();
+      }
+      // 펄서 빔
+      if (y > 1.00002e5 && y < 1e12) {
+        const al = 1 - ss(1e6, 1e12, y) * 0.85, L = Math.min(W, H) * 0.42, ang = clock * 5;
+        for (const k of [0, Math.PI]) {
+          const a = ang + k, w = 0.07;
+          const g = ctx.createRadialGradient(X, Y, 0, X, Y, L);
+          g.addColorStop(0, `rgba(200,230,255,${0.8 * al})`); g.addColorStop(1, 'rgba(200,230,255,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(X, Y);
+          ctx.lineTo(X + Math.cos(a - w) * L, Y + Math.sin(a - w) * L * TK); ctx.lineTo(X + Math.cos(a + w) * L, Y + Math.sin(a + w) * L * TK);
+          ctx.closePath(); ctx.fill();
+        }
+        if (showNames) label('펄서 빔!', X + 40, Y - 30, '#cfe8ff');
+      }
+    },
+    drawUI() {},
+  }),
+};
+
+// ---------- 알파 센타우리 : A·B 쌍둥이 + 멀리 프록시마 ----------
+const ALPHA = {
+  nodes: [[-5.3e9, 5], [-5.29e9, 5], [-5.2e9, 5], [-4.6e9, 5], [-1e9, 4], [-3000, 5], [-20, 7], [0, 6], [2.8e4, 5],
+    [1e9, 4], [3.5e9, 5], [4.6e9, 6], [4.75e9, 6], [1e10, 5], [1.06e10, 6], [1e12, 5], [1.2e13, 5], [1e15, 5], [1e17, 0]],
+  R: [[-5.3e9, 0], [-5.297e9, 0.02], [-5.29e9, 0.0055], [0, 0.00567], [3.5e9, 0.009], [4.4e9, 0.08], [4.6e9, 0.9],
+    [4.6005e9, 0.05], [4.65e9, 0.05], [4.7e9, 0.6], [4.72e9, 0.002], [4.75e9, 0.00006]],
+  C: [[-5.297e9, '#ff8a50'], [-5.29e9, '#fff4d8'], [0, '#fff2cc'], [3.5e9, '#ffe08a'], [4.4e9, '#ff9a50'], [4.6e9, '#ff4a28'],
+    [4.6005e9, '#ffd27a'], [4.65e9, '#ffc070'], [4.7e9, '#ff6030'], [4.72e9, '#ffffff'], [4.75e9, '#cfe0ff'], [1e12, '#fff0d0'],
+    [1e14, '#ffb070'], [3e15, '#c04020'], [3e16, '#501810'], [1e17, '#1a1212']],
+  L: [[-5.3e9, 0], [-5.297e9, 1.5], [-5.29e9, 1.0], [0, 1.1], [3.5e9, 1.5], [4.4e9, 2.5], [4.6e9, 6], [4.6005e9, 2],
+    [4.65e9, 2], [4.7e9, 4.5], [4.72e9, 3], [4.75e9, 1.2], [1e12, 0.5], [1e15, 0.15], [1e17, 0]],
+  M: [[-6e9, 1], [4.4e9, 1], [4.6e9, 0.8], [4.75e9, 0.55]],
+  belts: [{ a0: 0.1, a1: 40, n: 900, col: [255, 190, 130], on: [-5.3e9, -5.297e9], off: [-5.29e9, -5.2e9] }],
+  planets: [
+    { id: 'acb', n: 'B', full: '알파 센타우리 B', col: '#ffcf80', sz: 8, star: true, a0: 23.4, e0: 0.52, w: 1.0,
+      form: [-5.297e9, -5.29e9],
+      look: y => y < 1e10 ? { sz: 8, col: '#ffcf80', glow: 1 } : y < 1.04e10 ? { sz: lerp(8, 34, ss(1e10, 1.04e10, y)), col: '#ff5030', glow: 2 }
+        : y < 1.06e10 ? { sz: lerp(34, 2.5, ss(1.04e10, 1.06e10, y)), col: '#ffd0a0', glow: 1.5 }
+        : { sz: 2.5, col: y < 1e14 ? '#e8f0ff' : y < 3e15 ? '#ffb070' : '#3a2018', glow: y < 1e15 ? 0.8 : 0 },
+      fact: 'A의 쌍둥이 별. 태양보다 조금 작고 주황빛이에요. A와 B는 80년에 한 바퀴 서로 돌아요.',
+      st: y => y < 1e10 ? 'A와 80년에 한 바퀴 서로 도는 주황 별' : y < 1.04e10 ? 'B도 적색거성으로 부푸는 중!' : y < 1.06e10 ? '겉껍질이 날아가는 중' : '백색왜성' },
+    { id: 'acab', n: 'Ab?', full: '알파 센타우리 Ab (후보)', col: '#e0c890', col2: '#b8a070', sz: 8, a0: 1.6, form: [-5.29e9, -5.28e9], eject: 2e15,
+      fact: '2025년 제임스 웹 망원경이 A의 생명 가능 지대에서 찍은 토성만 한 가스 행성 후보예요. 진짜인지 더 확인해야 해요.',
+      st: y => y < 4.4e9 ? '생명 가능 지대의 가스 행성 (후보). 위성에 물이 있을지도!' : y < 4.75e9 ? 'A가 부풀어서 엄청 뜨거워요!' : '백색왜성 둘레를 도는 가스 행성' },
+    { id: 'prox', n: '프록시마', full: '프록시마 센타우리', col: '#ff5a3a', sz: 3, star: true, glow: 0.6, a0: 13000, noFit: true,
+      form: [-5.297e9, -5.29e9],
+      look: y => y < 4e12 ? { sz: 3, col: '#ff5a3a', glow: 0.6 } : y < 1.2e13 ? { sz: 3, col: '#a8c4ff', glow: 1 }
+        : { sz: 2, col: y < 1e15 ? '#e8f0ff' : '#3a2018', glow: y < 1e15 ? 0.5 : 0 },
+      fact: '태양에서 가장 가까운 별(4.2광년)! 작은 적색왜성이에요. A·B에서 13,000AU 떨어져 55만 년에 한 바퀴 돌아요. 왼쪽 아래 창에서 확대해서 봐요.',
+      st: y => y < 4e12 ? '작은 적색왜성. 플레어(폭발)를 자주 터뜨려요!' : y < 1.2e13 ? '파란 왜성' : '백색왜성' },
+  ],
+  events: [
+    { y: -5.3e9, e: '☁️', t: '세 쌍둥이 별 탄생', d: '하나의 가스 구름에서 별 세 개가 함께 태어나요: 알파 센타우리 A, B, 그리고 작은 프록시마.' },
+    { y: -5.29e9, e: '👯', t: '빙글빙글 쌍둥이 별', d: 'A와 B는 80년에 한 바퀴씩 서로 돌아요. 가까울 땐 태양~토성 거리, 멀 땐 태양~명왕성 거리!' },
+    { y: -5.2e9, e: '🔴', t: '멀리 도는 프록시마', d: '프록시마는 13,000AU나 떨어져서 55만 년에 한 바퀴 돌아요. 왼쪽 아래 창으로 확대해서 봐요!' },
+    { y: -4.6e9, e: '☀️', t: '저 멀리 태양 탄생', d: '이때 4광년 떨어진 곳에서 태양이 태어나요. 알파 센타우리가 7억 년쯤 형님!' },
+    { y: -1e9, e: '🪐', t: '프록시마의 행성들', d: '프록시마의 생명 가능 지대에 지구보다 조금 무거운 행성 b가 11일에 한 바퀴 돌아요. 하지만 플레어가 펑펑 터져서 살기 힘들지도.' },
+    { y: -10, e: '🚀', t: '브레이크스루 스타샷', d: '아주 작은 우주선에 빛 돛을 달고 레이저로 밀어서 20년 만에 가 보자는 계획이 2016년에 나왔어요.' },
+    { y: -1.5, e: '🔭', t: '토성 같은 행성 후보 (2025년)', d: '제임스 웹 망원경이 A의 생명 가능 지대에서 토성만 한 가스 행성 후보 "Ab"를 찍었어요!' },
+    { y: 0, e: '⭐', t: '지금! 가장 가까운 별', d: '태양에서 4.2~4.4광년. 우리와 제일 가까운 별들이에요.' },
+    { y: 2.8e4, e: '🛸', t: '더 가까이 와요', d: '약 2만 8천 년 뒤 알파 센타우리가 3광년까지 다가와 하늘에서 엄청 밝게 보여요.' },
+    { y: 3.5e9, e: '⏳', t: 'A의 수소가 바닥나요', d: '조금 더 무거운 A가 먼저 늙어요.' },
+    { y: 4.6e9, e: '🎈', t: 'A가 적색거성', d: 'A가 빨갛게 부풀어요. 무게가 줄어서 B의 궤도가 넓어져요.' },
+    { y: 4.7e9, e: '🌈', t: '행성상 성운', d: 'A의 겉껍질이 날아가 알록달록한 구름이 돼요.' },
+    { y: 4.75e9, e: '⚪', t: 'A가 백색왜성', d: 'A가 작고 무거운 백색왜성이 돼요.' },
+    { y: 1e10, e: '🎈', t: '이번엔 B가 적색거성', d: '이제 B가 부풀 차례예요.' },
+    { y: 1.06e10, e: '⚪', t: 'B도 백색왜성', d: '백색왜성 두 개가 서로 도는 쌍둥이가 돼요.' },
+    { y: 1e12, e: '🔴', t: '프록시마는 아직 쌩쌩', d: '작은 프록시마는 수조 년을 더 살아요.' },
+    { y: 1.2e13, e: '⚪', t: '프록시마도 백색왜성', d: '파란 왜성을 거쳐 프록시마도 백색왜성이 돼요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성 세 쌍둥이', d: '셋 다 빛을 잃은 흑색왜성이 돼요. 끝!' },
+  ],
+  // 왼쪽 아래: 프록시마 확대 창
+  extra: () => {
+    let flare = 0;
+    const pb = { a: 0.0485, th: 0 }, pd = { a: 0.029, th: 2 };
+    return {
+      update(dt, y) {
+        pb.th += dt * 1.2; pd.th += dt * 2.6;
+        flare = Math.max(0, flare - dt * 2);
+        if (y < 4e12 && Math.random() < dt * 0.4) flare = 1;
+      },
+      draw() {},
+      drawUI(y) {
+        const pr = PL.prox; if (!pr || !pr.alive) return;
+        const x0 = 12, y0 = H - 330, w = 230, h = 205, cx = x0 + w / 2, cy = y0 + 115;
+        ctx.fillStyle = 'rgba(8,12,34,.88)'; ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = '#ff7a5a'; ctx.lineWidth = 1.5; ctx.strokeRect(x0, y0, w, h);
+        ctx.textAlign = 'left'; ctx.font = 'bold 12px "Malgun Gothic"'; ctx.fillStyle = '#ffd0c0';
+        ctx.fillText('🔍 프록시마 센타우리 확대', x0 + 8, y0 + 16);
+        ctx.font = '11px "Malgun Gothic"'; ctx.fillStyle = '#b8c0e8';
+        ctx.fillText('태양에서 4.2광년, 가장 가까운 별', x0 + 8, y0 + 31);
+        const k = 68 / 0.0485;
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, y0 + 36, w, h - 36); ctx.clip();
+        // 생명 가능 지대
+        if (y < 4e12) {
+          ctx.fillStyle = 'rgba(80,220,120,.12)'; ctx.beginPath();
+          ctx.arc(cx, cy, 0.052 * k, 0, 6.283); ctx.arc(cx, cy, 0.025 * k, 0, 6.283); ctx.fill('evenodd');
+        }
+        ctx.strokeStyle = 'rgba(150,170,255,.3)'; ctx.lineWidth = 1;
+        for (const q of [pb, pd]) { ctx.beginPath(); ctx.arc(cx, cy, q.a * k, 0, 6.283); ctx.stroke(); }
+        const col = hexRgb(pr.lk ? pr.lk.col : '#ff5a3a');
+        const gr = 18 + flare * 30;
+        const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, gr);
+        g.addColorStop(0, rgba(col, 0.9)); g.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, gr, 0, 6.283); ctx.fill();
+        ctx.fillStyle = rgba(col, 1); ctx.beginPath(); ctx.arc(cx, cy, 6, 0, 6.283); ctx.fill();
+        if (flare > 0.5) { ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Malgun Gothic"'; ctx.textAlign = 'center'; ctx.fillText('플레어!', cx, cy - 22); }
+        const names = [['b', pb, '#9a8a7a'], ['d', pd, '#b8a898']];
+        for (const [n, q, c] of names) {
+          const X = cx + Math.cos(q.th) * q.a * k, Y = cy + Math.sin(q.th) * q.a * k;
+          drawBall(X, Y, n === 'b' ? 4 : 3, c, null);
+          label(n, X, Y + 13, '#dfe6ff');
+        }
+        ctx.restore();
+      },
+    };
+  },
+};
+
+// ---------- 시리우스 : 밤하늘에서 가장 밝은 별 + 백색왜성 짝꿍 ----------
+const SIRIUS = {
+  nodes: [[-2.3e8, 5], [-2.299e8, 5], [-2.29e8, 5], [-1.3e8, 5], [-1.25e8, 6], [-1.22e8, 6], [-1.2e8, 5], [-6.6e7, 5],
+    [-3000, 5], [-200, 8], [0, 6], [6e4, 5], [1e9, 5], [1.1e9, 5], [1.2e9, 5], [1.25e9, 5], [1e12, 5], [1e15, 5], [1e17, 0]],
+  R: [[-2.3e8, 0], [-2.299e8, 0.02], [-2.29e8, 0.0075], [0, 0.00795], [1e9, 0.012], [1.1e9, 0.6], [1.15e9, 0.05],
+    [1.2e9, 0.8], [1.21e9, 0.002], [1.25e9, 0.00004]],
+  C: [[-2.299e8, '#ffa070'], [-2.29e8, '#e8eeff'], [0, '#eef2ff'], [1e9, '#fff0c0'], [1.1e9, '#ff5030'], [1.15e9, '#ffd27a'],
+    [1.2e9, '#ff6030'], [1.21e9, '#ffffff'], [1.25e9, '#cfe0ff'], [1e12, '#fff0d0'], [1e14, '#ffb070'], [3e15, '#c04020'],
+    [3e16, '#501810'], [1e17, '#1a1212']],
+  L: [[-2.3e8, 0], [-2.299e8, 2], [-2.29e8, 3], [0, 3], [1e9, 3.5], [1.1e9, 6], [1.15e9, 3], [1.2e9, 5], [1.21e9, 3],
+    [1.25e9, 1.2], [1e12, 0.5], [1e15, 0.15], [1e17, 0]],
+  M: [[-3e8, 1], [1.05e9, 1], [1.2e9, 0.6], [1.25e9, 0.4]],
+  belts: [{ a0: 0.1, a1: 40, n: 800, col: [200, 210, 255], on: [-2.3e8, -2.299e8], off: [-2.29e8, -2e8] }],
+  nebulas: [{ y0: -1.22e8, y1: -1.0e8, au: 30, on: 'sb' }, { y0: 1.2e9, y1: 1e11, au: 60 }],
+  planets: [
+    { id: 'sb', n: '시리우스 B', full: '시리우스 B ("강아지 별")', col: '#b8ccff', sz: 9, star: true, e0: 0.59, w: 0.5,
+      aT: [[-1.3e8, 8], [-1.2e8, 20]], form: [-2.299e8, -2.29e8],
+      look: y => y < -1.3e8 ? { sz: 10, col: '#b8ccff', glow: 1.8 } : y < -1.22e8 ? { sz: lerp(10, 40, ss(-1.3e8, -1.25e8, y)), col: '#ff5030', glow: 2 }
+        : y < -1.2e8 ? { sz: lerp(40, 2.5, ss(-1.22e8, -1.2e8, y)), col: '#ffe0c0', glow: 1.5 }
+        : { sz: 2.5, col: y < 1e14 ? '#ffffff' : y < 3e15 ? '#ffb070' : '#3a2018', glow: y < 1e15 ? 0.9 : 0 },
+      fact: '지구만 한 크기에 태양만큼 무거운 백색왜성. 옛날엔 태양 5배 무게의 파란 별이었어요. 50년에 한 바퀴 A와 서로 돌아요.',
+      st: y => y < -1.3e8 ? 'A보다 크고 밝은 파란 별!' : y < -1.22e8 ? '적색거성으로 부푸는 중' : y < -1.2e8 ? '겉껍질이 날아가는 중' : '백색왜성 "강아지 별"' },
+  ],
+  events: [
+    { y: -2.3e8, e: '☁️', t: '시리우스 쌍둥이 탄생', d: '약 2억 3천만 년 전, 별 두 개가 함께 태어나요. 그때 지구엔 첫 공룡이 막 나타났어요!' },
+    { y: -2.29e8, e: '💙', t: 'B가 더 크고 밝았어요', d: '지금은 작은 백색왜성인 B가, 처음엔 태양 5배 무게의 크고 파란 별이었어요. A보다 컸어요!' },
+    { y: -1.3e8, e: '🎈', t: 'B가 적색거성이 돼요', d: '무거운 B가 연료를 먼저 다 써서 빨갛게 부풀어요.' },
+    { y: -1.22e8, e: '🌈', t: 'B의 행성상 성운', d: 'B의 겉껍질이 날아가요. 가벼워진 B는 A에게서 멀어져 궤도가 넓어져요.' },
+    { y: -1.2e8, e: '⚪', t: 'B가 백색왜성', d: '태양만큼 무거운데 크기는 지구만 한 백색왜성이 돼요.' },
+    { y: -6.6e7, e: '🦖', t: '지구에선 공룡 멸종', d: '지구에서 공룡이 사라질 때도 시리우스는 빛나고 있었어요.' },
+    { y: -3000, e: '🐶', t: '개의 별', d: '옛 이집트 사람들은 시리우스가 새벽에 뜨면 나일강이 넘친다는 걸 알았어요. 큰개자리의 코에 있어서 "개의 별"!' },
+    { y: -182, e: '🔍', t: '보이지 않는 짝꿍 (1844년)', d: '베셀이 시리우스가 흔들흔들 움직이는 걸 보고 "안 보이는 짝꿍이 있다!"고 했어요.' },
+    { y: -164, e: '🔭', t: 'B를 찾았다! (1862년)', d: '앨번 클라크가 새 망원경을 시험하다가 처음으로 B를 봤어요.' },
+    { y: 0, e: '✨', t: '지금! 밤하늘에서 제일 밝은 별', d: '8.6광년 떨어진, 밤하늘에서 가장 밝은 별이에요.' },
+    { y: 6e4, e: '🌟', t: '더 밝아져요', d: '시리우스가 조금씩 다가와서 앞으로 6만 년쯤 더 밝아져요.' },
+    { y: 1e9, e: '⏳', t: 'A의 수소가 바닥나요', d: '이번엔 A가 늙을 차례예요.' },
+    { y: 1.1e9, e: '🎈', t: 'A가 적색거성', d: 'A가 빨갛게 부풀어요.' },
+    { y: 1.2e9, e: '🌈', t: 'A의 행성상 성운', d: 'A의 겉껍질도 날아가요.' },
+    { y: 1.25e9, e: '⚪', t: 'A도 백색왜성', d: '백색왜성 두 개가 서로 도는 쌍둥이가 돼요.' },
+    { y: 1e12, e: '🌡️', t: '천천히 식어요', d: '두 백색왜성이 조금씩 식어 가요.' },
+    { y: 1e17, e: '⚫', t: '흑색왜성 쌍둥이', d: '빛을 다 잃은 두 별이 여전히 서로 돌아요. 끝!' },
+  ],
+};
+
+const SYSTEMS = {
+  solar: { name: '태양계', emoji: '🌞', load: loadSolar, ref: 1, fit0: 40,
+    intro: '▶ 를 누르면 46억 년 전부터 아주 먼 미래까지 태양계가 변하는 모습을 볼 수 있어요. 사건 카드를 모아 보세요!',
+    end: '46억 년 전 먼지 구름에서 시작해서<br>차갑게 식은 흑색왜성까지 다 봤어요.' },
+  tauceti: { name: '타우 세티', emoji: '🟡', def: TAU, ref: 1, fit0: 30, fitMin: 20,
+    intro: '12광년 떨어진 이웃 별 타우 세티! 태양보다 조금 작고 나이는 형님이에요. 슈퍼지구 4형제와 엄청난 먼지 원반을 구경해 봐요.',
+    end: '태양보다 먼저 태어난 타우 세티의<br>처음부터 끝까지 다 봤어요.',
+    starFact: '태양보다 조금 작고(무게 78%) 조금 더 차가운 주황빛 별. 12광년 떨어져 있어 맨눈으로도 보여요.',
+    starState: y => y < -5.79e9 ? '아기 별' : y < 9e9 ? '주계열성: 수소를 태우는 중' : y < 1.03e10 ? '부풀기 시작' :
+      y < 1.0603e10 ? '적색거성: 지금보다 ' + Math.round(tab(T_SUNR, P) / 0.0037) + '배 커요!' : y < 1.098e10 ? '헬륨을 태우는 중' :
+      y < 3e15 ? '백색왜성' : '흑색왜성',
+    starName: y => y < 1.03e10 ? '타우 세티' : y < 1.098e10 ? '적색거성 타우 세티' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    era: y => y < -5.79e9 ? '타우 세티 탄생' : y < -5.5e9 ? '행성이 태어나는 시대' : y < -3000 ? '혜성이 쏟아지는 먼지 원반 시대' :
+      y < 3000 ? '⭐ 지금 우리 시대 ⭐' : y < 9e9 ? '조용한 중년' : y < 1.1e10 ? '적색거성 시대' : y < 3e15 ? '백색왜성 시대' : '흑색왜성 시대' },
+  trappist: { name: '트라피스트-1', emoji: '🔴', def: TRAP, ref: 0.03, fit0: 0.3, fitMin: 0.02,
+    intro: '40광년 떨어진 작은 빨간 별 트라피스트-1! 지구만 한 행성 7개가 박자를 맞춰 돌아요. 이 별은 10조 년 넘게 살아요.',
+    end: '10조 년 넘게 산 작은 별과<br>행성 7형제 이야기를 다 봤어요.',
+    starFact: '태양 무게의 9%, 크기는 목성보다 조금 큰 아주 작은 별(울트라쿨 적색왜성). 너무 작아서 수소를 엄청 아껴 써요.',
+    starState: y => y < -6.6e9 ? '어리고 밝은 아기 별 (플레어 펑펑!)' : y < 4e12 ? '적색왜성: 아주 천천히 수소를 태우는 중' :
+      y < 1.21e13 ? '파란 왜성: 더 뜨겁고 파랗게!' : y < 3e15 ? '헬륨 백색왜성' : '흑색왜성',
+    starName: y => y < 1e13 ? '트라피스트-1' : y < 1.21e13 ? '파란 왜성' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    era: y => y < -7.5e9 ? '행성 7형제 탄생' : y < -6.6e9 ? '뜨거운 아기 별 시대' : y < -3000 ? '조용한 적색왜성' :
+      y < 3000 ? '⭐ 지금 우리 시대 ⭐' : y < 1e13 ? '아주아주 긴 적색왜성 시대' : y < 1.21e13 ? '파란 왜성 시대' : y < 3e15 ? '백색왜성 시대' : '흑색왜성 시대' },
+  tabby: { name: '태비의 별', emoji: '👽', def: TABBY, ref: 0.6, fit0: 3, fitMin: 1.8,
+    intro: '1,470광년 떨어진 "태비의 별"! 별빛이 이상하게 확 어두워져서 "외계인이 거대 구조물을 짓는다"는 괴담이 생긴 별이에요. 왼쪽 아래 밝기 그래프를 봐요!',
+    end: '외계인 괴담이 있는 태비의 별<br>이야기를 다 봤어요.',
+    starFact: '정식 이름은 KIC 8462852. 별빛이 불규칙하게 최대 22%나 어두워져서 유명해졌어요. 처음 연구한 과학자 태비사 보야지안의 이름을 따서 "태비의 별"이라고 불러요.',
+    starState: y => y < -9.9e8 ? '아기 별' : y < 1.5e9 ? 'F형 주계열성: 태양보다 뜨겁고 하얀 별' : y < 2.15e9 ? '적색거성' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    starName: y => y < 1.9e9 ? '태비의 별' : y < 2.15e9 ? '적색거성 태비의 별' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    era: y => y < -9.9e8 ? '태비의 별 탄생' : y < -1e5 ? '조용한 시대' : y < -20 ? '먼지 덩어리 시대' : y < 3000 ? '⭐ 지금! 수수께끼의 별 ⭐' :
+      y < 1.9e9 ? '하얀 별의 남은 일생' : y < 2.15e9 ? '적색거성 시대' : y < 3e15 ? '백색왜성 시대' : '흑색왜성 시대' },
+  betel: { name: '베텔게우스', emoji: '💥', def: BETEL, ref: 1, fit0: 12, fitMin: 6,
+    intro: '오리온자리 어깨의 빨간 거인 별 베텔게우스! 태양보다 20배 무겁고, 언젠가 초신성으로 펑! 터져요. 소리를 켜고 봐요!',
+    end: '파란 아기 별 → 적색 초거성 → 초신성 → 중성자별까지<br>베텔게우스의 일생을 다 봤어요.',
+    starFact: '태양보다 약 20배 무겁고, 크기는 700배가 넘는 적색 초거성. 너무 무거워서 백색왜성이 아니라 초신성으로 터져요.',
+    starState: y => y < -1e6 ? '파랗고 뜨거운 주계열성 (연료를 펑펑!)' : y < -9e5 ? '부풀기 시작' : y < 1e5 ? '적색 초거성: 태양보다 ' + Math.round(tab(T_SUNR, P) / 0.00465) + '배 커요!' :
+      y < 1.00002e5 ? '💥 폭발 중!!!' : y < 1e12 ? '중성자별 (펄서): 지름 20km, 1초에 여러 바퀴 돌아요' : '차갑게 식은 중성자별',
+    starName: y => y < -9e5 ? '베텔게우스' : y < 1e5 ? '적색 초거성 베텔게우스' : y < 1.00002e5 ? '초신성!' : '중성자별',
+    era: y => y < -9.99e6 ? '베텔게우스 탄생' : y < -9e5 ? '파란 별 시대' : y < -3000 ? '적색 초거성 시대' : y < 3000 ? '⭐ 지금! 언제 터질까? ⭐' :
+      y < 1e5 ? '폭발을 기다리는 중' : y < 1.00002e5 ? '💥 초신성 💥' : y < 1e6 ? '초신성 잔해' : '중성자별 시대' },
+  alphacen: { name: '알파 센타우리', emoji: '👯', def: ALPHA, ref: 1, fit0: 40, fitMin: 3,
+    intro: '태양에서 가장 가까운 별들! A와 B 쌍둥이 별이 서로 돌고, 멀리 작은 프록시마가 돌아요. 왼쪽 아래 창에서 프록시마를 확대해서 봐요.',
+    end: '세 쌍둥이 별 알파 센타우리의<br>처음부터 끝까지 다 봤어요.',
+    starFact: '알파 센타우리 A: 태양보다 조금 크고 밝은 별(무게 1.1배). 4.4광년 떨어져 있어요. 짝꿍 B와 80년에 한 바퀴 서로 돌아요.',
+    starState: y => y < -5.29e9 ? '아기 별' : y < 3.5e9 ? '주계열성: 태양과 아주 비슷해요' : y < 4.6e9 ? '부풀기 시작' : y < 4.72e9 ? '적색거성' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    starName: y => y < 4.4e9 ? '알파 센타우리 A' : y < 4.72e9 ? '적색거성 A' : y < 3e15 ? '백색왜성 A' : '흑색왜성 A',
+    era: y => y < -5.29e9 ? '세 쌍둥이 탄생' : y < -3000 ? '쌍둥이 별 시대' : y < 3000 ? '⭐ 지금! 가장 가까운 이웃 ⭐' : y < 4.6e9 ? '조용한 시대' :
+      y < 4.75e9 ? 'A가 늙는 시대' : y < 1.06e10 ? 'B가 늙는 시대' : y < 1.2e13 ? '프록시마 혼자 빛나는 시대' : '흑색왜성 시대' },
+  sirius: { name: '시리우스', emoji: '🐶', def: SIRIUS, ref: 1, fit0: 30, fitMin: 3,
+    intro: '밤하늘에서 제일 밝은 별 시리우스! 옆에는 지구만 한 백색왜성 짝꿍 "시리우스 B"가 50년에 한 바퀴 돌아요. B는 옛날엔 더 큰 별이었대요.',
+    end: '밝은 시리우스와 짝꿍 B의<br>이야기를 다 봤어요.',
+    starFact: '시리우스 A: 태양보다 2배 무겁고 25배 밝은 하얀 별. 8.6광년 떨어져 있어서 밤하늘에서 가장 밝게 보여요.',
+    starState: y => y < -2.29e8 ? '아기 별' : y < 1e9 ? '하얗고 뜨거운 주계열성' : y < 1.21e9 ? '적색거성' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    starName: y => y < 1.05e9 ? '시리우스 A' : y < 1.21e9 ? '적색거성 시리우스 A' : y < 3e15 ? '백색왜성 A' : '흑색왜성 A',
+    era: y => y < -2.29e8 ? '쌍둥이 탄생' : y < -1.3e8 ? '파란 B 시대' : y < -1.2e8 ? 'B가 늙는 시대' : y < -3000 ? '백색왜성 짝꿍 시대' :
+      y < 3000 ? '⭐ 지금! 가장 밝은 별 ⭐' : y < 1.05e9 ? '밝은 시리우스 시대' : y < 1.25e9 ? 'A가 늙는 시대' : y < 3e15 ? '백색왜성 쌍둥이 시대' : '흑색왜성 시대' },
+  kepler70: { name: '케플러-70', emoji: '🔵', def: KEP, ref: 0.1, fit0: 8, fitMin: 0.006,
+    intro: '3,800광년 떨어진 케플러-70! 적색거성이 됐다가 겉껍질을 다 날려 보낸 별이에요. 별에 삼켜졌다가 살아남은 행성들을 봐요.',
+    end: '별에 삼켜졌다 살아남은 행성들의<br>이야기를 다 봤어요.',
+    starFact: '적색거성 시절 겉껍질을 다 잃고 뜨거운 속만 남은 "뜨거운 준왜성(sdB)". 표면이 약 27,700도로 태양보다 5배 가까이 뜨거워요!',
+    starState: y => y < -1.2e8 ? '태양 같은 주계열성' : y < -1.842e7 ? '적색거성: 행성을 삼키는 중!' :
+      y < 1e8 ? '뜨거운 준왜성: 27,700도, 헬륨을 태워요' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    starName: y => y < -3e7 ? '케플러-70' : y < -1.842e7 ? '적색거성 케플러-70' : y < 1.2e8 ? '뜨거운 준왜성' : y < 3e15 ? '백색왜성' : '흑색왜성',
+    era: y => y < -9.99e9 ? '케플러-70 탄생' : y < -3e7 ? '조용한 주계열성' : y < -1.842e7 ? '적색거성 시대' :
+      y < -3000 ? '뜨거운 준왜성 시대' : y < 3000 ? '⭐ 지금 우리 시대 ⭐' : y < 1.2e8 ? '뜨거운 준왜성 시대' : y < 3e15 ? '백색왜성 시대' : '흑색왜성 시대' },
+};
+let SYS = 'solar';
+const SD = () => SYSTEMS[SYS];
+
+// ---------- 소리 (컴퓨터로 직접 만든 소리) ----------
+let AC = null, soundOn = true, NOISE = null, lastThud = 0;
+function ac() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+window.addEventListener('pointerdown', () => { if (soundOn) ac(); });
+function noiseBuf(a) {
+  if (NOISE) return NOISE;
+  NOISE = a.createBuffer(1, a.sampleRate * 3, a.sampleRate);
+  const d = NOISE.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return NOISE;
+}
+function tone(a, type, f0, f1, t0, dur, vol) {
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function noise(a, f0, f1, t0, dur, vol) {
+  const src = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = noiseBuf(a); fl.type = 'lowpass';
+  fl.frequency.setValueAtTime(f0, t0); fl.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(fl).connect(g).connect(a.destination); src.start(t0); src.stop(t0 + dur + 0.05);
+}
+function sfx(kind) {
+  if (!soundOn || !AC || AC.state !== 'running') return;
+  const a = AC, t = a.currentTime;
+  if (kind === 'ding') { tone(a, 'sine', 988, 988, t, 0.25, 0.15); tone(a, 'sine', 1319, 1319, t + 0.1, 0.35, 0.12); }
+  else if (kind === 'boom') { noise(a, 900, 60, t, 1.2, 0.5); tone(a, 'sine', 90, 35, t, 0.9, 0.4); }
+  else if (kind === 'big') { noise(a, 2500, 40, t, 4, 0.7); tone(a, 'sine', 70, 25, t, 3.5, 0.6); tone(a, 'sawtooth', 200, 30, t, 2, 0.08); }
+  else if (kind === 'gulp') { tone(a, 'sine', 320, 50, t, 0.7, 0.35); }
+  else if (kind === 'zap') { tone(a, 'square', 1400, 180, t, 0.16, 0.08); }
+  else if (kind === 'thud') { if (t - lastThud < 0.12) return; lastThud = t; noise(a, 400, 60, t, 0.25, 0.25); }
+}
+
+// ---------- 저장 (도감) ----------
+let got = new Set();
+try { got = new Set(JSON.parse(localStorage.getItem('ssTimelineDex') || '[]').map(k => typeof k === 'number' ? 'solar:' + k : k)); } catch (e) {}
+const dk = i => SYS + ':' + i;
+const dexCount = () => EVENTS.filter((E, i) => got.has(dk(i))).length;
+function saveDex() { try { localStorage.setItem('ssTimelineDex', JSON.stringify([...got])); } catch (e) {} }
+
+// ---------- 입자들 ----------
+const disk = [];   // 원시행성 원반 (먼지)
+for (let i = 0; i < 1800; i++) {
+  const a = Math.pow(Math.random(), 1.6) * 44 + 0.25;
+  disk.push({ a, th: Math.random() * 6.283, cloud: rnd(1.5, 6), ca: Math.random() * 6.283,
+    c: a < 3 ? [255, rnd(150, 210) | 0, 120] : [rnd(160, 220) | 0, rnd(190, 230) | 0, 255], s: Math.random() });
+}
+const belt = [];   // 소행성대
+for (let i = 0; i < 420; i++) belt.push({ a: rnd(2.15, 3.3), th: Math.random() * 6.283, s: Math.random() });
+const outer = [];  // 바깥 얼음 띠: 니스 모형 때 흩어져서 카이퍼 띠가 된다
+for (let i = 0; i < 600; i++) {
+  const keep = Math.random() < 0.3;
+  outer.push({ a0: rnd(15.5, 28), a1: keep ? rnd(32, 50) : rnd(0.5, 120), keep, th: Math.random() * 6.283,
+    s: Math.random(), d: rnd(0, 1) });
+}
+const stars = [];
+for (let i = 0; i < 380; i++) stars.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.2, tw: Math.random() * 6.28, b: Math.random() });
+
+let flashT = 0;    // 화면 전체 번쩍 (초신성)
+let meteor = { on: false, blocked: 0, hit: 0 }; // 운석 막기 점수
+let placing = false; // 내 행성 놓는 중
+let comets = [];   // {sx,sy,tid,t,dur,big}
+let fx = [];       // 번쩍! {follow|x,y, t, dur, r, c}
+let debris = [];   // 테이아 충돌 파편
+
+// ---------- 상태 ----------
+let P = 0;               // 시간 막대 위치(초)
+let playing = false, speed = 1, slowT = 0;
+let zoom = 1, camX = 0, camY = 0, follow = null, fitAU = 40;
+let showNames = true, showOrbit = true;
+let selected = null;
+let lastY = 0;
+let clock = 0;
+let ended = false;
+
+// 화면 좌표
+let S = 1;
+// 거리 눈금: 진짜 거리(AU)를 0.42제곱해서 줄인다 → 안쪽 행성도 넉넉하고 해왕성도 화면에 들어온다
+const EXP = 0.42, dist = a => Math.pow(Math.max(a, 0), EXP);
+const wx = (a, th) => dist(a) * Math.cos(th);
+const wy = (a, th) => dist(a) * Math.sin(th);
+const sx = x => W / 2 + (x + camX) * S;
+const sy = y => H / 2 + (y + camY) * S * TK;
+let tiltOn = false, TK = 1; // TK: 세로 눌림 (1 = 위에서, 0.38 = 비스듬히)
+function sunDisp(R) { // 태양 크기(화면용): 작을 땐 덜 작게 보이게
+  if (R <= 0) return 0;
+  if (SYS !== 'solar') return S * dist(R) * (R < 0.01 ? Math.pow(R / 0.01, 0.25) : 1);
+  return R > 0.05 ? S * dist(R) : S * dist(0.05) * Math.pow(R / 0.05, 0.3);
+}
+
+// 각 행성의 지금 거리(AU)
+function planetA(Pl, y, p) {
+  let a = Pl.aT ? tab(Pl.aT, p) : Pl.a0;
+  a /= tab(T_MASS, p);
+  if (Pl.engulf) {
+    const R = tab(T_SUNR, p);
+    a = lerp(a, R * 0.92, ss(Pl.engulf - (Pl.ew || 0.025e9), Pl.engulf, y));
+  }
+  if (Pl.eject && y > Pl.eject) a *= 1 + clamp(Math.log10(y / Pl.eject) / 0.5, 0, 1) * 25;
+  return a;
+}
+
+// ---------- 매 프레임 계산 ----------
+function update(dt) {
+  clock += dt;
+  if (playing) {
+    let sp = speed * (slowT > 0 ? 0.35 : 1);
+    P += dt * sp;
+    if (P >= TOTAL) { P = TOTAL; playing = false; setPlayBtn(); if (!ended) { ended = true; setTimeout(showEnd, 1800); } }
+  }
+  slowT -= dt;
+  const y = yearAt(P);
+
+  // 사건 통과 체크
+  if (y > lastY) {
+    let last = null;
+    for (const E of EVENTS) if (E.y > lastY && E.y <= y) { last = E; fire(E); }
+    if (last) showCaption(last);
+  }
+  lastY = y;
+
+  // 행성 이동
+  for (const Pl of PLANETS) {
+    Pl.a = planetA(Pl, y, P);
+    const born = ss(Pl.form[0], Pl.form[1], y);
+    Pl.alive = born > 0 && !(Pl.engulf && y >= Pl.engulf) && !(Pl.crash && y >= Pl.crash);
+    if (Pl.mine) {
+      const eaten = tab(T_SUNR, P) > Pl.a * 0.95;
+      if (eaten && Pl.alive) {
+        if (Pl.wasAlive) { fx.push({ x: Pl.x, y: Pl.y, t: 0, dur: 1.6, r: 40, c: [255, 160, 60] }); sfx('gulp'); toast('😱 내 행성이 별에 삼켜졌어!'); Pl.eatenAt = y; }
+        Pl.alive = false;
+      }
+    }
+    let vis = born;
+    if (Pl.eject && y > Pl.eject) vis *= 1 - clamp(Math.log10(y / Pl.eject) / 0.45, 0, 1);
+    if (Pl.leave) vis *= 1 - ss(Pl.leave[0], Pl.leave[1], y);
+    Pl.szNow = Pl.sz0 && y < Pl.shrink ? Pl.sz0 : Pl.sz;
+    if (Pl.look) { Pl.lk = Pl.look(y); Pl.szNow = Pl.lk.sz; }
+    if (vis <= 0.01) Pl.alive = false;
+    Pl.vis = vis;
+    // 찌그러진 궤도(타원): 태양에 가까울 땐 빨리, 멀 땐 천천히
+    Pl.e = Pl.eT ? tab(Pl.eT, P) : (Pl.e0 || 0);
+    const rAt = th => Pl.a * (1 - Pl.e * Pl.e) / (1 + Pl.e * Math.cos(th - (Pl.w || 0)));
+    if (Pl.trojan) {
+      // 테이아: 지구 앞 60도에 있다가 지구 쪽으로 미끄러져 온다
+      const E = PL.earth;
+      Pl.th = E.th + lerp(1.047, 0, ss(-4.535e9, -4.51e9, y));
+      Pl.r = Pl.a * (1 + 0.06 * ss(-4.535e9, -4.515e9, y) * Math.sin(clock * 3));
+    } else {
+      Pl.r = rAt(Pl.th);
+      Pl.th += omega(Pl.a) * dt * Math.pow(Pl.a / Pl.r, 2);
+    }
+    if (Pl.wasAlive && !Pl.alive && Pl.engulf && y >= Pl.engulf)
+    { fx.push({ x: wx(Pl.r, Pl.th), y: wy(Pl.r, Pl.th), t: 0, dur: 1.6, r: 40, c: [255, 160, 60] }); sfx('gulp'); }
+    Pl.wasAlive = Pl.alive;
+    Pl.x = wx(Pl.r, Pl.th); Pl.y = wy(Pl.r, Pl.th);
+    Pl.rAt = rAt;
+    // 충돌하러 가는 행성: 마지막엔 부딪힐 행성 쪽으로 끌려간다
+    if (Pl.hit && !Pl.trojan) {
+      const T = PL[Pl.hit], f = ss(Pl.crash - Pl.win, Pl.crash, y);
+      if (f > 0) { Pl.x = lerp(Pl.x, T.x, f); Pl.y = lerp(Pl.y, T.y, f); Pl.r = Math.hypot(Pl.x, Pl.y) ** (1 / EXP); }
+    }
+    if (Pl.wasCrash === false && Pl.crash && y >= Pl.crash && y - Pl.crash < 0.03e9) { // 멀리 건너뛸 땐 터지지 않게
+      sfx('boom');
+      if (!Pl.hit) fx.push({ x: Pl.x, y: Pl.y, t: 0, dur: 2.2, r: 70, c: [255, 220, 170] });
+      else fx.push({ follow: Pl.hit, t: 0, dur: 2.2, r: 70, c: [255, 240, 200] });
+      if (Pl.hit) for (let i = 0; i < 90; i++) debris.push({ on: Pl.hit, ang: Math.random() * 6.283, r: rnd(4, 10), vr: rnd(10, 40), w: rnd(2, 5), t: 0, dur: rnd(2, 4) });
+    }
+    Pl.wasCrash = !!(Pl.crash && y >= Pl.crash);
+  }
+  if (SYS === 'solar') {
+    for (const d of disk) d.th += omega(d.a) * dt;
+    for (const b of belt) b.th += omega(b.a) * dt;
+    for (const o of outer) o.th += omega(lerp(o.a0, o.a1, 0.5)) * dt * 0.8;
+  }
+  for (const g of GBELTS) for (const q of g.pts) q.th += omega(q.a) * dt * 0.7;
+  if (GEXTRA) GEXTRA.update(dt, y);
+
+  // 후기 대폭격: 혜성이 쏟아진다
+  if (SYS === 'solar' && playing && y > -4.1e9 && y < -3.8e9 && Math.random() < dt * 9) {
+    const ids = ['earth', 'earth', 'mars', 'venus', 'mercury', 'earth'];
+    const th = Math.random() * 6.283;
+    comets.push({ sx: wx(32, th), sy: wy(32, th), tid: ids[(Math.random() * ids.length) | 0], t: 0, dur: rnd(2.2, 3.6), big: false, moon: Math.random() < 0.3 });
+  }
+  for (const c of comets) {
+    c.t += dt;
+    if (c.t >= c.dur && !c.done) {
+      c.done = true;
+      const T = targetPos(c);
+      if (T) fx.push({ x: T[0], y: T[1], t: 0, dur: c.big ? 2.5 : 0.7, r: c.big ? 40 : 12, c: [255, 220, 150], follow: c.tid });
+      if (T) sfx(c.big ? 'boom' : 'thud');
+      if (T && c.tid === 'earth' && meteor.on) meteor.hit++;
+    }
+  }
+  comets = comets.filter(c => !c.done);
+  // 운석 막기 미니게임: 후기 대폭격 동안
+  const lhb = SYS === 'solar' && y > -4.1e9 && y < -3.8e9;
+  if (lhb && !meteor.on) { meteor = { on: true, blocked: 0, hit: 0 }; }
+  if (!lhb && meteor.on) {
+    meteor.on = false;
+    if (y >= -3.8e9) toast('☄️ 운석 막기 끝! 막은 것 ' + meteor.blocked + '개, 지구에 떨어진 것 ' + meteor.hit + '개');
+  }
+  for (const f of fx) f.t += dt;
+  fx = fx.filter(f => f.t < f.dur);
+  for (const d of debris) { d.t += dt; d.ang += d.w * dt; d.r += d.vr * dt; d.vr *= 0.97; }
+  debris = debris.filter(d => d.t < d.dur);
+
+  // 화면 크기 자동 맞추기
+  let target;
+  if (SYS !== 'solar') {
+    // 보이는 행성과 별 크기에 맞춰 자동으로
+    target = SD().fitMin;
+    for (const Pl of PLANETS) if (Pl.alive && Pl.vis > 0.5 && !Pl.noFit) target = Math.max(target, Math.max(Pl.r, Pl.a * (1 + Pl.e)) * 1.15);
+    target = Math.max(target, tab(T_SUNR, P) * 1.5);
+    if (y > 1e15) target = Math.min(target, fitAU);
+  }
+  else if (y < -4.57e9) target = 40;
+  else if (y < -4.555e9) target = 11;
+  else if (y < -4.1e9) target = 17;
+  else if (y < 7.3e9) target = 33;
+  else if (y < 1e15) target = 33 / tab(T_MASS, P);
+  else target = fitAU;
+  fitAU += (target - fitAU) * Math.min(1, dt * 1.2);
+  TK += ((tiltOn ? 0.38 : 1) - TK) * Math.min(1, dt * 3);
+  flashT = Math.max(0, flashT - dt * 0.5);
+  S = Math.min(W, (H - 120) / Math.max(TK, 0.55)) * 0.46 / dist(fitAU) * zoom;
+
+  if (follow && PL[follow] && PL[follow].alive) { camX = -PL[follow].x; camY = -PL[follow].y; }
+  else if (follow === 'sun') { camX *= 0.9; camY *= 0.9; }
+}
+
+function targetPos(c) {
+  const Pl = PL[c.tid];
+  if (!Pl || !Pl.alive) return null;
+  return [Pl.x, Pl.y];
+}
+
+// 사건이 일어날 때 특별한 장면
+function fire(E) {
+  if (!got.has(dk(E.i))) { got.add(dk(E.i)); saveDex(); sfx('ding'); toast('📖 새 사건 카드! ' + E.e + ' ' + E.t + '  (' + dexCount() + '/' + EVENTS.length + ')'); updateDexN(); }
+  slowT = 1.6;
+  const ear = PL.earth;
+  if (E.t.startsWith('공룡 멸종')) {
+    const th = ear.th + 1.2;
+    comets.push({ sx: ear.x + Math.cos(th) * 1.4, sy: ear.y + Math.sin(th) * 1.4, tid: 'earth', t: 0, dur: 1.2, big: true });
+  }
+  if (E.t === '헬륨 섬광') { fx.push({ x: 0, y: 0, t: 0, dur: 1.5, r: 160, c: [255, 255, 220] }); sfx('boom'); }
+  if (E.fx === 'super') { // 초신성!
+    fx.push({ x: 0, y: 0, t: 0, dur: 5, r: 700, c: [255, 255, 240] });
+    fx.push({ x: 0, y: 0, t: 0, dur: 3, r: 300, c: [255, 180, 120] });
+    flashT = 1; slowT = 4; sfx('big');
+  }
+  if (E.t === '행성상 성운') fx.push({ x: 0, y: 0, t: 0, dur: 2, r: 120, c: [180, 255, 240] });
+}
+
+// ---------- 그리기 ----------
+function draw() {
+  const y = yearAt(P);
+  ctx.fillStyle = '#02030a'; ctx.fillRect(0, 0, W, H);
+
+  // 별
+  for (const s of stars) {
+    const a = 0.35 + 0.5 * s.b + 0.25 * Math.sin(clock * 1.5 + s.tw);
+    ctx.fillStyle = `rgba(220,230,255,${clamp(a, 0, 1) * 0.55})`;
+    ctx.fillRect(s.x * W, s.y * H, s.r, s.r);
+  }
+  drawAndromeda(y);
+
+  const R = tab(T_SUNR, P);
+
+  // 다른 별의 원반·띠
+  for (const g of GBELTS) {
+    const al = ss(g.on[0], g.on[1], y) * (1 - ss(g.off[0], g.off[1], y));
+    if (al <= 0.01) continue;
+    const M = tab(T_MASS, P);
+    for (const q of g.pts) {
+      const X = sx(wx(q.a / M, q.th)), Y = sy(wy(q.a / M, q.th));
+      if (X < -5 || X > W + 5 || Y < -5 || Y > H + 5) continue;
+      ctx.fillStyle = rgba(g.col, al * (0.3 + q.s * 0.5));
+      ctx.fillRect(X, Y, 1.8, 1.8);
+    }
+  }
+  // 분자구름 / 원반 (태양계)
+  const diskA = SYS !== 'solar' ? 0 : y < -4.565e9 ? 1 : 1 - ss(-4.565e9, -4.535e9, y);
+  if (diskA > 0) {
+    const k = ss(-4.6e9, -4.575e9, y); // 0 = 아직 구름, 1 = 납작한 원반
+    for (const d of disk) {
+      const r = dist(d.a) * lerp(d.cloud, 1, k);
+      const th = lerp(d.ca, d.th, k);
+      const X = sx(r * Math.cos(th)), Y = sy(r * Math.sin(th));
+      if (X < -5 || X > W + 5 || Y < -5 || Y > H + 5) continue;
+      ctx.fillStyle = rgba(k < 0.5 ? [190, 130, 200] : d.c, diskA * (0.4 + d.s * 0.5));
+      ctx.fillRect(X, Y, 2, 2);
+    }
+  }
+  // 소행성대
+  const beltA = SYS !== 'solar' ? 0 : ss(-4.556e9, -4.54e9, y) * (y > 7.95e9 ? 1 - ss(1e15, 1e16, y) * 0.8 : 1);
+  if (beltA > 0) for (const b of belt) {
+    const a = b.a / tab(T_MASS, P);
+    ctx.fillStyle = `rgba(190,170,150,${beltA * (0.35 + b.s * 0.4)})`;
+    ctx.fillRect(sx(wx(a, b.th)), sy(wy(a, b.th)), 1.5, 1.5);
+  }
+  // 바깥 얼음 띠 → 카이퍼 띠
+  const outA = SYS !== 'solar' ? 0 : ss(-4.56e9, -4.54e9, y);
+  if (outA > 0) {
+    const n = ss(-4.1e9, -3.85e9, y), M = tab(T_MASS, P);
+    for (const o of outer) {
+      const f = ss(o.d * 0.5, o.d * 0.5 + 0.5, n);
+      const a = lerp(o.a0, o.a1, f) / M;
+      const al = o.keep ? 1 : 1 - f;
+      if (al <= 0.02) continue;
+      ctx.fillStyle = `rgba(170,210,255,${outA * al * (0.3 + o.s * 0.4)})`;
+      ctx.fillRect(sx(wx(a, o.th)), sy(wy(a, o.th)), 1.5, 1.5);
+    }
+  }
+
+  // 생명 가능 지대 (물이 액체로 있을 수 있는 거리) - 초록 띠
+  const HZ = HZT[SYS];
+  if (showOrbit && HZ && y > HZ[2] && y < HZ[3]) {
+    const r0 = dist(HZ[0]) * S, r1 = dist(HZ[1]) * S;
+    ctx.fillStyle = 'rgba(80,220,120,.08)';
+    ctx.beginPath(); ctx.ellipse(sx(0), sy(0), r1, r1 * TK, 0, 0, 6.283); ctx.ellipse(sx(0), sy(0), r0, r0 * TK, 0, 0, 6.283); ctx.fill('evenodd');
+    if (showNames) label('생명 가능 지대', sx(0), sy(0) - r1 * TK - 6, '#7fe08f');
+  }
+  // 궤도선
+  if (showOrbit) {
+    for (const Pl of PLANETS) if (Pl.alive) {
+      ctx.strokeStyle = selected === Pl.id ? 'rgba(255,220,120,.55)' : `rgba(150,170,255,${0.18 * Pl.vis})`;
+      ctx.lineWidth = selected === Pl.id ? 1.6 : 1;
+      ctx.beginPath();
+      if (Pl.e > 0.01 && Pl.rAt) {
+        for (let i = 0; i <= 120; i++) { const t = i / 120 * 6.283, rr = Pl.rAt(t);
+          i ? ctx.lineTo(sx(wx(rr, t)), sy(wy(rr, t))) : ctx.moveTo(sx(wx(rr, t)), sy(wy(rr, t))); }
+      } else if (!Pl.crash) ctx.ellipse(sx(0), sy(0), dist(Pl.a) * S, dist(Pl.a) * S * TK, 0, 0, 6.283);
+      ctx.stroke();
+    }
+  }
+
+  drawNebula(y);
+  if (TK < 0.95) for (const Pl of PLANETS) if (Pl.alive && Pl.y < 0) drawPlanet(Pl, y); // 별 뒤쪽 행성
+  drawSun(y, R);
+  if (GEXTRA) GEXTRA.draw(y);
+
+  // 행성 (별 앞쪽)
+  for (const Pl of PLANETS) if (Pl.alive && !(TK < 0.95 && Pl.y < 0)) drawPlanet(Pl, y);
+  // 화면 밖에 있는 행성은 가장자리에 화살표로 알려 준다
+  for (const Pl of PLANETS) {
+    if (!Pl.alive || Pl.vis < 0.3) continue;
+    const X = Pl.sX, Y = Pl.sY, m = 30;
+    if (X > m && X < W - m && Y > m && Y < H - 130) continue;
+    const cx = W / 2, cy = H / 2 - 30, dx = X - cx, dy = Y - cy;
+    const k = Math.min((W / 2 - m) / Math.abs(dx || 1), (H / 2 - 110) / Math.abs(dy || 1));
+    const ax = cx + dx * k, ay = cy + dy * k, ang = Math.atan2(dy, dx);
+    ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang);
+    ctx.fillStyle = Pl.full ? '#ffcf9a' : '#aab8ff';
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -7); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    label(Pl.n + ' ' + fmtAU(Pl.r) + 'AU', clamp(ax - Math.cos(ang) * 22, 70, W - 70), ay - Math.sin(ang) * 22 + 4, Pl.full ? '#ffcf9a' : '#aab8ff');
+  }
+
+  // 파편
+  for (const d of debris) {
+    const E = PL[d.on || 'earth'], X = sx(E.x) + Math.cos(d.ang) * d.r, Y = sy(E.y) + Math.sin(d.ang) * d.r;
+    ctx.fillStyle = `rgba(255,${180 + Math.random() * 60 | 0},120,${1 - d.t / d.dur})`;
+    ctx.fillRect(X, Y, 2, 2);
+  }
+  // 혜성
+  for (const c of comets) {
+    const T = targetPos(c) || [c.sx * 0.1, c.sy * 0.1];
+    const f = c.t / c.dur, e = f * f;
+    const x = lerp(c.sx, T[0], e), yy = lerp(c.sy, T[1], e);
+    const X = sx(x), Y = sy(yy);
+    c.sX = X; c.sY = Y;
+    const bx = sx(lerp(c.sx, T[0], Math.max(0, e - 0.08))), by = sy(lerp(c.sy, T[1], Math.max(0, e - 0.08)));
+    const g = ctx.createLinearGradient(bx, by, X, Y);
+    g.addColorStop(0, 'rgba(150,200,255,0)'); g.addColorStop(1, c.big ? 'rgba(255,200,120,1)' : 'rgba(200,230,255,.9)');
+    ctx.strokeStyle = g; ctx.lineWidth = c.big ? 4 : 2;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(X, Y); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(X, Y, c.big ? 3 : 1.6, 0, 6.283); ctx.fill();
+  }
+  // 번쩍
+  for (const f of fx) {
+    let X, Y;
+    if (f.follow && PL[f.follow]) { X = sx(PL[f.follow].x); Y = sy(PL[f.follow].y); }
+    else { X = sx(f.x); Y = sy(f.y); }
+    const k = f.t / f.dur, rr = f.r * (0.3 + k) * Math.sqrt(zoom);
+    const g = ctx.createRadialGradient(X, Y, 0, X, Y, rr);
+    g.addColorStop(0, rgba(f.c, 1 - k)); g.addColorStop(1, rgba(f.c, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y, rr, 0, 6.283); ctx.fill();
+  }
+
+  if (GEXTRA) GEXTRA.drawUI(y);
+  if (meteor.on) {
+    const x0 = 12, y0 = H / 2 - 40;
+    ctx.fillStyle = 'rgba(40,20,10,.85)'; ctx.fillRect(x0, y0, 230, 58);
+    ctx.strokeStyle = '#ff9a50'; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, 230, 58);
+    ctx.textAlign = 'left'; ctx.font = 'bold 14px "Malgun Gothic"'; ctx.fillStyle = '#ffd36a';
+    ctx.fillText('☄️ 운석 막기! 혜성을 눌러!', x0 + 10, y0 + 22);
+    ctx.font = '13px "Malgun Gothic"'; ctx.fillStyle = '#fff';
+    ctx.fillText('막은 것 ' + meteor.blocked + '  ·  지구에 떨어진 것 ' + meteor.hit, x0 + 10, y0 + 44);
+  }
+  if (flashT > 0) { ctx.fillStyle = `rgba(255,255,245,${flashT * 0.9})`; ctx.fillRect(0, 0, W, H); }
+  // 거리 눈금 안내
+  ctx.fillStyle = 'rgba(160,170,220,.6)'; ctx.font = '12px "Malgun Gothic"'; ctx.textAlign = 'left';
+  ctx.fillText('※ 거리는 줄여서 그렸어요 (바깥쪽일수록 더 많이 줄임)', 12, H - 112);
+}
+
+const fmtAU = r => r < 0.1 ? r.toFixed(4) : r < 3 ? r.toFixed(2) : r < 100 ? r.toFixed(1) : Math.round(r);
+function drawPlanet(Pl, y) {
+  const X = sx(Pl.x), Y = sy(Pl.y);
+  const r = Pl.szNow * Math.sqrt(zoom) * (0.35 + 0.65 * Pl.vis);
+  Pl.sX = X; Pl.sY = Y; Pl.sR = r;
+  ctx.globalAlpha = clamp(Pl.vis * 1.2, 0, 1);
+  if (Pl.id === 'earth') {
+    const [c1, c2] = earthLook(y);
+    drawBall(X, Y, r, c1, c2, Pl.th);
+    drawMoon(y, X, Y, r);
+  } else if (Pl.id === 'jupiter') drawJupiter(X, Y, r, Pl.th);
+  else if (Pl.id === 'saturn') drawSaturn(X, Y, r, Pl.th);
+  else if (Pl.star) drawStarBall(X, Y, r, Pl.lk ? Pl.lk.col : Pl.col, Pl.lk && Pl.lk.glow !== undefined ? Pl.lk.glow : (Pl.glow || 1));
+  else if (Pl.lk) drawBall(X, Y, r, Pl.lk.col, Pl.lk.col2, Pl.th);
+  else drawBall(X, Y, r, Pl.col, Pl.col2 || null, Pl.th);
+  ctx.globalAlpha = 1;
+  if (dist(Pl.r) * S < SUN_R) { // 별 속에 있을 때도 보이게 테두리
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(X, Y, r + 3, 0, 6.283); ctx.stroke();
+  }
+  if (selected === Pl.id) {
+    ctx.strokeStyle = '#ffd36a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(X, Y, r + 6 + Math.sin(clock * 5) * 1.5, 0, 6.283); ctx.stroke();
+  }
+  if (showNames) label(Pl.n, X, Y + r + 13, Pl.full ? '#ffcf9a' : '#dfe6ff');
+}
+// 짝꿍 별 (시리우스 B, 알파 센타우리 B 같은 별)
+function drawStarBall(X, Y, r, col, glow) {
+  const c = hexRgb(col), gr = r * (2 + glow * 2.5);
+  const g = ctx.createRadialGradient(X, Y, r * 0.5, X, Y, gr);
+  g.addColorStop(0, rgba(c, Math.min(0.8, 0.35 + glow * 0.15))); g.addColorStop(1, rgba(c, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y, gr, 0, 6.283); ctx.fill();
+  const g2 = ctx.createRadialGradient(X - r * 0.2, Y - r * 0.2, 0, X, Y, r);
+  g2.addColorStop(0, '#ffffff'); g2.addColorStop(1, col);
+  ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(X, Y, r, 0, 6.283); ctx.fill();
+}
+function label(t, X, Y, col) {
+  ctx.font = 'bold 12px "Malgun Gothic"'; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(t, X + 1, Y + 1);
+  ctx.fillStyle = col; ctx.fillText(t, X, Y);
+}
+
+// 공 모양 행성 (태양 반대쪽은 어둡게)
+function drawBall(X, Y, r, c1, c2, th) {
+  ctx.fillStyle = c1;
+  ctx.beginPath(); ctx.arc(X, Y, r, 0, 6.283); ctx.fill();
+  if (c2) {
+    ctx.save(); ctx.beginPath(); ctx.arc(X, Y, r, 0, 6.283); ctx.clip();
+    ctx.fillStyle = c2;
+    const sp = clock * 0.8;
+    for (let i = 0; i < 3; i++) {
+      const a = sp + i * 2.1;
+      ctx.beginPath(); ctx.arc(X + Math.cos(a) * r * 0.5, Y + Math.sin(a * 1.3) * r * 0.4, r * 0.42, 0, 6.283); ctx.fill();
+    }
+    ctx.restore();
+  }
+  shade(X, Y, r);
+}
+function shade(X, Y, r) {
+  const dx = X - sx(0), dy = Y - sy(0), d = Math.hypot(dx, dy) || 1;
+  const ux = dx / d, uy = dy / d;
+  const g = ctx.createRadialGradient(X - ux * r * 0.5, Y - uy * r * 0.5, r * 0.1, X, Y, r * 1.05);
+  g.addColorStop(0, 'rgba(255,255,255,.25)'); g.addColorStop(0.5, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,10,.75)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y, r, 0, 6.283); ctx.fill();
+}
+function drawJupiter(X, Y, r) {
+  ctx.save(); ctx.beginPath(); ctx.arc(X, Y, r, 0, 6.283); ctx.clip();
+  ctx.fillStyle = '#e8c79a'; ctx.fillRect(X - r, Y - r, r * 2, r * 2);
+  const bands = ['#b0784a', '#d9a874', '#a86a40', '#e6c090', '#b8845a'];
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = bands[i]; ctx.fillRect(X - r, Y - r + (i * 0.4 + 0.15) * r, r * 2, r * 0.18); }
+  ctx.fillStyle = '#c0503a'; ctx.beginPath(); ctx.ellipse(X + r * 0.3, Y + r * 0.35, r * 0.2, r * 0.12, 0, 0, 6.283); ctx.fill();
+  ctx.restore(); shade(X, Y, r);
+}
+function drawSaturn(X, Y, r) {
+  ctx.strokeStyle = 'rgba(230,210,160,.75)'; ctx.lineWidth = r * 0.28;
+  ctx.beginPath(); ctx.ellipse(X, Y, r * 1.9, r * 0.75, -0.35, Math.PI, 2 * Math.PI); ctx.stroke();
+  drawBall(X, Y, r, '#e4cc8e', null);
+  ctx.beginPath(); ctx.ellipse(X, Y, r * 1.9, r * 0.75, -0.35, 0, Math.PI); ctx.stroke();
+}
+function drawMoon(y, X, Y, r) {
+  if (y < -4.507e9) return;
+  const grow = ss(-4.507e9, -4.45e9, y);
+  const d = r + 6 + 8 * ss(-4.5e9, 7e9, y) * Math.sqrt(zoom) + 4;
+  const a = clock * 2.2;
+  ctx.globalAlpha *= grow;
+  drawBall(X + Math.cos(a) * d, Y + Math.sin(a) * d, Math.max(1.6, r * 0.32), '#cfcfcf', null);
+  ctx.globalAlpha = 1;
+}
+
+function drawSun(y, R) {
+  const disp = sunDisp(R);
+  const col = tabColor(T_SUNC, P), L = tab(T_SUNL, P);
+  const X = sx(0), Y = sy(0);
+  // 원시 태양 주변 구름 소용돌이
+  if (SYS === 'solar' && y < -4.567e9 && y > -4.6e9) {
+    const g = ctx.createRadialGradient(X, Y, 0, X, Y, S * 2.5);
+    g.addColorStop(0, 'rgba(200,90,60,.35)'); g.addColorStop(1, 'rgba(60,30,80,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y, S * 2.5, 0, 6.283); ctx.fill();
+  }
+  if (disp <= 0) return;
+  if (L > 0.01) {
+    const gr = disp * 1.25 + (25 + 22 * L) * Math.sqrt(zoom);
+    const g = ctx.createRadialGradient(X, Y, disp * 0.6, X, Y, gr);
+    g.addColorStop(0, rgba(col, Math.min(0.75, 0.3 + L * 0.1))); g.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y, gr, 0, 6.283); ctx.fill();
+  }
+  const r = Math.max(disp, 2.5);
+  const g2 = ctx.createRadialGradient(X - r * 0.2, Y - r * 0.2, 0, X, Y, r);
+  const hot = L > 0.05 ? [Math.min(255, col[0] + 50), Math.min(255, col[1] + 50), Math.min(255, col[2] + 50)] : col;
+  g2.addColorStop(0, rgba(hot, 1)); g2.addColorStop(1, rgba(col, 1));
+  ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(X, Y, r, 0, 6.283); ctx.fill();
+  // 적색거성 표면 출렁임
+  if (R > 0.1) {
+    ctx.strokeStyle = rgba([255, 200, 120], 0.25); ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 160; i++) {
+      const a = i / 160 * 6.283, w = r * (1 + 0.025 * Math.sin(a * 7 + clock * 2) + 0.015 * Math.sin(a * 13 - clock * 3));
+      i ? ctx.lineTo(X + Math.cos(a) * w, Y + Math.sin(a) * w) : ctx.moveTo(X + Math.cos(a) * w, Y + Math.sin(a) * w);
+    }
+    ctx.stroke();
+  }
+  if (L < 0.05) { ctx.strokeStyle = 'rgba(140,120,160,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X, Y, r + 1, 0, 6.283); ctx.stroke(); }
+  if (showNames) label(sunName(y), X, Y + r + 16 + (L > 0.01 ? 6 : 0), '#ffe9a0');
+  SUN_R = r;
+}
+let SUN_R = 0;
+function sunName(y) {
+  if (SYS !== 'solar') return SD().starName(y);
+  if (y < -4.567e9) return '원시 태양';
+  if (y < 5e9) return '태양';
+  if (y < 7.3e9) return '태양 (준거성)';
+  if (y < 7.5935e9) return '적색거성 태양';
+  if (y < 7.8e9) return '헬륨 태우는 태양';
+  if (y < 7.9e9) return '점근거성 태양';
+  if (y < 3e15) return '백색왜성';
+  return '흑색왜성';
+}
+
+function nebulaList() {
+  if (SYS === 'solar') return [{ y0: 7.88e9, y1: 1e11, au: 70 }];
+  const d = SD().def;
+  if (d.nebulas) return d.nebulas;
+  const e = d.events.find(e => e.t === '행성상 성운');
+  return e ? [{ y0: e.y, y1: 1e11, au: 60 }] : [];
+}
+function drawNebula(y) { for (const nb of nebulaList()) drawOneNebula(y, nb); }
+function drawOneNebula(y, nb) {
+  if (y < nb.y0 || P > pAt(nb.y1)) return;
+  const f = clamp((P - pAt(nb.y0)) / (pAt(nb.y1) - pAt(nb.y0)), 0, 1);
+  const al = Math.pow(1 - f, 1.3) * 0.75;
+  if (al <= 0.01) return;
+  const c = nb.on && PL[nb.on] ? PL[nb.on] : null;
+  const X = sx(c ? c.x : 0), Y = sy(c ? c.y : 0), rr = dist(1 + f * (nb.au || 70)) * S;
+  const lobes = nb.cols || [[0, 1, 0.75, '120,255,230'], [0.6, 0.85, 1, '255,90,140'], [2.1, 0.95, 0.8, '140,150,255']];
+  for (const [rot, sxk, syk, cc] of lobes) {
+    ctx.save(); ctx.translate(X, Y); ctx.scale(1, TK); ctx.rotate(rot + clock * 0.03); ctx.scale(sxk, syk);
+    const g = ctx.createRadialGradient(0, 0, rr * 0.55, 0, 0, rr);
+    g.addColorStop(0, `rgba(${cc},0)`); g.addColorStop(0.75, `rgba(${cc},${al * 0.6})`); g.addColorStop(1, `rgba(${cc},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rr, 0, 6.283); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawAndromeda(y) {
+  if (y < -1e9) return;
+  const g = ss(0, 4.5e9, y);
+  const after = ss(4.5e9, 5.5e9, y) * (1 - ss(5e11, 1e14, y));
+  if (y < 4.5e9) {
+    const X = W * 0.15, Y = H * 0.28, r = 12 + g * Math.min(W, H) * 0.35;
+    ctx.save(); ctx.translate(X, Y); ctx.rotate(-0.6); ctx.scale(1, 0.38);
+    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    gr.addColorStop(0, 'rgba(255,240,220,.55)'); gr.addColorStop(0.25, 'rgba(200,190,255,.22)'); gr.addColorStop(1, 'rgba(120,120,220,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+    ctx.restore();
+    if (showNames && y > 5e8) label('안드로메다 은하', X, Y + 14 + r * 0.38, '#b8b8ff');
+  }
+  if (after > 0) {
+    const r = Math.max(W, H) * 0.8;
+    const gr = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, r);
+    gr.addColorStop(0, `rgba(255,230,200,${0.12 * after})`); gr.addColorStop(1, 'rgba(150,140,255,0)');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ---------- 글자판 ----------
+const elYear = document.getElementById('year'), elEra = document.getElementById('era');
+function eraName(y) {
+  if (SYS !== 'solar') return SD().era(y);
+  if (y < -4.585e9) return '분자구름';
+  if (y < -4.567e9) return '원시 태양 시대';
+  if (y < -4.54e9) return '행성이 태어나는 시대';
+  if (y < -4.0e9) return '명왕누대 (불지옥 지구)';
+  if (y < -2.5e9) return '시생누대 (미생물의 바다)';
+  if (y < -5.4e8) return '원생누대';
+  if (y < -2.52e8) return '고생대';
+  if (y < -6.6e7) return '중생대 (공룡 시대)';
+  if (y < -3000) return '신생대';
+  if (y < 3000) return '⭐ 지금 우리 시대 ⭐';
+  if (y < 5e9) return '태양의 중년';
+  if (y < 7.3e9) return '태양이 부풀기 시작';
+  if (y < 7.9e9) return '적색거성 시대';
+  if (y < 3e15) return '백색왜성 시대';
+  return '흑색왜성 시대';
+}
+
+const cap = document.getElementById('caption');
+let capTimer = 0;
+function showCaption(E) {
+  cap.querySelector('.t').textContent = E.e + ' ' + E.t;
+  cap.querySelector('.d').textContent = E.d;
+  cap.classList.remove('hide');
+  clearTimeout(capTimer);
+  capTimer = setTimeout(() => cap.classList.add('hide'), 6500);
+}
+const toastEl = document.getElementById('toast');
+let toastT = 0;
+function toast(t) { toastEl.textContent = t; toastEl.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => toastEl.style.opacity = 0, 2500); }
+
+// 시간 막대
+const bar = document.getElementById('bar'), knob = document.getElementById('knob'), fillEl = document.getElementById('fill');
+let tickEls = [];
+function buildTicks() {
+  for (const d of tickEls) d.remove();
+  document.getElementById('nowmark').style.left = (pAt(0) / TOTAL * 100) + '%';
+  tickEls = EVENTS.map(E => {
+    const d = document.createElement('div');
+    d.className = 'tick'; d.textContent = E.e; d.title = E.t + ' (' + fmtYear(E.y) + ')';
+    d.style.left = (E.p / TOTAL * 100) + '%';
+    d.addEventListener('pointerdown', ev => { ev.stopPropagation(); jumpTo(E); });
+    bar.appendChild(d); return d;
+  });
+  updateTicks();
+}
+function updateTicks() { EVENTS.forEach((E, i) => tickEls[i] && (tickEls[i].className = 'tick ' + (got.has(dk(i)) ? 'got' : 'no'))); }
+function jumpTo(E) {
+  P = Math.max(0, E.p - 0.6); lastY = yearAt(P); playing = true; setPlayBtn();
+}
+let scrubbing = false, wasPlaying = false;
+function scrubTo(ev) {
+  const r = bar.getBoundingClientRect();
+  P = clamp((ev.clientX - r.left) / r.width, 0, 1) * TOTAL;
+  if (P < TOTAL) ended = false;
+}
+bar.addEventListener('pointerdown', ev => { scrubbing = true; wasPlaying = playing; playing = false; bar.setPointerCapture(ev.pointerId); scrubTo(ev); });
+bar.addEventListener('pointermove', ev => { if (scrubbing) scrubTo(ev); });
+bar.addEventListener('pointerup', () => { scrubbing = false; playing = wasPlaying; setPlayBtn(); });
+
+const playBtn = document.getElementById('play');
+function setPlayBtn() { playBtn.textContent = playing ? '⏸' : '▶'; }
+function togglePlay() {
+  if (!playing && P >= TOTAL) { restart(); }
+  playing = !playing; setPlayBtn();
+}
+function switchSystem(id) {
+  SYS = id; const D = SD();
+  if (D.def) loadGeneric(D.def); else { GBELTS = []; GEXTRA = null; D.load(); }
+  document.getElementById('bAlien').style.display = id === 'tabby' ? '' : 'none';
+  REF = D.ref;
+  for (const Pl of PLANETS) { Pl.th = Math.random() * Math.PI * 2; Pl.alive = false; Pl.wasAlive = false; Pl.vis = 0; Pl.lk = null; }
+  PL = Object.fromEntries(PLANETS.map(Pl => [Pl.id, Pl]));
+  EVENTS.forEach((E, i) => { E.i = i; E.p = pAt(E.y); });
+  fitAU = D.fit0; zoom = 1;
+  restart(); playing = false; setPlayBtn();
+  selected = null; showInfo();
+  buildTicks(); updateDexN();
+  document.querySelectorAll('.sys').forEach(b => b.classList.toggle('on', b.dataset.sys === id));
+  document.title = D.name + ' 타임라인 - 궤도 버전';
+  showCaption({ e: D.emoji, t: D.name + ' 타임라인', d: D.intro });
+}
+document.querySelectorAll('.sys').forEach(b => b.onclick = () => switchSystem(b.dataset.sys));
+// ---------- 내 행성 ----------
+const MINE_COLS = [['#5fc8ff', '#2a7a3a'], ['#ff8ac8', '#b04a8a'], ['#9fffb0', '#3a9a5a'], ['#ffd36a', '#c08a30'], ['#c8a0ff', '#6a4ab0']];
+function mineState(Pl, y) {
+  const HZ = HZT[SYS];
+  if (HZ && y > HZ[2] && y < HZ[3]) {
+    if (Pl.a < HZ[0]) return '🔥 너무 뜨거워요 (생명 가능 지대보다 안쪽)';
+    if (Pl.a > HZ[1]) return '❄️ 너무 추워요 (생명 가능 지대보다 바깥)';
+    return '🌱 생명 가능 지대 안! 물이 있을 수 있어요';
+  }
+  const R = tab(T_SUNR, P);
+  if (R > Pl.a * 0.3) return '😰 별이 엄청 가까이 부풀었어요!';
+  return '별 둘레를 잘 돌고 있어요';
+}
+function placeMine(X, Y) {
+  placing = false; cv.classList.remove('place');
+  const wxw = (X - W / 2) / S - camX, wyw = (Y - H / 2) / (S * TK) - camY;
+  const rr = Math.hypot(wxw, wyw);
+  if (rr < 0.02) return;
+  const a = Math.pow(rr, 1 / EXP), y = yearAt(P), M = tab(T_MASS, P), cc = MINE_COLS[(Math.random() * MINE_COLS.length) | 0];
+  PLANETS = PLANETS.filter(q => q.id !== 'mine');
+  const Pl = { id: 'mine', n: '내 행성', full: '⭐ 내 행성', col: cc[0], col2: cc[1], sz: 6.5, a0: a * M, mine: true, born: y,
+    form: [y - Math.max(1, Math.abs(y) * 1e-6), y], eject: 5e15, th: Math.atan2(wyw, wxw), vis: 0,
+    fact: '네가 직접 놓은 행성! 별이 부풀면 삼켜질까, 끝까지 살아남을까? ▶ 눌러서 지켜봐!',
+    st: y => mineState(Pl, y) };
+  PLANETS.push(Pl);
+  PL = Object.fromEntries(PLANETS.map(q => [q.id, q]));
+  selected = 'mine'; showInfo(); sfx('ding');
+  toast('🪐 내 행성을 놓았어! 거리: 태양-지구 거리의 ' + fmtAU(a) + '배');
+}
+document.getElementById('bMine').onclick = () => {
+  placing = !placing; cv.classList.toggle('place', placing);
+  if (placing) showCaption({ e: '🪐', t: '내 행성 넣기', d: '화면에서 행성을 놓고 싶은 곳을 눌러! 별이 부풀 때 삼켜지는지, 끝까지 살아남는지 지켜봐.' });
+};
+const bTilt = document.getElementById('bTilt'), bSound = document.getElementById('bSound');
+bTilt.onclick = () => { tiltOn = !tiltOn; bTilt.classList.toggle('on', tiltOn); };
+bSound.onclick = () => { soundOn = !soundOn; bSound.classList.toggle('on', soundOn); bSound.textContent = soundOn ? '🔊 소리' : '🔇 소리 끔'; if (soundOn) ac(); };
+
+function restart() { meteor = { on: false, blocked: 0, hit: 0 }; flashT = 0; P = 0; lastY = yearAt(0) - 1; ended = false; comets = []; fx = []; debris = []; follow = null; camX = camY = 0; }
+playBtn.onclick = togglePlay;
+document.getElementById('bStart').onclick = () => { restart(); playing = false; setPlayBtn(); };
+function nextEvent() { const E = EVENTS.find(E => E.p > P + 0.05); if (E) { P = E.p - 0.01; playing = true; setPlayBtn(); } }
+function prevEvent() {
+  const list = EVENTS.filter(E => E.p < P - 0.8); const E = list[list.length - 1];
+  if (E) { P = Math.max(0, E.p - 0.5); lastY = yearAt(P); } else restart();
+  playing = true; setPlayBtn();
+}
+document.getElementById('bNext').onclick = nextEvent;
+document.getElementById('bPrev').onclick = prevEvent;
+document.querySelectorAll('.spd').forEach(b => b.onclick = () => {
+  speed = +b.dataset.s; document.querySelectorAll('.spd').forEach(x => x.classList.toggle('on', x === b));
+});
+const bName = document.getElementById('bName'), bOrbit = document.getElementById('bOrbit');
+bName.onclick = () => { showNames = !showNames; bName.classList.toggle('on', showNames); };
+bOrbit.onclick = () => { showOrbit = !showOrbit; bOrbit.classList.toggle('on', showOrbit); };
+const bAlien = document.getElementById('bAlien');
+bAlien.onclick = () => {
+  TABBY_ALIEN = !TABBY_ALIEN; bAlien.classList.toggle('on', TABBY_ALIEN);
+  showCaption(TABBY_ALIEN
+    ? { e: '👽', t: '괴담 모드 켜짐 (상상!)', d: '외계 문명이 별 둘레에 거대한 태양광 패널(다이슨 구)을 지었다면? 패널이 별을 가리면 밝기 그래프가 어떻게 변하는지 봐요. 진짜로 있다는 증거는 없어요!' }
+    : { e: '🔬', t: '괴담 모드 꺼짐', d: '과학자들은 별빛을 가리는 게 먼지일 가능성이 크다고 생각해요.' });
+};
+document.getElementById('bFit').onclick = () => { zoom = 1; camX = camY = 0; follow = null; };
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'ArrowRight') nextEvent();
+  else if (e.code === 'ArrowLeft') prevEvent();
+  else if (e.key === '+' || e.key === '=') zoom = Math.min(30, zoom * 1.2);
+  else if (e.key === '-') zoom = Math.max(0.2, zoom / 1.2);
+  else if (e.key === 'Escape') closeModal();
+  else if (e.key === 't' || e.key === 'T' || e.key === 'ㅅ') bTilt.onclick();
+});
+
+// ---------- 화면 끌기 / 확대 / 클릭 ----------
+let down = null;
+cv.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, cx: camX, cy: camY, moved: false }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => {
+  if (!down) return;
+  const dx = e.clientX - down.x, dy = e.clientY - down.y;
+  if (!down.moved && Math.hypot(dx, dy) > 5) { down.moved = true; follow = null; cv.classList.add('drag'); }
+  if (down.moved) { camX = down.cx + dx / S; camY = down.cy + dy / (S * TK); }
+});
+cv.addEventListener('pointerup', e => {
+  cv.classList.remove('drag');
+  if (down && !down.moved) pick(e.clientX, e.clientY);
+  down = null;
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const k = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  // 마우스 위치를 기준으로 확대
+  const mx = (e.clientX - W / 2) / S - camX, my = (e.clientY - H / 2) / (S * TK) - camY;
+  zoom = clamp(zoom * k, 0.2, 40);
+  const S2 = S * k;
+  if (!follow) { camX = (e.clientX - W / 2) / S2 - mx; camY = (e.clientY - H / 2) / (S2 * TK) - my; }
+}, { passive: false });
+
+function pick(X, Y) {
+  if (placing) { placeMine(X, Y); return; }
+  // 혜성 부수기
+  for (const c of comets) if (!c.done && c.sX !== undefined && Math.hypot(X - c.sX, Y - c.sY) < 20) {
+    c.done = true; c.zapped = true;
+    fx.push({ x: (c.sX - W / 2) / S - camX, y: (c.sY - H / 2) / (S * TK) - camY, t: 0, dur: 0.5, r: 18, c: [150, 220, 255] });
+    sfx('zap');
+    if (meteor.on) meteor.blocked++;
+    if (c.big) toast('🦖 공룡을 구했어! (하지만 진짜 역사에서는 소행성이 떨어졌어요)');
+    return;
+  }
+  let best = null, bd = 1e9;
+  for (const Pl of PLANETS) if (Pl.alive && Pl.sX !== undefined) {
+    const d = Math.hypot(X - Pl.sX, Y - Pl.sY) - Pl.sR;
+    if (d < 14 && d < bd) { bd = d; best = Pl.id; }
+  }
+  const ds = Math.hypot(X - sx(0), Y - sy(0));
+  if (!best && ds < Math.max(SUN_R, 12) + 8) best = 'sun';
+  selected = best;
+  showInfo();
+}
+
+// ---------- 정보 카드 ----------
+const info = document.getElementById('info');
+const FACTS = {
+  sun: '태양계 무게의 99.8%가 태양이에요. 지금은 수소를 태워서 빛나요. 너무 가벼워서 블랙홀이나 초신성은 못 돼요.',
+  mercury: '가장 작고 태양에 가장 가까운 행성. 공기가 없어서 낮엔 430도, 밤엔 영하 180도!',
+  venus: '두꺼운 이산화탄소 구름 때문에 가장 뜨거운 행성(460도). 옛날엔 바다가 있었을지도 몰라요.',
+  earth: '생명이 사는 유일한 행성(지금까지 아는 것 중). 큰 달이 지구의 기울기를 잡아 줘요.',
+  mars: '붉은 행성. 옛날엔 강과 호수가 있었던 흔적이 남아 있어요.',
+  jupiter: '가장 큰 행성. 지구가 1300개 넘게 들어가요. 큰 붉은 점은 지구보다 큰 폭풍!',
+  saturn: '아름다운 고리를 가진 행성. 물에 넣으면 뜰 만큼 가벼워요(밀도가 물보다 작아요).',
+  uranus: '옆으로 누워서 굴러가듯 도는 얼음 거인. 옛날에 큰 충돌을 당했을지도.',
+  theia: '화성만 한 옛날 행성. 지구와 부딪혀 둘이 섞였고, 튀어나간 조각이 모여 달이 되었어요. 지구 속 깊은 곳에 테이아 조각이 아직 남아 있다는 연구도 있어요.',
+  planetv: '컴퓨터 계산으로 상상한 "있었을지도 모르는" 행성. 화성과 소행성대 사이를 돌다가 궤도가 흔들려 금성과 부딪혔어요.',
+  planet9: '처음엔 천왕성·해왕성 같은 얼음 거인이 하나 더 있었을지도 몰라요. 큰 행성들이 궤도를 방해해서 멀리 밀려나다 결국 태양계를 떠났다는 생각이 있어요. 지구 5~10배 무게예요.',
+  mimpact: '수성은 크기에 비해 속에 쇠(철 핵)가 엄청 많아요. 옛날에 큰 행성과 부딪혀 바깥 돌 껍질이 날아갔기 때문이라는 생각이 있어요.',
+  neptune: '가장 바깥 행성. 바람이 시속 2000km로 불어요. 니스 모형에선 엄청 멀리 이사 왔어요.',
+};
+function stateText(id, y) {
+  if (id === 'sun' && SYS !== 'solar') return SD().starState(y);
+  if (id !== 'sun' && PL[id].st && !(PL[id].eject && y > PL[id].eject)) return PL[id].st(y);
+  if (id === 'sun') {
+    if (y < -4.567e9) return '아기 태양 (아직 핵융합 전)';
+    if (y < 5e9) return '주계열성: 수소를 태우는 중 (밝기 ' + Math.round(tab(T_SUNL, P) * 100) + '%)';
+    if (y < 7.3e9) return '준거성: 수소가 바닥나 부푸는 중';
+    if (y < 7.5935e9) return '적색거성: 지금보다 ' + Math.round(tab(T_SUNR, P) / 0.00465) + '배 커요!';
+    if (y < 7.8e9) return '헬륨을 태우는 중';
+    if (y < 7.9e9) return '점근거성: 두 번째로 부푸는 중';
+    if (y < 3e15) return '백색왜성: 지구만 한 크기, 엄청 무거워요';
+    return '흑색왜성: 빛을 다 잃었어요';
+  }
+  const Pl = PL[id];
+  if (Pl.eject && y > Pl.eject) return '지나가는 별에 끌려 떠돌이 행성이 되는 중';
+  if (id === 'earth') return earthLook(y)[2];
+  if (id === 'theia') return y < -4.535e9 ? '지구 앞 60도 자리에서 함께 돌아요' : '지구 쪽으로 미끄러져 다가가는 중! 위험해!';
+  if (id === 'planetv') return y > -3.985e9 ? '금성 쪽으로 다가가는 중! 위험해!' : y > -4.1e9 ? '궤도가 점점 찌그러지는 중... 위험해!' : '화성 바깥의 작은 암석행성';
+  if (id === 'planet9') return y < -4.1e9 ? '5번째 얼음 거인' : y < -3.88e9 ? '궤도 방해를 받아 점점 밖으로 밀려나는 중!' : '태양계를 떠나는 중... 안녕!';
+  if (id === 'mimpact') return y > -3.925e9 ? '수성 쪽으로 다가가는 중! 위험해!' : y > -4.05e9 ? '궤도가 찌그러지는 중...' : '수성 바깥을 도는 행성';
+  if (id === 'mars') return y < -3.5e9 ? '물이 흐르는 화성 (바다가 있었을지도)' : y > 7.3e9 && y < 7.9e9 ? '태양이 커져서 얼음이 잠깐 녹아요!' : '붉은 사막 행성';
+  if (id === 'mercury' && y < -3.9e9) return '지금보다 큰 옛날 수성';
+  if (id === 'venus' && y > -3.95e9 && y < -3.5e9) return '행성 V와 부딪힌 뒤 거꾸로 돌게 됐을지도!';
+  if (id === 'venus') return y < -7e8 ? '얕은 바다가 있었을지도 몰라요' : '두꺼운 구름 속 찜통 행성';
+  if (id === 'jupiter') {
+    if (y > -4.566e9 && y < -4.562e9) return '그랜드 택! 태양 쪽으로 들어오는 중';
+    if (y >= -4.562e9 && y < -4.556e9) return '그랜드 택! 다시 바깥으로 나가는 중';
+    if (y > 7.3e9 && y < 7.9e9) return '위성 유로파·가니메데의 얼음이 녹아 바다가 될지도!';
+    return '가장 큰 가스 행성';
+  }
+  if (id === 'saturn') return y > 7.3e9 && y < 7.9e9 ? '위성 타이탄이 따뜻해져 생명이 살 수 있을지도!' : '고리가 예쁜 가스 행성';
+  if (id === 'neptune' && y > -4.1e9 && y < -3.85e9) return '바깥으로 이사 중! 천왕성을 추월해요';
+  if (id === 'uranus' && y > -4.1e9 && y < -3.85e9) return '얼음 덩어리를 흩으며 밀려나는 중';
+  return id === 'mercury' ? '태양에 제일 가까운 작은 행성' : '얼음 거인';
+}
+function showInfo() {
+  if (!selected) { info.style.display = 'none'; return; }
+  info.style.display = 'block';
+  const isSun = selected === 'sun';
+  document.getElementById('iName').textContent = isSun ? SD().emoji + ' ' + sunName(yearAt(P)) : (PL[selected].full || PL[selected].n);
+  document.getElementById('iFact').textContent = isSun ? (SYS === 'solar' ? FACTS.sun : SD().starFact) : (PL[selected].fact || FACTS[selected]);
+  document.getElementById('iFollow').style.display = isSun ? 'none' : '';
+  refreshInfo();
+}
+function refreshInfo() {
+  if (!selected) return;
+  const y = yearAt(P);
+  if (selected !== 'sun' && !PL[selected].alive) {
+    if (PL[selected].mine && y > PL[selected].born) { document.getElementById('iState').textContent = PL[selected].eatenAt !== undefined || tab(T_SUNR, P) > PL[selected].a * 0.95 ? '😢 별에 삼켜졌어요' : '멀리 떠나 보이지 않아요'; return; }
+    document.getElementById('iState').textContent = PL[selected].deadMsg && y >= (PL[selected].crash || (PL[selected].leave && PL[selected].leave[1] - 1e7) || PL[selected].engulf) ? PL[selected].deadMsg : PL[selected].engulf && y >= PL[selected].engulf ? '😢 ' + (SYS === 'solar' ? '태양' : '별') + '에 삼켜졌어요' : y < PL[selected].form[0] ? '아직 태어나지 않았어요' : '멀리 떠나 보이지 않아요';
+    return;
+  }
+  let s = stateText(selected, y);
+  if (selected !== 'sun') s += '\n거리: 태양-지구 거리의 ' + fmtAU(PL[selected].r) + '배';
+  document.getElementById('iState').innerText = s;
+}
+document.getElementById('iClose').onclick = () => { selected = null; follow = null; showInfo(); };
+document.getElementById('iFollow').onclick = () => { follow = selected; zoom = Math.max(zoom, 2.5); };
+
+// ---------- 도감 / 퀴즈 ----------
+const modal = document.getElementById('modal'), mbox = document.getElementById('mbox');
+function closeModal() { modal.style.display = 'none'; }
+modal.addEventListener('pointerdown', e => { if (e.target === modal) closeModal(); });
+function updateDexN() { document.getElementById('dexN').textContent = dexCount() + '/' + EVENTS.length; updateTicks(); }
+
+document.getElementById('bDex').onclick = () => {
+  let h = `<h2>📖 ${SD().emoji} ${SD().name} 사건 도감 (${dexCount()}/${EVENTS.length})</h2><p style="color:#9fb0ff;margin:0 0 10px">시간을 흘려 보내면 사건 카드를 모아요. 모은 카드를 누르면 그때로 가요!</p><div class="cards">`;
+  EVENTS.forEach((E, i) => {
+    h += got.has(dk(i))
+      ? `<div class="card" data-i="${i}"><div class="e">${E.e}</div><div class="y">${fmtYear(E.y)}</div><b>${E.t}</b>${E.d}</div>`
+      : `<div class="card lock"><div class="e">❔</div><div class="y">${fmtYear(E.y)}</div><b>???</b>아직 못 봤어요</div>`;
+  });
+  h += '</div><p style="text-align:right"><button onclick="closeModal()">닫기</button></p>';
+  mbox.innerHTML = h; modal.style.display = 'flex';
+  mbox.querySelectorAll('.card[data-i]').forEach(c => c.onclick = () => { closeModal(); jumpTo(EVENTS[+c.dataset.i]); });
+};
+
+const QUIZ = [
+  ['태양계에서 가장 먼저 생긴 행성은?', ['목성', '지구', '수성', '해왕성']],
+  ['달은 어떻게 생겼을까?', ['테이아가 지구와 부딪혀서', '지나가던 소행성을 붙잡아서', '지구 화산에서 튀어나와서', '처음부터 원래 있었어']],
+  ['그랜드 택에서 목성을 다시 바깥으로 데려간 행성은?', ['토성', '화성', '천왕성', '금성']],
+  ['공룡을 멸종시킨 건?', ['소행성 충돌', '태양 폭발', '눈덩이 지구', '외계인']],
+  ['태양이 적색거성이 될 때 가장 먼저 삼켜지는 행성은?', ['수성', '금성', '지구', '화성']],
+  ['약 10억 년 뒤 지구 바다는 어떻게 될까?', ['태양이 밝아져 증발해', '꽁꽁 얼어', '두 배로 많아져', '그대로야']],
+  ['태양의 마지막 모습은?', ['흑색왜성', '블랙홀', '중성자별', '초신성 폭발']],
+  ['태양이 블랙홀이 못 되는 이유는?', ['너무 가벼워서', '너무 차가워서', '너무 늙어서', '달이 막아서']],
+  ['적색거성 뒤 태양 겉껍질이 날아가 생기는 알록달록한 구름은?', ['행성상 성운', '은하수', '오로라', '혜성 꼬리']],
+  ['안드로메다 은하와 합쳐질 때 별들은?', ['거의 안 부딪혀', '모두 쾅쾅 부딪혀', '다 사라져', '블랙홀이 돼']],
+  ['니스 모형에서 순서가 바뀌었을지도 모르는 두 행성은?', ['천왕성과 해왕성', '지구와 화성', '목성과 토성', '수성과 금성']],
+  ['지구 공기에 산소를 처음 잔뜩 만든 생물은?', ['남세균', '공룡', '사람', '나무늘보']],
+  ['지금 태양은 일생 중 어디쯤일까?', ['딱 중간쯤', '막 태어났어', '곧 죽어', '이미 죽었어']],
+  ['지구와 부딪혀 달을 만든 행성 이름은?', ['테이아', '가이아', '세레스', '니비루']],
+  ['5번째 암석행성(행성 V)은 어디에 있었을까?', ['화성과 소행성대 사이', '수성보다 안쪽', '해왕성 바깥', '달 옆']],
+  ['5번째 암석행성은 결국 어느 행성과 부딪혔을까?', ['금성', '지구', '목성', '수성']],
+  ['수성이 작은데 엄청 무거운 이유는?', ['충돌로 바깥 돌 껍질이 날아가서', '금으로 만들어져서', '태양이 눌러서', '물이 많아서']],
+  ['9번째 행성은 결국 어떻게 됐을까?', ['궤도 방해로 태양계를 떠났어', '태양에 떨어졌어', '달이 됐어', '목성에 먹혔어']],
+  ['타우 세티는 태양보다 나이가 어떨까?', ['태양보다 형님(더 나이 많음)', '태양보다 동생', '똑같은 날 태어났어', '아직 안 태어났어']],
+  ['트라피스트-1에는 지구만 한 행성이 몇 개 있을까?', ['7개', '2개', '12개', '0개']],
+  ['트라피스트-1 같은 작은 빨간 별의 마지막 모습은?', ['파란 왜성을 거쳐 백색왜성', '초신성 폭발', '블랙홀', '적색 초거성']],
+  ['케플러-70의 행성들은 어떻게 살아남았을까?', ['별에 삼켜졌다가 핵만 남았어', '처음부터 멀리 있었어', '다른 별에서 날아왔어', '얼음으로 막았어']],
+  ['타우 세티 바깥 먼지 원반은 태양계 카이퍼 띠보다?', ['먼지가 10배쯤 많아', '훨씬 적어', '똑같아', '없어']],
+  ['태비의 별이 유명해진 이유는?', ['별빛이 이상하게 확 어두워져서', '색깔이 초록색이라서', '제일 커서', '소리가 나서']],
+  ['태비의 별이 어두워지는 이유로 지금 가장 유력한 것은?', ['먼지', '외계인 구조물', '블랙홀', '비구름']],
+  ['외계인이 별을 둘러싸 빛을 모으는 상상 속 거대 구조물 이름은?', ['다이슨 구', '데스 스타', '우주 정거장', '스타게이트']],
+  ['베텔게우스의 마지막 모습은?', ['초신성 폭발', '흑색왜성', '파란 왜성', '그냥 사라져']],
+  ['2019년에 베텔게우스가 갑자기 어두워진 이유는?', ['먼지 구름이 가려서', '터져서', '외계인이 가려서', '달이 가려서']],
+  ['태양에서 가장 가까운 별은?', ['프록시마 센타우리', '시리우스', '베텔게우스', '북극성']],
+  ['밤하늘에서 가장 밝은 별은?', ['시리우스', '북극성', '베텔게우스', '타우 세티']],
+  ['시리우스 B는 옛날에 어떤 별이었을까?', ['A보다 크고 파란 별', '처음부터 백색왜성', '행성', '혜성']],
+  ['초신성이 터지고 남는 아주 작고 무거운 별은?', ['중성자별', '적색거성', '갈색왜성', '혜성']],
+  ['태양이 가벼워지면 행성 궤도는?', ['더 넓어져', '더 좁아져', '그대로야', '네모가 돼']],
+];
+let quiz = null;
+document.getElementById('bQuiz').onclick = startQuiz;
+function startQuiz() {
+  const qs = QUIZ.slice().sort(() => Math.random() - 0.5).slice(0, 10);
+  quiz = { qs, i: 0, score: 0 };
+  playing = false; setPlayBtn();
+  modal.style.display = 'flex'; showQ();
+}
+function showQ() {
+  const { qs, i, score } = quiz;
+  if (i >= qs.length) {
+    const st = score >= 10 ? '⭐⭐⭐ 우주 박사!' : score >= 7 ? '⭐⭐ 천문학자!' : score >= 4 ? '⭐ 우주 탐험가' : '우주 새싹 🌱 다시 구경해 보자!';
+    mbox.innerHTML = `<h2>퀴즈 끝!</h2><div class="q">${qs.length}문제 중 ${score}개 맞았어요<br>${st}</div>
+      <p><button onclick="startQuiz()">다시 풀기</button> <button onclick="closeModal()">닫기</button></p>`;
+    return;
+  }
+  const [q, opts] = qs[i];
+  const shuffled = opts.map((o, k) => [o, k === 0]).sort(() => Math.random() - 0.5);
+  mbox.innerHTML = `<h2>❓ 퀴즈 ${i + 1} / ${qs.length} <span style="float:right;font-size:16px">맞힌 개수 ${score}</span></h2>
+    <div class="q">${q}</div><div class="opts">${shuffled.map((o, k) => `<button data-k="${k}">${o[0]}</button>`).join('')}</div>
+    <p style="text-align:right"><button onclick="closeModal()">그만하기</button></p>`;
+  mbox.querySelectorAll('.opts button').forEach(b => b.onclick = () => {
+    const ok = shuffled[+b.dataset.k][1];
+    mbox.querySelectorAll('.opts button').forEach((x, k) => { x.disabled = true; if (shuffled[k][1]) x.classList.add('ok'); });
+    if (!ok) b.classList.add('bad'); else quiz.score++;
+    setTimeout(() => { quiz.i++; showQ(); }, ok ? 800 : 1600);
+  });
+}
+function showEnd() {
+  mbox.innerHTML = `<h2>⚫ ${SD().name} 이야기 끝!</h2>
+    <div class="q">${SD().end}</div>
+    <p>모은 사건 카드: <b>${dexCount()} / ${EVENTS.length}</b></p>
+    ${PL.mine ? `<p style="font-size:18px">${PL.mine.eatenAt !== undefined ? '😢 내 행성은 ' + fmtYear(PL.mine.eatenAt) + '에 별에 삼켜졌어.' : '🎉 내 행성은 별에 삼켜지지 않고 버텼어!'}</p>` : ''}
+    <p><button onclick="startQuiz()">❓ 퀴즈 풀기</button> <button onclick="closeModal();restart();playing=true;setPlayBtn()">⏮ 처음부터 다시</button> <button onclick="closeModal()">닫기</button></p>`;
+  modal.style.display = 'flex';
+}
+
+// ---------- 시작 ----------
+switchSystem('solar');
+let prevT = performance.now(), infoT = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - prevT) / 1000); prevT = now;
+  update(dt);
+  draw();
+  const y = yearAt(P);
+  elYear.textContent = fmtYear(y);
+  elEra.textContent = SD().emoji + ' ' + SD().name + ' · ' + eraName(y);
+  const pct = P / TOTAL * 100;
+  knob.style.left = pct + '%'; fillEl.style.width = pct + '%';
+  infoT -= dt; if (infoT <= 0) { refreshInfo(); infoT = 0.25; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

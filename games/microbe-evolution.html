@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>미생물 진화 관찰</title>
+<style>
+:root{--bg:#f3f5f2;--panel:#ffffff;--ink:#1d2621;--sub:#5b6a61;--line:#d5ddd7;--accent:#1f8a5b;--warn:#c0572b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1210;--panel:#151c19;--ink:#e3ece6;--sub:#94a69b;--line:#26322c;--accent:#4fd18f;--warn:#ff8a5c}}
+:root[data-theme="dark"]{--bg:#0d1210;--panel:#151c19;--ink:#e3ece6;--sub:#94a69b;--line:#26322c;--accent:#4fd18f;--warn:#ff8a5c}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,"Malgun Gothic",sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0}
+.stat{color:var(--sub)}.stat b{color:var(--ink)}
+.speed button,.btn{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 9px;cursor:pointer;font:inherit}
+.speed button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+main{flex:1;display:flex;min-height:0}
+#wrap{flex:1;position:relative;min-width:0;background:#05090a}
+#cv{display:block;width:100%;height:100%}
+aside{width:340px;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:8px 0;color:var(--sub);cursor:pointer;font:inherit}
+.tabs button.on{color:var(--ink);box-shadow:inset 0 -2px var(--accent)}
+.pane{flex:1;overflow:auto;padding:10px 12px;display:none}.pane.on{display:block}
+#p-tree{padding:6px 0 6px 6px}
+#tree{display:block;cursor:pointer}
+.sp{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.sp .n{flex:1}.sp .c{color:var(--sub)}.sp .st{color:var(--sub);font-size:12px}
+.log div{padding:3px 0;border-bottom:1px solid var(--line)}
+.log .t{color:var(--sub);margin-right:6px}
+.gene{display:flex;justify-content:space-between;padding:2px 0}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-bottom:4px}.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.trend{font-size:12px;color:var(--sub)}
+#p-civ h3{margin:4px 0 2px;font-size:15px}#p-civ h4{margin:10px 0 4px;font-size:13px}
+#p-civ table{width:100%;border-collapse:collapse;font-size:12px}
+#p-civ th,#p-civ td{text-align:left;padding:4px 3px;border-bottom:1px solid var(--line);vertical-align:top}
+#p-civ th{color:var(--sub);font-weight:600}.sub{color:var(--sub);font-size:12px}
+.pet{padding:4px 0;border-bottom:1px solid var(--line);font-size:12px}
+#start,#ending{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,8,8,.82);padding:16px}
+#ending{display:none}
+.card{background:var(--panel);color:var(--ink);border-radius:12px;padding:20px;max-width:520px;width:100%;max-height:100%;overflow:auto}
+.card h2{margin:0 0 6px}.envs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}
+.env{border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer}.env.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.env small{color:var(--sub)}
+#planet{position:absolute;inset:0;display:none;background:radial-gradient(circle at 40% 40%,#0d1b3a,#02040a);overflow:auto;padding:12px 16px}
+.pl-wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:center}
+#globe{width:min(420px,88vw);height:min(420px,88vw);cursor:pointer;flex:none}
+#rlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;flex:1;min-width:260px;max-width:560px}
+.rc{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;font-size:12px;line-height:1.5}
+.rc.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.rc b{font-size:13px}.rc .civ{color:#e0a800;font-weight:700}
+#planet h2{color:#e8eefc;margin:0 0 10px;font-size:17px;text-align:center}
+#toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;display:none;max-width:90%}
+@media (max-width:760px){main{flex-direction:column}aside{width:100%;height:45%;border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>미생물 진화 관찰</h1>
+  <span class="stat">시간 <b id="time">0</b>억 년</span>
+  <span class="stat">최고 단계 <b id="stage">-</b></span>
+  <span class="stat">개체 <b id="pop">0</b></span>
+  <span class="stat">산소 <b id="o2">0</b>%</span>
+  <span class="speed" id="speed"></span>
+  <select class="btn" id="region" aria-label="지역 고르기"></select>
+  <button class="btn" id="planetBtn">행성 보기</button>
+</header>
+<main>
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="toast"></div>
+    <div id="start"><div class="card">
+      <h2>원시 수프 고르기</h2>
+      <div style="color:var(--sub)">미생물 몇 마리만 심고, 그다음은 지켜보기만 해요.</div>
+      <div class="envs" id="envs"></div>
+      <button class="btn" id="go" style="background:var(--accent);color:#fff;border-color:var(--accent)">미생물 심기</button>
+    </div></div>
+    <div id="ending"><div class="card" id="endCard"></div></div>
+    <div id="planet"><h2 id="plTitle">행성 둘러보기 — 지역을 누르면 들어가요</h2><div class="pl-wrap"><canvas id="globe"></canvas><div id="rlist"></div></div></div>
+  </div>
+  <aside>
+    <div class="tabs"><button data-p="species" class="on">종 목록</button><button data-p="tree">계통도</button><button data-p="info">종 정보</button><button data-p="civ">문명</button><button data-p="log">사건</button></div>
+    <div class="pane on" id="p-species"></div>
+    <div class="pane" id="p-tree"><canvas id="tree"></canvas></div>
+    <div class="pane" id="p-info">종을 눌러 보세요.</div>
+    <div class="pane" id="p-civ"></div>
+    <div class="pane log" id="p-log"></div>
+  </aside>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+// ===== 데이터 테이블 (기능 추가는 여기부터) =====
+// 유전자: 범위와 돌연변이 폭. 새 유전자는 여기에 한 줄 추가. body:true면 몸 모양에 쓰임.
+const GENES=[
+  {k:'size',  n:'크기',      min:2,  max:40, init:3,  step:.3},
+  {k:'speed', n:'속도',      min:.1, max:4,  init:.6, step:.08},
+  {k:'sense', n:'감각 범위',  min:5,  max:200,init:40, step:3},
+  {k:'photo', n:'광합성',     min:0,  max:1,  init:0,  step:.03},
+  {k:'pred',  n:'포식',       min:0,  max:1,  init:0,  step:.03},
+  {k:'repro', n:'번식 문턱',   min:20, max:300,init:30, step:3},
+  {k:'heat',  n:'내열성',     min:0,  max:1,  init:.5, step:.03},
+  {k:'dry',   n:'건조 내성',   min:0,  max:1,  init:0,  step:.02},
+  {k:'social',n:'군집성',     min:0,  max:1,  init:0,  step:.02},
+  {k:'intel', n:'지능',       min:0,  max:1,  init:0,  step:.008},
+  {k:'flag',  n:'편모·지느러미',min:0, max:1,  init:.2, step:.03, body:true},
+  {k:'spike', n:'가시',       min:0,  max:1,  init:0,  step:.03, body:true},
+  {k:'shell', n:'껍데기',     min:0,  max:1,  init:0,  step:.03, body:true},
+  {k:'eyes',  n:'눈',         min:0,  max:1,  init:0,  step:.025,body:true},
+  {k:'limbs', n:'다리·촉수',   min:0,  max:1,  init:0,  step:.025,body:true},
+  {k:'dig',   n:'땅파기',     min:0,  max:1,  init:0,  step:.02, body:true},
+];
+// 행성의 지역들 (한 지역에 최대 500마리). landX=땅이 시작되는 위치(작을수록 땅이 넓음), lat/lon=행성 위 위치
+const REGIONS=[
+  {id:'tropic',   n:'적도 얕은 바다', d:'따뜻하고 햇빛이 많아요',  light:1.3, chem:.8,  temp:.65, landX:.72, lat:5,   lon:0},
+  {id:'polar',    n:'얼음 바다',     d:'춥고 어두워요',          light:.7,  chem:.7,  temp:.12, landX:.8,  lat:68,  lon:60},
+  {id:'vent',     n:'심해 열수구',    d:'뜨거운 바닷속 굴뚝',      light:.5,  chem:1.6, temp:.75, landX:.9,  lat:-25, lon:120},
+  {id:'continent',n:'큰 대륙 해안',   d:'땅이 아주 넓어요',        light:1.1, chem:.9,  temp:.5,  landX:.42, lat:35,  lon:180},
+  {id:'volcano',  n:'화산섬',        d:'뜨겁고 먹이가 많아요',     light:1,   chem:1.2, temp:.85, landX:.6,  lat:-8,  lon:240},
+  {id:'swamp',    n:'늪지',          d:'얕고 축축해요',           light:.9,  chem:1.1, temp:.55, landX:.55, lat:-45, lon:300},
+];
+const GK=GENES.map(d=>d.k),NG=GK.length; // 유전자 이름 목록 (집계를 빠르게)
+// 시작 환경 (고른 원시 수프에 따라 처음 심는 지역이 정해짐)
+const ENVS=[
+  {id:'pond', region:'swamp', n:'웅덩이',   d:'햇빛이 많고 먹이가 적어요',   light:1.3, chem:.6, temp:.4},
+  {id:'vent', region:'vent', n:'열수구',   d:'뜨겁고 화학 먹이가 풍부해요', light:.75, chem:1.5, temp:.7},
+  {id:'sea',  region:'tropic', n:'얕은 바다', d:'골고루 무난해요',            light:1,  chem:1,  temp:.5},
+];
+// 진화 단계: 종마다 따로 판정. test(종 평균 유전자 a, 세계 W, 종 sp)
+const STAGES=[
+  {n:'원핵생물',      test:()=>true},
+  {n:'광합성 · 산소',  test:(a,w)=>w.o2>2.5}, // 산소는 세상 전체 사건
+  {n:'진핵생물',      test:(a,w)=>a.size>7&&w.o2>2.5},
+  {n:'다세포 생물',    test:a=>a.size>12&&a.social>.25||(a.size>9&&planOf(a)&&planOf(a).id!=='plant')},
+  {n:'동물 · 포식',    test:a=>a.pred>.45&&(a.flag>.5||a.limbs>.4)&&a.sense>60},
+  {n:'육상 진출 · 바다의 강자', test:(a,w,sp)=>a.dry>.55&&sp.land>.3||sp.land<.1&&a.size>11&&a.eyes>.5&&a.sense>80},
+  {n:'신경계 · 사회성', test:a=>a.intel>.35&&a.social>.5},
+  {n:'지적생명체',     test:a=>a.intel>.8},
+];
+// 몸 형태: 위에서부터 먼저 맞는 것. need=판정, want=대폭발 때 그 계통이 향하는 진화 방향
+const BODYPLANS=[
+  {id:'burrow',n:'굴 파는 군집형',word:'굴쥐', need:g=>g.size>6&&g.dig>.5&&g.social>.4&&g.limbs>.3,
+   want:{dig:1,social:1,limbs:.8,dry:1,size:.5,eyes:-.3}, seed:{size:9,dig:.8,social:.7,limbs:.6,dry:.75,eyes:.35,speed:1.3,shell:.2},
+   spawnAt:()=>{const x=rnd(LAND.x+260,WW-40);return{x,y:groundY(x)+rnd(40,140)}}},
+  {id:'walker',n:'육상 동물형',word:'걸음이', need:g=>g.size>8&&g.dry>.55&&g.limbs>.45,
+   want:{dry:1,limbs:1,size:1,eyes:.6}, seed:{size:12,dry:.75,limbs:.65,eyes:.55},
+   spawnAt:()=>{const x=rnd(LAND.x+200,WW-30);return{x,y:groundY(x)-8}}},
+  {id:'crust',n:'갑각류형',word:'갑옷게', need:g=>g.size>9&&g.shell>.5&&g.limbs>.4,
+   want:{size:1,shell:1,limbs:1,spike:.3,eyes:.5,flag:-.6}, seed:{size:11,shell:.7,limbs:.6,eyes:.5,flag:.3}},
+  {id:'fish', n:'물고기형',word:'물고기', need:g=>g.size>9&&g.flag>.6&&g.eyes>.45&&g.shell<.5&&g.limbs<.4,
+   want:{size:1,flag:1,eyes:1,speed:.8,sense:.6,shell:-.8,limbs:-.8}, seed:{size:11,flag:.85,eyes:.7,speed:1.6,shell:.15,limbs:.1}},
+  {id:'jelly',n:'해파리형',word:'해파리', need:g=>g.size>9&&g.limbs>.4&&g.flag<.4&&g.shell<.35,
+   want:{size:.8,limbs:1,flag:-1,shell:-1,pred:.6}},
+  {id:'plant',n:'해초형',  word:'잎덩이', need:g=>g.size>12&&g.photo>.6},
+];
+// 복잡한 몸 형태는 대폭발 이후에만 생긴다 (해초형은 그 전에도 가능)
+const planOf=g=>{for(const p of BODYPLANS)if((W.boomed||p.id==='plant')&&p.need(g))return p;return null};
+const BOOM_T=18, SURE_T=27; // 억 년: 대폭발 시작(다세포가 먼저 나오면 12억 년부터) / 이때까지 갑각류·물고기가 없으면 핵심 진화로 꼭 나오게
+const LAND_T=31, INTEL_T=38; // 억 년: 땅 위 동물·굴 파는 군집 동물 보장 / 물고기 지적생명체·굴 사는 지적생명체 보장
+const planById=id=>BODYPLANS.find(p=>p.id===id);
+const randAim=()=>{const a=BODYPLANS.filter(p=>p.want);return a[Math.random()*a.length|0]};
+// 지적생명체로 만들 때의 유전자 (핵심 진화)
+const INTEL_SEED={
+  fish:  {size:14,flag:.85,eyes:.8,intel:.88,social:.7,pred:.55,sense:110,limbs:.1,shell:.1,dig:0},
+  burrow:{size:10,speed:1.3,shell:.15,dig:.85,dry:.85,social:.85,limbs:.65,intel:.88,pred:.55,sense:100,eyes:.4,flag:.2},
+};
+// 애완동물 개량 특징
+const BREED_FEAT=[
+  {n:'방울눈',d:'눈이 동그랗게 커졌어요',ch:{eyes:.2}},
+  {n:'꼬마',d:'몸이 작고 귀여워졌어요',ch:{size:-2}},
+  {n:'튼튼',d:'몸이 튼튼해졌어요',ch:{size:2,shell:.1}},
+  {n:'날쌘',d:'아주 빨라졌어요',ch:{speed:.3,flag:.1}},
+  {n:'순둥이',d:'아주 순해졌어요',ch:{pred:-.2,social:.15}},
+  {n:'영리한',d:'말귀를 잘 알아들어요',ch:{intel:.08,sense:15}},
+  {n:'복슬',d:'가시가 보들보들한 털이 됐어요',ch:{spike:-.3}},
+  {n:'반짝이',d:'몸 색이 반짝반짝 예뻐졌어요',ch:{},hue:90},
+];
+const SPEEDS=[0,1,10,100,1000];
+const MAXPOP=100, /* 한 지역에 최대 100마리 */ YEARS_PER_TICK=0.0004; // 억 년
+const SPECIATE=.42; // 유전자 거리가 이만큼 벌어지면 새 종
+
+// ===== 상태 =====
+const cv=document.getElementById('cv');let cx=cv.getContext('2d'); // cx는 스프라이트를 그릴 때 잠깐 바뀜
+const WW=1600, WH=1000;
+// 옆에서 본 세상: 왼쪽은 바다(수면 SEA_Y 아래), 오른쪽은 땅. 지면 위는 뭍, 지면 아래는 흙(땅파기 유전자로 굴을 팜)
+const SEA_Y=WH*.22, LAND={x:WW*.68,y:WH*.17}; // LAND.y = 지면 높이, LAND.x는 지역마다 바뀜
+// 땅 높이는 지역마다 미리 표로 만들어 둔다 (매번 sin 계산 안 함)
+function buildGY(landX){const a=new Float32Array(WW+1),lx=WW*landX;for(let x=0;x<=WW;x++)a[x]=x<lx?WH+10:x<lx+140?SEA_Y+60+(LAND.y-SEA_Y-60)*((x-lx)/140):LAND.y+Math.sin(x*.015)*8;return a}
+let GY=buildGY(.68);
+const groundY=x=>GY[x<0?0:x>WW?WW:x|0];
+// 구역 번호: 0 바다, 1 뭍, 2 흙 속, 3 공중(못 감)
+const zoneN=(x,y)=>y>=GY[x<0?0:x>WW?WW:x|0]?2:y>=SEA_Y?0:x>LAND.x?1:3;
+const ZN=['sea','land','soil','air'];
+const zoneAt=(x,y)=>ZN[zoneN(x,y)];
+const W={t:0,o2:0,env:REGIONS[0],orgs:[],food:[],tunnels:new Set(),nests:new Map(),species:[],stage:0,speed:1,log:[],nextSp:1,selSp:null,ended:false,view:0,rot:0};
+// 지역 바꾸기: 계산·그리기 전에 그 지역의 생물·먹이·굴·땅 위치로 갈아끼운다
+function setRegion(R){W.R=R;W.orgs=R.orgs;W.food=R.food;W.tunnels=R.tunnels;W.nests=R.nests;W.env=R;LAND.x=WW*R.landX;GY=R.gy||(R.gy=buildGY(R.landX))}
+function saveRegion(R){R.orgs=W.orgs;R.food=W.food}
+// 조건에 맞는 생물이 가장 많은 지역 (없으면 땅이 넓은 지역)
+function bestRegion(pred,landy){
+  let best=null,bn=-1;
+  for(const R of W.regions){if(landy&&R.landX>.75)continue;let n=0;for(const o of R.orgs)if(pred(o))n++;if(n>bn){bn=n;best=R}}
+  return best||W.regions.find(R=>R.id==='continent');
+}
+const rnd=(a,b)=>a+Math.random()*(b-a), clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const onLand=(x,y)=>{const z=zoneAt(x,y);return z==='land'||z==='soil'};
+const tempAt=(x,y)=>clamp(W.env.temp+(x/WW-.5)*.6+(y/WH>.85?.25:0),0,1); // 왼쪽 춥고 오른쪽 덥고, 바닥 열수구는 뜨거움
+
+// 종마다 진화 방향(trend)이 있어서 계통마다 다르게 진화한다.
+function randTrend(base){
+  const t={};
+  for(const d of GENES){
+    let v=base?base[d.k]*.5:0;
+    if(Math.random()<.45)v+=rnd(-1,1)*.9; // 갈라질 때 방향을 크게 튼다
+    t[d.k]=clamp(v,-1,1);
+  }
+  return t;
+}
+function mutate(g,tr){
+  const o={};
+  for(const d of GENES){
+    let v=g[d.k];
+    if(Math.random()<.5) v+=(rnd(-1,1)+tr[d.k]*.6)*d.step*(W.boomed?1.4:1); // 대폭발 이후엔 더 빨리 변함 (지역당 100마리라 한 번에 크게)
+    if(Math.random()<.006) v+=rnd(-1,1)*d.step*10; // 가끔 큰 변이
+    o[d.k]=clamp(v,d.min,d.max);
+  }
+  return o;
+}
+function dist(a,b){let s=0;for(const d of GENES){const r=(a[d.k]-b[d.k])/(d.max-d.min);s+=r*r}return Math.sqrt(s)}
+
+// 이름은 특징에서 짓는다
+function autoName(g){
+  const pre=[];
+  if(g.spike>.5)pre.push('가시');if(g.shell>.5)pre.push('껍데기');if(g.eyes>.6)pre.push('큰눈');
+  if(g.photo>.5)pre.push('초록');if(g.pred>.5)pre.push('사냥꾼');if(g.dry>.5)pre.push('뭍');
+  if(g.heat>.75)pre.push('불꽃');else if(g.heat<.25)pre.push('얼음');
+  if(!pre.length)pre.push(['반짝','둥근','작은','물결','안개','푸른','붉은','보라'][Math.random()*8|0]);
+  let body;const pl=planOf(g);
+  if(g.intel>.6)body=pl&&pl.id==='fish'?'지혜 물고기족':pl&&pl.id==='burrow'?'굴살이 지혜족':'지혜족';else if(pl)body=pl.word;else if(g.limbs>.6)body=g.dry>.5?'걸음이':'촉수이';
+  else if(g.size>14)body=g.photo>.5?'잎덩이':'덩치';else if(g.size>7)body=g.flag>.5?'헤엄이':'방울이';
+  else body=g.flag>.5?'꼬리균':'알갱이';
+  const base=pre[Math.random()*pre.length|0]+' '+body;
+  const n=(nameCount[base]=(nameCount[base]||0)+1);
+  return n>1?base+' '+n+'호':base; // 같은 이름이면 번호를 붙임
+}
+let nameCount={};
+function newSpecies(genes,parent){
+  const sp={id:W.nextSp++,name:autoName(genes),hue:parent?(parent.hue+rnd(-70,70)+360)%360:Math.random()*360|0,
+    genes:{...genes},trend:randTrend(parent&&parent.trend),parent:parent?parent.id:null,born:W.t,died:null,
+    count:0,peak:0,dead:false,stage:parent?parent.stage:0,land:0,mean:{...genes},
+    owner:parent?parent.owner:null,civ:parent?parent.civ:null, // owner=애완동물 주인 문명, civ=속한 문명
+    reg:W.R?W.R.id:null, // 처음 생긴 지역
+    _n:0,_land:0,_rc:0,_lc:0,_sum:new Float64Array(NG)}; // 집계용 칸 (꼭 0으로 시작)
+  // 대폭발 이후 큰 생물에서 갈라진 종은 절반쯤 새로운 몸 형태 쪽으로 방향을 잡는다
+  if(W.boomed&&parent&&genes.size>6&&!parent.owner&&Math.random()<.5)aimPlan(sp,randAim());
+  W.species.push(sp);W.spMap.set(sp.id,sp);
+  return sp;
+}
+function aimPlan(sp,pl){for(const k in pl.want)sp.trend[k]=clamp(pl.want[k],-1,1);sp.aim=pl.id
+}
+const spById=id=>W.spMap.get(id);
+// 유전자는 평생 안 바뀌므로, 매 틱 쓰는 값들을 태어날 때 한 번만 계산해 둔다
+function spawn(g,x,y,sp,e){
+  const pl=g.size>9?planOf(g):null,pid=pl?pl.id:null,crust=pid==='crust',fish=pid==='fish',pm=pid?.8:1;
+  const gv=new Float32Array(NG);for(let k=0;k<NG;k++)gv[k]=g[GK[k]];
+  const o={x,y,vx:0,vy:0,e:e??g.repro*.5,g,gv,sp,age:0,pl:pid,dead:false,tgt:null,master:null,home:0,hd:Math.random()*6.283,ph:Math.random()*18,dig:0,face:1,ci:0,C:null,
+    size:g.size,
+    spd0:g.speed*(.5+g.flag*.7)*(1-g.shell*(crust?.15:.4))*(fish?1.3:1),landM:.15+g.limbs,soilM:.4+g.dig*.9,
+    sense0:g.sense*(.6+g.eyes*.8+g.intel*.6),soilSM:1+g.dig,
+    cBase:(.003*Math.pow(g.size,1.4)+.012*g.intel+.003*(g.spike+g.shell+g.limbs+g.eyes))*pm,cSpd:.004*g.size/3*pm,cSense:.0001*pm,
+    dryPen:(1-g.dry)*.25,soilPen:(1-g.dig)*.15+(1-g.dry)*.1,walkerSea:g.dry>.6&&g.limbs>.45,seaPen:g.dry>.6&&g.limbs>.45?(g.dry-.6)*.15:0,
+    photoK:g.photo>0?g.photo*.1*Math.pow(g.size,.3):0,photoS:g.photo*Math.sqrt(g.size),
+    canHunt:g.pred>.12||g.size>5,predG:g.pred>.12,huntBelow:g.repro*.7,preyMax:g.size*(g.pred>.12?.9:.4),
+    eatsFood:g.photo<.85,eatR:(3+g.size*.7)*(pid==='jelly'?1.6:1),
+    foodMul:(1-g.photo*.6)*(1-g.pred*.6)*(1+g.intel),fsSea:Math.min(1,(crust?11:5)/g.size),fsLand:Math.min(1,18/g.size),
+    def:g.spike*.6+g.shell*.5+(crust?.2:0),atk:1.2-g.pred*.5-g.intel*.5,esc:g.speed*(.5+g.flag*.7),huntGain:.5+g.pred*.5,digT:80-g.pred*50,
+    reproT:Math.max(g.repro,g.size*4),maxAge:3000+g.size*250,digger:g.dig>=.35,social15:g.social>.15};
+  W.orgs.push(o);return o;
+}
+function addLog(s){W.log.unshift({t:W.t,s});if(W.log.length>300)W.log.pop();dirtyUI=true}
+function toast(s){const el=document.getElementById('toast');el.textContent=s;el.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>el.style.display='none',3500)}
+// 먹이는 늘 같은 모양의 객체로 (브라우저가 빠르게 처리함)
+const mkFood=(x,y,v,land,soil)=>({x,y,v,land,soil,e:0,ci:0});
+function addFood(n){for(let i=0;i<n;i++){const y=SEA_Y+10+Math.pow(Math.random(),.6)*(WH-SEA_Y-10); /* 깊을수록 조금 더 많지만 골고루 */const x=rnd(0,LAND.x+140);if(zoneN(x,y)!==0)continue;W.food.push(mkFood(x,y,10,0,0))}
+}
+// 산소가 쌓이면 땅 위(이끼·열매)와 흙 속(뿌리·지렁이)에도 먹을 것이 생긴다 (바다 먹이와 따로 셈)
+function addLandFood(nl,ns){
+  if(W.o2>8&&nl<80&&Math.random()<.5){const x=rnd(LAND.x+150,WW-5);W.food.push(mkFood(x,groundY(x)-3,14,1,0))}
+  if(W.o2>8&&ns<100&&Math.random()<.45){const x=rnd(LAND.x+150,WW-10);W.food.push(mkFood(x,rnd(groundY(x)+25,WH-10),12,1,1))}}
+
+function start(env){
+  nameCount={};
+  Object.assign(W,{moon:false,impact:null,boomed:false,planSeen:{},tried:{},civs:[],t:0,o2:0,species:[],spMap:new Map(),stage:0,log:[],selSp:null,ended:false,nextSp:1,startEnv:env,
+    regions:REGIONS.map(r=>({...r,orgs:[],food:[],tunnels:new Set(),nests:new Map(),colonized:false,pop:0,top:null,best:0,civPop:0})),
+    view:Math.max(0,REGIONS.findIndex(r=>r.id===env.region))});
+  for(const R of W.regions){setRegion(R);addFood(250*R.chem);saveRegion(R);
+    R.tcv=document.createElement('canvas');R.tcv.width=201;R.tcv.height=126;R.tctx=R.tcv.getContext('2d');R.tctx.fillStyle='#1c120a'} // 굴 그림 (8px 칸 하나 = 1픽셀)
+  const R0=W.regions[W.view];setRegion(R0);R0.colonized=true;
+  const g={};for(const d of GENES)g[d.k]=d.init;
+  g.heat=R0.temp;
+  const sp=newSpecies(g,null);
+  for(let i=0;i<12;i++)spawn(mutate(g,sp.trend),LAND.x*.6+rnd(-80,80),WH*.7+rnd(-60,60),sp);
+  saveRegion(R0);
+  $('region').innerHTML=W.regions.map((R,i)=>`<option value="${i}">${R.n}</option>`).join('');$('region').value=W.view;
+  addLog(`행성의 ${R0.n}에 ${sp.name} 12마리를 심었어요`);
+  dirtyTree=true;
+}
+
+// ===== 시뮬레이션 한 틱 =====
+const G=50,COLS=Math.ceil(WW/G),ROWS=Math.ceil(WH/G),NC=COLS*ROWS;
+const cell=(x,y)=>clamp(x/G|0,0,COLS-1)+clamp(y/G|0,0,ROWS-1)*COLS;
+// 칸 나누기: 칸마다 배열을 새로 만들지 않고 "한 줄 목록 + 칸 시작 위치"로 정리 (계수 정렬, 아주 빠름)
+const oStart=new Int32Array(NC+1),oCnt=new Int32Array(NC),fStart=new Int32Array(NC+1),fCnt=new Int32Array(NC),posTmp=new Int32Array(NC);
+const oList=[],fList=[];
+function bucket(arr,start,cnt,out){
+  cnt.fill(0);const n=arr.length;
+  for(let i=0;i<n;i++){const a=arr[i];let gx=a.x/G|0,gy=a.y/G|0;if(gx<0)gx=0;else if(gx>=COLS)gx=COLS-1;if(gy<0)gy=0;else if(gy>=ROWS)gy=ROWS-1;const c=gx+gy*COLS;a.ci=c;cnt[c]++}
+  let t=0;for(let c=0;c<NC;c++){start[c]=t;posTmp[c]=t;t+=cnt[c]}start[NC]=t;
+  out.length=n;for(let i=0;i<n;i++){const a=arr[i];out[posTmp[a.ci]++]=a}
+}
+// 한 틱: 모든 지역을 차례로 계산한 뒤, 행성 전체 일(산소·이동·대폭발 등)을 처리
+function step(){
+  W.t+=YEARS_PER_TICK;
+  const tk=Math.round(W.t/YEARS_PER_TICK);
+  let photo=0;
+  for(const R of W.regions){setRegion(R);photo+=stepRegion(tk);saveRegion(R)}
+  planetStep(tk,photo);
+}
+function stepRegion(tk){
+  const E=W.env,R=W.R,orgs=W.orgs,food=W.food,N=orgs.length;
+  if(N)R.colonized=true;
+  for(let i=0;i<N;i++)orgs[i].sp._lc=0;          // 이 지역 안의 종별 개체 수
+  for(let i=0;i<N;i++)orgs[i].sp._lc++;
+  let nl=0,ns=0;for(let i=0;i<food.length;i++){const f=food[i];if(f.soil)ns++;else if(f.land)nl++}
+  if(food.length-nl-ns<300*E.chem)addFood(Math.round(4*E.chem));
+  addLandFood(nl,ns);
+  bucket(orgs,oStart,oCnt,oList);bucket(food,fStart,fCnt,fList);
+  const born=[];let photoSum=0;
+  // 애완동물이 따라갈 주인 목록
+  let ownerOrgs=null;
+  if(W.civs.length){ownerOrgs=new Map();for(let i=0;i<N;i++){const o=orgs[i];if(o.sp.civ){let a=ownerOrgs.get(o.sp.civ);if(!a)ownerOrgs.set(o.sp.civ,a=[]);a.push(o)}}}
+  const ox=1/(1+Math.min(W.o2,20)/20),dis=.15*clamp((N-40)/40,0,1),invN=1/(N||1),seaH=WH-SEA_Y,lightLand=E.light*1.5,LX=LAND.x,deep=WH*.85;
+  for(let i=0;i<N;i++){
+    const o=orgs[i];if(o.dead)continue;
+    const g=o.g;o.age++;
+    let x=o.x,y=o.y;
+    const zone=zoneN(x,y);
+    // 붐비면 흩어진다: 한 칸(50px)에 12마리가 넘으면 먹이 다툼으로 힘이 빠지고 칸 바깥쪽으로 밀려남
+    const crowd=oCnt[o.ci];
+    if(crowd>12){o.e-=.004*(crowd-12);const cxm=((x/G|0)+.5)*G,cym=((y/G|0)+.5)*G;o.vx+=((x-cxm)||rnd(-1,1))*.02+rnd(-.3,.3);o.vy+=((y-cym)||rnd(-1,1))*.02+rnd(-.3,.3)}
+    // 몸 형태 장점(물고기 빠름·갑각류 단단함·해파리 긴 촉수)은 태어날 때 spd0 등에 들어가 있음
+    const spd=o.spd0*(zone===1?o.landM:zone===2?o.soilM:1);
+    let sense=zone===2?o.sense0*o.soilSM:o.sense0;if(sense>150)sense=150; // 땅속에선 냄새로 먹이를 찾음
+    // 대사 비용: 산소가 있으면 큰 몸·뇌가 감당 가능
+    o.e-=(o.cBase+o.cSpd*spd*spd+o.cSense*sense)*ox;
+    // 한 종이 너무 많아지면 그 종만 노리는 병이 돈다 (여러 종이 함께 살게 하는 장치)
+    const sh=o.sp._lc*invN-.2;if(sh>0)o.e-=sh*dis;
+    // 온도: 왼쪽 춥고 오른쪽 덥고, 바닥 열수구는 뜨거움
+    let tp=E.temp+(x/WW-.5)*.6+(y>deep?.25:0);tp=tp<0?0:tp>1?1:tp;const dtp=g.heat-tp;o.e-=(dtp<0?-dtp:dtp)*.03;
+    if(zone===1)o.e-=o.dryPen;else if(zone===2)o.e-=o.soilPen;else o.e-=o.seaPen; // 뭍 짐승은 물속이 힘듦
+    // 광합성: 물속은 얕을수록 밝고, 땅 위는 더 밝고, 흙 속은 깜깜
+    if(o.photoK){const light=zone===2?0:zone===0?E.light*(1-.75*(y-SEA_Y)/seaH):lightLand;o.e+=o.photoK*light;photoSum+=o.photoS*light}
+    // 목표 찾기. 큰 세포는 작은 세포를 삼킬 수 있음. 배부르거나 소화 중이면 사냥 안 함
+    if(o.dig>0)o.dig--;
+    const hunter=o.canHunt&&o.e<o.huntBelow&&o.dig<=0,preyMax=o.preyMax,sp=o.sp;
+    let tx=NaN,ty=0;
+    const tg=o.tgt;
+    if(tg&&!tg.e&&!tg.dead&&(o.age%6)){tx=tg.x;ty=tg.y} // 목표는 6틱에 한 번만 새로 찾음 (쫓던 게 없어지면 바로)
+    else{
+      o.tgt=null;let best=sense*sense;
+      let gx0=(x-sense)/G|0,gx1=(x+sense)/G|0,gy0=(y-sense)/G|0,gy1=(y+sense)/G|0;
+      if(gx0<0)gx0=0;if(gy0<0)gy0=0;if(gx1>=COLS)gx1=COLS-1;if(gy1>=ROWS)gy1=ROWS-1;
+      if(o.eatsFood){let n=0;sF:for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const c=gx+gy*COLS;
+        for(let j=fStart[c],je=fStart[c+1];j<je;j++){if(++n>90)break sF;const f=fList[j];if(f.e)continue;const dx=f.x-x,dy=f.y-y,d=dx*dx+dy*dy;if(d<best){best=d;o.tgt=f}}}}
+      if(hunter){let n=0;sP:for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const c=gx+gy*COLS;
+        for(let j=oStart[c],je=oStart[c+1];j<je;j++){if(++n>90)break sP;const p=oList[j];if(p.dead||p.sp===sp||p.sp.owner||p.size>preyMax)continue;const dx=p.x-x,dy=p.y-y,d=dx*dx+dy*dy;if(d<best){best=d;o.tgt=p}}}}
+      if(o.tgt){tx=o.tgt.x;ty=o.tgt.y}
+    }
+    // 무리: 너무 붙으면 밀어내고, 적당히 떨어져 있으면 끌어당김. 무리 지어 살면 서로 도움
+    if(o.social15&&!(o.age%3)){const soc=g.social,sz=o.size;let fr=0,n=0;
+      let gx0=(x-40)/G|0,gx1=(x+40)/G|0,gy0=(y-40)/G|0,gy1=(y+40)/G|0;if(gx0<0)gx0=0;if(gy0<0)gy0=0;if(gx1>=COLS)gx1=COLS-1;if(gy1>=ROWS)gy1=ROWS-1;
+      sS:for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const c=gx+gy*COLS;
+        for(let j=oStart[c],je=oStart[c+1];j<je;j++){if(++n>90)break sS;const p=oList[j];if(p.sp!==sp||p===o)continue;fr++;
+          const dx=p.x-x,dy=p.y-y,d2=dx*dx+dy*dy,gap=sz+p.size;
+          if(d2<gap*gap){const d=Math.sqrt(d2)||1;o.vx-=dx/d*.6;o.vy-=dy/d*.6}else{o.vx+=dx*.0018*soc;o.vy+=dy*.0018*soc}}}
+      o.e+=.018*soc*(fr<5?fr:5)*(1+g.intel)}
+    if(tx!==tx&&g.photo>.5){tx=x+rnd(-30,30);ty=g.dry>.5&&x>LX?groundY(x)-5:SEA_Y+15} // 빛 쪽으로
+    if(tx!==tx&&zone===0&&o.walkerSea){if(!o.home)o.home=rnd(LX+180,WW-20);tx=o.home;ty=LAND.y-10} // 뭍 짐승은 물에 빠지면 땅으로 헤엄쳐 감
+    // 굴 파는 무리는 배부르면 둥지(굴 속 큰 방)로, 배고프면 먹이 찾으러
+    if(o.digger){let nest=W.nests.get(sp.id);
+      if(!nest&&zone===2&&g.dig>.35){nest={x,y:Math.max(y,groundY(x)+50)};W.nests.set(sp.id,nest)}
+      if(tx!==tx&&nest&&g.dig>.5&&g.social>.4&&o.e>g.repro*.6&&!(o.age%2)){tx=nest.x+rnd(-40,40);ty=nest.y+rnd(-15,15)}}
+    // 애완동물: 주인을 따라다니고 밥을 얻어먹는다 (너무 멀어지면만 따라감)
+    if(sp.owner){
+      if(!o.master||o.master.dead){const a=ownerOrgs&&ownerOrgs.get(sp.owner);o.master=a&&a.length?a[Math.random()*a.length|0]:null}
+      if(o.master){o.e+=.04;const dx=o.master.x-x,dy=o.master.y-y;if(dx*dx+dy*dy>6400){tx=o.master.x+rnd(-40,40);ty=o.master.y+rnd(-40,40)}}
+    }
+    if(tx===tx){const dx=tx-x,dy=ty-y,k=spd*.2/(Math.sqrt(dx*dx+dy*dy)||1);o.vx+=dx*k;o.vy+=dy*k}
+    else{o.hd+=rnd(-.3,.3);o.vx+=Math.cos(o.hd)*spd*.12;o.vy+=Math.sin(o.hd)*spd*.12}
+    o.vx*=.9;o.vy*=.9;
+    const v2=o.vx*o.vx+o.vy*o.vy;if(v2>spd*spd){const k=spd/Math.sqrt(v2);o.vx*=k;o.vy*=k}
+    let nx=x+o.vx,ny=y+o.vy;nx=nx<0?0:nx>WW?WW:nx;ny=ny<0?0:ny>WH?WH:ny;
+    const z2=zoneN(nx,ny);
+    // 물 밖 공중은 못 감, 마른 땅은 건조 내성이 있어야, 흙 속은 땅파기가 있어야 들어감
+    if(z2===3||(z2===1&&zone!==1&&g.dry<.25)||(z2===2&&zone!==2&&!o.digger)){o.hd+=Math.PI;o.vx*=-.5;o.vy*=-.5;if(z2===3&&o.vy<0)o.vy=.3}
+    else{o.x=x=nx;o.y=y=ny;
+      if(z2===2&&o.digger&&W.tunnels.size<3500){const k=((y/8)|0)*1000+((x/8)|0);if(!W.tunnels.has(k)){W.tunnels.add(k);if(R.tctx)R.tctx.fillRect(x/8|0,y/8|0,1,1)}} // 지나간 자리는 굴이 됨
+    }
+    // 뭍에서는 땅을 딛고 걷는다 (굴로 내려가는 중이 아니면)
+    if(zoneN(x,y)===1&&(!o.digger||o.vy<=0))o.y=y=groundY(x)-o.size*.6;
+    if(x<=0||x>=WW||y<=0||y>=WH)o.hd+=Math.PI;
+    // 먹기
+    const eatR=o.eatR;
+    {let gx0=(x-eatR)/G|0,gx1=(x+eatR)/G|0,gy0=(y-eatR)/G|0,gy1=(y+eatR)/G|0;if(gx0<0)gx0=0;if(gy0<0)gy0=0;if(gx1>=COLS)gx1=COLS-1;if(gy1>=ROWS)gy1=ROWS-1;
+      if(o.eatsFood){let n=0;eF:for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const c=gx+gy*COLS;
+        for(let j=fStart[c],je=fStart[c+1];j<je;j++){if(++n>90)break eF;const f=fList[j];if(f.e)continue;const dx=f.x-x,dy=f.y-y;
+          if(dx<eatR&&dx>-eatR&&dy<eatR&&dy>-eatR){f.e=1;o.e+=f.v*o.foodMul*(f.land?o.fsLand:o.fsSea)}}}} // 큰 몸은 작은 먹이 알갱이로 배를 못 채움
+      if(hunter){const er2=eatR*eatR;let n=0;eP:for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const c=gx+gy*COLS;
+        for(let j=oStart[c],je=oStart[c+1];j<je;j++){if(++n>90)break eP;const p=oList[j];
+          if(p.dead||p.sp===sp||p.sp.owner||p.size>preyMax)continue; // 애완동물은 주인이 지켜 줌
+          const dx=p.x-x,dy=p.y-y;if(dx*dx+dy*dy>=er2)continue;
+          if(Math.random()<p.def*o.atk)continue;         // 가시·껍데기가 지켜 줌 (똑똑하면 사냥을 더 잘함)
+          if(!o.predG&&Math.random()<.5)continue;        // 그냥 큰 세포는 삼키기에 자주 실패
+          if(p.esc>o.esc&&Math.random()<.6)continue;     // 빠른 먹잇감은 도망침
+          o.e+=(Math.max(0,p.e)*.5+p.size*2)*o.huntGain;p.dead=true;o.dig=o.digT;break eP}}}}
+    // 번식 (큰 몸은 새끼를 낳는 데 에너지가 더 듦). 새끼는 조금 떨어진 곳에서, 사는 곳이 바뀌면 부모 자리에서
+    if(o.e>o.reproT){o.e/=2;let bx=x+rnd(-1,1)*(o.size+6),by=y+rnd(-1,1)*(o.size+6);bx=bx<0?0:bx>WW?WW:bx;by=by<0?0:by>WH?WH:by;if(zoneN(bx,by)!==zone){bx=x;by=y}
+      born.push({g:mutate(g,sp.trend),x:bx,y:by,sp,e:o.e})}
+    if(o.e<=0||o.age>o.maxAge)o.dead=true;
+  }
+  // 먹힌 먹이 치우기 · 죽은 생물은 분해되어 먹이가 됨 (새 배열을 만들지 않고 제자리에서 정리)
+  let w=0;for(let i=0;i<food.length;i++){const f=food[i];if(!f.e)food[w++]=f}food.length=w;
+  w=0;for(let i=0;i<orgs.length;i++){const o=orgs[i];if(o.dead){if(food.length<900)food.push(mkFood(o.x,o.y,4+o.size*.6,0,0))}else orgs[w++]=o}orgs.length=w;
+  for(const b of born){
+    let sp=b.sp;
+    // 다른 지역으로 이사 간 무리는 조금만 달라져도 새 종이 됨 (떨어져 살면 갈라짐)
+    if(dist(b.g,sp.genes)>(sp.reg!==R.id?.2:SPECIATE)){sp=newSpecies(b.g,sp);dirtyTree=true}
+    spawn(b.g,b.x,b.y,sp,b.e);
+  }
+  // 세균은 절대 사라지지 않는다: 생명이 한 번이라도 퍼진 지역에서 작은 미생물이 거의 없으면 처음 종의 후손이 다시 퍼진다
+  if(R.colonized&&tk%300===0){
+    let small=0;for(let i=0;i<orgs.length;i++)if(orgs[i].size<5)small++;
+    if(small<5){const root=W.species[0];root.dead=false;root.died=null;
+      for(let i=0;i<3;i++)spawn(mutate(root.genes,root.trend),rnd(0,LAND.x),rnd(WH*.45,WH),root)}
+  }
+  cull();
+  return photoSum;
+}
+// 너무 많으면 셋 중 가장 배고픈 개체가 굶어 죽는다 (지역마다 절대 500마리를 넘지 않게)
+function cull(){while(W.orgs.length>MAXPOP){let k=-1;for(let j=0;j<3;j++){const r=Math.random()*W.orgs.length|0;if(k<0||W.orgs[r].e<W.orgs[k].e)k=r}const d=W.orgs[k];W.orgs[k]=W.orgs[W.orgs.length-1];W.orgs.pop();if(W.food.length<900)W.food.push(mkFood(d.x,d.y,4+d.g.size*.6,0,0))}}
+// 생물이 이웃 지역으로 옮겨 감 (행성은 지역들이 둥글게 이어져 있음)
+function migrate(){
+  const n=W.regions.length;
+  for(let i=0;i<n;i++){
+    const R=W.regions[i];if(R.orgs.length<5||Math.random()<.7)continue;
+    const k=Math.random()*R.orgs.length|0,o=R.orgs[k];
+    setRegion(R);const z=zoneAt(o.x,o.y);
+    const N=W.regions[(i+(Math.random()<.5?1:n-1))%n];setRegion(N);
+    let x,y;
+    if(z==='sea'){x=rnd(20,LAND.x-20);y=rnd(SEA_Y+20,WH-20)}
+    else if(z==='land'){x=rnd(LAND.x+160,WW-20);y=groundY(x)-o.g.size*.6}
+    else{x=rnd(LAND.x+160,WW-20);y=groundY(x)+rnd(30,200)}
+    R.orgs[k]=R.orgs[R.orgs.length-1];R.orgs.pop();
+    Object.assign(o,{x,y,vx:0,vy:0,tgt:null,master:null,home:null});N.orgs.push(o);
+    if(!N.colonized){N.colonized=true;addLog(`생명이 ${N.n}까지 퍼졌어요! (${o.sp.name})`);toast(`생명이 ${N.n}까지 퍼졌어요!`)}
+  }
+}
+function planetStep(tk,photo){
+  // 산소: 행성 전체의 광합성 + 8억 년부터 바위·화산에서 조금씩 (1억 년에 1%, 최대 20%)
+  W.o2+=(Math.max(Math.min(35,photo*.03),clamp(W.t-8,0,20))-W.o2)*.0006;
+  if(tk%100===0)migrate(); // 0.04억 년마다 가끔 이웃 지역으로
+  // 캄브리아 대폭발
+  if(!W.boomed&&(W.t>=BOOM_T||(W.stage>=3&&W.t>=12))){
+    W.boomed=true;addLog('캄브리아 대폭발! 몸의 설계도가 여러 갈래로 나뉘기 시작해요');toast('캄브리아 대폭발! 갑옷·지느러미·촉수를 가진 생물이 나타날 거예요');
+    for(const sp of W.species)if(sp.count>0&&sp.mean.size>6&&Math.random()<.6)aimPlan(sp,randAim());
+  }
+  // 갑각류·물고기·땅 동물·굴쥐·지적생명체가 안 나왔거나 다 멸종했으면 핵심 진화로 등장 (1억 년마다 다시 시도)
+  if(tk%250===0){
+    const alive=id=>W.species.some(sp=>sp.count>0&&sp.plan&&sp.plan.id===id&&!sp.owner);
+    if(W.t>=SURE_T)for(const id of['crust','fish'])if(!alive(id))keyInnovation(planById(id));
+    if(W.t>=LAND_T)for(const id of['burrow','walker'])if(!alive(id))keyInnovation(planById(id));
+    if(W.t>=INTEL_T)for(const id of['fish','burrow'])if(!W.species.some(sp=>sp.count>0&&sp.stage===7&&sp.plan&&sp.plan.id===id))makeIntelligent(id);
+  }
+  if(W.civs.length&&tk%500===0)breedPets(); // 0.2억 년마다 애완동물 개량
+  for(const R of W.regions)if(R.orgs.length>MAXPOP){setRegion(R);cull();saveRegion(R)}
+  if(W.regions.every(R=>!R.orgs.length)){addLog('모든 생명이 사라졌어요… 다시 심어요');start(W.startEnv)}
+}
+
+function keyInnovation(pl){
+  const key='plan_'+pl.id;if(W.tried[key]&&W.t-W.tried[key]<1)return;W.tried[key]=W.t;
+  const landy=pl.id==='burrow'||pl.id==='walker';
+  const cands=W.species.filter(s=>s.count>=3&&!s.owner&&!s.civ).sort((a,b)=>landy?b.mean.dry-a.mean.dry||b.mean.size-a.mean.size:b.mean.size-a.mean.size);
+  const donor=cands[0];if(!donor)return;
+  const g={...donor.mean};for(const k in pl.seed){const d=GENES.find(x=>x.k===k);g[k]=(pl.want[k]<0||k==="shell"&&pl.id==="burrow")?Math.min(g[k],pl.seed[k]):Math.max(g[k],pl.seed[k]);g[k]=clamp(g[k],d.min,d.max)}
+  if(pl.id==='burrow')g.size=Math.min(g.size,10);
+  const sp=newSpecies(g,donor);aimPlan(sp,pl);sp.name=autoName(g);
+  const R=bestRegion(o=>o.sp===donor,landy);setRegion(R);R.colonized=true;
+  const at=W.orgs.filter(o=>o.sp===donor);
+  for(let i=0;i<12;i++){const a=pl.spawnAt?pl.spawnAt():at.length?at[i%at.length]:{x:rnd(50,LAND.x-50),y:rnd(SEA_Y+60,WH-50)};spawn(mutate(g,sp.trend),a.x+rnd(-20,20),a.y+rnd(-20,20),sp,g.repro*.9)}
+  saveRegion(R);
+  addLog(`핵심 진화! ${donor.name}에서 ${pl.n} ${sp.name} 탄생`);dirtyTree=true;
+}
+// 물고기나 굴 파는 무리 중에서 생각하는 종이 태어난다
+function makeIntelligent(id){
+  const key='intel_'+id;if(W.tried[key]&&W.t-W.tried[key]<1)return;W.tried[key]=W.t;
+  const donor=W.species.filter(s=>s.count>=3&&s.plan&&s.plan.id===id&&!s.owner&&!s.civ).sort((a,b)=>b.count-a.count)[0];if(!donor)return;
+  const g={...donor.mean,...INTEL_SEED[id]};
+  const sp=newSpecies(g,donor);aimPlan(sp,planById(id));sp.trend.intel=1;sp.trend.social=1;sp.name=autoName(g);
+  const R=bestRegion(o=>o.sp===donor);setRegion(R);
+  const at=W.orgs.filter(o=>o.sp===donor);
+  for(let i=0;i<12;i++){const a=at.length?at[i%at.length]:{x:rnd(50,LAND.x-50),y:rnd(SEA_Y+60,WH-50)};spawn(mutate(g,sp.trend),a.x+rnd(-15,15),a.y+rnd(-15,15),sp,g.repro*.9)}
+  saveRegion(R);
+  addLog(`핵심 진화! ${donor.name}에서 생각하는 ${sp.name} 탄생`);dirtyTree=true;
+}
+// ===== 문명: 애완동물 =====
+const shortName=n=>n.replace(/ \d+호$/,'').replace(/^(길들인|방울눈|꼬마|튼튼|날쌘|순둥이|영리한|복슬|반짝이) /,'');
+function pickPet(owner,civ){
+  const aq=owner.land<.1;
+  const ok=s=>s.count>=5&&!s.civ&&!s.owner&&s.mean.size>=2.5&&s.mean.size<=owner.mean.size*1.5&&s.mean.pred<.6;
+  let c=W.species.filter(s=>ok(s)&&(aq?s.land<.2:s.land>.2));
+  if(!c.length)c=W.species.filter(ok);
+  if(!c.length)c=W.species.filter(s=>s.count>=3&&!s.civ&&!s.owner).sort((a,b)=>a.mean.size-b.mean.size).slice(0,1); // 그래도 없으면 가장 작은 생물을 길들임
+  c.sort((a,b)=>(b.mean.eyes+b.mean.social)*30+b.count*.1-((a.mean.eyes+a.mean.social)*30+a.count*.1));
+  const w=c[0];if(w&&!civ.wild)civ.wild=w.id;return w||null;
+}
+function breedPets(){
+  for(const civ of W.civs){
+    if(civ.breeds.length>=7)continue;
+    const owner=W.species.filter(s=>s.civ===civ.id&&s.count>0).sort((a,b)=>b.count-a.count)[0];if(!owner)continue;
+    let base=null;for(let i=civ.breeds.length-1;i>=0;i--){const b=spById(civ.breeds[i]);if(b&&b.count>0){base=b;break}}
+    if(!base)base=pickPet(owner,civ);if(!base)continue;
+    const first=!civ.breeds.length, f=first?null:BREED_FEAT[Math.random()*BREED_FEAT.length|0];
+    const g={...base.mean};
+    // 기본 개량 방향: 순해지고, 가시는 줄고, 사람(주인)과 친해지고, 주인이 사는 곳에 맞춰짐
+    g.pred-=.1;g.spike-=.1;g.social+=.1;g.eyes+=.05;
+    for(const k of['dry','dig','heat'])g[k]+=(owner.mean[k]-g[k])*(first?1:.4); // 처음 길들일 때 주인이 사는 곳(물·땅·굴)에 맞춰짐
+    g.size+=(owner.mean.size*.45-g.size)*.3;
+    if(f)for(const k in f.ch)g[k]+=f.ch[k];
+    for(const d of GENES)g[d.k]=clamp(g[d.k],d.min,d.max);
+    const sp=newSpecies(g,base);sp.owner=civ.id;sp.civ=null;
+    for(const k in sp.trend)sp.trend[k]=0;
+    sp.hue=(base.hue+(f&&f.hue?f.hue:25))%360;
+    sp.breedNo=civ.breeds.length+1;sp.featD=f?f.d:'야생에서 데려와 길들였어요';
+    sp.name=(f?f.n:'길들인')+' '+shortName(base.name);sp.userNamed=true;
+    civ.breeds.push(sp.id);
+    const R=bestRegion(o=>o.sp.civ===civ.id);setRegion(R);
+    const at=W.orgs.filter(o=>o.sp.civ===civ.id);
+    for(let i=0;i<5;i++){const a=at[i%at.length]||{x:rnd(0,LAND.x),y:rnd(SEA_Y+50,WH)};spawn(mutate(g,sp.trend),a.x+rnd(-20,20),a.y+rnd(-20,20),sp,g.repro*.9)}
+    saveRegion(R);
+    addLog(first?`${owner.name}이(가) ${base.name}을(를) 애완동물로 길들였어요`:`애완동물 개량! ${sp.name} (${sp.breedNo}대) — ${sp.featD}`);
+    toast(first?`${owner.name}의 첫 애완동물: ${sp.name}`:`애완동물 개량! ${sp.name} — ${sp.featD}`);
+    dirtyTree=true;
+  }
+}
+function onIntelligent(sp){
+  if(sp.owner||sp.civ)return; // 애완동물이거나 이미 문명의 후손이면 새 문명 아님
+  sp.civ=sp.id;W.civs.push({id:sp.id,t:W.t,wild:null,breeds:[]});
+  if(!W.ended)ending(sp);else toast(`또 다른 지적생명체! ${sp.name}`);
+}
+function census(){
+  if(!W.regions)return;
+  // 지난번에 살아 있던 종만 0으로 (멸종한 수천 종은 건드리지 않음)
+  for(const sp of W.species)if(sp._n){sp._n=0;sp._land=0;sp._sum.fill(0)}
+  for(const R of W.regions){
+    setRegion(R);const orgs=W.orgs,n=orgs.length;let civ=0,top=null,tn=0,best=0,nsp=0;
+    for(let i=0;i<n;i++)orgs[i].sp._rc=0;
+    for(let i=0;i<n;i++){const o=orgs[i],sp=o.sp;
+      if(!sp._sum)sp._sum=new Float64Array(NG);
+      sp._n++;const z=zoneN(o.x,o.y);if(z===1||z===2)sp._land++;
+      const gv=o.gv,su=sp._sum;for(let k=0;k<NG;k++)su[k]+=gv[k];
+      // 지역 요약 (행성 보기용)
+      const c=++sp._rc;if(c===1){nsp++;if(sp.stage>best)best=sp.stage}if(c>tn&&!sp.owner){tn=c;top=sp}
+      if(sp.civ)civ++}
+    R.pop=n;R.top=top;R.best=best;R.civPop=civ;R.nsp=nsp;
+  }
+  for(const sp of W.species){
+    const sn=sp._n||0;sp.count=sn;
+    if(!sn){if(!sp.dead&&W.t-sp.born>.004){sp.dead=true;sp.died=W.t;sp._spr=null;sp._sprV=-1;if(sp.peak>=10)addLog(`${sp.name} 멸종`);dirtyTree=true}continue}
+    if(sp.peak<10&&sp.count>=10&&sp.parent)addLog(`새 종 자리잡음: ${sp.name} (${spById(sp.parent).name}에서 갈라짐)`);
+    sp.peak=Math.max(sp.peak,sp.count);sp.land=sp._land/sn;
+    const su=sp._sum,m=sp.mean;for(let k=0;k<NG;k++)m[GK[k]]=su[k]/sn;
+    sp.plan=planOf(sp.mean);
+    if(sp.plan&&sp.namedPlan!==sp.plan.id&&!sp.userNamed&&sp.count>=5){sp.namedPlan=sp.plan.id;sp.name=autoName(sp.mean);dirtyTree=true} // 몸 형태가 생기면 이름도 바뀜
+    if(sp.plan&&sp.count>=5&&!W.planSeen[sp.plan.id]){W.planSeen[sp.plan.id]=W.t;addLog(`최초의 ${sp.plan.n} 생물 등장: ${sp.name}`);toast(`최초의 ${sp.plan.n} 생물 등장! — ${sp.name}`)}
+    // 종마다 따로 단계 판정 (개체가 어느 정도 있어야 인정)
+    if(sp.count>=5) while(sp.stage<STAGES.length-1&&STAGES[sp.stage+1].test(sp.mean,W,sp)){
+      sp.stage++;dirtyTree=true;
+      if(sp.stage>W.stage){W.stage=sp.stage;addLog(`최초 돌파! ${sp.name} → ${STAGES[sp.stage].n}`);toast(`${sp.stage+1}단계 최초 돌파 — ${sp.name}: ${STAGES[sp.stage].n}`)}
+      else addLog(`${sp.name}도 ${STAGES[sp.stage].n} 단계에 도달`);
+      if(sp.stage===STAGES.length-1)onIntelligent(sp);
+    }
+  }
+}
+
+// ===== 엔딩 =====
+function lineage(sp){const out=[];while(sp){out.unshift(sp);sp=sp.parent?spById(sp.parent):null}return out}
+function ending(sp){
+  W.ended=true;W.speed=0;markSpeed();
+  const line=lineage(sp),ext=W.species.filter(s=>s.dead&&s.peak>=10).length;
+  const g=sp.mean,feat=GENES.filter(d=>d.body&&g[d.k]>.5).map(d=>d.n).join(', ')||'특별한 기관 없음';
+  document.getElementById('endCard').innerHTML=`<h2>지적생명체 탄생!</h2>
+  <p><b>${sp.name}</b>이(가) ${W.t.toFixed(2)}억 년 만에 생각하기 시작했어요.</p>
+  <p style="color:var(--sub)">몸: ${feat} · ${g.dry>.5?'땅':'물'}에서 삶 · ${g.photo>.5?'햇빛으로 먹고 삶':g.pred>.5?'사냥으로 먹고 삶':'먹이를 주워 먹고 삶'}</p>
+  <p>멸종한 종 ${ext}개 · 생긴 종 모두 ${W.species.length}개</p>
+  <p><b>조상 줄기</b><br>${line.map(s=>s.name).join(' → ')}</p>
+  <p>오른쪽 <b>문명</b> 탭에 이 종족이 먹는 <b>요리 표</b>와 <b>애완동물</b>이 생겼어요. 시간이 지나면 애완동물이 점점 개량돼요.</p>
+  <button class="btn" id="keep">계속 지켜보기</button>`;
+  document.getElementById('ending').style.display='flex';
+  document.getElementById('keep').onclick=()=>{document.getElementById('ending').style.display='none';W.speed=10;markSpeed();showTab('civ')};
+}
+
+// ===== 그리기 =====
+function resize(){const r=cv.parentElement.getBoundingClientRect();cv.width=Math.max(1,r.width*devicePixelRatio|0);cv.height=Math.max(1,r.height*devicePixelRatio|0)}
+addEventListener('resize',resize);
+// 옆에서 본 모습: 왼쪽/오른쪽만 바라보고 위아래로 살짝 기울어짐
+function faceOf(o){if(Math.abs(o.vx)>.05)o.face=o.vx<0?-1:1;return o.face||1}
+let BS=1,BOX=0,BOY=0; // 화면 배율과 위치 (draw에서 정함)
+// save/restore 대신 변환 행렬을 바로 지정 (생물 수백 마리라 이게 훨씬 빠름)
+function sideXf(o,flat){const f=faceOf(o);let t=0;if(!flat){t=Math.atan2(o.vy,(o.vx<0?-o.vx:o.vx)+.001);t=t<-.6?-.6:t>.6?.6:t}
+  const c=Math.cos(t)*BS,sn=Math.sin(t)*BS;cx.setTransform(c*f,sn,-sn*f,c,BS*o.x+BOX,BS*o.y+BOY)}
+function endXf(){cx.setTransform(BS,0,0,BS,BOX,BOY);cx.lineCap='butt'}
+// 색 글자는 생물마다 한 번만 만들어 둔다 (매 장면마다 새로 만들면 느림)
+function colorsOf(o){const h=o.sp.hue,g=o.g,h40=(h+40)%360;return{
+  fl:`hsla(${h},70%,70%,.7)`,lb:`hsla(${h},60%,60%,.8)`,spk:`hsla(${h},90%,80%,.85)`,body:`hsla(${h},${g.photo>.5?60:80}%,${42+g.photo*15}%,.88)`,
+  sh:`hsla(${h40},40%,80%,.9)`,nuc:`hsla(${h},90%,80%,.6)`,
+  cl:`hsla(${h},50%,65%,.9)`,claw:`hsla(${(h+20)%360},70%,55%,.95)`,seg:[0,1,2,3,4].map(i=>`hsl(${h},${55+i*4}%,${38+i*5}%)`),segS:`hsla(${h40},40%,80%,.8)`,tail:`hsl(${h},55%,48%)`,
+  fin:`hsl(${h},65%,45%)`,back:`hsl(${h},60%,40%)`,belly:`hsl(${h},50%,78%)`,gill:`hsla(${h},40%,25%,.8)`,
+  jt:`hsla(${h},80%,75%,.6)`,jb:`hsla(${h},80%,60%,.55)`,jc:`hsla(${h},90%,85%,.6)`,
+  bl:`hsl(${h},35%,35%)`,bt:`hsl(${h},35%,45%)`,bb:`hsl(${h},40%,${55+g.social*10}%)`,
+  wl:`hsl(${h},45%,35%)`,wb:`hsl(${h},55%,48%)`,ws:`hsla(${h40},40%,70%,.9)`}}
+// ===== 스프라이트: 종마다 모습을 4장면(꼬리·다리 움직임)씩 미리 그려 두고, 매 장면엔 돌려서 붙이기만 함 =====
+let SPRS=1,SPRV=0; // 스프라이트 해상도(화면 배율에 맞춤), 바뀌면 다시 그림
+function bodyFn(pid){return pid==='crust'?drawCrust:pid==='fish'?drawFish:pid==='jelly'?drawJelly:pid==='burrow'?drawBurrow:pid==='walker'?drawWalker:drawBlob}
+function makeSprite(o,fr){
+  const H=Math.ceil(o.size*2.9*SPRS)+4,c=document.createElement('canvas');c.width=c.height=H*2;
+  const keep=[cx,BS,BOX,BOY];cx=c.getContext('2d');BS=SPRS;BOX=H;BOY=H;cx.setTransform(BS,0,0,BS,BOX,BOY);
+  bodyFn(o.pl)({x:0,y:0,vx:1,vy:0,age:fr*4.5,g:o.g,size:o.size,C:o.C,pl:o.pl,sp:o.sp,face:1});
+  [cx,BS,BOX,BOY]=keep;c._H=H;return c;
+}
+function drawOrg(o){
+  if(!o.C)o.C=colorsOf(o);
+  const r=o.size,sp=o.sp;
+  if(r*BS<2.2&&!o.pl){cx.fillStyle=o.C.body;cx.fillRect(o.x-r,o.y-r,r*2,r*2)} // 화면에서 2픽셀도 안 되면 점 하나
+  else{
+    if(sp._sprV!==SPRV){sp._spr=new Map();sp._sprV=SPRV}
+    const fr=((o.age+o.ph)/4.5|0)&3,key=(r+.5|0)*4+fr;
+    let im=sp._spr.get(key);if(!im){im=makeSprite(o,fr);sp._spr.set(key,im)}
+    const H=im._H,k=BS/SPRS;
+    if(o.pl==='jelly')cx.setTransform(k,0,0,k,BS*o.x+BOX,BS*o.y+BOY);
+    else{const f=faceOf(o);let t=0;if(o.pl!=='walker'){t=Math.atan2(o.vy,(o.vx<0?-o.vx:o.vx)+.001);t=t<-.6?-.6:t>.6?.6:t}
+      const c=Math.cos(t)*k,sn=Math.sin(t)*k;cx.setTransform(c*f,sn,-sn*f,c,BS*o.x+BOX,BS*o.y+BOY)}
+    cx.drawImage(im,-H,-H);cx.setTransform(BS,0,0,BS,BOX,BOY);
+  }
+  if(o.sp.stage===7&&o.sp.civ)drawSmart(o);
+  if(o.sp.owner){const y=o.y-o.size-7;cx.fillStyle='#ff7fae';cx.beginPath();cx.arc(o.x-2,y,2.4,0,6.283);cx.arc(o.x+2,y,2.4,0,6.283);cx.fill();cx.beginPath();cx.moveTo(o.x-4.3,y+.8);cx.lineTo(o.x,y+5);cx.lineTo(o.x+4.3,y+.8);cx.fill()} // 애완동물 하트
+}
+function drawBlob(o){
+  const g=o.g,C=o.C,r=o.size;
+  // 아주 작은 미생물은 동그라미 하나로 (빠름)
+  if(r*BS<2.2){cx.fillStyle=C.body;cx.fillRect(o.x-r,o.y-r,r*2,r*2);return} // 화면에서 2픽셀도 안 되면 네모 점 하나
+  if(r<4.5&&g.flag<=.3&&g.spike<=.35&&g.limbs<=.35){cx.fillStyle=C.body;cx.beginPath();cx.arc(o.x,o.y,r,0,6.283);cx.fill();return}
+  sideXf(o);
+  if(g.flag>.3){cx.strokeStyle=C.fl;cx.lineWidth=Math.max(.6,r*.12);const n=g.flag>.7?3:1;
+    cx.beginPath();for(let i=0;i<n;i++){cx.moveTo(-r,(i-(n-1)/2)*r*.4);cx.quadraticCurveTo(-r*1.8,(i-(n-1)/2)*r*.4+Math.sin(o.age*.3+i)*r*.5,-r*2.4,(i-(n-1)/2)*r*.6)}cx.stroke()}
+  if(g.limbs>.35){cx.strokeStyle=C.lb;cx.lineWidth=Math.max(.6,r*.1);const n=g.limbs>.7?3:2,sw=Math.sin(o.age*.25)*.4;
+    cx.beginPath();for(let i=0;i<n;i++){const lx=(i/(n-1||1)-.5)*r*1.2;cx.moveTo(lx,r*.7);cx.lineTo(lx+sw*r,r*1.5)}cx.stroke()}
+  if(g.spike>.35){cx.strokeStyle=C.spk;cx.lineWidth=.8;const n=6+(g.spike*8|0),k=1.3+g.spike*.4;
+    cx.beginPath();for(let i=0;i<n;i++){const t=i/n*6.283,c=Math.cos(t)*r,s2=Math.sin(t)*r;cx.moveTo(c,s2);cx.lineTo(c*k,s2*k)}cx.stroke()}
+  const el=1+g.speed*.15+g.flag*.2;
+  cx.fillStyle=C.body;
+  cx.beginPath();cx.ellipse(0,0,r*el,r/el*1.1,0,0,6.283);cx.fill();
+  if(g.shell>.35){cx.strokeStyle=C.sh;cx.lineWidth=Math.max(1,r*.18*g.shell);cx.stroke()}
+  if(g.photo>.5&&r>4){cx.fillStyle='rgba(120,230,120,.6)';cx.beginPath();for(let i=0;i<3;i++){cx.moveTo((i-1)*r*.4+r*.15,r*.2);cx.arc((i-1)*r*.4,r*.2,r*.15,0,6.283)}cx.fill()}
+  if(r>6){cx.fillStyle=C.nuc;cx.beginPath();cx.arc(-r*.2,0,r*.3*(1+g.intel*.6),0,6.283);cx.fill()}
+  if(g.eyes>.4){const er=Math.max(1,r*.18*(.6+g.eyes));cx.fillStyle='#fff';cx.beginPath();cx.arc(r*el*.6,-.18*r,er,0,6.283);cx.fill();
+    cx.fillStyle='#000';cx.beginPath();cx.arc(r*el*.6+er*.3,-.18*r,er*.5,0,6.283);cx.fill()}
+  endXf();
+}
+// 갑각류형 (옆모습): 둥근 마디 갑옷 + 아래로 뻗은 다리 + 더듬이 + 집게 + 자루 눈 + 꼬리 부채
+function drawCrust(o){
+  const g=o.g,C=o.C,r=o.size*.8,t=o.age;
+  sideXf(o);
+  cx.strokeStyle=C.cl;cx.lineWidth=Math.max(.8,r*.08);
+  cx.beginPath();for(let i=0;i<5;i++){const x=r*.7-i*r*.38,sw=Math.sin(t*.4+i*1.3)*r*.18;cx.moveTo(x,r*.25);cx.lineTo(x+sw,r*.6);cx.lineTo(x+sw-r*.12,r*.85)}
+  cx.moveTo(r*1.05,-r*.15);cx.quadraticCurveTo(r*1.8,-r*.9,r*2.4,-r*(.6+.1*Math.sin(t*.2)));cx.moveTo(r*1.05,-r*.05);cx.quadraticCurveTo(r*1.7,-r*.5,r*2.1,-r*.1);cx.stroke();
+  if(g.pred>.4){cx.fillStyle=C.claw;cx.strokeStyle=C.claw;cx.beginPath();cx.moveTo(r*.95,r*.15);cx.lineTo(r*1.3,r*.3);cx.stroke();
+    cx.beginPath();cx.ellipse(r*1.5,r*.3,r*.35,r*.2,.3,0,6.283);cx.fill();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(r*1.55,r*.28,r*.3,r*.05)}
+  cx.strokeStyle=C.segS;cx.lineWidth=Math.max(.6,r*.05);
+  for(let i=4;i>=0;i--){const x=r*.85-i*r*.4,rr=r*(.5-i*.05),y=-Math.sin(i/4*Math.PI)*r*.08;
+    cx.fillStyle=C.seg[i];cx.beginPath();cx.ellipse(x,y,rr*.7,rr*.85,0,Math.PI,0);cx.lineTo(x+rr*.7,y+rr*.35);cx.lineTo(x-rr*.7,y+rr*.35);cx.closePath();cx.fill();cx.stroke()}
+  cx.fillStyle=C.tail;cx.beginPath();cx.moveTo(-r*.9,0);cx.lineTo(-r*1.5,-r*.28);cx.lineTo(-r*1.55,r*.32);cx.closePath();cx.fill();
+  if(g.spike>.4){cx.strokeStyle='rgba(255,255,255,.7)';cx.lineWidth=.8;cx.beginPath();for(let i=0;i<5;i++){const x=r*.85-i*r*.4;cx.moveTo(x,-r*.42);cx.lineTo(x-r*.1,-r*.72)}cx.stroke()}
+  cx.strokeStyle='#ccc';cx.lineWidth=Math.max(.6,r*.05);cx.beginPath();cx.moveTo(r*1.0,-r*.3);cx.lineTo(r*1.15,-r*.55);cx.stroke();
+  cx.fillStyle='#111';cx.beginPath();cx.arc(r*1.15,-r*.58,Math.max(1,r*.1),0,6.283);cx.fill();
+  endXf();
+}
+// 물고기형: 유선형 몸 + 꼬리지느러미 + 등지느러미 + 아가미 + 눈 (그라디언트 대신 등·배 두 색)
+function drawFish(o){
+  const g=o.g,C=o.C,r=o.size*.85,wag=Math.sin(o.age*.35)*.35;
+  sideXf(o);
+  cx.fillStyle=C.fin;
+  cx.save();cx.translate(-r*1.3,0);cx.rotate(wag);cx.beginPath();cx.moveTo(0,0);cx.lineTo(-r*.9,-r*.7);cx.quadraticCurveTo(-r*.6,0,-r*.9,r*.7);cx.closePath();cx.fill();cx.restore();
+  cx.beginPath();cx.moveTo(-r*.3,-r*.5);cx.quadraticCurveTo(r*.1,-r*1.05,r*.4,-r*.5);cx.moveTo(r*.1,r*.35);cx.lineTo(-r*.3,r*.8+wag*r*.3);cx.lineTo(-r*.2,r*.35);cx.fill();
+  cx.fillStyle=C.back;cx.beginPath();cx.moveTo(r*1.4,0);cx.bezierCurveTo(r*1.1,-r*.75,-r*.8,-r*.65,-r*1.35,0);cx.bezierCurveTo(-r*.8,r*.65,r*1.1,r*.75,r*1.4,0);cx.fill();
+  cx.fillStyle=C.belly;cx.beginPath();cx.moveTo(r*1.3,r*.05);cx.bezierCurveTo(r*.9,r*.6,-r*.7,r*.55,-r*1.25,r*.05);cx.closePath();cx.fill();
+  if(g.shell>.3||g.spike>.4){cx.strokeStyle='rgba(255,255,255,.35)';cx.lineWidth=.7;cx.beginPath();for(let i=0;i<4;i++){cx.moveTo(-r*.6+i*r*.4+r*.3*Math.cos(-1),r*.3*Math.sin(-1));cx.arc(-r*.6+i*r*.4,0,r*.3,-1,1)}cx.stroke()}
+  cx.strokeStyle=C.gill;cx.lineWidth=Math.max(.7,r*.06);cx.beginPath();cx.arc(r*.55,0,r*.4,-1,1);cx.stroke();
+  const er=Math.max(1.2,r*.16);cx.fillStyle='#fff';cx.beginPath();cx.arc(r*.95,-r*.12,er,0,6.283);cx.fill();
+  cx.fillStyle='#000';cx.beginPath();cx.arc(r*.98,-r*.12,er*.55,0,6.283);cx.fill();
+  if(g.pred>.5){cx.strokeStyle='#fff';cx.lineWidth=.8;cx.beginPath();cx.moveTo(r*1.35,r*.08);cx.lineTo(r*1.1,r*.18);cx.stroke()}
+  endXf();
+}
+// 해파리형: 반투명 우산 + 늘어진 촉수
+function drawJelly(o){
+  const g=o.g,C=o.C,r=o.size*.8,p=Math.sin(o.age*.15),a=o.age*.1;
+  cx.setTransform(BS,0,0,BS,BS*o.x+BOX,BS*o.y+BOY);
+  cx.strokeStyle=C.jt;cx.lineWidth=Math.max(.6,r*.05);
+  const n=4+(g.limbs*6|0);
+  cx.beginPath();for(let i=0;i<n;i++){const x=(i/(n-1)-.5)*r*1.4;cx.moveTo(x,0);cx.quadraticCurveTo(x+Math.sin(a+i)*r*.4,r*1.2,x+Math.sin(a+i+1)*r*.3,r*(2+g.limbs))}cx.stroke();
+  cx.fillStyle=C.jb;cx.beginPath();cx.ellipse(0,0,r*(1+p*.08),r*(.8-p*.08),0,Math.PI,0);cx.closePath();cx.fill();
+  cx.fillStyle=C.jc;cx.beginPath();cx.arc(0,-r*.35,r*.25,0,6.283);cx.fill();
+  endXf();
+}
+// 굴 파는 군집형 (옆모습): 벌거숭이두더지쥐처럼 통통한 몸 + 땅 파는 발톱 + 앞니
+function drawBurrow(o){
+  const g=o.g,C=o.C,r=o.size*.8,t=o.age,w=Math.sin(t*.5)*r*.15,s5=Math.sin(t*.5)*r*.15;
+  sideXf(o);cx.lineCap='round';
+  cx.strokeStyle=C.bl;cx.lineWidth=Math.max(1,r*.14);
+  cx.beginPath();cx.moveTo(r*.55,r*.3);cx.lineTo(r*.55+Math.sin(t*.5)*r*.15,r*.65);cx.moveTo(r*.25,r*.3);cx.lineTo(r*.25+Math.sin(t*.5+2)*r*.15,r*.65);
+  cx.moveTo(-r*.35,r*.3);cx.lineTo(-r*.35+Math.sin(t*.5+1)*r*.15,r*.65);cx.moveTo(-r*.6,r*.3);cx.lineTo(-r*.6+Math.sin(t*.5+3)*r*.15,r*.65);cx.stroke();
+  cx.strokeStyle='#eee';cx.lineWidth=Math.max(.6,r*.05);cx.beginPath();for(let k=0;k<3;k++){cx.moveTo(r*.6+s5,r*.65);cx.lineTo(r*.75+k*r*.06+s5,r*.8)}cx.stroke();
+  cx.strokeStyle=C.bt;cx.lineWidth=Math.max(.8,r*.08);cx.beginPath();cx.moveTo(-r*.9,0);cx.quadraticCurveTo(-r*1.3,-r*.1+w,-r*1.5,r*.1);cx.stroke();
+  cx.fillStyle=C.bb;cx.beginPath();cx.ellipse(0,0,r,r*.5,0,0,6.283);cx.moveTo(r*1.37,-r*.05);cx.ellipse(r*.95,-r*.05,r*.42,r*.34,0,0,6.283);cx.fill();
+  cx.strokeStyle='rgba(0,0,0,.15)';cx.lineWidth=Math.max(.5,r*.04);cx.beginPath();for(let i=0;i<4;i++){const ax=-r*.5+i*r*.3;cx.moveTo(ax+r*.45*Math.cos(-1.2),r*.45*Math.sin(-1.2));cx.arc(ax,0,r*.45,-1.2,-.6)}cx.stroke();
+  cx.fillStyle='#f39';cx.beginPath();cx.arc(r*1.35,-r*.02,r*.09,0,6.283);cx.fill();
+  cx.fillStyle='#fff';cx.fillRect(r*1.18,r*.12,r*.08,r*.15);
+  cx.fillStyle='#111';cx.beginPath();cx.arc(r*1.05,-r*.16,Math.max(.8,r*(.04+g.eyes*.06)),0,6.283);cx.fill();
+  endXf();
+}
+// 육상 동물형 (옆모습): 네 다리로 걷는 짐승
+function drawWalker(o){
+  const g=o.g,C=o.C,r=o.size*.75,t=o.age;
+  sideXf(o,true);cx.lineCap='round';
+  cx.strokeStyle=C.wl;cx.lineWidth=Math.max(1,r*.15);
+  const a=Math.sin(t*.35)*r*.3;
+  cx.beginPath();cx.moveTo(r*.6,r*.2);cx.lineTo(r*.6+a,r*.95);cx.moveTo(r*.35,r*.2);cx.lineTo(r*.35-a,r*.95);cx.moveTo(-r*.45,r*.2);cx.lineTo(-r*.45-a,r*.95);cx.moveTo(-r*.7,r*.2);cx.lineTo(-r*.7+a,r*.95);
+  cx.moveTo(-r*.9,-r*.05);cx.quadraticCurveTo(-r*1.5,-r*.1,-r*1.9,r*.25+Math.sin(t*.2)*r*.1);cx.stroke();
+  cx.fillStyle=C.wb;cx.beginPath();cx.ellipse(0,0,r,r*.45,0,0,6.283);cx.fill();
+  cx.beginPath();cx.moveTo(r*.65,-r*.25);cx.lineTo(r*1.0,-r*.72);cx.lineTo(r*1.25,-r*.55);cx.lineTo(r*.95,-r*.05);cx.fill();
+  cx.beginPath();cx.ellipse(r*1.3,-r*.7,r*.38,r*.24,.2,0,6.283);cx.fill();
+  if(g.shell>.4){cx.fillStyle=C.ws;cx.beginPath();cx.ellipse(-r*.05,-r*.2,r*.8,r*.45,0,Math.PI,0);cx.fill()}
+  if(g.spike>.4){cx.fillStyle='rgba(255,255,255,.8)';cx.beginPath();for(let i=0;i<5;i++){const x=-r*.6+i*r*.3;cx.moveTo(x-r*.08,-r*.4);cx.lineTo(x,-r*.7);cx.lineTo(x+r*.08,-r*.4)}cx.fill()}
+  cx.fillStyle='#fff';cx.beginPath();cx.arc(r*1.42,-r*.78,Math.max(1,r*.09),0,6.283);cx.fill();
+  cx.fillStyle='#000';cx.beginPath();cx.arc(r*1.45,-r*.78,Math.max(.6,r*.05),0,6.283);cx.fill();
+  endXf();
+}
+// 지적생명체 표시: 반짝이는 머리띠 + 손에 든 도구(창)
+function drawSmart(o){
+  const r=o.g.size*.8;sideXf(o,o.pl==='walker');cx.lineCap='round';
+  cx.strokeStyle='#ffd34d';cx.lineWidth=Math.max(1,r*.1);cx.beginPath();cx.arc(r*.95,-r*.25,r*.36,Math.PI*1.1,Math.PI*1.9);cx.stroke();
+  cx.fillStyle='#fff6b0';cx.beginPath();cx.arc(r*.95,-r*.62,Math.max(1,r*.08),0,6.283);cx.fill();
+  cx.strokeStyle='#c8a46a';cx.lineWidth=Math.max(.8,r*.07);cx.beginPath();cx.moveTo(r*.2,r*.35);cx.lineTo(r*1.6,-r*.45);cx.stroke();
+  cx.fillStyle='#ddd';cx.beginPath();cx.moveTo(r*1.62,-r*.46);cx.lineTo(r*1.9,-r*.72);cx.lineTo(r*1.5,-r*.62);cx.fill();
+  endXf();
+}
+const bgCv=document.createElement('canvas');bgCv.width=WW;bgCv.height=WH;const bgx=bgCv.getContext('2d');let bgKey='';
+const FOODCOL=[['rgba(230,180,90,.55)',0],['rgba(140,220,90,.8)',1],['rgba(230,140,150,.85)',2]]; // 바다·뭍·흙 먹이 색
+function renderBg(){
+  const c=bgx,E=W.env;c.clearRect(0,0,WW,WH);
+  // 하늘
+  const sky=c.createLinearGradient(0,0,0,SEA_Y);sky.addColorStop(0,W.o2>6?'#1d3f6e':'#3a2a3a');sky.addColorStop(1,W.o2>6?'#6d9ccc':'#8a6a58');
+  c.fillStyle=sky;c.fillRect(0,0,WW,SEA_Y);
+  c.fillStyle='rgba(255,230,150,.9)';c.beginPath();c.arc(WW*.12,SEA_Y*.42,26,0,6.283);c.fill();
+  // 바다 (깊을수록 어두움) + 왼쪽 춥고 오른쪽 더운 빛깔
+  const gr=c.createLinearGradient(0,SEA_Y,0,WH);
+  gr.addColorStop(0,`rgba(40,130,150,${.6+E.light*.15})`);gr.addColorStop(.8,'#04100f');gr.addColorStop(1,'#1a0d06');
+  c.fillStyle='#03070a';c.fillRect(0,SEA_Y,WW,WH-SEA_Y);c.fillStyle=gr;c.fillRect(0,SEA_Y,WW,WH-SEA_Y);
+  const tg=c.createLinearGradient(0,0,WW,0);tg.addColorStop(0,'rgba(80,140,255,.10)');tg.addColorStop(.5,'rgba(0,0,0,0)');tg.addColorStop(1,'rgba(255,110,60,.10)');
+  c.fillStyle=tg;c.fillRect(0,SEA_Y,WW,WH-SEA_Y);
+  // 열수구 (바다 바닥)
+  c.fillStyle='rgba(255,120,40,.4)';for(let i=0;i<5;i++){const x=WW*(.08+i*.13);c.beginPath();c.moveTo(x-18,WH);c.lineTo(x,WH-40);c.lineTo(x+18,WH);c.fill()}
+  // 땅 단면
+  c.beginPath();c.moveTo(LAND.x,WH);for(let x=LAND.x;x<=WW;x+=10)c.lineTo(x,groundY(x));c.lineTo(WW,WH);c.closePath();
+  const sg=c.createLinearGradient(0,LAND.y,0,WH);sg.addColorStop(0,'#7a5634');sg.addColorStop(1,'#4a301c');c.fillStyle=sg;c.fill();
+  c.fillStyle='rgba(0,0,0,.12)';for(let i=0;i<40;i++){const x=LAND.x+30+((i*97)%(WW-LAND.x-40)),y=LAND.y+40+((i*53)%(WH-LAND.y-50));c.beginPath();c.arc(x,y,3+(i%4),0,6.283);c.fill()}
+  if(W.o2>6){c.strokeStyle='#4f8a34';c.lineWidth=6;c.beginPath();for(let x=LAND.x+90;x<=WW;x+=10)c.lineTo(x,groundY(x));c.stroke()}
+}
+function draw(){
+  if(W.regions)setRegion(W.regions[W.view]);
+  const s=Math.min(cv.width/WW,cv.height/WH),ox=(cv.width-WW*s)/2,oy=(cv.height-WH*s)/2;
+  cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#03070a';cx.fillRect(0,0,cv.width,cv.height);
+  cx.setTransform(s,0,0,s,ox,oy);BS=s;BOX=ox;BOY=oy;
+  const ns=Math.min(2,Math.max(.25,Math.ceil(s*4)/4));if(ns!==SPRS){SPRS=ns;SPRV++}
+  // 배경(하늘·바다·땅)은 지역이나 산소가 바뀔 때만 다시 그림
+  const bk=(W.R?W.R.id:'')+(W.o2>6?1:0);if(bk!==bgKey){bgKey=bk;renderBg()}
+  cx.drawImage(bgCv,0,0);
+  if(W.moon){const mp=(W.t*2)%1,mx=WW*(.05+.9*mp),my=SEA_Y*(.75-Math.sin(mp*Math.PI)*.5); // 하늘을 가로지르는 달
+    cx.fillStyle='#e8e8e2';cx.beginPath();cx.arc(mx,my,16,0,6.283);cx.fill();cx.fillStyle='rgba(120,120,115,.5)';cx.beginPath();cx.arc(mx+5,my-3,4,0,6.283);cx.arc(mx-6,my+5,3,0,6.283);cx.fill()}
+  const tide=W.moon?Math.sin(W.t*600)*4:0; // 달이 있으면 밀물·썰물로 물결선이 오르내림
+  cx.strokeStyle='rgba(210,245,255,.6)';cx.lineWidth=2;cx.beginPath();for(let x=0;x<=LAND.x+140;x+=32)cx.lineTo(x,SEA_Y+tide+Math.sin(x*.05+W.t*40)*2);cx.stroke();
+  // 굴 (작은 그림을 크게 늘려서 한 번에)
+  if(W.R&&W.R.tcv){cx.imageSmoothingEnabled=false;cx.drawImage(W.R.tcv,0,0,201,126,0,0,201*8,126*8);cx.imageSmoothingEnabled=true}
+  for(const [id,n] of W.nests){const sp=spById(id);if(!sp||!sp.count)continue;cx.fillStyle='#140b06';cx.beginPath();cx.ellipse(n.x,n.y,46,20,0,0,6.283);cx.fill();
+    if(sp.civ){cx.fillStyle='rgba(255,190,90,.35)';cx.beginPath();cx.ellipse(n.x,n.y,40,15,0,0,6.283);cx.fill();cx.fillStyle='#ffb347';cx.fillRect(n.x-30,n.y-12,3,8);cx.fillRect(n.x+28,n.y-12,3,8)}}
+  cx.fillStyle='rgba(230,240,255,.45)';cx.font='20px system-ui';cx.fillText('바다',14,SEA_Y+26);cx.font='bold 26px system-ui';cx.fillStyle='rgba(255,255,255,.85)';cx.fillText(W.env.n||'',16,36);cx.font='20px system-ui';cx.fillStyle='rgba(230,240,255,.45)';cx.fillText('땅',WW-40,LAND.y-12);cx.fillText('땅속',WW-56,WH-14);
+  // 먹이는 종류별로 한 번에 (색 바꾸기를 줄임)
+  const fd=W.food;
+  for(const [col,kind] of FOODCOL){cx.fillStyle=col;cx.beginPath();for(let i=0;i<fd.length;i++){const f=fd[i];if(f.land+f.soil===kind)cx.rect(f.x-1.5,f.y-1.5,3,3)}cx.fill()}
+  for(const o of W.orgs)drawOrg(o);
+  if(W.selSp){cx.strokeStyle='#fff';cx.lineWidth=1.5;for(const o of W.orgs)if(o.sp===W.selSp){cx.beginPath();cx.arc(o.x,o.y,o.g.size*1.6+4,0,6.283);cx.stroke()}}
+}
+
+// ===== 행성 보기 =====
+let globePts=[];
+// 행성 꾸밈용 대륙 무늬 (위도, 경도, 크기)
+const CONTS=[[20,30,.28],[40,90,.22],[-15,150,.3],[10,200,.35],[45,230,.2],[-35,260,.25],[-5,320,.22],[55,330,.18],[-50,40,.2],[30,140,.15]];
+function drawGlobe(){
+  const gc=$('globe'),w=gc.clientWidth||400,dpr=devicePixelRatio||1;
+  if(gc.width!==w*dpr){gc.width=w*dpr;gc.height=w*dpr}
+  const g=gc.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,w);
+  const c=w/2,R=w*.4;W.rot+=.004;
+  const imp=W.impact?(performance.now()-W.impact.t0)/1000:99; // 충돌 장면이 시작된 지 몇 초
+  const moonOn=W.moon||imp>=IMP_END;
+  // 달 궤도 (행성 뒤로 갈 때는 행성보다 먼저 그림)
+  const ma=performance.now()/4000,mx=c+Math.cos(ma)*R*1.12,my=c+Math.sin(ma)*R*.32,mBehind=Math.sin(ma)<0;
+  if(moonOn&&mBehind)drawMoonBall(g,mx,my,R*.16);
+  // 대기 (산소가 많을수록 파랗게 빛남)
+  const glow=g.createRadialGradient(c,c,R*.95,c,c,R*1.15);glow.addColorStop(0,`rgba(120,180,255,${.15+Math.min(W.o2,20)/40})`);glow.addColorStop(1,'rgba(120,180,255,0)');
+  g.fillStyle=glow;g.beginPath();g.arc(c,c,R*1.15,0,6.283);g.fill();
+  const oc=g.createRadialGradient(c-R*.35,c-R*.35,R*.1,c,c,R);oc.addColorStop(0,'#4f9be8');oc.addColorStop(1,'#0b2a5a');
+  g.fillStyle=oc;g.beginPath();g.arc(c,c,R,0,6.283);g.fill();
+  // 얼음 모자
+  g.save();g.beginPath();g.arc(c,c,R,0,6.283);g.clip();g.fillStyle='rgba(235,245,255,.85)';g.beginPath();g.ellipse(c,c-R*.97,R*.55,R*.13,0,0,6.283);g.fill();g.beginPath();g.ellipse(c,c+R*.97,R*.5,R*.12,0,0,6.283);g.fill();
+  globePts=[];const labels=[];
+  for(const [la0,lo0,sz] of CONTS){const ph=la0*Math.PI/180,la=lo0*Math.PI/180+W.rot,z=Math.cos(ph)*Math.cos(la);if(z<0)continue;
+    const sx=c+Math.cos(ph)*Math.sin(la)*R,sy=c-Math.sin(ph)*R,k=.3+.7*z;g.fillStyle=W.o2>6?'rgba(70,130,60,.85)':'rgba(130,100,70,.85)';
+    g.beginPath();g.ellipse(sx,sy,sz*R*.55*k*Math.max(.35,z),sz*R*.4*k,0,0,6.283);g.fill();g.beginPath();g.ellipse(sx+sz*R*.25*z,sy+sz*R*.15,sz*R*.3*k*Math.max(.35,z),sz*R*.25*k,.5,0,6.283);g.fill()}
+  if(imp<IMP_END)drawImpact(g,c,R,imp);
+  const regs=(W.impact?[]:(W.regions||REGIONS)).map((r,i)=>{const ph=r.lat*Math.PI/180,la=r.lon*Math.PI/180+W.rot;return{r,i,x:Math.cos(ph)*Math.sin(la),y:-Math.sin(ph),z:Math.cos(ph)*Math.cos(la)}}).sort((a,b)=>a.z-b.z);
+  for(const p of regs){
+    if(p.z<-.05)continue;
+    const sx=c+p.x*R,sy=c+p.y*R,k=.4+.6*p.z,land=(1-p.r.landX)*R*.55*k;
+    // 땅덩어리
+    g.fillStyle=p.r.temp<.2?'#dfe9f2':p.r.temp>.8?'#7a5a3a':'#4d8a3c';
+    g.beginPath();g.ellipse(sx+land*.3,sy,land,land*.7,.4,0,6.283);g.fill();
+    // 생명 표시
+    const pop=p.r.pop||0,col=p.r.top?`hsl(${p.r.top.hue},85%,60%)`:'#888';
+    const rr=(5+Math.sqrt(pop)*.6)*k;
+    g.fillStyle=pop?col:'rgba(150,150,150,.6)';g.beginPath();g.arc(sx,sy,rr,0,6.283);g.fill();
+    if(p.r.civPop){g.strokeStyle='#ffd34d';g.lineWidth=3;g.beginPath();g.arc(sx,sy,rr+4,0,6.283);g.stroke()}
+    if(W.regions&&p.i===W.view){g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(sx,sy,rr+8,0,6.283);g.stroke()}
+    if(p.z>0)labels.push([p.r.n,sx,sy-rr-6,p.z]);
+    globePts.push({i:p.i,x:sx,y:sy,r:rr+10});
+  }
+  g.restore();
+  // 그림자
+  const sh=g.createRadialGradient(c-R*.4,c-R*.4,R*.2,c,c,R*1.05);sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(1,'rgba(0,0,0,.45)');
+  g.fillStyle=sh;g.beginPath();g.arc(c,c,R,0,6.283);g.fill();
+  if(moonOn&&!mBehind)drawMoonBall(g,mx,my,R*.16);
+  if(imp<IMP_END)drawImpactFront(g,c,R,imp,mx,my);
+  g.textAlign='center';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.7)';g.fillStyle='#fff';
+  for(const [n,x,y,z] of labels){g.font=`bold ${Math.round(12+3*z)}px system-ui`;g.strokeText(n,x,Math.max(14,y));g.fillText(n,x,Math.max(14,y))}
+  g.textAlign='left';
+}
+// ===== 거대 충돌: 행성 테이아가 부딪혀 튀어나온 조각이 고리가 되었다가 뭉쳐서 달이 됨 =====
+const IMP_HIT=3,IMP_END=9; // 초: 부딪히는 순간 / 장면이 끝나는 순간
+function drawMoonBall(g,x,y,r){
+  const mg=g.createRadialGradient(x-r*.4,y-r*.4,r*.1,x,y,r);mg.addColorStop(0,'#f2f2ee');mg.addColorStop(1,'#8d8d88');
+  g.fillStyle=mg;g.beginPath();g.arc(x,y,r,0,6.283);g.fill();
+  g.fillStyle='rgba(90,90,85,.45)';g.beginPath();g.arc(x+r*.3,y-r*.1,r*.22,0,6.283);g.arc(x-r*.35,y+r*.3,r*.15,0,6.283);g.arc(x-r*.1,y-r*.45,r*.1,0,6.283);g.fill();
+}
+// 행성 표면이 녹아서 빨갛게 (부딪힌 뒤 서서히 식음)
+function drawImpact(g,c,R,t){
+  if(t<IMP_HIT)return;
+  const a=Math.max(0,1-(t-IMP_HIT)/(IMP_END-IMP_HIT));
+  const mg=g.createRadialGradient(c+R*.5,c-R*.5,R*.05,c,c,R);mg.addColorStop(0,`rgba(255,240,150,${a})`);mg.addColorStop(.5,`rgba(255,110,30,${a*.9})`);mg.addColorStop(1,`rgba(120,20,10,${a*.8})`);
+  g.fillStyle=mg;g.beginPath();g.arc(c,c,R,0,6.283);g.fill();
+}
+function drawImpactFront(g,c,R,t,mx,my){
+  const cx0=c+R*.62,cy0=c-R*.62; // 부딪히는 곳
+  if(t<IMP_HIT){ // 테이아가 다가옴
+    const k=t/IMP_HIT,e=k*k*.6+k*.4,tx=c+R*1.05+(cx0+R*.2-(c+R*1.05))*e,ty=c-R*1.05+(cy0-R*.2-(c-R*1.05))*e,tr=R*.3;
+    const tg=g.createRadialGradient(tx-tr*.4,ty-tr*.4,tr*.1,tx,ty,tr);tg.addColorStop(0,'#d9a26b');tg.addColorStop(1,'#5a3a22');
+    g.fillStyle=tg;g.beginPath();g.arc(tx,ty,tr,0,6.283);g.fill();
+    g.fillStyle='#fff';g.font='bold 14px system-ui';g.textAlign='center';g.fillText('테이아',tx,ty-tr-6);g.textAlign='left';
+    return;
+  }
+  const u=t-IMP_HIT;
+  // 번쩍!
+  if(u<.8){const fa=1-u/.8;g.fillStyle=`rgba(255,250,220,${fa})`;g.beginPath();g.arc(cx0,cy0,R*(.3+u*1.2),0,6.283);g.fill()}
+  // 튀어나온 조각들: 처음엔 사방으로 → 행성 둘레를 도는 고리 → 한 점(달)으로 뭉침
+  const P=W.impact.parts||(W.impact.parts=Array.from({length:240},()=>({a:Math.atan2(cy0-c,cx0-c)+rnd(-1.3,1.3),r:rnd(1.05,1.45),w:rnd(.6,1.1),s:rnd(1,3)})));
+  const gather=Math.max(0,Math.min(1,(t-(IMP_END-2.5))/2.2)),ge=gather*gather*(3-2*gather);
+  for(const q of P){
+    const out=Math.min(1,u/1.2),ang=q.a+q.w*u,rad=R*(1+(q.r-1)*out);
+    let x=c+Math.cos(ang)*rad,y=c+Math.sin(ang)*rad*(1-.62*out); // 점점 납작한 고리로
+    x+=(mx-x)*ge;y+=(my-y)*ge;
+    const hot=Math.max(0,1-u/4);
+    g.fillStyle=`rgb(${200+55*hot|0},${120+100*(1-hot)|0},${80+90*(1-hot)|0})`;g.fillRect(x-q.s/2,y-q.s/2,q.s,q.s);
+  }
+  if(gather>.6)drawMoonBall(g,mx,my,R*.16*(gather-.6)/.4);
+}
+function beginImpact(){
+  W.impact={t0:performance.now(),spd:W.speed||1,parts:null};W.speed=0;markSpeed();
+  $('plTitle').textContent='거대 충돌! 행성 "테이아"가 날아와요…';$('planet').style.display='block';
+}
+function updateImpact(){
+  if(!W.impact)return;
+  const t=(performance.now()-W.impact.t0)/1000;
+  if(t>IMP_HIT&&!W.impact.said){W.impact.said=1;$('plTitle').textContent='쾅! 튀어나온 조각들이 고리가 되었다가 뭉쳐요…'}
+  if(t>=IMP_END){const sp=W.impact.spd;W.impact=null;W.moon=true;W.speed=sp;markSpeed();
+    $('plTitle').textContent='행성 둘러보기 — 지역을 누르면 들어가요';selectRegion(W.view);
+    addLog('거대 충돌! 행성 테이아와 부딪혀 튀어나온 조각들이 뭉쳐서 달이 생겼어요');toast('달이 생겼어요! 바다에 밀물과 썰물이 생겨요')}
+}
+function renderRegions(){
+  if(!W.regions){$('rlist').innerHTML='';return}
+  $('rlist').innerHTML=W.regions.map((R,i)=>`<div class="rc${i===W.view?' on':''}" data-i="${i}"><b>${R.n}</b><br><span class="sub">${R.d}</span><br>
+    ${R.pop?`개체 ${R.pop}/${MAXPOP} · 종 ${R.nsp}<br>대표: ${R.top?R.top.name:'-'}<br>최고 단계: ${R.best+1}. ${STAGES[R.best].n}`:'<span class="sub">아직 생명이 없어요</span>'}
+    ${R.civPop?`<br><span class="civ">문명 있음 (${R.civPop}명)</span>`:''}</div>`).join('');
+}
+function selectRegion(i){W.view=i;$('region').value=i;$('planet').style.display='none';dirtyUI=true}
+$('globe').onclick=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;let b=null,bd=1e9;for(const p of globePts){const d=Math.hypot(p.x-x,p.y-y);if(d<p.r&&d<bd){bd=d;b=p}}if(b)selectRegion(b.i)};
+$('rlist').onclick=e=>{const el=e.target.closest('.rc');if(el)selectRegion(+el.dataset.i)};
+$('planetBtn').onclick=()=>{const pl=$('planet');const on=pl.style.display!=='block';pl.style.display=on?'block':'none';if(on)renderRegions()};
+$('region').onchange=e=>selectRegion(+e.target.value);
+
+// ===== 계통도 =====
+// 개체가 10마리 이상 된 적 있거나 지금 살아 있는 종 + 그 조상만 그린다.
+let dirtyTree=true,treeRows=[];
+function drawTree(){
+  const tc=document.getElementById('tree'),pane=document.getElementById('p-tree');
+  const keep=new Set();
+  for(const s of W.species)if((s.peak>=10||s.count>0)){let p=s;while(p&&!keep.has(p)){keep.add(p);p=p.parent?spById(p.parent):null}}
+  const kids=new Map();for(const s of keep){const k=s.parent&&spById(s.parent);if(k){if(!kids.has(k))kids.set(k,[]);kids.get(k).push(s)}}
+  const roots=[...keep].filter(s=>!s.parent);
+  treeRows=[];const pos=new Map();
+  const visit=s=>{const ch=(kids.get(s)||[]).sort((a,b)=>a.born-b.born);const half=Math.ceil(ch.length/2);
+    ch.slice(0,half).forEach(visit);pos.set(s,treeRows.length);treeRows.push(s);ch.slice(half).forEach(visit)};
+  roots.forEach(visit);
+  const rowH=16,padL=6,labelW=120,w=Math.max(200,pane.clientWidth-12),h=Math.max(60,treeRows.length*rowH+30);
+  const dpr=devicePixelRatio||1;tc.width=w*dpr;tc.height=h*dpr;tc.style.width=w+'px';tc.style.height=h+'px';
+  const c=tc.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+  const css=getComputedStyle(document.documentElement),ink=css.getPropertyValue('--ink'),sub=css.getPropertyValue('--sub');
+  const T=Math.max(W.t,.01),X=t=>padL+t/T*(w-labelW-padL),Y=i=>14+i*rowH;
+  c.font='11px system-ui';c.textBaseline='middle';
+  for(const s of treeRows){
+    const y=Y(pos.get(s)),x0=X(s.born),x1=X(s.dead?s.died:W.t);
+    const col=s.dead?sub:`hsl(${s.hue},70%,50%)`;
+    c.strokeStyle=col;c.lineWidth=s===W.selSp?3:1.6;
+    if(s.parent&&pos.has(spById(s.parent))){const py=Y(pos.get(spById(s.parent)));c.beginPath();c.moveTo(x0,py);c.lineTo(x0,y);c.stroke()}
+    c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();
+    // 단계가 오른 종은 동그라미 크기로 표시
+    if(s.stage>0){c.fillStyle=col;c.beginPath();c.arc(x1,y,2+s.stage*.7,0,6.283);c.fill()}
+    c.fillStyle=s.dead?sub:ink;c.fillText((s.dead?'† ':'')+s.name,x1+6+s.stage*.7,y);
+  }
+  c.fillStyle=sub;c.fillText(`0 ─ 시간 → ${W.t.toFixed(2)}억 년`,padL,h-8);
+  tc._pos={rowH,Y};dirtyTree=false;
+}
+document.getElementById('tree').onclick=e=>{const r=e.target.getBoundingClientRect(),i=Math.round((e.clientY-r.top-14)/16);const s=treeRows[i];if(s){W.selSp=s;renderInfo(s);showTab('info')}};
+
+// ===== UI =====
+let dirtyUI=true;
+const lastHTML={};function setHTML(id,h){if(lastHTML[id]!==h){lastHTML[id]=h;$(id).innerHTML=h}} // 내용이 같으면 화면을 건드리지 않음
+function renderUI(){
+  $('time').textContent=W.t.toFixed(2);
+  $('stage').textContent=`${W.stage+1}. ${STAGES[W.stage].n}`;
+  if(W.regions){const V=W.regions[W.view],tot=W.regions.reduce((a,R)=>a+R.orgs.length,0);$('pop').textContent=`${V.orgs.length}/${MAXPOP} (행성 ${tot})`}
+  $('o2').textContent=Math.min(99,W.o2).toFixed(1);
+  const live=W.species.filter(s=>s.count>0).sort((a,b)=>b.stage-a.stage||b.count-a.count);
+  setHTML('p-species',live.slice(0,40).map(s=>`<div class="sp" data-id="${s.id}"><span class="dot" style="background:hsl(${s.hue},80%,55%)"></span><span class="n">${s.name}<br><span class="st">${s.stage+1}. ${STAGES[s.stage].n}${s.plan?' · '+s.plan.n:''}</span></span><span class="c">${s.count}</span></div>`).join('')+`<div style="color:var(--sub);padding-top:6px">살아 있는 종 ${live.length}개 · 지금까지 생긴 종 ${W.species.length}개</div>`);
+  if(dirtyUI){$('p-log').innerHTML=W.log.slice(0,100).map(l=>`<div><span class="t">${l.t.toFixed(2)}억</span>${l.s}</div>`).join('');dirtyUI=false}
+  if($('p-tree').classList.contains('on')&&(dirtyTree||frame%60===0))drawTree();
+  if(W.selSp&&$('p-info').classList.contains('on'))renderInfo(W.selSp);
+  if($('p-civ').classList.contains('on')&&frame%60===0)renderCiv();
+}
+// ===== 문명 탭: 요리 표 + 애완동물 =====
+const hashN=n=>{n=(n*2654435761)>>>0;return n};
+const tasteOf=g=>g.size<5?'새콤달콤한 맛':g.spike>.5?'톡 쏘는 맛':g.shell>.5?'바삭바삭한 맛':g.photo>.5?'상큼한 풀맛':g.heat>.75?'얼큰한 맛':g.heat<.25?'시원한 맛':g.size>14?'푸짐하고 고소한 맛':g.pred>.5?'쫄깃한 맛':'담백한 맛';
+const homeOf=sp=>sp.plan&&sp.plan.id==='burrow'||sp.mean.dig>.5?'땅속 굴에서 무리 지어 살아요':sp.land>.3?'땅 위에서 살아요':'바다에서 살아요';
+function recipes(civ,sp){
+  const water=!(sp.land>.3);
+  const M=water?[['회','얇게 썰어 날로 먹어요'],['소금 절임','바닷소금에 절여요'],['열수구 찜','뜨거운 열수구 위에 올려 쪄요'],['해초 말이','해초로 돌돌 말아요'],['젓갈','조개 항아리에 넣고 삭혀요'],['거품 무침','공기방울과 버무려요']]
+               :[['숯불 구이','숯불에 구워요'],['돌판 볶음','뜨거운 돌판에 볶아요'],['흙가마 찜','흙가마에 넣고 쪄요'],['굴 속 훈제','굴 속에서 연기로 훈제해요'],['뿌리 수프','뿌리랑 같이 끓여요'],['꼬치','꼬챙이에 꿰어 구워요']];
+  // 사는 곳에서 구할 수 있는 재료만 (물속 종족은 바다 생물만, 땅 종족은 땅 생물 + 낚시), 자기 친척(같은 몸 형태)은 안 먹음
+  const myPlan=sp.plan&&sp.plan.id;
+  let ing=W.species.filter(s=>s.count>0&&!s.owner&&!s.civ&&s.peak>=5&&(!water||s.land<.2)&&!(myPlan&&myPlan!=='fish'&&s.plan&&s.plan.id===myPlan));
+  const seen=new Set();ing=ing.sort((a,b)=>b.count-a.count).filter(s=>{const n=shortName(s.name);if(seen.has(n))return false;seen.add(n);return true});
+  if(sp.mean.photo>.5)ing=ing.filter(s=>s.mean.photo>.3||s.mean.size<5).concat(ing.filter(s=>!(s.mean.photo>.3||s.mean.size<5)).slice(0,1));
+  ing=ing.sort((a,b)=>b.count-a.count).slice(0,7);
+  const rows=ing.map(s=>{const m=M[hashN(civ.id*31+s.id)%M.length],n=shortName(s.name);
+    if(s.mean.size<5)return{n:`${n} 발효 음료`,i:s.name,how:'작은 미생물을 넣고 발효시켜요',taste:'새콤달콤한 맛',star:1+hashN(s.id)%3};
+    return{n:`${n} ${m[0]}`,i:s.name,how:m[1],taste:tasteOf(s.mean),star:1+hashN(s.id*7+civ.id)%3}});
+  if(ing.length>=2){const a=ing[0],b=ing[1],m=M[hashN(civ.id)%M.length];rows.unshift({n:`★ ${shortName(a.name)}·${shortName(b.name)} 모둠 ${m[0]}`,i:`${a.name}, ${b.name}`,how:'두 재료를 함께 넣고 '+m[1],taste:'최고로 맛있는 특별 요리',star:3})}
+  return rows;
+}
+function renderCiv(){
+  if(!W.civs.length){$('p-civ').innerHTML='<div class="sub">아직 지적생명체가 없어요. 지적생명체가 나오면 그 종족이 먹는 요리 표와 애완동물이 여기에 생겨요.</div>';return}
+  let h='';
+  for(const civ of W.civs){
+    const sp=spById(civ.id),live=W.species.filter(s=>s.civ===civ.id&&s.count>0),n=live.reduce((a,s)=>a+s.count,0),main=live.sort((a,b)=>b.count-a.count)[0]||sp;
+    h+=`<h3><span class="dot" style="display:inline-block;background:hsl(${sp.hue},80%,55%)"></span> ${sp.name}</h3><div class="sub">${homeOf(main)} · ${civ.t.toFixed(1)}억 년에 생각하기 시작 · 인구 ${n}${n?'':' (사라짐)'}</div>`;
+    const rs=recipes(civ,main);
+    h+=`<h4>요리 표</h4><table><tr><th>요리</th><th>재료</th><th>만드는 법</th><th>맛</th></tr>`+
+      (rs.map(r=>`<tr><td><b>${r.n}</b><br><span style="color:#e0a800">${'★'.repeat(r.star)}</span></td><td>${r.i}</td><td>${r.how}</td><td>${r.taste}</td></tr>`).join('')||'<tr><td colspan="4" class="sub">먹을 재료가 없어요</td></tr>')+
+      `</table><div class="sub" style="margin-top:4px">애완동물은 절대 요리하지 않아요!</div>`;
+    h+='<h4>애완동물</h4>';
+    const wild=civ.wild&&spById(civ.wild);
+    if(!wild)h+='<div class="sub">곧 야생 동물을 길들일 거예요 (0.2억 년마다 개량)</div>';
+    else{
+      h+=`<div class="pet">야생 조상: <b>${wild.name}</b> ${wild.count?'':'(야생은 사라짐)'}</div>`;
+      for(const id of civ.breeds){const b=spById(id),r=b.mean.size/wild.mean.size;
+        const d=[];if(Math.abs(r-1)>.1)d.push(`크기 ${r.toFixed(1)}배`);if(b.mean.pred<wild.mean.pred-.05)d.push('순해짐');if(b.mean.eyes>wild.mean.eyes+.05)d.push('눈이 커짐');if(b.mean.intel>wild.mean.intel+.03)d.push('똑똑해짐');if(b.mean.dig>wild.mean.dig+.1)d.push('땅을 팜');if(b.mean.dry>wild.mean.dry+.1)d.push('뭍에서도 삶');
+        h+=`<div class="pet"><span class="dot" style="display:inline-block;background:hsl(${b.hue},80%,55%)"></span> <b>${b.breedNo}대 ${b.name}</b> — ${b.featD}<br><span class="sub">${d.join(' · ')||'야생과 비슷'} · ${b.count?b.count+'마리':'사라짐'}</span></div>`}
+      if(civ.breeds.length>=7)h+='<div class="sub">개량을 모두 마쳤어요!</div>';
+    }
+    h+='<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">';
+  }
+  $('p-civ').innerHTML=h;
+}
+function renderInfo(sp){
+  const g=sp.count?sp.mean:sp.genes;
+  const tr=GENES.filter(d=>Math.abs(sp.trend[d.k])>.4).map(d=>`${d.n}${sp.trend[d.k]>0?'↑':'↓'}`).join(' ')||'뚜렷한 방향 없음';
+  const par=sp.parent&&spById(sp.parent);
+  $('p-info').innerHTML=`<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><span class="dot" style="background:hsl(${sp.hue},80%,55%)"></span><b style="flex:1">${sp.name}</b><button class="btn" id="rename">이름 짓기</button></div>
+  <div style="color:var(--sub);margin-bottom:4px">${sp.dead?'멸종':'개체 '+sp.count} · ${sp.born.toFixed(2)}억 년에 등장${par?` · 조상 ${par.name}`:''}</div>
+  <div style="margin-bottom:4px">단계: ${sp.stage+1}. ${STAGES[sp.stage].n}</div>
+  <div style="margin-bottom:4px">몸 형태: ${sp.plan?sp.plan.n:'미생물·덩어리형'}${sp.owner?' · 애완동물 '+sp.breedNo+'대':''}${sp.civ?' · 문명 종족':''}</div>
+  <div class="trend" style="margin-bottom:8px">이 계통의 진화 방향: ${tr}</div>`+
+  GENES.map(d=>{const p=(g[d.k]-d.min)/(d.max-d.min)*100;return `<div class="gene"><span>${d.n}</span><span>${g[d.k].toFixed(2)}</span></div><div class="bar"><i style="width:${p}%"></i></div>`}).join('');
+  $('rename').onclick=()=>{const v=prompt('새 이름',sp.name);if(v){sp.name=v.slice(0,20);sp.userNamed=true;addLog(`이름 지음: ${sp.name}`);dirtyTree=true;renderInfo(sp)}};
+}
+$('p-species').onclick=e=>{const el=e.target.closest('.sp');if(!el)return;W.selSp=W.species.find(s=>s.id==el.dataset.id);renderInfo(W.selSp);showTab('info')};
+function showTab(p){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));if(p==='tree')drawTree();if(p==='civ')renderCiv()}
+document.querySelector('.tabs').onclick=e=>{if(e.target.dataset.p)showTab(e.target.dataset.p)};
+$('speed').innerHTML=SPEEDS.map(v=>`<button data-v="${v}">${v?v+'x':'멈춤'}</button>`).join('');
+$('speed').onclick=e=>{const v=e.target.dataset.v;if(v!==undefined){W.speed=+v;markSpeed()}};
+function markSpeed(){document.querySelectorAll('#speed button').forEach(b=>b.classList.toggle('on',+b.dataset.v===W.speed))}
+let envSel=ENVS[2];
+$('envs').innerHTML=ENVS.map(e=>`<div class="env" data-id="${e.id}"><b>${e.n}</b><br><small>${e.d}</small></div>`).join('');
+$('envs').onclick=e=>{const el=e.target.closest('.env');if(!el)return;envSel=ENVS.find(x=>x.id===el.dataset.id);document.querySelectorAll('.env').forEach(x=>x.classList.toggle('on',x===el))};
+document.querySelector(`.env[data-id="sea"]`).classList.add('on');
+let running=false;
+$('go').onclick=()=>{start(envSel);$('start').style.display='none';running=true;beginImpact()}; // 미생물을 심기 전에 달부터 생김
+
+// ===== 메인 루프 =====
+let frame=0;
+function loop(){
+  try{
+    if(running&&W.speed){
+      const t0=performance.now();
+      for(let i=0;i<W.speed;i++){step();if(performance.now()-t0>25)break} // 느린 PC 보호
+    }
+    updateImpact();
+    if($('planet').style.display==='block'){drawGlobe();if(frame%30===0)renderRegions()}else draw();
+    if(++frame%15===0){census();renderUI()}
+  }catch(err){console.error(err)}
+  requestAnimationFrame(loop);
+}
+resize();markSpeed();loop();
+</script>
+</body>
+</html>

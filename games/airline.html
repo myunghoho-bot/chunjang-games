@@ -1,0 +1,2413 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>항공사 게임</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0a1526;
+    font-family:"맑은 고딕","Malgun Gothic",sans-serif;color:#eaf2ff;user-select:none}
+  #cv{position:fixed;left:0;top:0;width:100%;height:100%;display:block}
+  #hud{position:fixed;left:0;top:0;width:100%;height:52px;display:flex;align-items:center;gap:14px;
+    padding:0 14px;background:rgba(6,16,32,.82);border-bottom:2px solid #2d4a7a;z-index:5}
+  #hud .logo{width:30px;height:30px;border-radius:8px;flex:0 0 auto}
+  #hud b{font-size:17px}
+  #hud .st{font-size:15px;background:#12294a;padding:5px 11px;border-radius:9px;white-space:nowrap}
+  #hud .sp{flex:1}
+  button{font-family:inherit;font-size:15px;font-weight:bold;color:#fff;background:#2b6fd6;
+    border:none;border-radius:10px;padding:9px 14px;cursor:pointer}
+  button:hover{filter:brightness(1.15)}
+  button.g{background:#1f9d55}button.r{background:#c93a3a}button.d{background:#3c5170}
+  button:disabled{background:#41506b;color:#93a3bd;cursor:not-allowed}
+  #panel{position:fixed;left:0;top:52px;width:100%;height:calc(100% - 52px);overflow:auto;
+    padding:16px;z-index:4}
+  #panel.side{left:auto;right:0;width:370px;background:rgba(6,16,32,.9);border-left:2px solid #2d4a7a}
+  #panel.hide{display:none}
+  #tools{position:fixed;left:0;bottom:0;width:100%;padding:10px 14px;display:flex;gap:8px;
+    align-items:center;flex-wrap:wrap;background:rgba(6,16,32,.88);border-top:2px solid #2d4a7a;z-index:6}
+  #tools.hide{display:none}
+  .card{background:#14294a;border:2px solid #2d4a7a;border-radius:14px;padding:13px 15px;margin-bottom:11px}
+  .card h3{margin:0 0 6px;font-size:18px}
+  .card p{margin:3px 0;font-size:14px;color:#b9cbe6}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  input[type=text]{font-family:inherit;font-size:17px;padding:9px 11px;border-radius:9px;border:2px solid #3d6bb0;
+    background:#0d1e38;color:#fff;width:230px}
+  .sw{width:36px;height:36px;border-radius:9px;border:3px solid #24406e;cursor:pointer}
+  .sw.on{border-color:#fff}
+  .tool{background:#25406b}
+  .tool.on{background:#ffd23f;color:#26343f}
+  #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:20;
+    display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+  #toast div{background:rgba(10,24,44,.95);border:2px solid #4c7fd0;border-radius:11px;
+    padding:9px 16px;font-size:16px;font-weight:bold}
+  .big{font-size:20px;padding:13px 22px}
+  .tag{display:inline-block;background:#27476f;border-radius:7px;padding:2px 8px;font-size:13px;margin-right:5px}
+  .warn{color:#ffb454}.ok{color:#7be08a}.bad{color:#ff8080}
+  h2{margin:2px 0 12px;font-size:24px}
+  .mini{font-size:13px;color:#93a9c8}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud"></div>
+<div id="panel"></div>
+<div id="tools" class="hide"></div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* =========================================================================
+   항공사 게임  —  항공사 만들기 → 비행기 사기 → 좌석 배치 → 화물 싣기 → 운항
+   전부 한 파일. 그림은 전부 캔버스에 직접 그린다(이모티콘 안 씀).
+   ========================================================================= */
+
+/* ---------------- 캔버스 ---------------- */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0;
+function resize(){ W = cv.width = Math.max(320, innerWidth); H = cv.height = Math.max(320, innerHeight); }
+addEventListener('resize', resize); resize();
+
+const $panel = document.getElementById('panel');
+const $hud   = document.getElementById('hud');
+const $tools = document.getElementById('tools');
+const $toast = document.getElementById('toast');
+
+function toast(msg, ms){
+  const d = document.createElement('div'); d.textContent = msg; $toast.appendChild(d);
+  setTimeout(()=>{ d.style.opacity = 0; d.style.transition='opacity .4s'; }, (ms||1800)-400);
+  setTimeout(()=>d.remove(), ms||1800);
+}
+const clamp = (v,a,b)=> v<a?a : v>b?b : v;
+const rnd = (a,b)=> a + Math.random()*(b-a);
+const money = n => Math.round(n).toLocaleString('ko-KR');
+
+/* ---------------- 비행기 종류 ---------------- */
+const TYPES = [
+ {id:'atr72', name:'ATR 72-600', cat:'여객', price:1000,  pat:'EE.EE',   seatRows:18, svc:1, hw:5,  hh:2, maxW:1000,
+  fuel:80,  range:1500,  vmax:510, eng:2, prop:true,  wing:'high',
+  desc:'프로펠러 두 개짜리 작은 여객기. 2-2 배열 18줄 = 72석. 날개가 지붕 위에 붙어 있어.'},
+ {id:'b737',  name:'보잉 737-800', cat:'여객', price:5000, pat:'EEE.EEE', seatRows:32, svc:2, hw:9,  hh:2, maxW:2500,
+  fuel:300, range:5400,  vmax:840, eng:2, prop:false, wing:'low',
+  desc:'세상에서 가장 많이 날아다니는 여객기. 3-3 배열 32줄 = 192석.'},
+ {id:'a320',  name:'에어버스 A320neo', cat:'여객', price:4800, pat:'EEE.EEE', seatRows:30, svc:2, hw:9,  hh:2, maxW:2400,
+  fuel:300, range:6300,  vmax:830, eng:2, prop:false, wing:'low',
+  desc:'737의 라이벌. 똑같이 3-3 배열 30줄 = 180석. 새 엔진이라 기름을 덜 먹는다.'},
+ {id:'b787',  name:'보잉 787-9 드림라이너', cat:'여객', price:14000, pat:'EEE.EEE.EEE', seatRows:33, svc:2, hw:12, hh:3, maxW:3900,
+  fuel:520, range:14100, vmax:900, eng:2, prop:false, wing:'low', bigWin:true,
+  desc:'3-3-3 배열 33줄 = 297석. 엔진 두 개로 지구 반대편까지 가고 창문이 아주 크다.'},
+ {id:'e190',  name:'엠브라에르 E190', cat:'여객', price:2000, pat:'EE.EE', seatRows:25, svc:2, hw:6, hh:2, maxW:1500,
+  fuel:160, range:4500,  vmax:830, eng:2, prop:false, wing:'low',
+  desc:'2-2 배열 25줄 = 100석. 가운데 낀 자리가 없어서 손님들이 좋아하는 작은 제트기.'},
+ {id:'a350',  name:'에어버스 A350-900', cat:'여객', price:15000, pat:'EEE.EEE.EEE', seatRows:35, svc:2, hw:12, hh:3, maxW:4200,
+  fuel:620, range:15000, vmax:900, eng:2, prop:false, wing:'low', bigWin:true,
+  desc:'3-3-3 배열 35줄 = 315석. 787의 라이벌, 아주 조용하고 멀리 간다.'},
+ {id:'b777',  name:'보잉 777-300ER', cat:'여객', price:20000, pat:'EEE.EEEE.EEE', seatRows:42, svc:2, hw:13, hh:3, maxW:5400,
+  fuel:800, range:13600, vmax:900, eng:2, prop:false, wing:'low',
+  desc:'엔진 두 개짜리 중에 제일 큰 비행기. 3-4-3 배열 42줄 = 420석.'},
+ {id:'b744',  name:'보잉 747-400', cat:'여객', price:18000, pat:'EEE.EEEE.EEE', seatRows:38, svc:2, hw:14, hh:3, maxW:5600,
+  fuel:850, range:13400, vmax:900, eng:4, prop:false, wing:'low', hump:true,
+  pat2:'EE.EE', seatRows2:8, svc2:1,
+  desc:'하늘의 여왕! 앞머리 혹이 2층이야. 아래 3-4-3 380석 + 2층 2-2 32석 = 412석.'},
+ {id:'a380',  name:'에어버스 A380-800', cat:'여객', price:26000, pat:'EEE.EEEE.EEE', seatRows:40, svc:2, hw:14, hh:3, maxW:6100,
+  fuel:900, range:15000, vmax:900, eng:4, prop:false, wing:'low', deck2:true,
+  pat2:'EE.EEEE.EE', seatRows2:20, svc2:2,
+  desc:'세상에서 제일 큰 2층 비행기! 아래 3-4-3 400석 + 2층 2-4-2 160석 = 560석.'},
+ {id:'b747f', name:'보잉 747-8F 화물기', cat:'화물', price:11000, pat:'EE.EE', seatRows:3, svc:1, hw:16, hh:4, maxW:2900,
+  fuel:560, range:8100,  vmax:900, eng:4, prop:false, wing:'low', hump:true,
+  desc:'앞머리가 볼록 튀어나온 짐 전용 점보기. 코가 위로 열려서 큰 짐도 들어간다.'}
+];
+// 좌석열 수 = 배열 무늬 길이(복도 칸 포함) / 전체 줄 = 손님 줄 + 화장실·주방 줄
+TYPES.forEach(t=>{
+  t.cols = t.pat.length;
+  t.rows = t.seatRows + t.svc;
+  t.seatsPerRow = t.pat.split('').filter(c=>c!=='.').length;
+  t.realSeats = t.seatRows * t.seatsPerRow;
+  if(t.pat2){                                  // 2층이 있는 비행기 (747-400, A380)
+    t.cols2 = t.pat2.length;
+    t.rows2 = t.seatRows2 + t.svc2;
+    t.seatsPerRow2 = t.pat2.split('').filter(c=>c!=='.').length;
+    t.realSeats2 = t.seatRows2 * t.seatsPerRow2;
+    t.realSeats += t.realSeats2;
+  }
+});
+const typeOf = id => TYPES.find(t=>t.id===id);
+
+/* ---------------- 좌석 종류 ---------------- */
+//  E 이코노미 / B 비즈니스 / F 일등석(가로 2칸, 뒤칸은 f) / T 화장실 / G 주방 / . 빈칸(복도)
+const SEAT = {
+  E:{name:'이코노미', w:1,  fare:8,  col:'#3fa0ff', pax:1, wide:1},
+  B:{name:'비즈니스', w:2,  fare:22, col:'#b46bff', pax:1, wide:1},
+  F:{name:'일등석',   w:3.5,fare:60, col:'#ffd23f', pax:1, wide:2},
+  T:{name:'화장실',   w:2,  fare:0,  col:'#6fd3c7', pax:0, wide:1},
+  G:{name:'주방',     w:3,  fare:0,  col:'#ff9a5c', pax:0, wide:1}
+};
+
+/* ---------------- 꼬리 그림 (아이가 직접 그린다) ---------------- */
+const TAILW = 9, TAILH = 12;
+const TAILPAL = ['#ffffff','#ff4d4d','#ff9a3c','#ffd23f','#7be08a','#3fa0ff','#2b3fd6','#b46bff','#ff6fb5','#2a3446'];
+function emptyTail(){ const g=[]; for(let r=0;r<TAILH;r++){ const row=[]; for(let c=0;c<TAILW;c++) row.push(-1); g.push(row); } return g; }
+
+/* ---------------- 공항/노선 ---------------- */
+const ROUTES = [
+ {to:'제주',        dist:450,   demand:330, land:30},
+ {to:'부산',        dist:330,   demand:260, land:25},
+ {to:'도쿄',        dist:1200,  demand:340, land:60},
+ {to:'베이징',      dist:960,   demand:310, land:55},
+ {to:'타이베이',    dist:1480,  demand:260, land:65},
+ {to:'싱가포르',    dist:4670,  demand:310, land:110},
+ {to:'두바이',      dist:6900,  demand:250, land:140},
+ {to:'시드니',      dist:8300,  demand:240, land:160},
+ {to:'런던',        dist:8850,  demand:300, land:190},
+ {to:'로스앤젤레스',dist:9600,  demand:290, land:190},
+ {to:'뉴욕',        dist:11000, demand:350, land:210}
+];
+
+/* ---------------- 지도용 좌표 (경도, 위도) ---------------- */
+const HOME = {name:'서울', lon:126.8, lat:37.5};
+const CITY = {
+ '제주':[126.5,33.5], '부산':[129.0,35.2], '도쿄':[139.8,35.7], '베이징':[116.4,39.9],
+ '타이베이':[121.5,25.0], '싱가포르':[103.8,1.4], '두바이':[55.3,25.3], '시드니':[151.2,-33.9],
+ '런던':[-0.1,51.5], '로스앤젤레스':[-118.2,34.1], '뉴욕':[-74.0,40.7], '가까운 공항':[135.0,30.0]
+};
+// 대충 그린 대륙 (중심 경도, 중심 위도, 가로 반지름도, 세로 반지름도, 기울기)
+const LANDS = [
+ [75,54,74,19,0], [12,48,24,11,0], [96,22,30,15,0.1], [48,28,17,10,0],
+ [12,17,30,14,0], [23,-14,15,18,0], [-100,48,42,17,0], [-88,20,14,8,0.3],
+ [-60,-20,17,25,0], [134,-25,22,13,0], [-42,72,16,8,0], [139,37,5,8,0.3],
+ [113,-2,14,7,0], [175,-41,6,7,0.4]
+];
+
+/* ---------------- 화물 종류 ---------------- */
+const CARGO_KINDS = [
+ {n:'우편물',   col:'#e8d9a8', dens:0.8},
+ {n:'옷 상자',  col:'#7fd6a0', dens:0.9},
+ {n:'과일 상자',col:'#ff9f68', dens:1.3},
+ {n:'기계 부품',col:'#9aa7bd', dens:2.4},
+ {n:'냉동 식품',col:'#79c8ff', dens:1.8},
+ {n:'자동차',   col:'#ff7b7b', dens:2.9}
+];
+
+/* ---------------- 게임 상태 ---------------- */
+const SAVEKEY = 'airline_save_v1';
+let S = null;
+function newGame(){
+  return { screen:'title', name:'', c1:'#2b6fd6', c2:'#ffd23f',
+           money:1400, rep:50, day:1, planes:[], sel:0, tick:0,
+           flights:[], arrivals:[], lastResult:null, watchSpeed:2,
+           tail:null, tailOn:false, nameOn:true };
+}
+S = newGame();
+
+/* 저장 / 불러오기 */
+function save(){
+  try{
+    const d = { name:S.name, c1:S.c1, c2:S.c2, money:S.money, rep:S.rep, day:S.day,
+      planes:S.planes.map(p=>({type:p.type, nick:p.nick, wear:p.wear,
+        seats:p.seats.map(r=>r.join('')),
+        seats2:p.seats2 ? p.seats2.map(r=>r.join('')) : null })),
+      tail:S.tail, tailOn:S.tailOn, nameOn:S.nameOn };
+    localStorage.setItem(SAVEKEY, JSON.stringify(d));
+    toast('저장했어!');
+  }catch(e){ toast('저장 실패 ㅠㅠ'); }
+}
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(SAVEKEY)||'null');
+    if(!d || !d.name) return false;
+    S = newGame();
+    S.name=d.name; S.c1=d.c1; S.c2=d.c2; S.money=d.money; S.rep=d.rep; S.day=d.day||1;
+    // 옛날에 저장한 기종(지금은 없는 이름)은 건너뛴다
+    if(d.tail) S.tail = d.tail;
+    if(d.tailOn!==undefined) S.tailOn = d.tailOn;
+    if(d.nameOn!==undefined) S.nameOn = d.nameOn;
+    S.planes = (d.planes||[]).filter(p=>typeOf(p.type)).map(p=>{
+      const t = typeOf(p.type);
+      return { type:p.type, nick:p.nick, wear:p.wear||0,
+        seats:(p.seats||[]).map(r=>r.split('')),
+        seats2:(p.seats2||null) && p.seats2.map(r=>r.split('')) };
+    });
+    S.planes.forEach(p=>{ const t=typeOf(p.type);
+      if(!p.seats || p.seats.length!==t.rows || p.seats[0].length!==t.cols) p.seats = autoSeats(t,0);
+      if(t.pat2 && (!p.seats2 || p.seats2.length!==t.rows2 || p.seats2[0].length!==t.cols2)) p.seats2 = autoSeats(t,1);
+      if(!t.pat2) p.seats2 = null;
+    });
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ---------------- 좌석 도우미 (층: 0=아래층, 1=2층) ---------------- */
+function deckSpec(t, d){
+  return (d===1 && t.pat2)
+    ? {pat:t.pat2, cols:t.cols2, rows:t.rows2, seatRows:t.seatRows2, svc:t.svc2, realSeats:t.realSeats2}
+    : {pat:t.pat,  cols:t.cols,  rows:t.rows,  seatRows:t.seatRows,  svc:t.svc,  realSeats:t.realSeats};
+}
+function gridOf(p, d){ return d===1 ? p.seats2 : p.seats; }
+function decksOf(p){ const t=typeOf(p.type); return t.pat2 ? [0,1] : [0]; }
+
+function emptySeats(t, d){
+  const k = deckSpec(t, d||0), g=[];
+  for(let r=0;r<k.rows;r++){ const row=[]; for(let c=0;c<k.cols;c++) row.push('.'); g.push(row); }
+  return g;
+}
+/* 기본 배치 — 진짜 배열(3-3 같은)로 손님 줄을 꽉 채우고,
+   화장실·주방은 손님 자리를 잡아먹지 않게 맨 앞/맨 뒤 서비스 줄에 넣는다. */
+function autoSeats(t, d){
+  d = d||0;
+  const k = deckSpec(t, d);
+  const g = emptySeats(t, d);
+  const pat = k.pat.split('');
+  const front = (k.svc>=2) ? 1 : 0;            // 앞쪽 서비스 줄 수
+  const back  = k.svc - front;
+  for(let r=front; r<k.rows-back; r++)
+    for(let c=0;c<k.cols;c++) g[r][c] = (pat[c]==='.') ? '.' : 'E';
+
+  // 서비스 줄의 쓸 수 있는 칸을 창가(바깥)부터 모으되, 앞줄·뒷줄을 번갈아 쓴다
+  const pick = r => {
+    const cs = [];
+    for(let c=0;c<k.cols;c++) if(pat[c]!=='.') cs.push(c);
+    cs.sort((a,b)=> Math.abs(b-(k.cols-1)/2) - Math.abs(a-(k.cols-1)/2));
+    return cs.map(c=>[r,c]);
+  };
+  const fList = [], bList = [];
+  for(let r=0;r<front;r++) fList.push(...pick(r));
+  for(let r=k.rows-back;r<k.rows;r++) bList.push(...pick(r));
+  const cells = [];
+  for(let i=0;i<Math.max(fList.length,bList.length);i++){
+    if(bList[i]) cells.push(bList[i]);      // 화장실은 뒤쪽부터
+    if(fList[i]) cells.push(fList[i]);
+  }
+
+  const pax = k.realSeats;
+  const needT = t.cat==='화물' ? 1 : Math.max(2, Math.ceil(pax/50));
+  const needG = t.cat==='화물' ? 0 : Math.min(Math.max(1, Math.round(k.seatRows/14)), Math.max(0,cells.length-needT));
+  cells.forEach(([r,c],i)=>{
+    if(i < needT) g[r][c] = 'T';
+    else if(i < needT+needG) g[r][c] = 'G';
+  });
+  return g;
+}
+function seatStats(p){
+  const t = typeOf(p.type);
+  let pax=0, w=0, fare=0, toilet=0, galley=0, aisle=true;
+  const cnt = {E:0,B:0,F:0};
+  decksOf(p).forEach(d=>{
+    const k = deckSpec(t,d), g = gridOf(p,d);
+    if(!g) return;
+    for(let r=0;r<k.rows;r++) for(let c=0;c<k.cols;c++){
+      const s = g[r][c];
+      if(s==='.'||s==='f') continue;
+      const sd = SEAT[s]; if(!sd) continue;
+      w += sd.w; pax += sd.pax; fare += sd.fare;
+      if(s==='T') toilet++;
+      if(s==='G') galley++;
+      if(cnt[s]!==undefined) cnt[s]++;
+    }
+    // 복도: 위아래로 쭉 비어 있는 세로줄이 층마다 하나는 있어야 한다
+    let has=false;
+    for(let c=0;c<k.cols;c++){
+      let free=true;
+      for(let r=0;r<k.rows;r++) if(g[r][c]!=='.'){ free=false; break; }
+      if(free){ has=true; break; }
+    }
+    let used=false;
+    for(let r=0;r<k.rows && !used;r++) for(let c=0;c<k.cols;c++) if(g[r][c]!=='.'){ used=true; break; }
+    if(used && !has) aisle = false;
+  });
+  const needT = Math.ceil(pax/50);
+  return {pax, weight:w + pax*8, seatW:w, fare, toilet, galley, aisle, needT, cnt};
+}
+
+/* ---------------- 비행기 사기 ---------------- */
+function buyPlane(t){
+  if(S.money < t.price){ toast('돈이 모자라!'); return; }
+  let nick = null;
+  try{ nick = prompt('이 비행기 이름을 지어줘!', S.name+' '+(S.planes.length+1)+'호기'); }catch(e){}
+  if(nick===null) return;
+  if(!nick.trim()) nick = t.name;
+  S.money -= t.price;
+  S.planes.push({ type:t.id, nick:nick.trim().slice(0,16), wear:0,
+                  seats:autoSeats(t,0), seats2: t.pat2 ? autoSeats(t,1) : null });
+  S.sel = S.planes.length-1;
+  toast(nick.trim()+' 도착! ✈');
+  go('office');
+}
+
+/* =========================================================================
+   그림 그리기 — 비행기 옆모습 / 윗모습
+   ========================================================================= */
+function planeColors(){ return {a:S.c1, b:S.c2}; }
+
+/* 옆에서 본 비행기.  L = 전체 길이(픽셀) */
+function drawPlaneSide(x, y, L, t, opt){
+  opt = opt || {};
+  const c = planeColors();
+  const high  = !!(t && t.wing==='high');      // ATR 처럼 날개가 지붕에 붙은 비행기
+  const deck2 = !!(t && t.deck2);              // A380 — 2층
+  const hump  = !!(t && t.hump);               // 747 — 앞머리 혹
+  const h = L*(deck2 ? 0.168 : 0.135);         // 동체 높이
+  ctx.save(); ctx.translate(x,y); if(opt.rot) ctx.rotate(opt.rot);
+  const noseX = L*0.5, tailX = -L*0.5;
+
+  // 반대쪽 날개(먼저 그려서 뒤에 깔린다)
+  ctx.fillStyle = shade(c.a,-25);
+  ctx.beginPath();
+  if(high){
+    ctx.moveTo(-L*0.02,-h*0.40); ctx.lineTo(-L*0.20,-h*1.15);
+    ctx.lineTo(-L*0.04,-h*1.18); ctx.lineTo(L*0.10,-h*0.38);
+  }else{
+    ctx.moveTo(-L*0.02, 0); ctx.lineTo(-L*0.22, h*0.95); ctx.lineTo(-L*0.05, h*1.0); ctx.lineTo(L*0.10, 0);
+  }
+  ctx.closePath(); ctx.fill();
+
+  // 동체
+  ctx.beginPath();
+  ctx.moveTo(noseX, 0);
+  ctx.quadraticCurveTo(noseX-L*0.06, -h*0.52, noseX-L*0.20, -h*0.5);
+  if(hump){                                    // 747 의 볼록한 2층 앞머리
+    ctx.lineTo(noseX-L*0.24, -h*0.5);
+    ctx.quadraticCurveTo(noseX-L*0.20, -h*0.95, noseX-L*0.30, -h*0.95);
+    ctx.lineTo(noseX-L*0.40, -h*0.92);
+    ctx.quadraticCurveTo(noseX-L*0.46, -h*0.86, noseX-L*0.50, -h*0.5);
+  }
+  ctx.lineTo(tailX+L*0.20, -h*0.5);
+  ctx.quadraticCurveTo(tailX+L*0.02, -h*0.5, tailX, -h*0.62);   // 위로 솟는 꼬리
+  ctx.lineTo(tailX+L*0.03, h*0.12);
+  ctx.lineTo(noseX-L*0.14, h*0.5);
+  ctx.quadraticCurveTo(noseX-L*0.02, h*0.42, noseX, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#f2f6fc'; ctx.fill();
+  ctx.strokeStyle = '#93a6c4'; ctx.lineWidth = Math.max(1,L*0.004); ctx.stroke();
+
+  // 항공사 이름을 쓸 자리 (그 자리엔 창문을 안 그린다)
+  const showName = (S.nameOn!==false && S.name && L > 120);
+  const nameX0 = tailX + L*0.28, nameX1 = nameX0 + L*0.30;
+
+  // 아래쪽 색 띠 + 회사 색
+  ctx.save(); ctx.clip();
+  ctx.fillStyle = c.a; ctx.fillRect(tailX, h*0.10, L, h*0.5);
+  ctx.fillStyle = c.b; ctx.fillRect(tailX, h*0.02, L, h*0.09);
+  // 뒤쪽 동체에 항공사 이름 (작게) — 2층 비행기는 위층 창문 자리에 쓴다
+  if(showName){
+    ctx.textAlign = 'left';
+    ctx.fillStyle = shade(c.a, -15);
+    ctx.font = 'bold ' + Math.max(6, h*(deck2?0.24:0.27)) + 'px "맑은 고딕","Malgun Gothic",sans-serif';
+    ctx.fillText(S.name+' 항공', nameX0, deck2 ? -h*0.30 : -h*0.24, nameX1-nameX0);
+  }
+  ctx.restore();
+
+  // 화물칸(살짝 비치게)
+  if(opt.hold && opt.hold.length){
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    const hx0 = -L*0.30, hx1 = L*0.28, hy = h*0.16, hh2 = h*0.32;
+    ctx.fillStyle = 'rgba(20,30,45,.75)'; ctx.fillRect(hx0, hy, hx1-hx0, hh2);
+    opt.hold.forEach(b=>{
+      const bw=(hx1-hx0)/opt.holdW, bh=hh2/opt.holdH;
+      ctx.fillStyle = b.col;
+      ctx.fillRect(hx0+b.x*bw+1, hy+b.y*bh+1, b.w*bw-2, b.h*bh-2);
+    });
+    ctx.restore();
+  }
+
+  // 창문 + 손님 (화물기는 창문이 몇 개 없고 큰 짐 문이 있다)
+  const cargoPlane = t && t.cat==='화물';
+  const winY = -h*0.13, wr = Math.max(1.1, L*0.009*(t&&t.bigWin?1.35:1));
+  const n = cargoPlane ? 4 : Math.max(4, Math.round(L/(L*0.045)));
+  for(let i=0;i<n;i++){
+    const wx = tailX + L*0.16 + i*(L*0.66/n);
+    if(wx > noseX-L*0.20) break;
+    ctx.beginPath(); ctx.arc(wx, winY, wr, 0, 7);
+    ctx.fillStyle = opt.night ? (i%5===0?'#3a4a66':'#ffdf9a')
+                  : ((opt.paxLit && i%2===0) ? '#ffe9a8' : '#2b4a75'); ctx.fill();
+    if(deck2 && !(showName && wx > nameX0-wr*2 && wx < nameX1+wr)){   // A380 은 2층에도 창문
+      ctx.beginPath(); ctx.arc(wx, -h*0.36, wr, 0, 7);
+      ctx.fillStyle = opt.night ? (i%4===0?'#3a4a66':'#ffdf9a')
+                    : ((opt.paxLit && i%3===0) ? '#ffe9a8' : '#2b4a75'); ctx.fill();
+    }
+  }
+  if(hump){                                         // 747 혹 안의 창문
+    for(let i=0;i<5;i++){
+      ctx.beginPath(); ctx.arc(noseX-L*0.28-i*L*0.028, -h*0.70, wr, 0, 7);
+      ctx.fillStyle = opt.paxLit ? '#ffe9a8' : '#2b4a75'; ctx.fill();
+    }
+  }
+  if(cargoPlane){                                   // 옆으로 열리는 짐 문
+    ctx.strokeStyle='rgba(40,60,90,.55)'; ctx.lineWidth=Math.max(1.2,L*0.005);
+    ctx.strokeRect(tailX+L*0.30, -h*0.34, L*0.26, h*0.42);
+  }
+  // 조종석 창
+  ctx.beginPath();
+  ctx.moveTo(noseX-L*0.055, -h*0.30); ctx.lineTo(noseX-L*0.135, -h*0.36);
+  ctx.lineTo(noseX-L*0.135, -h*0.12); ctx.lineTo(noseX-L*0.045, -h*0.08);
+  ctx.closePath(); ctx.fillStyle = '#1d3557'; ctx.fill();
+
+  // 꼬리 날개(수직) — 회사 색
+  ctx.beginPath();
+  ctx.moveTo(tailX+L*0.25, -h*0.28);                 // 앞 아래(동체 속에서 시작)
+  ctx.lineTo(tailX+L*0.10, -h*1.95);                 // 앞 위 — 뒤로 젖혀진 앞날
+  ctx.lineTo(tailX+L*0.005,-h*1.95);
+  ctx.lineTo(tailX+L*0.015,-h*0.42);
+  ctx.closePath(); ctx.fillStyle = c.a; ctx.fill();
+  ctx.strokeStyle = shade(c.a,-30); ctx.stroke();
+  if(S.tailOn && S.tail){                            // 아이가 그린 꼬리 그림
+    ctx.save();
+    ctx.beginPath();                                 // 꼬리날개 모양으로 잘라내기
+    ctx.moveTo(tailX+L*0.25, -h*0.28); ctx.lineTo(tailX+L*0.10, -h*1.95);
+    ctx.lineTo(tailX+L*0.005,-h*1.95); ctx.lineTo(tailX+L*0.015,-h*0.42);
+    ctx.closePath(); ctx.clip();
+    // 꼬리날개가 뒤로 젖혀져 있으니 그림도 같은 모양으로 눕혀서 붙인다
+    const yAt = u => -h*1.95 + u*h*1.67;                       // u: 0=꼭대기, 1=뿌리
+    const lAt = u => tailX + L*(0.005 + u*0.010);              // 뒤쪽 가장자리
+    const rAt = u => tailX + L*(0.100 + u*0.150);              // 앞쪽 가장자리
+    for(let r=0;r<TAILH;r++){
+      const u0 = r/TAILH, u1 = (r+1)/TAILH;
+      const y0 = yAt(u0)-0.5, y1 = yAt(u1)+0.5;
+      const l0 = lAt(u0), r0 = rAt(u0), l1 = lAt(u1), r1 = rAt(u1);
+      for(let cc=0;cc<TAILW;cc++){
+        const v = S.tail[r][cc]; if(v<0) continue;
+        const a0 = cc/TAILW, a1 = (cc+1)/TAILW;
+        ctx.fillStyle = TAILPAL[v];
+        ctx.beginPath();
+        ctx.moveTo(l0+(r0-l0)*a0, y0); ctx.lineTo(l0+(r0-l0)*a1, y0);
+        ctx.lineTo(l1+(r1-l1)*a1, y1); ctx.lineTo(l1+(r1-l1)*a0, y1);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }else{
+    ctx.beginPath();                                 // 기본 꼬리 무늬
+    ctx.moveTo(tailX+L*0.030,-h*1.78); ctx.lineTo(tailX+L*0.115,-h*1.78);
+    ctx.lineTo(tailX+L*0.135,-h*1.24); ctx.lineTo(tailX+L*0.026,-h*1.24);
+    ctx.closePath(); ctx.fillStyle = c.b; ctx.fill();
+  }
+  // 수평 꼬리날개
+  ctx.fillStyle = shade(c.a,-15);
+  ctx.beginPath(); ctx.moveTo(tailX+L*0.16,-h*0.34); ctx.lineTo(tailX-L*0.03,-h*0.86);
+  ctx.lineTo(tailX+L*0.05,-h*0.92); ctx.lineTo(tailX+L*0.20,-h*0.40); ctx.closePath(); ctx.fill();
+
+  // 앞쪽 날개
+  ctx.fillStyle = '#dde6f2';
+  ctx.beginPath();
+  if(high){
+    ctx.moveTo(L*0.02,-h*0.44); ctx.lineTo(-L*0.24,-h*1.02);
+    ctx.lineTo(-L*0.06,-h*1.06); ctx.lineTo(L*0.14,-h*0.42);
+  }else{
+    ctx.moveTo(L*0.02, h*0.05); ctx.lineTo(-L*0.26, h*0.62); ctx.lineTo(-L*0.06, h*0.66); ctx.lineTo(L*0.14, h*0.10);
+  }
+  ctx.closePath(); ctx.fill(); ctx.strokeStyle='#9fb2cc'; ctx.stroke();
+
+  // 엔진 (날개에 매달린다)
+  const engN = t ? t.eng : 2, prop = t ? t.prop : false;
+  for(let i=0;i<engN/2;i++){
+    const ex = -L*0.03 - i*L*0.13;
+    const ey = high ? (-h*0.62 - i*L*0.02) : (h*0.46 + i*L*0.02);
+    ctx.fillStyle = '#cfd8e6';
+    if(prop){
+      ctx.beginPath(); ctx.ellipse(ex, ey, L*0.048, h*0.26, 0, 0, 7); ctx.fill();
+      ctx.save(); ctx.globalAlpha = 0.32;             // 도는 프로펠러 원반
+      ctx.fillStyle='#9fb0c6';
+      ctx.beginPath(); ctx.ellipse(ex+L*0.052, ey, L*0.013, h*0.95, 0,0,7); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle='#8b98ab';
+      ctx.beginPath(); ctx.ellipse(ex+L*0.050, ey, L*0.009, h*0.11, 0,0,7); ctx.fill();
+    }else{
+      roundRect(ex-L*0.06, ey-h*0.30, L*0.13, h*0.60, h*0.28);
+      ctx.fill(); ctx.fillStyle = shade(c.a,-10);
+      roundRect(ex-L*0.06, ey-h*0.30, L*0.03, h*0.60, h*0.28); ctx.fill();
+    }
+  }
+
+  // 밤이면 날개 끝 깜빡이등 + 앞쪽 착륙등
+  if(opt.night){
+    const blink = (Math.floor(performance.now()/500)%2)===0;
+    ctx.fillStyle = blink ? '#ff5555' : 'rgba(120,40,40,.5)';
+    ctx.beginPath(); ctx.arc(-L*0.26, h*0.62, Math.max(2,L*0.012), 0, 7); ctx.fill();
+    ctx.fillStyle = blink ? 'rgba(255,255,255,.95)' : 'rgba(120,130,150,.5)';
+    ctx.beginPath(); ctx.arc(tailX+L*0.09, -h*1.95, Math.max(2,L*0.011), 0, 7); ctx.fill();
+    if(opt.gear){
+      ctx.fillStyle='rgba(255,245,200,.85)';
+      ctx.beginPath(); ctx.arc(L*0.30, h*0.42, Math.max(2,L*0.012), 0, 7); ctx.fill();
+      ctx.fillStyle='rgba(255,245,200,.16)';
+      ctx.beginPath(); ctx.moveTo(L*0.30, h*0.42); ctx.lineTo(L*0.95, h*1.5);
+      ctx.lineTo(L*1.0, h*0.1); ctx.closePath(); ctx.fill();
+    }
+  }
+  // 바퀴
+  if(opt.gear){
+    ctx.strokeStyle = '#42536b'; ctx.lineWidth = Math.max(1.6, L*0.007); ctx.fillStyle='#26313f';
+    const legs = [[L*0.30, h*0.42, L*0.016], [-L*0.04, h*0.55, L*0.020]];
+    legs.forEach(g=>{
+      ctx.beginPath(); ctx.moveTo(g[0], g[1]-h*0.05); ctx.lineTo(g[0], g[1]+h*0.26); ctx.stroke();
+      ctx.beginPath(); ctx.arc(g[0], g[1]+h*0.30, g[2], 0, 7); ctx.fill();
+      if(g[2]>L*0.017){ ctx.beginPath(); ctx.arc(g[0]-g[2]*1.7, g[1]+h*0.30, g[2], 0, 7); ctx.fill(); }
+    });
+  }
+  ctx.restore();
+}
+
+/* 위에서 본 비행기 겉모양 (좌석 배치 화면 배경) */
+function drawPlaneTopShell(cx, top, bodyW, bodyH, t){
+  const c = planeColors();
+  const noseH = bodyW*0.55, tailH = bodyW*0.55;
+  ctx.save();
+  // 날개
+  ctx.fillStyle = '#dde6f2'; ctx.strokeStyle='#96a9c6'; ctx.lineWidth=2;
+  const wy = top + noseH + bodyH*0.42;
+  ctx.beginPath();
+  ctx.moveTo(cx-bodyW*0.45, wy-bodyH*0.06); ctx.lineTo(cx-bodyW*2.0, wy+bodyH*0.10);
+  ctx.lineTo(cx-bodyW*2.0, wy+bodyH*0.16); ctx.lineTo(cx-bodyW*0.45, wy+bodyH*0.20);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx+bodyW*0.45, wy-bodyH*0.06); ctx.lineTo(cx+bodyW*2.0, wy+bodyH*0.10);
+  ctx.lineTo(cx+bodyW*2.0, wy+bodyH*0.16); ctx.lineTo(cx+bodyW*0.45, wy+bodyH*0.20);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // 꼬리날개
+  const ty = top + noseH + bodyH + tailH*0.25;
+  ctx.beginPath();
+  ctx.moveTo(cx-bodyW*0.40, ty-bodyH*0.02); ctx.lineTo(cx-bodyW*1.05, ty+bodyW*0.32);
+  ctx.lineTo(cx-bodyW*1.05, ty+bodyW*0.42); ctx.lineTo(cx-bodyW*0.36, ty+bodyW*0.30);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx+bodyW*0.40, ty-bodyH*0.02); ctx.lineTo(cx+bodyW*1.05, ty+bodyW*0.32);
+  ctx.lineTo(cx+bodyW*1.05, ty+bodyW*0.42); ctx.lineTo(cx+bodyW*0.36, ty+bodyW*0.30);
+  ctx.closePath(); ctx.fill();
+  // 동체
+  ctx.beginPath();
+  ctx.moveTo(cx, top);
+  ctx.quadraticCurveTo(cx+bodyW*0.52, top+noseH*0.45, cx+bodyW*0.5, top+noseH);
+  ctx.lineTo(cx+bodyW*0.5, top+noseH+bodyH);
+  ctx.quadraticCurveTo(cx+bodyW*0.35, top+noseH+bodyH+tailH, cx, top+noseH+bodyH+tailH);
+  ctx.quadraticCurveTo(cx-bodyW*0.35, top+noseH+bodyH+tailH, cx-bodyW*0.5, top+noseH+bodyH);
+  ctx.lineTo(cx-bodyW*0.5, top+noseH);
+  ctx.quadraticCurveTo(cx-bodyW*0.52, top+noseH*0.45, cx, top);
+  ctx.closePath();
+  ctx.fillStyle = '#f4f7fc'; ctx.fill(); ctx.strokeStyle='#8ea2c0'; ctx.lineWidth=3; ctx.stroke();
+  // 조종석
+  ctx.beginPath(); ctx.moveTo(cx-bodyW*0.20, top+noseH*0.62);
+  ctx.quadraticCurveTo(cx, top+noseH*0.18, cx+bodyW*0.20, top+noseH*0.62);
+  ctx.closePath(); ctx.fillStyle=c.a; ctx.fill();
+  ctx.restore();
+}
+
+function roundRect(x,y,w,h,r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function shade(hex, amt){
+  const n = parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt, g=((n>>8)&255)+amt, b=(n&255)+amt;
+  r=clamp(r,0,255); g=clamp(g,0,255); b=clamp(b,0,255);
+  return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}
+
+/* =========================================================================
+   화면 전환
+   ========================================================================= */
+function go(s){
+  S.screen = s;
+  $panel.className = ''; $panel.innerHTML=''; $tools.className='hide'; $tools.innerHTML='';
+  if(s==='title')  buildTitle();
+  if(s==='office') buildOffice();
+  if(s==='shop')   buildShop();
+  if(s==='seat')   buildSeat();
+  if(s==='route')  buildRoute();
+  if(s==='cargo')  buildCargo();
+  if(s==='flight') buildFlight();
+  if(s==='result') buildResult();
+  if(s==='tail')   buildTail();
+  if(s==='map')    buildMap();
+  drawHud();
+}
+function drawHud(){
+  if(S.screen==='title'){ $hud.innerHTML=''; $hud.style.display='none'; return; }
+  $hud.style.display='flex';
+  const c = planeColors();
+  $hud.innerHTML =
+    `<div class="logo" style="background:linear-gradient(135deg,${c.a},${c.b})"></div>`+
+    `<b>${esc(S.name)} 항공</b>`+
+    `<div class="st">💰 ${money(S.money)}</div>`+
+    `<div class="st">⭐ 평판 ${Math.round(S.rep)}</div>`+
+    `<div class="st">✈ 비행기 ${S.planes.length}대</div>`+
+    `<div class="st">📅 ${S.day}일째</div>`+
+    `<div class="sp"></div>`+
+    (S.screen==='flight'?'':`<button class="d" id="hSave">💾 저장</button>`)+
+    (S.screen==='office'||S.screen==='title'||S.screen==='flight'?'':`<button class="d" id="hBack">↩ 본사로</button>`);
+  const b1 = document.getElementById('hSave'); if(b1) b1.onclick = save;
+  const b2 = document.getElementById('hBack'); if(b2) b2.onclick = ()=>go('office');
+}
+function esc(s){ return String(s).replace(/[<>&]/g, m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
+
+/* =========================================================================
+   1) 항공사 만들기
+   ========================================================================= */
+const PALETTE = ['#2b6fd6','#e03b3b','#1f9d55','#7a3ff0','#ff8a1f','#0fb5c4','#e0338f','#243b62'];
+function buildTitle(){
+  $panel.innerHTML = `
+   <div style="max-width:640px;margin:6vh auto 0">
+     <h2 style="font-size:34px;text-align:center">✈ 나만의 항공사 만들기</h2>
+     <div class="card">
+       <h3>1. 항공사 이름</h3>
+       <input type="text" id="nm" maxlength="8" placeholder="예: 하늘" value="하늘">
+       <p class="mini">뒤에 '항공'이 자동으로 붙어.</p>
+     </div>
+     <div class="card">
+       <h3>2. 비행기 색</h3>
+       <p>바탕색</p><div class="row" id="p1"></div>
+       <p style="margin-top:9px">무늬색</p><div class="row" id="p2"></div>
+     </div>
+     <div class="row" style="justify-content:center;margin-top:6px">
+       <button class="g big" id="start">이 항공사로 시작! ✈</button>
+       <button class="d big" id="cont">저장한 항공사 불러오기</button>
+     </div>
+   </div>`;
+  const mk = (el, key)=>{
+    el.innerHTML='';
+    PALETTE.forEach(col=>{
+      const d = document.createElement('div');
+      d.className = 'sw'+(S[key]===col?' on':''); d.style.background = col;
+      d.onclick = ()=>{ S[key]=col; mk(el,key); };
+      el.appendChild(d);
+    });
+  };
+  mk(document.getElementById('p1'),'c1');
+  mk(document.getElementById('p2'),'c2');
+  document.getElementById('start').onclick = ()=>{
+    const v = document.getElementById('nm').value.trim();
+    S.name = v || '하늘';
+    toast(S.name+' 항공이 문을 열었어!'); go('office');
+  };
+  document.getElementById('cont').onclick = ()=>{
+    if(load()){ toast('불러왔어!'); go('office'); } else toast('저장된 게 없어');
+  };
+}
+
+/* =========================================================================
+   2) 본사
+   ========================================================================= */
+function buildOffice(){
+  $panel.className = 'side';
+  let html = `<h2>🏢 본사</h2>`;
+  if(!S.planes.length){
+    html += `<div class="card"><h3>비행기가 없어!</h3>
+      <p>먼저 비행기를 한 대 사자.</p></div>`;
+  }
+  if(S.flights.length){
+    html += `<div class="card" style="border-color:#4bd07a">
+      <h3>✈ 지금 하늘에 ${S.flights.length}대</h3>` +
+      S.flights.map(f=>`<p>${esc(f.p.nick)} — 서울→${f.route.to}
+        <b>${Math.round(clamp(f.dist/f.route.dist,0,1)*100)}%</b></p>`).join('') +
+      `<div class="row" style="margin-top:8px"><button class="g" id="watch">👀 하늘 구경하기</button></div></div>`;
+  }
+  if(S.arrivals.length){
+    html += `<div class="card"><h3>방금 도착</h3>` + S.arrivals.map(a=>
+      `<p>${esc(a.nick)} → ${a.to} · ${esc(a.grade)}
+        <b class="${a.net>=0?'ok':'bad'}">${a.net>=0?'+':''}${money(a.net)}</b></p>`).join('') + `</div>`;
+  }
+  S.planes.forEach((p,i)=>{
+    const t = typeOf(p.type), st = seatStats(p);
+    const f = S.flights.find(x=>x.p===p);
+    html += `<div class="card" style="${i===S.sel?'border-color:#ffd23f':''}">
+      <h3>${esc(p.nick)}</h3>
+      <p><span class="tag">${t.name}</span><span class="tag">${t.cat}</span>
+         ${f?`<span class="tag" style="background:#1f6b45">비행 중</span>`:''}</p>
+      <p>손님 자리 <b>${st.pax}명</b> · 짐칸 ${t.hw}×${t.hh}칸</p>
+      <p>갈 수 있는 거리 ${money(t.range)}km ${p.wear>0?`· <span class="warn">고장 ${Math.round(p.wear)}%</span>`:''}</p>
+      <div class="row" style="margin-top:8px">` +
+      (f ? `<button class="g" data-watch="${i}">👀 이 비행기 구경</button>
+            <p class="mini">서울 → ${f.route.to} ${Math.round(clamp(f.dist/f.route.dist,0,1)*100)}%</p>`
+         : `<button data-seat="${i}">💺 자리 배치</button>
+            <button class="g" data-fly="${i}">🛫 운항</button>
+            ${p.wear>2?`<button class="r" data-fix="${i}">🔧 수리 ${money(fixCost(p))}</button>`:''}`) +
+      `</div></div>`;
+  });
+  html += `<div class="row"><button id="shop" class="big">✈ 비행기 사기</button>
+      <button id="tailBtn" class="d">🎨 꼬리 그리기</button>
+      <button id="mapBtn" class="d">🗺 지도 보기</button></div>
+    <p class="mini" style="margin-top:10px">여러 대를 한꺼번에 띄워 놓고, 보고 싶은 비행기를 골라 구경할 수 있어!</p>`;
+  $panel.innerHTML = html;
+  document.getElementById('shop').onclick = ()=>go('shop');
+  document.getElementById('tailBtn').onclick = ()=>go('tail');
+  document.getElementById('mapBtn').onclick = ()=>go('map');
+  const bw = document.getElementById('watch'); if(bw) bw.onclick = ()=>{ F = S.flights[0]; go('flight'); };
+  $panel.querySelectorAll('[data-watch]').forEach(b=> b.onclick=()=>{
+    const p = S.planes[+b.dataset.watch];
+    watchFlight(S.flights.find(x=>x.p===p));
+  });
+  $panel.querySelectorAll('[data-seat]').forEach(b=> b.onclick=()=>{ S.sel=+b.dataset.seat; go('seat'); });
+  $panel.querySelectorAll('[data-fly]').forEach(b=> b.onclick=()=>{ S.sel=+b.dataset.fly; go('route'); });
+  $panel.querySelectorAll('[data-fix]').forEach(b=> b.onclick=()=>{
+    const p = S.planes[+b.dataset.fix], c = fixCost(p);
+    if(S.money < c){ toast('돈이 모자라!'); return; }
+    S.money -= c; p.wear = 0; toast('싹 고쳤어!'); go('office');
+  });
+}
+function fixCost(p){ return Math.round(typeOf(p.type).price * p.wear/100 * 0.9) + 10; }
+
+/* =========================================================================
+   3) 비행기 가게
+   ========================================================================= */
+function buildShop(){
+  let html = `<h2>✈ 비행기 가게</h2><div class="grid">`;
+  TYPES.forEach(t=>{
+    html += `<div class="card">
+      <h3>${t.name}</h3>
+      <p>${t.desc}</p>
+      <p><span class="tag">${t.cat}</span><span class="tag">엔진 ${t.eng}개${t.prop?'(프로펠러)':''}</span>
+         <span class="tag">${t.pat.replace(/\./g,'-').replace(/E/g,'■')}</span></p>
+      <p>좌석 ${t.seatRows}줄 × ${t.seatsPerRow}자리${t.pat2?` + <b>2층</b> ${t.seatRows2}줄 × ${t.seatsPerRow2}자리`:''}
+         = <b>${t.realSeats}석</b> · 짐칸 ${t.hw}×${t.hh}칸</p>
+      <p>실을 수 있는 무게 ${t.maxW} · 갈 수 있는 거리 ${money(t.range)}km</p>
+      <p>가장 빠른 속도 ${t.vmax}km/h</p>
+      <div class="row" style="margin-top:8px">
+        <button class="${S.money>=t.price?'g':''}" data-buy="${t.id}" ${S.money>=t.price?'':'disabled'}>
+          💰 ${money(t.price)} 사기</button>
+      </div></div>`;
+  });
+  html += `</div>`;
+  $panel.innerHTML = html;
+  $panel.querySelectorAll('[data-buy]').forEach(b=> b.onclick=()=> buyPlane(typeOf(b.dataset.buy)));
+}
+
+/* =========================================================================
+   4) 좌석 배치
+   ========================================================================= */
+const seatView = { tool:'E', cell:26, x0:0, y0:0, painting:false, scroll:0 };
+function buildSeat(){
+  const p = S.planes[S.sel];
+  if(!p || S.flights.some(f=>f.p===p)){        // 날고 있는 비행기의 자리는 못 바꾼다
+    toast('그 비행기는 지금 날고 있어!'); go('office'); return;
+  }
+  const t = typeOf(p.type);
+  $panel.className='hide'; $tools.className='';
+  if(!t.pat2) seatView.deck = 0;
+  if(seatView.sameAs !== S.sel){ seatView.scroll = 0; seatView.deck = 0; seatView.sameAs = S.sel; }
+  const tools = [['E','이코노미'],['B','비즈니스'],['F','일등석(2칸)'],['T','화장실'],['G','주방'],['X','지우개']];
+  $tools.innerHTML = tools.map(([k,n])=>
+      `<button class="tool ${seatView.tool===k?'on':''}" data-t="${k}">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;
+        background:${k==='X'?'#7d8ba3':SEAT[k].col}"></span> ${n}</button>`).join('')
+    + (t.pat2 ? `<button class="tool" id="deck">${seatView.deck? '🔽 아래층으로':'🔼 2층으로'}</button>` : '')
+    + `<div style="flex:1"></div>
+       <button class="d" id="auto">↺ 기본 배치</button>
+       <button class="d" id="clr">비우기</button>
+       <button class="g" id="doneSeat">다 했어! ✔</button>`;
+  $tools.querySelectorAll('[data-t]').forEach(b=> b.onclick=()=>{ seatView.tool=b.dataset.t; buildSeat(); });
+  const dk = document.getElementById('deck');
+  if(dk) dk.onclick = ()=>{ seatView.deck = seatView.deck?0:1; seatView.scroll=0; buildSeat(); };
+  document.getElementById('auto').onclick = ()=>{ setGrid(p, seatView.deck, autoSeats(t, seatView.deck)); toast('기본 배치로!'); };
+  document.getElementById('clr').onclick  = ()=>{ setGrid(p, seatView.deck, emptySeats(t, seatView.deck)); };
+  document.getElementById('doneSeat').onclick = ()=>{
+    const st = seatStats(p);
+    if(st.pax>0 && !st.aisle){ toast('복도가 없어! 세로로 한 줄은 비워야 손님이 지나가.', 2600); return; }
+    go('office');
+  };
+}
+function seatGeom(){
+  const p = S.planes[S.sel], t = typeOf(p.type);
+  const d = (t.pat2 && seatView.deck) ? 1 : 0;
+  const k = deckSpec(t, d), grid = gridOf(p, d);
+  const availH = H - 52 - 74 - 34;
+  // 앞코(bodyW*0.55) + 좌석줄 + 꼬리(bodyW*0.55) 가 다 들어가게 칸 크기를 정하되,
+  // 실제 기종은 줄이 많아서(32~45줄) 다 안 들어가면 칸을 18px로 두고 위아래로 굴려 본다.
+  const fit = availH / ((k.cols+1.5)*1.15 + k.rows);
+  const cell = clamp(fit, 18, 40);
+  const gw = cell*k.cols, gh = cell*k.rows;
+  const cx = W*0.5 - 120;                      // 오른쪽 정보칸 자리를 남김
+  const bodyW = gw + cell*2.6;                 // 줄 번호가 들어갈 자리까지
+  const top = 52 + 22;
+  const totalH = bodyW*1.10 + gh;              // 앞코 + 좌석 + 꼬리
+  const maxScroll = Math.max(0, totalH - availH);
+  seatView.scroll = clamp(seatView.scroll, 0, maxScroll);
+  const sc = seatView.scroll;
+  return {p,t,k,d,grid,cell,gw,gh,cx,bodyW,top:top-sc, maxScroll, scroll:sc, clipTop:52+18, clipH:availH+30,
+          x0:cx-gw/2, y0:top - sc + bodyW*0.55 + cell*0.4};
+}
+function drawSeatScreen(){
+  const g = seatGeom(), {p,t,k,cell,grid} = g;
+  ctx.fillStyle = '#0d1c33'; ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, g.clipTop, W, g.clipH); ctx.clip();   // 위아래로 굴릴 수 있게 잘라 준다
+  drawPlaneTopShell(g.cx, g.top, g.bodyW, g.gh + cell*0.8, t);
+
+  const st = seatStats(p);
+  // 복도 표시
+  for(let c=0;c<k.cols;c++){
+    let free=true; for(let r=0;r<k.rows;r++) if(grid[r][c]!=='.'){free=false;break;}
+    if(free){ ctx.fillStyle='rgba(120,200,255,.13)'; ctx.fillRect(g.x0+c*cell, g.y0, cell, g.gh); }
+  }
+  // 칸
+  for(let r=0;r<k.rows;r++) for(let c=0;c<k.cols;c++){
+    const x = g.x0+c*cell, y = g.y0+r*cell, sv = grid[r][c];
+    ctx.strokeStyle = 'rgba(140,170,210,.28)'; ctx.lineWidth=1;
+    ctx.strokeRect(x+.5,y+.5,cell-1,cell-1);
+    if(sv==='.'||sv==='f') continue;
+    const sd = SEAT[sv]; const wCells = (sv==='F')?2:1;
+    drawSeatCell(x, y, cell*wCells, cell, sv, sd);
+  }
+  // 줄 번호
+  ctx.fillStyle='#6d86a8'; ctx.font='bold '+Math.max(10,cell*0.46)+'px sans-serif'; ctx.textAlign='right';
+  for(let r=0;r<k.rows;r++) ctx.fillText(String(r+1), g.x0-4, g.y0+r*cell+cell*0.70);
+  ctx.textAlign='left';
+  ctx.restore();
+  if(t.pat2){
+    ctx.fillStyle = g.d ? '#ffd23f' : '#9fe6ff'; ctx.font='bold 18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(g.d ? '🔼 2층 (윗층)' : '🔽 아래층', g.cx, 92); ctx.textAlign='left';
+  }
+
+  // 위아래로 굴리는 막대
+  if(g.maxScroll > 0){
+    const bx = W-26, by = g.clipTop+6, bh = g.clipH-30;
+    ctx.fillStyle='rgba(255,255,255,.10)'; roundRect(bx, by, 8, bh, 4); ctx.fill();
+    const th = Math.max(30, bh*(bh/(bh+g.maxScroll)));
+    ctx.fillStyle='#4c7fd0';
+    roundRect(bx, by + (bh-th)*(g.scroll/g.maxScroll), 8, th, 4); ctx.fill();
+    ctx.fillStyle='#8fa6c6'; ctx.font='13px sans-serif'; ctx.textAlign='right';
+    ctx.fillText('🖱 휠을 굴리면 앞뒤로 움직여', W-40, H-88); ctx.textAlign='left';
+  }
+
+  // 오른쪽 정보
+  const ix = Math.min(W-286, g.cx + g.bodyW*2.1 + 10), iy = 100;
+  ctx.fillStyle='rgba(8,20,38,.9)'; roundRect(ix, iy, 236, 296, 14); ctx.fill();
+  ctx.strokeStyle='#2d4a7a'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 18px sans-serif';
+  ctx.fillText(p.nick, ix+14, iy+30);
+  ctx.font='15px sans-serif';
+  const layoutName = k.pat.split('.').map(x=>x.length).join('-');   // 예: 2-2, 3-3, 3-4-3
+  const lines = [
+    ['배열'+(t.pat2?(g.d?'(2층)':'(아래층)'):''), layoutName+' · '+k.seatRows+'줄', '#9fe6ff'],
+    ['손님', st.pax+'명', '#eaf2ff'],
+    ['이코노미 '+st.cnt.E+' · 비즈 '+st.cnt.B+' · 일등 '+st.cnt.F, '', '#9db4d4'],
+    ['자리+손님 무게', Math.round(st.weight)+' / '+t.maxW, st.weight>t.maxW?'#ff8080':'#7be08a'],
+    ['한 명 요금 합', money(st.fare), '#ffd23f'],
+    ['복도', st.aisle?'있음 ✔':'없음 ✘', st.aisle?'#7be08a':'#ff8080'],
+    ['화장실', st.toilet+' / 필요 '+st.needT, st.toilet>=st.needT?'#7be08a':'#ffb454'],
+    ['주방', st.galley?'있음 ✔':'없음', st.galley?'#7be08a':'#ffb454']
+  ];
+  lines.forEach((l,i)=>{
+    ctx.fillStyle = l[2]; ctx.fillText(l[0], ix+14, iy+62+i*28);
+    ctx.textAlign='right'; ctx.fillText(l[1], ix+222, iy+62+i*28); ctx.textAlign='left';
+  });
+  ctx.fillStyle='#8fa6c6'; ctx.font='13px sans-serif';
+  ctx.fillText('칸을 눌러서(끌어서) 자리를 놔봐', ix+14, iy+280);
+}
+function drawSeatCell(x,y,w,h,s,d){
+  const pad = Math.max(1.5, w*0.06);
+  ctx.fillStyle = d.col;
+  roundRect(x+pad, y+pad, w-pad*2, h-pad*2, Math.max(2,h*0.18)); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  if(s==='T'){                                  // 변기 모양
+    ctx.fillRect(x+w*0.34, y+h*0.24, w*0.32, h*0.42);
+    ctx.fillRect(x+w*0.30, y+h*0.62, w*0.40, h*0.12);
+  }else if(s==='G'){                            // 주방 = 카트 칸
+    ctx.fillRect(x+w*0.22, y+h*0.26, w*0.56, h*0.16);
+    ctx.fillRect(x+w*0.22, y+h*0.52, w*0.56, h*0.16);
+  }else{                                        // 의자 등받이
+    ctx.fillRect(x+pad*1.6, y+pad*1.6, w-pad*3.2, h*0.22);
+    if(s==='F'){ ctx.fillStyle='rgba(255,255,255,.35)';
+      ctx.fillRect(x+w*0.5-1, y+pad*2, 2, h-pad*4); }
+  }
+}
+function setGrid(p, d, g){ if(d===1) p.seats2 = g; else p.seats = g; }
+function seatClick(mx,my,drag){
+  if(S.screen!=='seat') return;
+  const g = seatGeom(), {k,cell,grid} = g;
+  if(my < g.clipTop || my > g.clipTop+g.clipH) return;
+  const c = Math.floor((mx-g.x0)/cell), r = Math.floor((my-g.y0)/cell);
+  if(c<0||r<0||c>=k.cols||r>=k.rows) return;
+  const tool = seatView.tool;
+  if(tool==='X'){ clearCell(grid,r,c); return; }
+  if(tool==='F'){
+    if(c+1>=k.cols) { if(!drag) toast('일등석은 2칸이 필요해!'); return; }
+    clearCell(grid,r,c); clearCell(grid,r,c+1);
+    grid[r][c]='F'; grid[r][c+1]='f';
+  }else{
+    clearCell(grid,r,c);
+    grid[r][c]=tool;
+  }
+}
+function clearCell(grid,r,c){
+  const s = grid[r][c];
+  if(s==='F'){ grid[r][c]='.'; if(grid[r][c+1]==='f') grid[r][c+1]='.'; }
+  else if(s==='f'){ grid[r][c]='.'; if(grid[r][c-1]==='F') grid[r][c-1]='.'; }
+  else grid[r][c]='.';
+}
+
+/* =========================================================================
+   5) 노선 고르기
+   ========================================================================= */
+function buildRoute(){
+  const p = S.planes[S.sel];
+  if(!p || S.flights.some(f=>f.p===p)){        // 이미 하늘에 있는 비행기는 또 못 띄운다
+    toast('그 비행기는 지금 날고 있어!'); go('office'); return;
+  }
+  const t = typeOf(p.type), st = seatStats(p);
+  let html = `<h2>🗺 어디로 갈까? — ${esc(p.nick)} (${t.name})</h2>`;
+  if(st.pax>0 && !st.aisle) html += `<div class="card"><p class="bad">복도가 없어서 손님이 못 타! 먼저 자리 배치를 고쳐줘.</p></div>`;
+  html += `<div class="grid">`;
+  ROUTES.forEach((r,i)=>{
+    const far = r.dist > t.range;
+    const fuelCost = Math.round(r.dist*0.11);
+    const pax = expectedPax(p, r);
+    html += `<div class="card">
+      <h3>서울 → ${r.to}</h3>
+      <p>거리 ${money(r.dist)}km ${far?'<span class="bad">· 너무 멀어서 못 가!</span>':''}</p>
+      <p>기다리는 손님 약 ${r.demand}명 → 탈 손님 <b>${pax}명</b></p>
+      <p>기름값 약 ${money(fuelCost)} · 착륙료 ${money(r.land)}</p>
+      <div class="row" style="margin-top:8px">
+        <button class="${far?'':'g'}" data-r="${i}" ${far||(st.pax>0&&!st.aisle)?'disabled':''}>📦 짐 싣기</button>
+      </div></div>`;
+  });
+  html += `</div>`;
+  $panel.innerHTML = html;
+  $panel.querySelectorAll('[data-r]').forEach(b=> b.onclick=()=>{ startCargo(ROUTES[+b.dataset.r]); });
+}
+function expectedPax(p, r){
+  const st = seatStats(p);
+  const repF = 0.55 + S.rep/100*0.6;
+  return Math.min(st.pax, Math.round(r.demand * repF * 0.9));
+}
+
+/* =========================================================================
+   6) 화물 싣기 (무게중심 맞추기)
+   ========================================================================= */
+let C = null;   // 화물 화면 상태
+function startCargo(route){
+  const p = S.planes[S.sel], t = typeOf(p.type), st = seatStats(p);
+  const pax = expectedPax(p, route);
+  const boxes = [];
+  const n = clamp(6 + Math.floor(rnd(0, t.hw*t.hh/2.2)), 6, 18);
+  for(let i=0;i<n;i++){
+    const k = CARGO_KINDS[Math.floor(rnd(0,CARGO_KINDS.length))];
+    const w = 1 + Math.floor(rnd(0, Math.min(3, t.hw-1)));
+    const h = 1 + Math.floor(rnd(0, Math.min(2, t.hh)));
+    const weight = Math.round(w*h*10*k.dens);
+    const pay = Math.round(weight * (0.55 + route.dist/2600) * 1.5);
+    boxes.push({ id:i, n:k.n, col:k.col, w, h, weight, pay, x:-1, y:-1 });
+  }
+  const st2 = seatStats(p);
+  C = { route, pax, boxes, drag:null, dragDX:0, dragDY:0, mx:0, my:0,
+        paxW: pax*8 + st.seatW, t, p,
+        night: (S.day % 2 === 0),                     // 하루걸러 밤 비행
+        crew: Math.max(2, Math.ceil(pax/50)),         // 승무원
+        meal: route.dist > 2500 ? 2 : 1 };            // 0없음 1간식 2기내식 3특식
+  go('cargo');
+}
+function holdGeom(){
+  const t = C.t;
+  const availW = W*0.86;
+  const cell = clamp(Math.min(availW/t.hw, (H*0.30)/t.hh), 24, 72);
+  const gw = cell*t.hw, gh = cell*t.hh;
+  return { cell, gw, gh, x0:(W-gw)/2, y0: Math.round(H*0.34) };
+}
+function trayGeom(){
+  const g = holdGeom();
+  const y0 = g.y0 + g.gh + 62;
+  return { y0, cell: clamp(Math.min(g.cell*0.72, (H-64-y0)/2.4), 18, 60) };
+}
+function layoutTray(){
+  const tr = trayGeom(); let x = 24, y = tr.y0, rowH = 0;
+  C.boxes.forEach(b=>{
+    if(b.x>=0) return;
+    const bw = b.w*tr.cell, bh = b.h*tr.cell;
+    if(x+bw > W-24){ x = 24; y += rowH + 12; rowH = 0; }
+    b.tx = x; b.ty = y; rowH = Math.max(rowH, bh); x += bw + 12;
+  });
+}
+function cargoTotals(){
+  let w = 0, pay = 0, mx = 0;
+  const t = C.t;
+  C.boxes.forEach(b=>{
+    if(b.x<0) return;
+    w += b.weight; pay += b.pay;
+    mx += b.weight * ((b.x + b.w/2) / t.hw);
+  });
+  const total = w + C.paxW;
+  // 손님·자리는 앞뒤로 골고루 퍼져 있으니, 앞뒤 균형은 짐 놓은 자리로만 따진다
+  const cg = w > 0 ? mx / w : 0.5;
+  return { cargoW:w, pay, total, cg, over: total > t.maxW };
+}
+const MEALS = [
+  {n:'없음',   cost:0,    mood:-9},
+  {n:'간식',   cost:0.7,  mood:3},
+  {n:'기내식', cost:1.8,  mood:9},
+  {n:'특식',   cost:4.0,  mood:16}
+];
+function crewNeed(){ return Math.max(2, Math.ceil(C.pax/50)); }
+function serviceCost(){ return Math.round(C.crew*26 + MEALS[C.meal].cost*C.pax); }
+function buildCargo(){
+  $panel.className='hide'; $tools.className='';
+  $tools.innerHTML = `<button class="d" id="cAuto">🤖 알아서 싣기</button>
+    <button class="d" id="cAll">전부 내리기</button>
+    <button class="${C.night?'tool on':'d'}" id="cNight">${C.night?'🌙 밤 비행':'☀ 낮 비행'}</button>
+    <span class="st">👩‍✈️ 승무원 <button class="d" id="cCrewM">−</button> <b>${C.crew}명</b>
+      <button class="d" id="cCrewP">+</button> <span class="mini">(적어도 ${crewNeed()}명)</span></span>
+    <span class="st">🍱 기내식 ${MEALS.map((m,i)=>`<button class="${C.meal===i?'tool on':'d'}" data-meal="${i}">${m.n}</button>`).join(' ')}</span>
+    <span class="st">서비스비 💰${money(serviceCost())}</span>
+    <div style="flex:1"></div>
+    <button class="d" id="cBack">↩ 노선 다시</button>
+    <button class="g big" id="cGo">🛫 이륙 준비 끝!</button>`;
+  layoutTray();
+  document.getElementById('cAuto').onclick = autoLoad;
+  document.getElementById('cAll').onclick = ()=>{ C.boxes.forEach(b=>{b.x=-1;b.y=-1;}); layoutTray(); };
+  document.getElementById('cNight').onclick = ()=>{ C.night=!C.night; buildCargo(); };
+  document.getElementById('cCrewM').onclick = ()=>{ C.crew=Math.max(1,C.crew-1); buildCargo(); };
+  document.getElementById('cCrewP').onclick = ()=>{ C.crew=Math.min(40,C.crew+1); buildCargo(); };
+  $tools.querySelectorAll('[data-meal]').forEach(b=> b.onclick=()=>{ C.meal=+b.dataset.meal; buildCargo(); });
+  document.getElementById('cBack').onclick = ()=> go('route');
+  document.getElementById('cGo').onclick = tryTakeoff;
+}
+function fits(b, x, y, ignore){
+  const t = C.t;
+  if(x<0||y<0||x+b.w>t.hw||y+b.h>t.hh) return false;
+  for(const o of C.boxes){
+    if(o===b || o.x<0 || o===ignore) continue;
+    if(x < o.x+o.w && x+b.w > o.x && y < o.y+o.h && y+b.h > o.y) return false;
+  }
+  return true;
+}
+function autoLoad(){
+  const t = C.t;
+  C.boxes.forEach(b=>{ b.x=-1; b.y=-1; });
+  // 무거운 것부터 가운데(날개 근처)에, 번갈아 앞뒤로
+  const order = C.boxes.slice().sort((a,b)=>b.weight-a.weight);
+  const mid = Math.floor(t.hw/2);
+  order.forEach((b,i)=>{
+    const dirs = [];
+    for(let d=0; d<=t.hw; d++){ dirs.push(mid+d); dirs.push(mid-d); }
+    for(const x of dirs){
+      let placed=false;
+      for(let y=t.hh-b.h; y>=0; y--){
+        if(fits(b,x,y)){ b.x=x; b.y=y; placed=true; break; }
+      }
+      if(placed) break;
+    }
+    const tot = cargoTotals();
+    if(tot.over){ b.x=-1; b.y=-1; }
+  });
+  layoutTray();
+  toast('알아서 실었어! 마음에 안 들면 직접 옮겨.');
+}
+function drawCargoScreen(){
+  const t = C.t, g = holdGeom(), tr = trayGeom(), tot = cargoTotals();
+  // 배경
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#12294a'); sky.addColorStop(1,'#081627');
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 20px sans-serif';
+  ctx.fillText(`서울 → ${C.route.to}   손님 ${C.pax}명 태움`, 24, 84);
+
+  // 위쪽에 작은 비행기 그림 — 실은 짐이 배 속에 보인다
+  const pl = clamp(W*0.36, 280, 520);
+  drawPlaneSide(W*0.5, Math.round(H*0.34)-62, pl, t,
+    {gear:true, paxLit:true, hold:C.boxes.filter(b=>b.x>=0), holdW:t.hw, holdH:t.hh});
+
+  // 짐칸 격자
+  ctx.fillStyle='rgba(6,14,26,.88)'; ctx.fillRect(g.x0, g.y0, g.gw, g.gh);
+  ctx.strokeStyle='#4a6d9e'; ctx.lineWidth=3; ctx.strokeRect(g.x0, g.y0, g.gw, g.gh);
+  ctx.strokeStyle='rgba(120,160,210,.25)'; ctx.lineWidth=1;
+  for(let x=1;x<t.hw;x++){ ctx.beginPath(); ctx.moveTo(g.x0+x*g.cell,g.y0); ctx.lineTo(g.x0+x*g.cell,g.y0+g.gh); ctx.stroke(); }
+  for(let y=1;y<t.hh;y++){ ctx.beginPath(); ctx.moveTo(g.x0,g.y0+y*g.cell); ctx.lineTo(g.x0+g.gw,g.y0+y*g.cell); ctx.stroke(); }
+  // 좋은 무게중심 구역 표시
+  ctx.fillStyle='rgba(90,230,140,.13)';
+  ctx.fillRect(g.x0+g.gw*0.38, g.y0, g.gw*0.24, g.gh);
+  ctx.fillStyle='#9fe6bb'; ctx.font='13px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('날개 위 — 무거운 짐은 여기!', g.x0+g.gw*0.5, g.y0+g.gh+38);
+  ctx.textAlign='left';
+  ctx.fillStyle='#8fa6c6'; ctx.font='14px sans-serif';
+  ctx.fillText('◀ 앞(조종석)', g.x0, g.y0+g.gh+20);
+  ctx.textAlign='right'; ctx.fillText('뒤(꼬리) ▶', g.x0+g.gw, g.y0+g.gh+20); ctx.textAlign='left';
+
+  // 실린 상자
+  C.boxes.forEach(b=>{ if(b.x>=0 && C.drag!==b) drawBox(b, g.x0+b.x*g.cell, g.y0+b.y*g.cell, g.cell); });
+  // 대기 상자
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 16px sans-serif';
+  ctx.fillText('아직 못 실은 짐', 24, tr.y0-12);
+  C.boxes.forEach(b=>{ if(b.x<0 && C.drag!==b) drawBox(b, b.tx, b.ty, tr.cell); });
+
+  // 무게 / 무게중심 막대
+  const bx = W-306, by = 78, bw = 282;
+  ctx.fillStyle='rgba(8,20,38,.92)'; roundRect(bx, by, bw, 132, 12); ctx.fill();
+  ctx.strokeStyle='#2d4a7a'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='15px sans-serif';
+  ctx.fillStyle = tot.over ? '#ff8080' : '#eaf2ff';
+  ctx.fillText(`무게 ${Math.round(tot.total)} / ${t.maxW} ${tot.over?'너무 무거워!':''}`, bx+14, by+26);
+  const wr = clamp(tot.total/t.maxW,0,1.4);
+  ctx.fillStyle='#12294a'; ctx.fillRect(bx+14, by+34, bw-28, 12);
+  ctx.fillStyle = tot.over?'#e05555':(wr>0.85?'#ffb454':'#4bd07a');
+  ctx.fillRect(bx+14, by+34, (bw-28)*Math.min(1,wr), 12);
+
+  ctx.fillStyle='#eaf2ff'; ctx.fillText('앞뒤 균형(무게중심)', bx+14, by+72);
+  const mx0 = bx+14, mw = bw-28, my0 = by+82;
+  ctx.fillStyle='#12294a'; ctx.fillRect(mx0, my0, mw, 16);
+  ctx.fillStyle='rgba(75,208,122,.55)'; ctx.fillRect(mx0+mw*0.40, my0, mw*0.22, 16);
+  const good = tot.cg>=0.40 && tot.cg<=0.62;
+  ctx.fillStyle = good ? '#7be08a' : '#ff8080';
+  ctx.fillRect(mx0+mw*clamp(tot.cg,0,1)-3, my0-4, 6, 24);
+  ctx.font='14px sans-serif';
+  ctx.fillText(good?'딱 좋아! ✔':(tot.cg<0.40?'앞으로 너무 쏠렸어':'뒤로 너무 쏠렸어'), bx+14, by+122);
+  ctx.fillStyle='#ffd23f'; ctx.textAlign='right';
+  ctx.fillText('짐 값 '+money(tot.pay), bx+bw-14, by+122); ctx.textAlign='left';
+
+  // 끌고 있는 상자
+  if(C.drag){
+    const b = C.drag;
+    const cell = (b.x>=0||C.fromHold) ? g.cell : tr.cell;
+    const gx = Math.round((C.mx - C.dragDX - g.x0)/g.cell), gy = Math.round((C.my - C.dragDY - g.y0)/g.cell);
+    if(fits(b,gx,gy)){
+      ctx.fillStyle='rgba(120,255,170,.25)';
+      ctx.fillRect(g.x0+gx*g.cell, g.y0+gy*g.cell, b.w*g.cell, b.h*g.cell);
+    }
+    ctx.save(); ctx.globalAlpha=0.88;
+    drawBox(b, C.mx-C.dragDX, C.my-C.dragDY, g.cell);
+    ctx.restore();
+  }
+}
+function drawBox(b, x, y, cell){
+  const w = b.w*cell, h = b.h*cell;
+  ctx.fillStyle = b.col; roundRect(x+2, y+2, w-4, h-4, 5); ctx.fill();
+  ctx.strokeStyle = shade(b.col,-60); ctx.lineWidth=2; ctx.stroke();
+  // 상자 띠
+  ctx.fillStyle='rgba(0,0,0,.13)';
+  ctx.fillRect(x+2, y+h*0.45, w-4, Math.max(3,h*0.10));
+  ctx.fillRect(x+w*0.45, y+2, Math.max(3,w*0.10), h-4);
+  ctx.fillStyle='#22303f';
+  ctx.font='bold '+Math.max(10, Math.min(15, cell*0.30))+'px sans-serif';
+  ctx.fillText(b.n, x+7, y+16, w-12);
+  ctx.font=Math.max(9, Math.min(13, cell*0.25))+'px sans-serif';
+  ctx.fillText(b.weight+'kg  💰'+b.pay, x+7, y+h-7, w-12);
+}
+function cargoDown(mx,my){
+  const g = holdGeom(), tr = trayGeom();
+  for(let i=C.boxes.length-1;i>=0;i--){
+    const b = C.boxes[i];
+    if(b.x>=0){
+      const x=g.x0+b.x*g.cell, y=g.y0+b.y*g.cell;
+      if(mx>=x&&mx<=x+b.w*g.cell&&my>=y&&my<=y+b.h*g.cell){
+        C.drag=b; C.dragDX=mx-x; C.dragDY=my-y; C.fromHold=true; b.px=b.x; b.py=b.y; b.x=-1; return;
+      }
+    }else{
+      const x=b.tx, y=b.ty;
+      if(mx>=x&&mx<=x+b.w*tr.cell&&my>=y&&my<=y+b.h*tr.cell){
+        C.drag=b; C.dragDX=(mx-x)*(g.cell/tr.cell); C.dragDY=(my-y)*(g.cell/tr.cell); C.fromHold=false; return;
+      }
+    }
+  }
+}
+function cargoUp(){
+  if(!C.drag) return;
+  const b = C.drag, g = holdGeom();
+  const gx = Math.round((C.mx - C.dragDX - g.x0)/g.cell), gy = Math.round((C.my - C.dragDY - g.y0)/g.cell);
+  if(fits(b,gx,gy)){ b.x=gx; b.y=gy; }
+  else { b.x=-1; b.y=-1; }
+  C.drag=null; layoutTray();
+}
+function tryTakeoff(){
+  const tot = cargoTotals();
+  if(tot.over){ toast('너무 무거워서 못 떠! 짐을 좀 내리자.', 2600); return; }
+  if(tot.cg<0.30 || tot.cg>0.72){
+    toast(tot.cg<0.3?'짐이 앞으로 확 쏠렸어! 다시 놓자.':'짐이 뒤로 확 쏠렸어! 다시 놓자.', 2800); return;
+  }
+  launchFlight();
+}
+
+/* =========================================================================
+   7) 운항 — 기장(자동 조종)이 몰고, 나는 구경만 한다
+   ========================================================================= */
+let F = null;
+const keys = {};
+addEventListener('keydown', e=>{
+  if(e.target && e.target.tagName==='INPUT') return;      // 이름 칸에 글 쓸 땐 건드리지 않는다
+  keys[e.key] = true;
+  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  if(S.screen==='flight'){
+    if(e.key===' ') toggleView();
+    if(e.key==='f'||e.key==='F'||e.key==='ㄹ') cycleSpeed();
+    if(e.key==='ArrowLeft')  watchNext(-1);
+    if(e.key==='ArrowRight') watchNext(1);
+  }
+});
+addEventListener('keyup', e=>{ keys[e.key]=false; });
+
+function toggleView(){
+  if(!F) return;
+  F.view = (F.view==='in') ? 'out' : 'in';
+  buildFlightTools();
+}
+function cycleSpeed(){
+  S.watchSpeed = S.watchSpeed>=4 ? 1 : S.watchSpeed*2;   // 하늘 전체가 같이 빨라진다
+  buildFlightTools();
+}
+function watchNext(dir){
+  const list = S.flights;
+  if(!list.length) return;
+  let i = list.indexOf(F);
+  i = ((i<0?0:i) + dir + list.length) % list.length;
+  watchFlight(list[i]);
+}
+function watchFlight(f){
+  F = f;
+  if(S.screen!=='flight') go('flight'); else buildFlightTools();
+}
+function buildFlightTools(){
+  const tabs = S.flights.map((f,i)=>{
+    const pct = Math.round(clamp(f.dist/f.route.dist,0,1)*100);
+    const on = (f===F);
+    return `<button class="${on?'g':'d'}" data-w="${i}">${on?'👀 ':''}${esc(f.p.nick)}
+      <span style="opacity:.8">· ${f.route.to} ${f.phase==='done'?'도착':pct+'%'}</span></button>`;
+  }).join('');
+  $tools.innerHTML =
+    (F ? `<button class="${F.view==='in'?'g':'d'}" id="vIn">🔍 ${F.view==='in'?'밖에서 보기':'속 들여다보기'}</button>` : '')+
+    `<button class="d" id="vSpd">⏩ 빠르기 ${S.watchSpeed}배</button>`+
+    `<div style="flex:1"></div>`+
+    `<span class="st">✈ 하늘에 ${S.flights.length}대</span>` + tabs +
+    `<div style="flex:1"></div>`+
+    `<button class="d" id="mapB">🗺 지도</button>`+
+    `<button class="d" id="giveUp">🏢 본사로</button>`;
+  const b1 = document.getElementById('vIn'); if(b1) b1.onclick = ()=>{ toggleView(); blurBtn(); };
+  document.getElementById('vSpd').onclick = ()=>{ cycleSpeed(); blurBtn(); };
+  document.getElementById('mapB').onclick = ()=> go('map');
+  document.getElementById('giveUp').onclick = ()=> go('office');
+  $tools.querySelectorAll('[data-w]').forEach(b=> b.onclick=()=>{ watchFlight(S.flights[+b.dataset.w]); blurBtn(); });
+}
+function blurBtn(){ if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+
+/* 짐까지 다 실었으면 하늘로 띄운다 — 여러 대가 동시에 날 수 있다 */
+function launchFlight(){
+  const tot = cargoTotals(), t = C.t, p = C.p, st = seatStats(p);
+  let mood = 82;
+  if(st.toilet < st.needT) mood -= 14;
+  if(!st.galley && C.route.dist > 3000) mood -= 12;
+  if(st.cnt.F+st.cnt.B > st.pax*0.25) mood += 6;
+  mood += MEALS[C.meal].mood;                          // 기내식
+  if(!st.galley && C.meal>0) mood -= 6;                // 주방이 없으면 밥을 못 데운다
+  const need = crewNeed();
+  mood += (C.crew < need) ? -12 : Math.min(10, (C.crew-need)*4);
+  if(C.night) mood += 4;                               // 밤하늘 야경 구경
+  const wLoad = tot.total / t.maxW;
+
+  const f = {
+    t, p, route:C.route, pax:C.pax, cargoPay:tot.pay, cg:tot.cg, load:wLoad,
+    phase:'ground',                 // ground → air → done
+    spd:0, alt:0, pitch:0, thr:0.0, gear:true, vy:0,
+    runX:0, runLen:1400,            // 활주로 (m)
+    dist:0, mood:clamp(mood,20,100), fuel:t.fuel, maxFuel:t.fuel,
+    warp:1, msg:'출발! 기장이 엔진을 켠다', msgT:4,
+    ev:null, evT:0, nextEv:rnd(0.15,0.3), shake:0, crashed:false,
+    landRate:0, result:null, hold:C.boxes.filter(b=>b.x>=0), t0:performance.now(),
+    tilt: (tot.cg-0.51)*2.2, alarm:0, cloud:[], view:'out',
+    seatRows: rowPlan(p, C.pax), walk:0,
+    night: C.night, crew: C.crew, meal: C.meal, svcCost: serviceCost(),
+    emg:null, diverted:false, homeTo:C.route.to
+  };
+  for(let i=0;i<26;i++) f.cloud.push({x:rnd(0,3000), y:rnd(60,H*0.6), s:rnd(0.5,1.6), sp:rnd(0.3,1)});
+  p.flying = true;
+  S.flights.push(f);
+  F = f;
+  go('flight');
+}
+function buildFlight(){
+  $panel.className='hide'; $tools.className='';
+  if(!F || S.flights.indexOf(F)<0) F = S.flights[0] || null;
+  if(!F){ go('office'); return; }
+  buildFlightTools();
+  blurBtn();
+}
+/* 다 끝난 비행기는 잠깐 뒤 하늘에서 지운다 */
+function purgeFlights(){
+  const now = performance.now();
+  for(let i=S.flights.length-1;i>=0;i--){
+    const f = S.flights[i];
+    if(f.phase==='done' && f.doneAt && now > f.doneAt + 2600){
+      S.flights.splice(i,1);
+      if(F===f){
+        F = S.flights[0] || null;
+        if(S.screen==='flight'){ if(F) buildFlightTools(); else go('office'); }
+      }else if(S.screen==='flight') buildFlightTools();
+    }
+  }
+}
+/* 어느 줄에 손님이 몇 명 앉았는지 미리 정해 둔다 (속 들여다보기용) — 층마다 따로 */
+function rowPlan(p, pax){
+  const t = typeOf(p.type), out = {};
+  const decks = decksOf(p);
+  decks.forEach(d=> out[d]=[]);
+  let left = pax;
+  // 좋은 자리부터 손님이 찬다
+  for(const cls of ['F','B','E']){
+    // 층을 번갈아 가며 앞줄부터 채운다 (2층에도 손님이 앉게)
+    const list = [];
+    decks.forEach(d=>{
+      const k = deckSpec(t,d), g = gridOf(p,d); if(!g) return;
+      for(let r=0;r<k.rows;r++){
+        let n=0; for(let c=0;c<k.cols;c++) if(g[r][c]===cls) n++;
+        if(n) list.push({d, r, n});
+      }
+    });
+    list.sort((a,b)=> (a.r-b.r) || (a.d-b.d));
+    list.forEach(it=>{
+      const take = Math.min(left, it.n); left -= take;
+      const e = out[it.d].find(x=>x.r===it.r);
+      if(e){ e.seats += it.n; e.filled += take; if(cls==='F'||(cls==='B'&&e.cls==='E')) e.cls=cls; }
+      else out[it.d].push({r:it.r, cls, seats:it.n, filled:take});
+    });
+  }
+  decks.forEach(d=>{
+    const k = deckSpec(t,d), g = gridOf(p,d); if(!g) return;
+    for(let r=0;r<k.rows;r++) for(let c=0;c<k.cols;c++){
+      const s=g[r][c];
+      if((s==='T'||s==='G') && !out[d].find(x=>x.r===r && x.room)) out[d].push({r, room:s, cls:s, seats:0, filled:0});
+    }
+  });
+  return out;
+}
+function toggleGear(f){
+  if(!f || f.phase==='done') return;
+  f.gear = !f.gear;
+}
+function fmsg(f, m, s){ f.msg = m; f.msgT = s||3; }
+
+/* --------- 자동 조종 (기장) --------- */
+function autoFly(f, dt){
+  const t = f.t, R = f.route, rem = f.rem;
+  const vRot = 180 + f.load*150;
+  const setThr = v => { f.thr += clamp((v - f.thr), -dt*0.9, dt*0.7); f.thr = clamp(f.thr,0,1); };
+  const setPitch = v => { f.pitch += clamp((v - f.pitch), -dt*0.8, dt*0.8); f.pitch = clamp(f.pitch,-0.55,0.65); };
+
+  if(f.phase === 'ground'){
+    setThr(1);
+    setPitch(f.spd > vRot ? 0.5 : 0);
+    f.gear = true;
+    if(f.spd > vRot*0.7 && !f.saidRot){ f.saidRot = true; fmsg(f, 'V1... 로테이션! 기수를 든다', 3); }
+    return;
+  }
+  /* 목표 높이 */
+  let cruiseAlt = t.range > 9000 ? 11500 : (t.range > 4000 ? 10500 : 6500);
+  if(R.dist < 700) cruiseAlt = 5500;
+  let targetAlt = (rem < 170) ? f.wantAlt : cruiseAlt;
+  let targetSpd = t.vmax*0.94;
+  if(f.ev==='난기류') targetSpd = t.vmax*0.62;
+  if(f.ev==='새떼' && f.alt>1800 && f.alt<4500) targetAlt = Math.max(targetAlt, 5200);
+  if(f.ev==='폭풍우') targetAlt = Math.max(targetAlt, 9200);
+  if(rem < 60) targetSpd = Math.max(vRot*1.25, t.vmax*0.42);
+  if(rem < 12) targetSpd = Math.max(vRot*1.02, t.vmax*0.34);
+
+  /* 착륙 직전엔 살살 (플레어) */
+  let wantVy = clamp((targetAlt - f.alt)*0.55, -210, 240);
+  if(rem < 12 && f.alt < 140) wantVy = -(14 + f.alt*0.16);
+  if(f.alt < 12 && rem < 6) wantVy = -8;
+
+  const liftF = Math.max(0.25, clamp((f.spd - vRot*0.72)/(vRot*0.5), 0, 1.7));
+  setPitch(clamp(wantVy/(260*liftF), -0.5, 0.6));
+  setThr(clamp(0.25 + (targetSpd - f.spd)*0.012, 0, 1));
+
+  /* 바퀴 */
+  const wantGear = (f.alt < 250 && f.phase==='air') || rem < 12;
+  if(wantGear !== f.gear && f.alt > 20){
+    f.gear = wantGear;
+    fmsg(f, wantGear ? '바퀴 내림 — 착륙 준비' : '바퀴 접음', 2);
+  }
+}
+
+function updateFlight(f, dt){
+  if(!f || f.phase==='done') return;
+  const t = f.t, R = f.route;
+
+  /* 남은 거리와 알맞은 높이를 먼저 구하고 → 기장이 조종한다 */
+  f.rem = R.dist - f.dist;
+  f.wantAlt = clamp((f.rem-0.8)*300, 0, 12000);
+  autoFly(f, dt);
+
+  /* 속도 — 엔진을 최대로 하면 그 비행기의 가장 빠른 속도까지 올라간다 */
+  const pmax = t.vmax * 0.34 * (1 - f.load*0.30);
+  const power = f.thr * pmax;
+  const drag = pmax * (f.spd*f.spd)/(t.vmax*t.vmax) + (f.gear ? 14 : 0);
+  f.spd = clamp(f.spd + (power - drag)*dt*0.17, 0, t.vmax*1.06);
+
+  /* 뜨는 힘 */
+  const vRot = 180 + f.load*150;                 // 이 속도는 넘어야 뜬다
+  const liftF = clamp((f.spd - vRot*0.72)/(vRot*0.5), 0, 1.7);
+  const wantVy = f.pitch * 260 * liftF;          // 올라가고 내려가는 빠르기
+  f.vy += (wantVy - f.vy) * clamp(dt*2.2, 0, 1);
+  if(f.spd < vRot*0.60 && f.alt>10){             // 너무 느리면 실속
+    f.vy -= 190*dt; f.alarm = 1;
+    if(f.msgT<=0) fmsg(f, '속도가 너무 느려! 기장이 엔진을 올린다', 2);
+  } else f.alarm = Math.max(0, f.alarm-dt);
+
+  /* 시간 압축 — 하늘 높이 안정적으로 날면 빨리 감기 (공항 가까이 오면 다시 보통 속도) */
+  const rem = f.rem;
+  const cruising = f.alt>400 && Math.abs(f.vy)<260 && rem > 2.5 && !f.ev;
+  let target = cruising ? clamp(R.dist/6, 20, 700) : 1;
+  if(rem < 170) target = Math.min(target, 25);    // 공항이 가까우면 천천히
+  if(rem < 170 && f.alt > f.wantAlt + 800) target = Math.min(target, 8);  // 내려올 시간을 준다
+  if(rem < 12)  target = Math.min(target, 2);     // 착륙 접근은 거의 제 속도로
+  if(rem < 2.5 || f.alt < 260) target = 1;        // 내려앉는 순간은 제 속도로
+  f.warp += (target - f.warp) * clamp(dt*1.4, 0, 1);
+
+  /* 고도 */
+  f.alt = Math.max(0, f.alt + f.vy*dt*(f.warp>3?3:1));
+  if(f.alt > 13000){ f.alt = 13000; f.vy = Math.min(f.vy,0); if(f.msgT<=0) fmsg(f, '너무 높아! 공기가 얇아.',2); }
+
+  /* 거리 — 빨리 감는 중이라도 공항을 확 지나치지 않게 막는다 */
+  let km = f.spd/3600 * dt * f.warp;
+  // 빨리 감는 중에 공항을 건너뛰지 않게 (배속이 2 아래로 내려오면 이 제한은 풀린다)
+  if(f.warp > 2.5) km = Math.min(km, Math.max(0, rem - 11));
+  if(f.alt>3 || f.dist>0) f.dist += km;
+  if(f.alt < 5) f.runX += f.spd/3.6 * dt;         // 활주로에서 달린 거리(m)
+
+  /* 기름 — 엔진을 계속 최대로 켜도 '갈 수 있는 거리'보다는 조금 더 갈 수 있게 */
+  f.fuel -= ((0.35 + f.thr)/1.5) * (t.fuel/t.range) * km;
+  if(f.fuel < f.maxFuel*0.25 && !f.lowWarn){
+    f.lowWarn = true; fmsg(f, '기름이 얼마 안 남았어! 기장이 엔진을 아껴 쓴다', 4);
+  }
+  if(f.fuel <= 0){
+    f.fuel = 0; f.thr = 0;
+    if(!f.dry){ f.dry=true; fmsg(f, '기름이 다 떨어졌어!! 활공해서 내려앉자', 4); }
+  }
+
+  /* 땅과의 관계 */
+  const overRunway = (f.dist < f.runLen/1000) || (f.dist > R.dist - 0.8);
+  if(f.alt <= 0.5){
+    f.alt = 0;
+    if(f.phase==='air'){                          // 착지!
+      if(f.dist < 3){                             // 출발 활주로에 도로 내려앉음
+        f.phase='ground'; f.vy=0; fmsg(f, '다시 활주로에 내려앉았어! 더 빨리 달려 보자', 3);
+      }else{
+        landed(f); return;
+      }
+    }
+    if(f.vy<0) f.vy = 0;
+    if(!overRunway && f.dist>3){ crash(f, '땅에 부딪혔어!'); return; }
+    // 지상 활주
+    if(f.runX > f.runLen && f.spd < vRot && f.phase==='ground'){
+      crash(f, '활주로가 끝났는데 못 떴어! 너무 무거웠나 봐');
+      return;
+    }
+  }
+  if(f.phase==='ground' && f.alt > 12){
+    f.phase='air'; fmsg(f, '떴다!! 이제 하늘로 올라간다', 3);
+  }
+
+  /* 비상 상황 — 가끔 엔진이 멈추거나 손님이 아프다 → 가까운 공항으로 */
+  if(f.phase==='air' && !f.emg && !f.diverted && f.emgRoll===undefined){
+    f.emgRoll = (Math.random() < 0.07) ? rnd(0.30, 0.62) : 9;   // 언제 터질지 (거의 안 난다)
+  }
+  if(f.phase==='air' && !f.emg && f.dist/R.dist > f.emgRoll && f.rem > 260){
+    f.emg = (Math.random()<0.3) ? '엔진 고장' : '아픈 손님';   // 엔진 고장은 아주 드물게
+    f.diverted = true;
+    const near = Math.round(f.dist + 190);
+    f.route = { to:'가까운 공항', dist:near, land:70, demand:R.demand };
+    f.told = false; f.told1 = true; f.evCount = 3;              // 더 이상 날씨는 없다
+    fmsg(f, '🚨 '+f.emg+'! 가까운 공항으로 비상 착륙한다', 6);
+    f.mood -= (f.emg==='엔진 고장') ? 16 : 8;
+  }
+  if(f.emg==='엔진 고장'){                    // 엔진 하나가 죽으면 힘이 준다
+    f.thr = Math.min(f.thr, 0.72);
+    if(f.alt > 7200){ f.vy = Math.min(f.vy, -30); }
+  }
+
+  /* 이벤트(날씨/새) */
+  if(f.phase==='air' && !f.ev && f.dist/R.dist > f.nextEv && f.dist < R.dist*0.75 && (f.evCount||0) < 3){
+    f.evCount = (f.evCount||0) + 1;
+    const kinds = ['난기류','새떼','폭풍우'];
+    f.ev = kinds[Math.floor(rnd(0,kinds.length))];
+    f.evT = rnd(7,12);
+    f.nextEv = f.dist/R.dist + rnd(0.2,0.4);
+    if(f.ev==='난기류') fmsg(f, '난기류! 기장이 속도를 줄인다', 4);
+    if(f.ev==='새떼')   fmsg(f, '새떼다! 고도를 바꿔서 피한다', 4);
+    if(f.ev==='폭풍우') fmsg(f, '폭풍우! 더 높이 올라가서 넘어간다', 4);
+  }
+  if(f.ev){
+    f.evT -= dt;
+    f.shake = 1;
+    if(f.ev==='난기류' && f.spd > t.vmax*0.72) f.mood -= dt*2.5;
+    if(f.ev==='새떼'){
+      if(f.alt>2000 && f.alt<4200){ f.mood -= dt*2; f.p.wearAdd = (f.p.wearAdd||0)+dt*1.5; }
+    }
+    if(f.ev==='폭풍우'){
+      if(f.alt < 8000){ f.mood -= dt*2.5; f.vy += Math.sin(performance.now()/120)*40*dt; }
+    }
+    if(f.evT<=0){ f.ev=null; f.shake=0; fmsg(f, '지나갔다! 잘했어', 2); }
+  }
+  if(Math.abs(f.pitch)>0.62 && f.alt>200) f.mood -= dt*0.6;          // 너무 험하게 몰면 무서워한다
+  else if(!f.ev && f.alt>3000 && Math.abs(f.pitch)<0.25) f.mood += dt*0.7;  // 편안하게 날면 기분이 좋아진다
+  f.mood = clamp(f.mood, 0, 100);
+
+  /* 도착지 안내 */
+  if(f.phase==='air' && rem < 150 && !f.told1){
+    f.told1 = true; fmsg(f, '슬슬 내려갈 준비 — 손님들이 창밖을 본다', 5);
+  }
+  if(f.phase==='air' && rem < 15 && !f.told){
+    f.told = true; fmsg(f, R.to+' 공항이 보인다! 착륙 준비', 5);
+  }
+  if(f.dist > R.dist + 2.5 && f.alt > 3){         // 지나쳤으면 한 바퀴 돌아서 다시
+    f.dist = R.dist - 9; f.told = false;
+    fmsg(f, '한 바퀴 빙 돌아서 다시 내려온다', 4);
+  }
+  if(f.msgT>0) f.msgT -= dt;
+}
+function landed(f){
+  const R = f.route;
+  // 기장은 잘 몰지만, 짐을 앞뒤로 쏠리게 실었거나 너무 무거우면 착륙이 거칠어진다
+  const hard = Math.abs(f.vy) + Math.abs(f.cg-0.51)*300 + Math.max(0, f.load-0.88)*260;
+  f.landRate = hard;
+  if(f.dist < R.dist - 1.2){ crash(f, '공항이 아닌 데 내렸어!'); return; }
+  if(!f.gear){ crash(f, '바퀴를 안 내리고 착륙했어!'); return; }
+  if(hard > 150 || f.spd > f.t.vmax*0.68){ crash(f, '너무 세게 부딪혔어!'); return; }
+  let grade, bonus;
+  if(hard < 38 && f.spd < f.t.vmax*0.50){ grade='완벽한 착륙!'; bonus=1.22; f.mood+=8; }
+  else if(hard < 80){ grade='좋은 착륙'; bonus=1.08; f.mood+=3; }
+  else { grade='쿵! 거친 착륙'; bonus=0.94; f.mood-=12; f.p.wearAdd=(f.p.wearAdd||0)+8; }
+  finish(f, grade, bonus, false);
+}
+function crash(f, why){
+  f.crashed = true;
+  finish(f, why, 0, true);
+}
+function finish(f, grade, bonus, bad){
+  f.phase='done';
+  const R = f.route, p = f.p, t = f.t, st = seatStats(p);
+  f.mood = clamp(f.mood,0,100);
+  const moodF = 0.55 + f.mood/100*0.6;
+  const distF = 0.80 + R.dist/3000;
+  let ticket = 0;
+  if(!bad){
+    // 자리 종류별로 요금이 다르다 — 좋은 자리부터 손님이 찬다
+    const order = [['F',SEAT.F.fare],['B',SEAT.B.fare],['E',SEAT.E.fare]];
+    let left = f.pax;
+    order.forEach(([k,fare])=>{
+      const n = Math.min(left, st.cnt[k]||0);
+      ticket += n * fare * distF; left -= n;
+    });
+    ticket = Math.round(ticket * moodF * bonus);
+  }
+  const dv = f.diverted ? (f.emg==='아픈 손님' ? 0.72 : 0.55) : 1;   // 비상 착륙이면 요금을 다 못 받는다
+  ticket = Math.round(ticket * dv);
+  const cargo = bad ? 0 : Math.round(f.cargoPay * bonus * (f.diverted?0.35:1));
+  const fuelUsed = Math.max(0, f.maxFuel - f.fuel);
+  const fuelCost = Math.round(fuelUsed * 1.6 + R.dist*0.02);
+  const landFee = bad ? 0 : R.land;
+  const damage  = bad ? Math.round(t.price*0.10) : 0;
+  const wearAdd = (p.wearAdd||0) + R.dist/900 + (bad?30:0);
+  p.wearAdd = 0;
+  p.wear = clamp((p.wear||0) + wearAdd, 0, 100);
+  const svc = f.svcCost || 0;
+  const net = ticket + cargo - fuelCost - landFee - damage - svc;
+  S.money = Math.max(0, S.money + net);           // 빚은 안 지게
+  S.rep = clamp(S.rep + (bad ? -9 : (f.diverted ? 2 : (f.mood-55)/9)), 5, 100);
+  S.day++;
+  p.flying = false;
+  f.doneAt = performance.now();
+  if(f.diverted && !bad) grade = '🚨 무사히 비상 착륙! ('+f.emg+')';
+  f.result = { grade, bad, ticket, cargo, fuelCost, landFee, damage, svc, net,
+               mood:Math.round(f.mood), to:R.to, nick:p.nick, pax:f.pax, planeIdx:S.planes.indexOf(p),
+               diverted:f.diverted, emg:f.emg, night:f.night };
+  S.lastResult = f.result;
+  S.arrivals.unshift(f.result); if(S.arrivals.length>4) S.arrivals.pop();
+  if(F === f && S.screen==='flight'){
+    setTimeout(()=>{ if(S.screen==='flight') go('result'); }, 1400);      // 보고 있던 비행기면 결산 화면
+  }else{
+    toast((bad?'😖 ':'🎉 ')+p.nick+' '+R.to+' 도착 — '+(net>=0?'+':'')+money(net), 3200);
+  }
+}
+
+/* --------- 운항 그림 --------- */
+function drawFlight(){
+  if(F.view==='in'){ drawCutaway(); drawFlightHud(); return; }
+  const t = F.t, R = F.route, night = !!F.night;
+  const altF = clamp(F.alt/12000, 0, 1);
+  // 하늘
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  if(night){
+    sky.addColorStop(0, '#01040d');
+    sky.addColorStop(0.55, mix('#0a1636','#04091c', altF));
+    sky.addColorStop(1, mix('#25406e','#0b1428', altF));
+  }else{
+    sky.addColorStop(0, mix('#0b1a3a','#000814', altF));
+    sky.addColorStop(0.55, mix('#5aa9e6','#1b3a6b', altF));
+    sky.addColorStop(1, mix('#bfe3ff','#2a4d7a', altF));
+  }
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+  if(night || altF>0.55){                   // 밤이거나 높이 오르면 별
+    const a = night ? 0.85 : (altF-0.55)*1.6;
+    for(let i=1;i<(night?150:70);i++){
+      const bx=(i*7919)%W, by=(i*104729)%Math.round(H*(night?0.8:0.55));
+      ctx.fillStyle='rgba(255,255,255,'+(a*(0.4+((i*37)%10)/16))+')';
+      ctx.fillRect(bx, by, (i%13===0)?3:2, (i%13===0)?3:2);
+    }
+  }
+  if(night){                                // 달
+    ctx.fillStyle='rgba(240,245,255,.95)'; ctx.beginPath(); ctx.arc(W*0.82, 120, 32, 0, 7); ctx.fill();
+    ctx.fillStyle=mix('#01040d','#0a1636',0.5); ctx.beginPath(); ctx.arc(W*0.82-13, 112, 28, 0, 7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.10)'; ctx.beginPath(); ctx.arc(W*0.82, 120, 52, 0, 7); ctx.fill();
+  }else{                                    // 해
+    ctx.fillStyle='rgba(255,240,180,.9)'; ctx.beginPath();
+    ctx.arc(W*0.82, 120, 34, 0, 7); ctx.fill();
+  }
+
+  const px = W*0.36, py = H*0.56;            // 비행기 화면 위치
+  const groundY = py + clamp((F.alt)*0.055, 0, H) + 50;
+
+  // 구름
+  F.cloud.forEach(c=>{
+    c.x -= (F.spd*0.02*c.sp + 0.3);
+    if(c.x < -300) { c.x = W+rnd(50,900); c.y = rnd(50, H*0.7); }
+    const cy = c.y + F.alt*0.05;
+    if(cy>-100 && cy<H+100) drawCloud(c.x, cy, 70*c.s);
+  });
+
+  // 땅
+  if(groundY < H+80){
+    const gh = H - groundY + 90;
+    ctx.fillStyle = night ? '#0e1c17' : '#2f6b3a'; ctx.fillRect(0, groundY, W, gh);
+    ctx.fillStyle = night ? '#0a1512' : '#285c33';
+    for(let i=0;i<8;i++){
+      const x = ((i*430) - (F.dist*90)%430 + 900)%(W+600) - 300;
+      ctx.beginPath(); ctx.moveTo(x, groundY); ctx.lineTo(x+120, groundY-46); ctx.lineTo(x+240, groundY);
+      ctx.closePath(); ctx.fill();
+    }
+    if(night){                                  // 도시 불빛
+      for(let i=0;i<120;i++){
+        const x = ((i*137) - (F.dist*90)%137 + 2000)%(W+400) - 200;
+        const y = groundY + 6 + (i*53)%Math.max(10, gh-10);
+        ctx.fillStyle = ['#ffd88a','#fff0c0','#9fd8ff'][i%3];
+        ctx.globalAlpha = 0.35 + ((i*29)%10)/14;
+        ctx.fillRect(x, y, 2.5, 2.5);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // 활주로 — 출발지 / 도착지
+    const scale = 0.40;                        // m → px
+    const drawRunway = (worldKm, label)=>{
+      const rx = px + (worldKm - F.dist)*1000*scale;
+      const len = F.runLen*scale;
+      if(rx < -len*2 || rx > W+len) return;
+      ctx.fillStyle='#3b4450'; ctx.fillRect(rx-len*0.1, groundY, len, 26);
+      ctx.fillStyle='#e8eef7';
+      for(let i=0;i<16;i++) ctx.fillRect(rx-len*0.1 + 26 + i*(len/16), groundY+11, len/40, 5);
+      if(night){                                 // 활주로 등불
+        for(let i=0;i<18;i++){
+          const lx = rx-len*0.1 + i*(len/18);
+          ctx.fillStyle='#ffd257'; ctx.beginPath(); ctx.arc(lx, groundY-2, 2.6, 0, 7); ctx.fill();
+          ctx.fillStyle='rgba(255,210,87,.25)'; ctx.beginPath(); ctx.arc(lx, groundY-2, 6, 0, 7); ctx.fill();
+          ctx.fillStyle='#7be08a'; ctx.beginPath(); ctx.arc(lx, groundY+27, 2.2, 0, 7); ctx.fill();
+        }
+      }
+      ctx.fillStyle='#d8e4f5'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(label+' 공항', rx+len*0.45, groundY+50); ctx.textAlign='left';
+      // 터미널
+      const tw = len*0.30, tx = rx+len*0.55;
+      ctx.fillStyle='#7f8fa6'; ctx.fillRect(tx, groundY-42, tw, 42);
+      ctx.fillStyle='#9fb2cc'; ctx.fillRect(tx+8, groundY-34, tw-16, 13);
+      ctx.fillStyle='#5f6d80'; ctx.fillRect(tx+tw*0.45, groundY-66, 9, 26);
+      ctx.fillStyle='#c8d6e8'; ctx.fillRect(tx+tw*0.42, groundY-74, 15, 10);
+    };
+    drawRunway(0, '서울');
+    drawRunway(R.dist, R.to);
+  }
+
+  // 새떼 / 폭풍
+  if(F.ev==='새떼'){
+    for(let i=0;i<9;i++){
+      const bx = W*0.9 - ((performance.now()/8 + i*90)%(W*1.3));
+      const by = py - 40 + Math.sin(performance.now()/300+i)*22 + (F.alt>2000&&F.alt<4200?0:400);
+      ctx.strokeStyle='#20304a'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(bx-9,by); ctx.quadraticCurveTo(bx,by-8,bx+9,by); ctx.stroke();
+    }
+  }
+  if(F.ev==='폭풍우' && F.alt<8000){
+    ctx.fillStyle='rgba(30,40,60,.42)'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(180,205,240,.6)'; ctx.lineWidth=2;
+    for(let i=0;i<80;i++){
+      const x=(i*97 + performance.now()*0.6)%W, y=(i*53 + performance.now()*1.4)%H;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-6,y+16); ctx.stroke();
+    }
+  }
+
+  // 비행기
+  const shake = (F.shake? Math.sin(performance.now()/40)*4 : 0) + (F.alarm?Math.sin(performance.now()/60)*2:0);
+  const L = clamp(W*0.20, 150, 340);
+  drawPlaneSide(px, py+shake, L, t, {
+    rot: -F.pitch*0.42 + F.tilt*0.05, gear:F.gear, paxLit:true, night:night,
+    hold:F.hold, holdW:t.hw, holdH:t.hh });
+  // 엔진 불꽃
+  if(F.thr>0.15 && F.fuel>0){
+    ctx.save(); ctx.translate(px, py+shake); ctx.rotate(-F.pitch*0.42);
+    ctx.fillStyle='rgba(255,190,90,'+(0.3+F.thr*0.5)+')';
+    for(let i=0;i<t.eng/2;i++){
+      const ex = -L*0.03 - i*L*0.13 - L*0.06, ey = L*0.135*0.46 + i*L*0.02;
+      ctx.beginPath(); ctx.ellipse(ex-L*0.03*F.thr, ey, L*0.04*F.thr, L*0.016, 0,0,7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawFlightHud();
+}
+/* --------- 비행기 속 들여다보기 (단면도) — 앞(조종석)이 왼쪽 --------- */
+function drawCutaway(){
+  const t = F.t, p = F.p, rows = t.rows;
+  const two = !!t.pat2;                          // 2층이 있는 비행기
+  const cw = clamp((W-420)/rows, 13, 44);
+  const bodyL = cw*rows;
+  const noseL = clamp(cw*2.6, 70, 150), tailL = clamp(cw*3.0, 80, 190);
+  const totalL = noseL + bodyL + tailL;
+  const x0 = (W-totalL)/2;
+  const cy = Math.round(two ? H*0.62 : H*0.52);  // 아래층 바닥 높이
+  const cabH = clamp(two ? H*0.14 : H*0.17, 66, 122);   // 객실 높이
+  const holH = clamp(H*0.10, 44, 80);            // 짐칸 높이
+  const up = two ? {                             // 2층 정보
+    cabH: cabH*0.86,
+    floorY: cy - cabH - 7,
+    cw: t.deck2 ? (bodyL/t.rows2) : cw,          // A380 은 앞뒤로 쭉, 747 은 앞쪽 혹만
+    rows: t.rows2
+  } : null;
+  const topY = two ? (up.floorY - up.cabH) : (cy - cabH);
+  const shake = F.shake ? Math.sin(performance.now()/45)*3 : 0;
+
+  /* 하늘 배경 */
+  const night = !!F.night;
+  const altF = clamp(F.alt/12000, 0, 1);
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  if(night){
+    sky.addColorStop(0,'#01040d'); sky.addColorStop(0.6,'#0a1636'); sky.addColorStop(1,'#16294a');
+  }else{
+    sky.addColorStop(0, mix('#0b1a3a','#000814', altF));
+    sky.addColorStop(0.6, mix('#5aa9e6','#1b3a6b', altF));
+    sky.addColorStop(1, mix('#bfe3ff','#2a4d7a', altF));
+  }
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+  if(night) for(let i=1;i<120;i++){
+    ctx.fillStyle='rgba(255,255,255,'+(0.3+((i*37)%10)/14)+')';
+    ctx.fillRect((i*7919)%W, (i*104729)%Math.round(H*0.9), 2, 2);
+  }
+  F.cloud.forEach(c=>{
+    c.x -= (F.spd*0.02*c.sp + 0.3);
+    if(c.x < -300){ c.x = W+rnd(50,900); c.y = rnd(60, H*0.8); }
+    drawCloud(c.x, c.y, 80*c.s);
+  });
+
+  ctx.save(); ctx.translate(0, shake);
+  ctx.translate(W/2, cy); ctx.rotate(clamp(F.pitch*0.09, -0.06, 0.06)); ctx.translate(-W/2, -cy);
+
+  /* 동체 껍데기 */
+  const humpEnd = two && !t.deck2 ? x0+noseL+up.cw*up.rows : 0;
+  const bodyPath = ()=>{
+  ctx.beginPath();
+  if(two && t.deck2){                                   // A380 — 앞뒤로 쭉 2층
+    ctx.moveTo(x0+noseL, topY);
+    ctx.lineTo(x0+noseL+bodyL, topY);
+  }else if(two){                                        // 747 — 앞쪽만 볼록한 혹
+    ctx.moveTo(x0+noseL*0.9, cy-cabH);
+    ctx.quadraticCurveTo(x0+noseL, topY, x0+noseL+up.cw*0.7, topY);
+    ctx.lineTo(humpEnd, topY);
+    ctx.quadraticCurveTo(humpEnd+up.cw*1.2, topY+8, humpEnd+up.cw*1.6, cy-cabH);
+    ctx.lineTo(x0+noseL+bodyL, cy-cabH);
+  }else{
+    ctx.moveTo(x0+noseL, cy-cabH);
+    ctx.lineTo(x0+noseL+bodyL, cy-cabH);
+  }
+  ctx.quadraticCurveTo(x0+totalL-cw*0.6, cy-cabH-4, x0+totalL, cy-cabH-tailL*0.42);
+  ctx.lineTo(x0+totalL-6, cy+holH*0.15);
+  ctx.quadraticCurveTo(x0+noseL+bodyL, cy+holH, x0+noseL, cy+holH);
+  ctx.quadraticCurveTo(x0+noseL*0.25, cy+holH*0.85, x0, cy-cabH*0.30);
+  ctx.quadraticCurveTo(x0+noseL*0.35, cy-cabH, x0+noseL, cy-cabH);
+  ctx.closePath();
+  };
+  bodyPath();
+  ctx.fillStyle = '#eef3fa'; ctx.fill();
+  ctx.strokeStyle = '#8ea2c0'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.save(); ctx.clip();
+  ctx.fillStyle = night ? '#e8dcc2' : '#fbfcfe'; ctx.fillRect(x0, topY+9, totalL, cy-topY-9);   // 객실 벽
+  if(two){ ctx.fillStyle = '#c7d2e2'; ctx.fillRect(x0, up.floorY-2, totalL, 5); }  // 2층 바닥
+  ctx.fillStyle = '#1a2942'; ctx.fillRect(x0, cy+3, totalL, holH);          // 짐칸(어둡다)
+  ctx.fillStyle = planeColors().a; ctx.fillRect(x0, cy+holH-9, totalL, 9);  // 배 밑 회사색
+  ctx.restore();
+  // 바닥
+  ctx.fillStyle = '#c7d2e2'; ctx.fillRect(x0+noseL*0.4, cy-2, totalL-noseL*0.4-8, 5);
+  // 천장 짐칸(오버헤드 빈)
+  ctx.fillStyle = '#dde5f0';
+  ctx.fillRect(x0+noseL, cy-cabH+9, bodyL, 12);
+
+  /* 창문 */
+  const winCol = night ? '#0a1024' : mix('#9fd3ff','#0d2044', altF);
+  for(let r=0;r<rows;r++){
+    const wx = x0+noseL+r*cw+cw*0.5;
+    ctx.beginPath(); ctx.ellipse(wx, cy-cabH+30, cw*0.19, cw*0.24, 0,0,7);
+    ctx.fillStyle = winCol; ctx.fill();
+    ctx.strokeStyle='#b8c6da'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  if(two) for(let r=0;r<up.rows;r++){
+    const wx = x0+noseL+r*up.cw+up.cw*0.5;
+    ctx.beginPath(); ctx.ellipse(wx, up.floorY-up.cabH+28, up.cw*0.17, up.cw*0.22, 0,0,7);
+    ctx.fillStyle = winCol; ctx.fill();
+    ctx.strokeStyle='#b8c6da'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  /* 조종석 — 기장 두 명 */
+  const px = x0+noseL*0.55;
+  ctx.fillStyle='#22456e';
+  ctx.beginPath(); ctx.moveTo(x0+8, cy-cabH*0.42); ctx.lineTo(x0+noseL*0.62, cy-cabH*0.70);
+  ctx.lineTo(x0+noseL*0.62, cy-cabH*0.20); ctx.lineTo(x0+14, cy-cabH*0.10); ctx.closePath(); ctx.fill();
+  for(let i=0;i<2;i++) drawPerson(px+i*cw*0.55, cy, cabH*0.44, '#26467a', i===0?'#3b2b22':'#4b3a2c', true);
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 12px sans-serif';
+  ctx.fillText('조종석', x0+noseL*0.35, cy+18);
+
+  /* 자리와 손님 (아래층 → 2층) */
+  (F.seatRows[0]||[]).forEach(row=>{
+    const sx = x0+noseL+row.r*cw;
+    if(row.room==='T'){ drawLavatory(sx, cy, cw, cabH); return; }
+    if(row.room==='G'){ drawGalley(sx, cy, cw, cabH); return; }
+    drawCabinSeat(sx, cy, cw, row, cabH);
+  });
+  if(two) (F.seatRows[1]||[]).forEach(row=>{
+    const sx = x0+noseL+row.r*up.cw;
+    if(row.room==='T'){ drawLavatory(sx, up.floorY, up.cw, up.cabH); return; }
+    if(row.room==='G'){ drawGalley(sx, up.floorY, up.cw, up.cabH); return; }
+    drawCabinSeat(sx, up.floorY, up.cw, row, up.cabH);
+  });
+  if(two){
+    ctx.fillStyle='#ffd23f'; ctx.font='bold 12px sans-serif';
+    ctx.fillText('2층', x0+noseL-26, up.floorY-up.cabH*0.4);
+    ctx.fillStyle='#9fb6d4'; ctx.fillText('아래층', x0+noseL-46, cy-cabH*0.4);
+  }
+
+  /* 승무원 — 카트를 밀고 통로를 오간다 */
+  F.walk += 0.0016*(S.watchSpeed||1);
+  const wpos = (Math.sin(F.walk)*0.5+0.5);
+  const wx = x0+noseL+wpos*(bodyL-cw);
+  drawPerson(wx, cy, cabH*0.62, '#a0246b', '#2c2119', false);
+  ctx.fillStyle='#c9d3e0'; roundRect(wx+cabH*0.22, cy-cabH*0.34, cabH*0.20, cabH*0.34, 3); ctx.fill();
+  ctx.strokeStyle='#8b97a8'; ctx.lineWidth=1; ctx.stroke();
+
+  /* 짐칸 상자 */
+  ctx.save(); bodyPath(); ctx.clip();        // 동체 밖으로 삐져나가지 않게
+  const bw = bodyL/t.hw, bh = (holH-10)/t.hh;
+  F.hold.forEach(b=>{
+    const bx2 = x0+noseL+b.x*bw, by2 = cy+6+b.y*bh;
+    ctx.fillStyle = b.col; roundRect(bx2+1.5, by2+1.5, b.w*bw-3, b.h*bh-3, 3); ctx.fill();
+    ctx.strokeStyle = shade(b.col,-60); ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.14)';
+    ctx.fillRect(bx2+1.5, by2+b.h*bh*0.45, b.w*bw-3, 2.5);
+    if(bw*b.w > 46){
+      ctx.fillStyle='#2a3543'; ctx.font='bold 10px sans-serif';
+      ctx.fillText(b.n, bx2+5, by2+13, b.w*bw-9);
+    }
+  });
+  ctx.restore();
+  ctx.fillStyle='#8fa6c6'; ctx.font='12px sans-serif';
+  ctx.fillText('짐칸', x0+noseL-30, cy+holH*0.6);
+
+  /* 꼬리 날개 */
+  const c2 = planeColors();
+  ctx.beginPath();
+  ctx.moveTo(x0+totalL-cw*1.2, cy-cabH-4);
+  ctx.lineTo(x0+totalL-cw*0.2, topY-tailL*0.75);
+  ctx.lineTo(x0+totalL+cw*0.5, topY-tailL*0.75);
+  ctx.lineTo(x0+totalL+cw*0.2, cy-cabH-tailL*0.30);
+  ctx.closePath(); ctx.fillStyle=c2.a; ctx.fill();
+  ctx.strokeStyle=shade(c2.a,-30); ctx.lineWidth=2; ctx.stroke();
+
+  ctx.restore();
+
+  /* 안내 */
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(6,16,32,.72)'; roundRect(W/2-330, 112, 660, 52, 12); ctx.fill();
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 19px sans-serif';
+  ctx.fillText('🔍 비행기 속 들여다보기      앞(조종석) ◀    ▶ 뒤(꼬리)', W/2, 132);
+  ctx.font='14px sans-serif'; ctx.fillStyle='#a9c0de';
+  ctx.fillText('네가 놓은 자리에 손님이 앉아 있고, 짐칸엔 네가 실은 상자가 들어 있어', W/2, 154);
+  ctx.textAlign='left';
+}
+function drawCabinSeat(x, floorY, w, row, cabH){
+  const cls = row.cls || 'E';
+  const d = SEAT[cls] || SEAT.E;
+  const h = cabH * (cls==='F' ? 0.60 : cls==='B' ? 0.55 : 0.48);   // 의자 높이는 천장에 맞춰서
+  // 등받이(뒤쪽=오른쪽) + 방석 + 다리
+  ctx.fillStyle = d.col;
+  roundRect(x+w*0.60, floorY-h, w*0.32, h, w*0.12); ctx.fill();
+  roundRect(x+w*0.12, floorY-h*0.46, w*0.58, h*0.16, 3); ctx.fill();
+  ctx.fillStyle = shade(d.col,-45);
+  roundRect(x+w*0.66, floorY-h*0.16, w*0.20, h*0.16, 2); ctx.fill();
+  // 손님
+  if(row.filled > 0){
+    drawPerson(x+w*0.36, floorY-h*0.34, Math.min(h, w*2.2), ['#3a6ea8','#a8563a','#3f8f6a','#7a4fa3','#b0893a'][row.r%5],
+      ['#2b2019','#4a3526','#141416','#5a3a1e'][row.r%4], true);
+    if(row.filled>1 && w>22){
+      ctx.fillStyle='#68809e'; ctx.font='bold '+Math.max(9,w*0.34)+'px sans-serif';
+      ctx.fillText('×'+row.filled, x+w*0.04, floorY-h-3);
+    }
+  }
+}
+/* size = 사람 키 기준 크기 */
+function drawPerson(x, floorY, size, shirt, hair, sitting){
+  const hr = size*0.20;
+  const headY = floorY - (sitting ? size*0.62 : size*0.72);
+  ctx.fillStyle = shirt;                                  // 몸
+  roundRect(x-size*0.17, headY+hr*0.72, size*0.34, (sitting? size*0.46 : size*0.56), size*0.10); ctx.fill();
+  ctx.fillStyle = '#f2c9a4';                              // 얼굴
+  ctx.beginPath(); ctx.arc(x, headY, hr, 0, 7); ctx.fill();
+  ctx.fillStyle = hair;                                   // 머리카락
+  ctx.beginPath(); ctx.arc(x, headY-hr*0.20, hr*0.96, Math.PI*1.02, Math.PI*2.02); ctx.fill();
+  ctx.fillStyle = '#2a3140';                              // 눈 (앞=왼쪽을 본다)
+  ctx.beginPath(); ctx.arc(x-hr*0.40, headY+hr*0.06, Math.max(1, hr*0.14), 0, 7); ctx.fill();
+}
+function drawLavatory(x, floorY, w, cabH){
+  const top = floorY-cabH+24;
+  ctx.fillStyle = '#dff1ef'; ctx.fillRect(x+1, top, w-2, floorY-top);
+  ctx.strokeStyle = '#6fd3c7'; ctx.lineWidth=2; ctx.strokeRect(x+1, top, w-2, floorY-top);
+  ctx.fillStyle = '#bfe6e1';                                  // 변기
+  ctx.fillRect(x+w*0.28, floorY-w*0.52, w*0.44, w*0.34);
+  ctx.fillRect(x+w*0.22, floorY-w*0.18, w*0.56, w*0.16);
+  ctx.fillStyle = '#3f7f79'; ctx.font='bold 10px sans-serif';
+  ctx.fillText('화장실', x+2, top+13, w-4);
+}
+function drawGalley(x, floorY, w, cabH){
+  const top = floorY-cabH+24;
+  ctx.fillStyle = '#ffe6d3'; ctx.fillRect(x+1, top, w-2, floorY-top);
+  ctx.strokeStyle = '#ff9a5c'; ctx.lineWidth=2; ctx.strokeRect(x+1, top, w-2, floorY-top);
+  ctx.fillStyle = '#e0b391';
+  for(let i=0;i<3;i++) ctx.fillRect(x+w*0.16, top+18+i*(w*0.24), w*0.68, w*0.13);
+  ctx.fillStyle = '#a05a2c'; ctx.font='bold 10px sans-serif';
+  ctx.fillText('주방', x+2, top+13, w-4);
+}
+
+function drawCloud(x,y,s){
+  ctx.fillStyle='rgba(255,255,255,.72)';
+  ctx.beginPath();
+  ctx.arc(x, y, s*0.5, 0, 7); ctx.arc(x+s*0.45, y+s*0.08, s*0.36, 0, 7);
+  ctx.arc(x-s*0.42, y+s*0.10, s*0.32, 0, 7); ctx.arc(x+s*0.10, y-s*0.22, s*0.34, 0, 7);
+  ctx.fill();
+}
+function drawFlightHud(){
+  const t = F.t, R = F.route;
+  // 위쪽 진행 막대
+  const bx=W*0.5-260, bw=520, by=64;
+  ctx.fillStyle='rgba(6,16,32,.8)'; roundRect(bx-10, by-10, bw+20, 44, 12); ctx.fill();
+  ctx.fillStyle='#12294a'; ctx.fillRect(bx, by+8, bw, 12);
+  ctx.fillStyle='#4bd07a'; ctx.fillRect(bx, by+8, bw*clamp(F.dist/R.dist,0,1), 12);
+  ctx.fillStyle='#eaf2ff'; ctx.font='14px sans-serif';
+  ctx.fillText('서울', bx, by+4); ctx.textAlign='right'; ctx.fillText(R.to, bx+bw, by+4); ctx.textAlign='left';
+  ctx.fillStyle='#ffd23f'; ctx.font='bold 14px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(Math.round(F.dist)+' / '+money(R.dist)+'km'+(F.warp>3?'   ⏩ 빨리 감는 중':''), bx+bw/2, by+34);
+  ctx.textAlign='left';
+
+  // 왼쪽 계기
+  const gx=18, gy=120;
+  ctx.fillStyle='rgba(6,16,32,.82)'; roundRect(gx, gy, 210, 232, 12); ctx.fill();
+  ctx.strokeStyle='#2d4a7a'; ctx.lineWidth=2; ctx.stroke();
+  const bar=(i,label,val,max,col,mark)=>{
+    const y=gy+22+i*34;
+    ctx.fillStyle='#c9d9ef'; ctx.font='13px sans-serif'; ctx.fillText(label, gx+12, y);
+    ctx.fillStyle='#12294a'; ctx.fillRect(gx+12, y+5, 186, 11);
+    ctx.fillStyle=col; ctx.fillRect(gx+12, y+5, 186*clamp(val/max,0,1), 11);
+    if(mark!==undefined){                       // 노란 눈금 = 알맞은 높이
+      ctx.fillStyle='#ffd23f';
+      ctx.fillRect(gx+12+186*clamp(mark/max,0,1)-2, y+2, 4, 17);
+    }
+    ctx.fillStyle='#fff'; ctx.textAlign='right';
+    ctx.fillText(typeof val==='number'?Math.round(val):val, gx+196, y); ctx.textAlign='left';
+  };
+  const vRot = 180 + F.load*140;
+  bar(0,'속도 (뜨려면 '+Math.round(vRot)+')', F.spd, t.vmax, F.spd<vRot?'#ffb454':'#4bd07a');
+  bar(1,'높이 (m)', F.alt, 13000, '#68b6ff', (F.rem<170?F.wantAlt:undefined));
+  bar(2,'기름', F.fuel, F.maxFuel, F.fuel<F.maxFuel*0.2?'#e05555':'#ffd23f');
+  bar(3,'엔진 세기', F.thr*100, 100, '#ff9a5c');
+  bar(4,'손님 기분', F.mood, 100, F.mood<40?'#e05555':'#7be08a');
+  // 바퀴 등
+  ctx.fillStyle = F.gear?'#4bd07a':'#5a6a80';
+  roundRect(gx+12, gy+178, 60, 12, 6); ctx.fill();
+  ctx.fillStyle='#0b1526'; ctx.font='bold 11px sans-serif'; ctx.fillText('바퀴', gx+28, gy+188);
+  // 오르내림
+  ctx.fillStyle='#c9d9ef'; ctx.font='13px sans-serif';
+  ctx.fillText((F.vy>8?'▲ 올라가는 중':F.vy<-8?'▼ 내려가는 중':'— 수평'), gx+86, gy+188);
+  ctx.fillStyle='#ffd23f'; ctx.font='bold 15px sans-serif';
+  ctx.fillText('🧑‍✈️ '+flightPhaseName(), gx+12, gy+220);
+
+  // 안내 문구
+  if(F.msgT>0){
+    ctx.font='bold 20px sans-serif';
+    const w = ctx.measureText(F.msg).width + 40;
+    ctx.fillStyle='rgba(10,24,44,.92)'; roundRect(W/2-w/2, H-150, w, 44, 12); ctx.fill();
+    ctx.strokeStyle='#ffd23f'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#ffe89a'; ctx.textAlign='center'; ctx.fillText(F.msg, W/2, H-120); ctx.textAlign='left';
+  }
+  if(F.alarm>0){
+    ctx.fillStyle='rgba(220,60,60,'+(0.25+Math.sin(performance.now()/90)*0.15)+')';
+    ctx.fillRect(0,0,W,H);
+  }
+  if(F.ev){
+    ctx.fillStyle='#ff8080'; ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('⚠ '+F.ev, W/2, 140); ctx.textAlign='left';
+  }
+  if(F.phase==='done'){
+    ctx.fillStyle='rgba(4,10,20,.7)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle= F.crashed?'#ff8080':'#7be08a'; ctx.font='bold 40px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(F.result?F.result.grade:'', W/2, H/2); ctx.textAlign='left';
+  }
+}
+function flightPhaseName(){
+  if(F.phase==='ground') return F.spd<20 ? '엔진 켜는 중' : '활주로를 달리는 중';
+  if(F.rem < 3)    return '착륙!';
+  if(F.rem < 14)   return '착륙 준비 (바퀴 내림)';
+  if(F.vy > 25)    return '올라가는 중';
+  if(F.vy < -25)   return '내려가는 중';
+  return '순항 중 — 편안하게';
+}
+function mix(a,b,f){
+  const A=parseInt(a.slice(1),16), B=parseInt(b.slice(1),16);
+  const r=Math.round((A>>16)*(1-f)+(B>>16)*f), g=Math.round(((A>>8)&255)*(1-f)+((B>>8)&255)*f),
+        bl=Math.round((A&255)*(1-f)+(B&255)*f);
+  return '#'+((r<<16)|(g<<8)|bl).toString(16).padStart(6,'0');
+}
+
+/* =========================================================================
+   8) 결과
+   ========================================================================= */
+function buildResult(){
+  const r = S.lastResult;
+  if(!r){ go('office'); return; }
+  const p = S.planes[r.planeIdx] || {nick:r.nick, wear:0};
+  $panel.className='';
+  $panel.innerHTML = `
+    <div style="max-width:560px;margin:4vh auto 0">
+      <h2 style="text-align:center">${r.bad?'😖 ':'🎉 '}${esc(r.grade)}</h2>
+      <div class="card">
+        <h3>서울 → ${r.to} · ${esc(r.nick)}</h3>
+        <p>손님 ${r.pax}명 · 기분 ${r.mood}점</p>
+        <p style="margin-top:8px">티켓 값 <b class="ok">+${money(r.ticket)}</b></p>
+        <p>짐 값 <b class="ok">+${money(r.cargo)}</b></p>
+        <p>기름값 <b class="bad">-${money(r.fuelCost)}</b></p>
+        <p>서비스비(승무원·기내식) <b class="bad">-${money(r.svc||0)}</b></p>
+        <p>착륙료 <b class="bad">-${money(r.landFee)}</b></p>
+        ${r.damage?`<p>수리비 <b class="bad">-${money(r.damage)}</b></p>`:''}
+        <p style="font-size:21px;margin-top:10px">합쳐서
+          <b class="${r.net>=0?'ok':'bad'}">${r.net>=0?'+':''}${money(r.net)}</b></p>
+      </div>
+      <div class="card"><p>지금 돈 <b>${money(S.money)}</b> · 평판 <b>${Math.round(S.rep)}</b>
+        · ${esc(p.nick)} 고장 <b>${Math.round(p.wear)}%</b></p></div>
+      <div class="row" style="justify-content:center">
+        <button class="g big" id="again">🛫 또 날기</button>
+        <button class="big" id="home">🏢 본사로</button>
+      </div>
+    </div>`;
+  document.getElementById('again').onclick = ()=>{
+    if(r.planeIdx<0 || !S.planes[r.planeIdx]){ go('office'); return; }
+    S.sel = r.planeIdx; go('route');
+  };
+  document.getElementById('home').onclick  = ()=> go('office');
+  save();
+}
+
+/* =========================================================================
+   9) 꼬리 그리기
+   ========================================================================= */
+const tailView = { col:1, painting:false };
+function buildTail(){
+  if(!S.tail) S.tail = emptyTail();
+  $panel.className='hide'; $tools.className='';
+  $tools.innerHTML =
+    TAILPAL.map((c,i)=>`<button class="tool ${tailView.col===i?'on':''}" data-tc="${i}"
+        style="width:34px;height:30px;background:${c};border:2px solid ${tailView.col===i?'#fff':'#24406e'}"></button>`).join('')
+    + `<button class="tool ${tailView.col<0?'on':''}" data-tc="-1">지우개</button>`
+    + `<div style="flex:1"></div>
+       <button class="${S.nameOn?'g':'d'}" id="nOn">${S.nameOn?'✔ 이름 쓰는 중':'🔤 이름 쓰기'}</button>
+       <button class="${S.tailOn?'g':'d'}" id="tOn">${S.tailOn?'✔ 내 그림 쓰는 중':'내 그림 쓰기'}</button>
+       <button class="d" id="tClr">전부 지우기</button>
+       <button class="g" id="tDone">다 그렸어! ✔</button>`;
+  $tools.querySelectorAll('[data-tc]').forEach(b=> b.onclick=()=>{ tailView.col=+b.dataset.tc; buildTail(); });
+  document.getElementById('tOn').onclick = ()=>{ S.tailOn = !S.tailOn; buildTail(); };
+  document.getElementById('nOn').onclick = ()=>{ S.nameOn = !S.nameOn; buildTail(); };
+  document.getElementById('tClr').onclick = ()=>{ S.tail = emptyTail(); };
+  document.getElementById('tDone').onclick = ()=>{ S.tailOn = true; save(); go('office'); };
+}
+function tailGeom(){
+  const cell = clamp(Math.min((H-230)/TAILH, 44), 20, 44);
+  const gw = cell*TAILW, gh = cell*TAILH;
+  return { cell, gw, gh, x0: Math.round(W*0.30 - gw/2), y0: Math.round(52+40) };
+}
+function drawTailScreen(){
+  const g = tailGeom();
+  ctx.fillStyle='#0d1c33'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 20px sans-serif';
+  ctx.fillText('🎨 꼬리날개에 우리 항공사 마크를 그려 봐', 24, 84);
+  // 격자
+  for(let r=0;r<TAILH;r++) for(let c=0;c<TAILW;c++){
+    const x=g.x0+c*g.cell, y=g.y0+r*g.cell, v=S.tail[r][c];
+    ctx.fillStyle = (v<0) ? ((r+c)%2 ? '#16294a':'#12223e') : TAILPAL[v];
+    ctx.fillRect(x,y,g.cell,g.cell);
+    ctx.strokeStyle='rgba(140,170,210,.22)'; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,g.cell-1,g.cell-1);
+  }
+  // 미리보기 — 진짜 비행기에 붙은 모습
+  const px = W*0.72, py = H*0.52;
+  const on = S.tailOn; S.tailOn = true;                  // 미리보기는 항상 내 그림으로
+  drawPlaneSide(px, py, clamp(W*0.34, 260, 460), TYPES[4], {gear:true, paxLit:true});
+  S.tailOn = on;
+  ctx.fillStyle='#9db4d4'; ctx.font='14px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('이렇게 붙어! (모든 비행기 꼬리에 다 붙는다)', px, py+120); ctx.textAlign='left';
+}
+function tailClick(mx,my){
+  const g = tailGeom();
+  const c = Math.floor((mx-g.x0)/g.cell), r = Math.floor((my-g.y0)/g.cell);
+  if(c<0||r<0||c>=TAILW||r>=TAILH) return;
+  S.tail[r][c] = tailView.col;
+}
+
+/* =========================================================================
+   10) 세계 지도 — 지금 나는 비행기가 다 보인다
+   ========================================================================= */
+function mapGeom(){
+  const top = 52+46, bot = H-70;
+  return { top, bot, cy:(top+bot)/2, hh:(bot-top)/2, cx:W/2, hw:W/2-40 };
+}
+function mapXY(lon, lat){
+  const g = mapGeom();
+  let rel = ((lon - HOME.lon + 540) % 360) - 180;      // 서울이 가운데
+  return { x: g.cx + rel/180*g.hw, y: g.cy - lat/90*g.hh };
+}
+function buildMap(){
+  $panel.className='hide'; $tools.className='';
+  $tools.innerHTML = `<span class="st">🗺 세계 지도 — 지금 하늘에 ${S.flights.length}대</span>
+    <span class="mini">비행기를 누르면 그 비행기를 구경할 수 있어</span>
+    <div style="flex:1"></div>
+    <button class="d" id="mSpd">⏩ 빠르기 ${S.watchSpeed}배</button>
+    <button class="d" id="mBack">🏢 본사로</button>`;
+  document.getElementById('mSpd').onclick = ()=>{ cycleSpeed(); buildMap(); blurBtn(); };
+  document.getElementById('mBack').onclick = ()=> go('office');
+}
+function flightPos(f){
+  const to = CITY[f.route.to] || CITY['가까운 공항'];
+  const a = mapXY(HOME.lon, HOME.lat), b = mapXY(to[0], to[1]);
+  const u = clamp(f.dist/f.route.dist, 0, 1);
+  const mx0 = (a.x+b.x)/2, my0 = (a.y+b.y)/2;
+  const dx = b.x-a.x, dy = b.y-a.y;
+  const ctrl = { x: mx0 - dy*0.13, y: my0 + dx*0.13 };     // 살짝 휜 항로
+  const q = (p0,p1,p2,t)=> (1-t)*(1-t)*p0 + 2*(1-t)*t*p1 + t*t*p2;
+  const x = q(a.x,ctrl.x,b.x,u), y = q(a.y,ctrl.y,b.y,u);
+  const t2 = Math.min(1, u+0.02);
+  const x2 = q(a.x,ctrl.x,b.x,t2), y2 = q(a.y,ctrl.y,b.y,t2);
+  return {x, y, a, b, ctrl, u, ang: Math.atan2(y2-y, x2-x)};
+}
+function drawMapScreen(){
+  const g = mapGeom();
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#071426'); sky.addColorStop(1,'#0d2a44');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#123a5e'; roundRect(20, g.top, W-40, g.bot-g.top, 14); ctx.fill();
+  ctx.strokeStyle='#2d5f8a'; ctx.lineWidth=2; ctx.stroke();
+  ctx.save(); roundRect(20, g.top, W-40, g.bot-g.top, 14); ctx.clip();
+  ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+  for(let lon=-180; lon<=180; lon+=30){ const q=mapXY(lon+HOME.lon,0);
+    ctx.beginPath(); ctx.moveTo(q.x,g.top); ctx.lineTo(q.x,g.bot); ctx.stroke(); }
+  for(let lat=-60; lat<=60; lat+=30){ const q=mapXY(HOME.lon,lat);
+    ctx.beginPath(); ctx.moveTo(20,q.y); ctx.lineTo(W-20,q.y); ctx.stroke(); }
+  LANDS.forEach(function(L){
+    const lon=L[0], lat=L[1], rx=L[2], ry=L[3], rot=L[4];
+    [-360,0,360].forEach(function(off){
+      const c = mapXY(lon+off, lat);
+      const r1 = rx/180*g.hw, r2 = ry/90*g.hh;
+      if(c.x + r1 < 0 || c.x - r1 > W) return;
+      ctx.fillStyle='#2f7a4a'; ctx.beginPath();
+      ctx.ellipse(c.x, c.y, r1, r2, rot, 0, 7); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.07)'; ctx.beginPath();
+      ctx.ellipse(c.x, c.y-r2*0.25, r1*0.86, r2*0.5, rot, 0, 7); ctx.fill();
+    });
+  });
+  Object.keys(CITY).forEach(function(n){
+    if(n==='가까운 공항') return;
+    const c = CITY[n], q = mapXY(c[0], c[1]);
+    ctx.fillStyle='#0f2136'; ctx.beginPath(); ctx.arc(q.x,q.y,4.5,0,7); ctx.fill();
+    ctx.fillStyle='#cfe0f5'; ctx.beginPath(); ctx.arc(q.x,q.y,2.6,0,7); ctx.fill();
+    ctx.fillStyle='rgba(210,228,248,.78)'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(n, q.x, q.y-9); ctx.textAlign='left';
+  });
+  const hp = mapXY(HOME.lon, HOME.lat);
+  ctx.fillStyle='#ffd23f'; ctx.beginPath(); ctx.arc(hp.x,hp.y,7,0,7); ctx.fill();
+  ctx.fillStyle='#0f2136'; ctx.beginPath(); ctx.arc(hp.x,hp.y,3,0,7); ctx.fill();
+  mapLabel(S.name+' 공항', hp.x, hp.y+26, '#ffd23f');
+
+  S.flights.forEach(function(f){
+    const q = flightPos(f);
+    ctx.strokeStyle='rgba(255,255,255,.22)'; ctx.lineWidth=2; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(q.a.x,q.a.y); ctx.quadraticCurveTo(q.ctrl.x,q.ctrl.y,q.b.x,q.b.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = (f===F) ? '#ffd23f' : '#7be08a'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(q.a.x,q.a.y);
+    const steps = 24;
+    for(let i=1;i<=steps;i++){
+      const tt = q.u*i/steps;
+      const xx=(1-tt)*(1-tt)*q.a.x+2*(1-tt)*tt*q.ctrl.x+tt*tt*q.b.x;
+      const yy=(1-tt)*(1-tt)*q.a.y+2*(1-tt)*tt*q.ctrl.y+tt*tt*q.b.y;
+      ctx.lineTo(xx,yy);
+    }
+    ctx.stroke();
+    ctx.save(); ctx.translate(q.x,q.y); ctx.rotate(q.ang);
+    ctx.fillStyle = (f===F) ? '#ffd23f' : '#eaf2ff';
+    ctx.beginPath();
+    ctx.moveTo(13,0); ctx.lineTo(-4,5); ctx.lineTo(-1,0); ctx.lineTo(-4,-5);
+    ctx.closePath(); ctx.fill();
+    ctx.fillRect(-2,-9,3,18);
+    ctx.restore();
+    mapLabel(f.p.nick+' '+Math.round(q.u*100)+'%', q.x, q.y-16, (f===F)?'#ffd23f':'#cfe0f5');
+  });
+  ctx.restore();
+
+  if(!S.flights.length){
+    ctx.fillStyle='#9db4d4'; ctx.font='bold 20px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('지금 하늘에 뜬 비행기가 없어 — 본사에서 한 대 띄워 봐!', W/2, g.cy); ctx.textAlign='left';
+  }
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 20px sans-serif';
+  ctx.fillText('🗺 세계 지도', 24, 84);
+}
+function mapLabel(txt, x, y, col){
+  ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+  const w = ctx.measureText(txt).width + 12;
+  ctx.fillStyle='rgba(6,16,32,.78)'; roundRect(x-w/2, y-13, w, 18, 6); ctx.fill();
+  ctx.fillStyle=col; ctx.fillText(txt, x, y); ctx.textAlign='left';
+}
+function mapClick(mx,my){
+  let best=null, bd=1e9;
+  S.flights.forEach(function(f){
+    const q = flightPos(f);
+    const d = Math.hypot(q.x-mx, q.y-my);
+    if(d<bd){ bd=d; best=f; }
+  });
+  if(best && bd < 34) watchFlight(best);
+}
+
+/* =========================================================================
+   본사 배경 그림
+   ========================================================================= */
+function drawOfficeScreen(){
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#0d2247'); sky.addColorStop(0.6,'#2d6ea8'); sky.addColorStop(1,'#8fc4e8');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  const gy = H*0.66;
+  ctx.fillStyle='#4c8f57'; ctx.fillRect(0,gy,W,H-gy);
+  ctx.fillStyle='#3b4450'; ctx.fillRect(0,gy+60,W,70);
+  ctx.fillStyle='#e8eef7';
+  for(let i=0;i<26;i++) ctx.fillRect(i*80 - (S.tick*0.4)%80, gy+92, 34, 5);
+  // 터미널
+  ctx.fillStyle='#8496ad'; roundRect(W*0.05, gy-70, 300, 70, 8); ctx.fill();
+  ctx.fillStyle='#c8d6e8';
+  for(let i=0;i<10;i++) ctx.fillRect(W*0.05+14+i*28, gy-56, 18, 26);
+  ctx.fillStyle='#6e7d92'; ctx.fillRect(W*0.05+140, gy-110, 12, 42);
+  ctx.fillStyle='#eaf2ff'; ctx.font='bold 16px sans-serif';
+  ctx.fillText(S.name+' 공항', W*0.05+16, gy-16);
+  // 주기된 비행기들 (하늘에 뜬 건 빼고)
+  const list = S.planes.filter(p=>!S.flights.some(f=>f.p===p)).slice(0,4);
+  const ax0 = W*0.30, ax1 = Math.max(ax0+200, W-390);   // 오른쪽은 정보칸이 덮으니 비워 둔다
+  const step = (ax1-ax0)/Math.max(1,list.length);
+  list.forEach((p,i)=>{
+    const t = typeOf(p.type);
+    const L = Math.min(step*1.35, clamp(W*0.11,95,200)*(0.7 + t.rows/30));
+    drawPlaneSide(ax0 + step*(i+0.5), gy+72, L, t, {gear:true, paxLit:true});
+  });
+  // 하늘에는 지금 운항 중인 비행기들이 지나간다
+  S.flights.slice(0,4).forEach((f,i)=>{
+    const x = ((S.tick*1.6 + i*430)%(W+500)) - 250;
+    const y = H*0.14 + i*54;
+    drawPlaneSide(x, y, 84, f.t, {gear:false, rot:-0.05, paxLit:true});
+    ctx.fillStyle='rgba(8,20,38,.65)'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+    const label = f.p.nick+' → '+f.route.to;
+    const tw = ctx.measureText(label).width+14;
+    roundRect(x-tw/2, y+22, tw, 18, 6); ctx.fill();
+    ctx.fillStyle='#cfe0f5'; ctx.fillText(label, x, y+35); ctx.textAlign='left';
+  });
+}
+function drawShopScreen(){
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#08152b'); sky.addColorStop(1,'#123055');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+}
+
+/* =========================================================================
+   메인 루프
+   ========================================================================= */
+let last = performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  S.tick += dt*60;
+  try{
+    // 하늘에 떠 있는 비행기는 어느 화면에 있든 계속 날아간다
+    if(S.flights && S.flights.length){
+      const n = clamp(S.watchSpeed||1, 1, 4);
+      for(let i=0;i<n;i++) S.flights.forEach(f=> updateFlight(f, dt));
+      purgeFlights();
+      if(S.screen==='flight' && S.tick%90 < 1) buildFlightTools();   // 진행률 가끔 새로 고침
+    }
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,W,H);
+    switch(S.screen){
+      case 'title':  drawTitleScreen(); break;
+      case 'office': drawOfficeScreen(); break;
+      case 'shop':   drawShopScreen(); break;
+      case 'seat':   drawSeatScreen(); break;
+      case 'route':  drawShopScreen(); break;
+      case 'cargo':  drawCargoScreen(); break;
+      case 'flight': if(F) drawFlight(); else drawShopScreen(); break;
+      case 'result': drawShopScreen(); break;
+      case 'tail':   drawTailScreen(); break;
+      case 'map':    drawMapScreen(); break;
+    }
+  }catch(e){
+    // 여기서 멈추면 게임 전체가 멈춘다 — 화면에 알려만 주고 계속 돈다
+    console.error(e);
+    ctx.fillStyle='#2a0b0b'; ctx.fillRect(0,H-40,W,40);
+    ctx.fillStyle='#ff9c9c'; ctx.font='14px sans-serif';
+    ctx.fillText('앗! 문제가 생겼어: '+e.message, 12, H-15);
+  }
+}
+function drawTitleScreen(){
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#06122a'); sky.addColorStop(0.6,'#1b4a7d'); sky.addColorStop(1,'#4d90c4');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(255,255,255,.55)';
+  for(let i=1;i<70;i++) ctx.fillRect((i*7919)%W, (i*104729)%Math.round(H*0.55), 2, 2);
+  const x = (S.tick*1.2)%(W+600) - 300;
+  drawPlaneSide(x, H*0.80, 220, TYPES[2], {gear:false, paxLit:true, rot:-0.04});
+}
+requestAnimationFrame(loop);
+
+/* =========================================================================
+   마우스
+   ========================================================================= */
+function pos(e){
+  const r = cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height) };
+}
+cv.addEventListener('mousedown', e=>{
+  const p = pos(e);
+  if(S.screen==='tail'){ tailView.painting = true; tailClick(p.x,p.y); }
+  if(S.screen==='map'){ mapClick(p.x,p.y); }
+  if(S.screen==='seat'){ seatView.painting = true; seatClick(p.x,p.y,false); }
+  if(S.screen==='cargo'){ C.mx=p.x; C.my=p.y; cargoDown(p.x,p.y); }
+});
+cv.addEventListener('mousemove', e=>{
+  const p = pos(e);
+  if(S.screen==='tail' && tailView.painting) tailClick(p.x,p.y);
+  if(S.screen==='seat' && seatView.painting) seatClick(p.x,p.y,true);
+  if(S.screen==='cargo'){ C.mx=p.x; C.my=p.y; }
+});
+addEventListener('mouseup', ()=>{
+  seatView.painting = false; tailView.painting = false;
+  if(S.screen==='cargo' && C && C.drag) cargoUp();
+});
+cv.addEventListener('wheel', e=>{
+  if(S.screen==='seat'){ e.preventDefault(); seatView.scroll += e.deltaY*0.6; }
+}, {passive:false});
+cv.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  if(S.screen==='seat'){ const p=pos(e); const old=seatView.tool; seatView.tool='X'; seatClick(p.x,p.y,false); seatView.tool=old; }
+});
+
+/* 시작 */
+go('title');
+window.go = go; window.resize = resize;   // 확인용 (S 는 그냥 전역 변수라 콘솔에서 바로 보인다)
+</script>
+</body>
+</html>

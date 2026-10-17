@@ -1,0 +1,1585 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>새플링 2D</title>
+<style>
+:root{--bg:#f3f5f2;--panel:#ffffff;--ink:#1d2621;--sub:#5b6a61;--line:#d5ddd7;--accent:#1f8a5b;--warn:#c0572b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1210;--panel:#151c19;--ink:#e3ece6;--sub:#94a69b;--line:#26322c;--accent:#4fd18f;--warn:#ff8a5c}}
+:root[data-theme="dark"]{--bg:#0d1210;--panel:#151c19;--ink:#e3ece6;--sub:#94a69b;--line:#26322c;--accent:#4fd18f;--warn:#ff8a5c}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,"Malgun Gothic",sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0}
+.stat{color:var(--sub)}.stat b{color:var(--ink)}
+.btn{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 9px;cursor:pointer;font:inherit}
+.btn.on,.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+main{flex:1;display:flex;min-height:0}
+#wrap{flex:1;position:relative;min-width:0;background:#0a1420;touch-action:none}
+#cv{display:block;width:100%;height:100%}
+#tools{position:absolute;left:8px;top:8px;right:60px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none}
+#tools>*{pointer-events:auto}
+.tb{background:rgba(20,28,25,.85);color:#e8f0ea;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:5px 9px;cursor:pointer;font:inherit;font-size:13px}
+.tb.on{background:#1f8a5b;border-color:#4fd18f}
+#palette{position:absolute;left:8px;bottom:8px;right:8px;display:flex;gap:6px;overflow-x:auto}
+.pc{flex:none;background:rgba(20,28,25,.88);color:#e8f0ea;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:4px;cursor:pointer;text-align:center;font-size:12px;width:78px}
+.pc.on{border-color:#4fd18f;box-shadow:0 0 0 1px #4fd18f}
+.pc canvas{display:block;margin:0 auto;width:60px;height:44px}
+#pad{position:absolute;left:16px;bottom:70px;display:none;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:4px;z-index:3}
+#pad button{font-size:18px;padding:0;touch-action:none}
+#hud{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(10,16,20,.85);color:#e8f0ea;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 12px;font-size:13px;display:none;max-width:90%;text-align:center;z-index:3}
+#cam{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
+#brushBox{display:none;align-items:center;gap:4px;background:rgba(20,28,25,.85);color:#e8f0ea;border-radius:8px;padding:4px 8px;font-size:12px}
+aside{width:340px;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:8px 0;color:var(--sub);cursor:pointer;font:inherit}
+.tabs button.on{color:var(--ink);box-shadow:inset 0 -2px var(--accent)}
+.pane{flex:1;overflow:auto;padding:10px 12px;display:none}.pane.on{display:block}
+#p-tree{padding:6px 0 6px 6px}
+#tree{display:block;cursor:pointer}
+.sp{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.dot{width:12px;height:12px;border-radius:50%;flex:none;display:inline-block}
+.sp .n{flex:1}.sp .c{color:var(--sub)}.sp .st{color:var(--sub);font-size:12px}.sub{color:var(--sub);font-size:12px}
+.log div{padding:3px 0;border-bottom:1px solid var(--line)}.log .t{color:var(--sub);margin-right:6px}
+.gene{display:flex;justify-content:space-between;padding:2px 0}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-bottom:4px}.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.trend{font-size:12px;color:var(--sub)}
+#p-civ h3{margin:4px 0 2px;font-size:15px}#p-civ h4{margin:10px 0 4px;font-size:13px}
+#p-civ table{width:100%;border-collapse:collapse;font-size:12px}
+#p-civ th,#p-civ td{text-align:left;padding:4px 3px;border-bottom:1px solid var(--line);vertical-align:top}
+#p-civ th{color:var(--sub);font-weight:600}
+.pet{padding:4px 0;border-bottom:1px solid var(--line);font-size:12px}
+.modal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,8,8,.8);padding:16px;z-index:5}
+.card{background:var(--panel);color:var(--ink);border-radius:12px;padding:18px;max-width:640px;width:100%;max-height:100%;overflow:auto}
+.card h2{margin:0 0 6px}
+.envs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}
+.env{border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer}.env.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.env small{color:var(--sub)}
+.ed{display:flex;flex-wrap:wrap;gap:14px}
+.ed canvas{width:220px;height:170px;background:#16301f;border-radius:10px;flex:none}
+.sl{flex:1;min-width:230px}
+.parts{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.part{border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:13px;user-select:none}
+.part.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sl label{display:flex;justify-content:space-between;font-size:13px;margin-top:6px}
+.sl input[type=range]{width:100%}
+#intro{position:absolute;inset:0;display:none;background:#02040a;z-index:6}
+#intro canvas{width:100%;height:100%;display:block}
+#introTxt{position:absolute;left:0;right:0;top:16px;text-align:center;color:#e8eefc;font-size:17px;font-weight:700}
+#toast{position:absolute;left:50%;top:52px;transform:translateX(-50%);background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;display:none;max-width:90%;z-index:7}
+@media (max-width:760px){main{flex-direction:column}aside{width:100%;height:42%;border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>새플링 2D</h1>
+  <span class="stat">시간 <b id="time">0</b></span>
+  <span class="stat">최고 단계 <b id="stage">-</b></span>
+  <span class="stat">동물 <b id="na">0</b> · 식물 <b id="np">0</b></span>
+  <span class="stat">산소 <b id="o2">0</b>%</span>
+  <span id="speed"></span>
+  <button class="btn" id="farBtn" style="display:none">먼 미래로 (1조 년)</button>
+  <button class="btn" id="newWorld">새 세상</button>
+</header>
+<main>
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="tools"></div>
+    <div id="palette"></div>
+    <div id="cam"><button class="tb" id="zin">+</button><button class="tb" id="zout">−</button><button class="tb" id="fit">전체</button><button class="tb" id="follow">따라가기</button><button class="tb" id="drive">내가 조종하기</button></div>
+    <div id="pad"><span></span><button class="tb" data-d="u">▲</button><span></span><button class="tb" data-d="l">◀</button><button class="tb" id="padE" style="font-size:14px">E</button><button class="tb" data-d="r">▶</button><span></span><button class="tb" data-d="d">▼</button><span></span></div>
+    <div id="hud"></div>
+    <div id="toast"></div>
+    <div class="modal" id="startM"><div class="card">
+      <h2>원시 수프 고르기</h2>
+      <div class="sub">미생물 몇 마리만 심고, 그다음은 지켜보기만 해요. 언제든 위쪽 "창조"로 내가 만든 생물을 풀어놓을 수도 있어요.</div>
+      <div class="envs" id="envs"></div>
+      <button class="btn pri" id="go">미생물 심기</button> <button class="btn" id="reroll">지형 다시 뽑기</button> <span class="sub" id="seedTxt"></span>
+    </div></div>
+    <div class="modal" id="edM"><div class="card">
+      <h2 id="edTitle">창조</h2>
+      <div class="ed"><canvas id="edCv"></canvas><div class="sl" id="edSl"></div></div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="edName" class="btn" style="flex:1;min-width:140px" maxlength="16" placeholder="이름">
+        <button class="btn" id="edRand">아무렇게나</button><button class="btn" id="edCancel">취소</button><button class="btn pri" id="edOk">만들기</button>
+      </div>
+    </div></div>
+    <div class="modal" id="ending"><div class="card" id="endCard"></div></div>
+    <div id="intro"><canvas id="introCv"></canvas><div id="introTxt"></div></div>
+  </div>
+  <aside>
+    <div class="tabs"><button data-p="species" class="on">종 목록</button><button data-p="tree">계통도</button><button data-p="info">종 정보</button><button data-p="civ">문명</button><button data-p="log">사건</button></div>
+    <div class="pane on" id="p-species"></div>
+    <div class="pane" id="p-tree"><canvas id="tree"></canvas></div>
+    <div class="pane" id="p-info">종을 누르거나, 보기 도구로 생물을 눌러 보세요.</div>
+    <div class="pane" id="p-civ"></div>
+    <div class="pane log" id="p-log"></div>
+  </aside>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+// ===================== 데이터 표 (기능 추가는 여기부터) =====================
+// 동물 유전자 (돌연변이·종 정보·창조가 이 표를 씀)
+const AG=[
+  {k:'size',  n:'크기',       min:1.5,max:24, step:.35, init:2.2},
+  {k:'speed', n:'속도',       min:.2, max:3,  step:.07, init:.8},
+  {k:'sense', n:'감각 범위',   min:10, max:160,step:3,   init:30},
+  {k:'diet',  n:'먹이 (풀 → 고기)',min:0,max:1,step:.03,init:.1},
+  {k:'legs',  n:'다리',       min:0,  max:8,  step:.12, init:0},
+  {k:'arms',  n:'팔',         min:0,  max:1,  step:.03, init:0},
+  {k:'fins',  n:'물결막',    min:0,  max:1,  step:.03, init:.6},
+  {k:'eyes',  n:'눈',         min:0,  max:1,  step:.03, init:.1},
+  {k:'armor', n:'껍데기',      min:0,  max:1,  step:.03, init:0},
+  {k:'spikes',n:'가시',       min:0,  max:1,  step:.03, init:0},
+  {k:'social',n:'무리 짓기',   min:0,  max:1,  step:.03, init:0},
+  {k:'dig',   n:'땅 파기',     min:0,  max:1,  step:.03, init:0},
+  {k:'intel', n:'지능',       min:0,  max:1,  step:.006,init:0},
+  {k:'heat',  n:'좋아하는 온도',min:0, max:1,  step:.02, init:.5},
+  {k:'hue',   n:'색깔',       min:0,  max:360,step:6,   init:170, wrap:true},
+  {k:'pattern',n:'무늬',      min:0,  max:2,  step:.08, init:0},
+];
+// 식물 유전자
+const PG=[
+  {k:'max',   n:'다 자란 크기', min:1,  max:16, step:.25, init:1.6},
+  {k:'grow',  n:'자라는 속도',  min:.1, max:2,  step:.05, init:1.4},
+  {k:'range', n:'씨앗 거리',    min:6,  max:120,step:3,   init:22},
+  {k:'seeds', n:'씨앗 수',      min:.2, max:2,  step:.05, init:1.8},
+  {k:'moist', n:'좋아하는 물기',min:0,  max:1,  step:.02, init:.5},
+  {k:'heat',  n:'좋아하는 온도',min:0,  max:1,  step:.02, init:.5},
+  {k:'thorns',n:'가시',        min:0,  max:1,  step:.03, init:0},
+  {k:'aqua',  n:'물속에서 자람',min:0,  max:1,  step:.03, init:1},
+  {k:'hue',   n:'색깔',        min:50, max:170,step:3,   init:150},
+];
+const GK=AG.map(d=>d.k),NG=GK.length;
+// 창조: 있다/없다로 켜고 끄는 몸 부위 (켜면 on 값, 끄면 off 값)
+const PARTS=[
+  {k:'legs',n:'다리',on:4,off:0},{k:'arms',n:'팔',on:1,off:0},{k:'eyes',n:'눈',on:.6,off:0},{k:'fins',n:'물결막',on:1,off:0},
+  {k:'armor',n:'껍데기',on:.8,off:0},{k:'spikes',n:'가시',on:.8,off:0},{k:'social',n:'무리 짓기',on:.7,off:0},{k:'dig',n:'땅 파기',on:.8,off:0},
+];
+const ED_SLIDERS=['size','speed','diet','hue','pattern'];
+// 원시 수프 (예전처럼 고름)
+const ENVS=[
+  {id:'pond',n:'웅덩이',  d:'따뜻하고 해초가 많아요',  temp:.06,algae:240,heat:.55},
+  {id:'vent',n:'열수구',  d:'뜨거운 바다에서 시작해요',temp:.15,algae:150,heat:.8},
+  {id:'sea', n:'얕은 바다',d:'골고루 무난해요',        temp:0,  algae:180,heat:.5},
+];
+// 진화 단계 (종마다 따로 판정). a=종 평균 유전자, sp.land=땅에 사는 비율
+const STAGES=[
+  {n:'원핵생물',          test:()=>true},
+  {n:'광합성 · 산소',      test:(a,w)=>w.o2>2.5},
+  {n:'진핵생물',          test:(a,w)=>a.size>3.5&&w.o2>2.5},
+  {n:'다세포 생물',        test:a=>a.size>5&&(a.legs>=1||a.fins>.5)},
+  {n:'동물 · 포식',        test:a=>(a.eyes>.3&&a.speed>.9)||a.diet>.45},
+  {n:'육상 진출 · 바다의 강자',test:(a,w,sp)=>sp.land>.3&&a.legs>=1.5||sp.land<.1&&a.size>9&&a.eyes>.45},
+  {n:'신경계 · 사회성',    test:a=>a.intel>.35&&a.social>.5},
+  {n:'지적생명체',        test:a=>a.intel>.8},
+];
+// 이때까지 안 나오면 핵심 진화로 꼭 나옴 (억 년)
+const LANDP_T=8,LANDA_T=12,INTEL_T=30,INTEL2_T=32;
+const INTEL_SEED={
+  land:{size:9,speed:1.3,legs:4,arms:1,eyes:.6,dig:.85,social:.85,intel:.88,diet:.5,sense:100,fins:.1},
+  fish:{size:12,speed:1.4,legs:0,arms:.7,fins:1,eyes:.8,social:.7,intel:.88,diet:.5,sense:110},
+};
+const BREED_FEAT=[
+  {n:'방울눈',d:'눈이 동그랗게 커졌어요',ch:{eyes:.2}},{n:'꼬마',d:'몸이 작고 귀여워졌어요',ch:{size:-2}},
+  {n:'튼튼',d:'몸이 튼튼해졌어요',ch:{size:2,armor:.1}},{n:'날쌘',d:'아주 빨라졌어요',ch:{speed:.3}},
+  {n:'순둥이',d:'아주 순해졌어요',ch:{diet:-.2,social:.15}},{n:'영리한',d:'말귀를 잘 알아들어요',ch:{intel:.08,sense:15}},
+  {n:'복슬',d:'가시가 보들보들한 털이 됐어요',ch:{spikes:-.3}},{n:'반짝이',d:'몸 색이 반짝반짝 예뻐졌어요',ch:{},hue:90},
+];
+const SPEEDS=[0,1,10,100,1000];
+const MAXA=800,MAXP=2600,TICK=.0004; // 동물·식물 최대 수, 1틱 = 0.0004억 년
+const SPECIATE=.3;
+// ===================== 지도 =====================
+const TW=200,TH=130,TS=8,WW=TW*TS,WH=TH*TS;let WL=.42,M0=null; // M0 = 처음 물기 (사막이 돼도 기억해 둠)
+const H=new Float32Array(TW*TH),M=new Float32Array(TW*TH),T=new Float32Array(TW*TH);
+const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function rng(s){s>>>=0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+function noise(sd,gw,gh){const r=rng(sd),a=new Float32Array((gw+2)*(gh+2));for(let i=0;i<a.length;i++)a[i]=r();
+  return(x,y)=>{const x0=Math.floor(x),y0=Math.floor(y),fx=x-x0,fy=y-y0,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy),W2=gw+2,v=(xx,yy)=>a[clamp(yy,0,gh+1)*W2+clamp(xx,0,gw+1)];
+    const t=v(x0,y0)+(v(x0+1,y0)-v(x0,y0))*sx,b=v(x0,y0+1)+(v(x0+1,y0+1)-v(x0,y0+1))*sx;return t+(b-t)*sy}}
+let seed=Date.now()%100000,tempOff=0;
+function genWorld(){
+  const mk=sd=>{const ns=[];let f=1;for(let o=0;o<5;o++){ns.push([noise(sd+o*101,Math.ceil(4*f)+1,Math.ceil(3*f)+1),f]);f*=2}
+    return(x,y)=>{let s=0,amp=1,tot=0;for(const [n,ff] of ns){s+=n(x*4*ff,y*3*ff)*amp;tot+=amp;amp*=.5}return s/tot}};
+  const fh=mk(seed),fm=mk(seed+7777);let mn=9,mx=-9;
+  for(let y=0;y<TH;y++)for(let x=0;x<TW;x++){const i=y*TW+x,nx=x/TW,ny=y/TH,edge=Math.max(Math.abs(nx-.5)*2,Math.abs(ny-.5)*2);
+    const v=fh(nx,ny)-Math.pow(edge,3)*.45;H[i]=v;if(v<mn)mn=v;if(v>mx)mx=v;M[i]=fm(nx,ny)}
+  let a=9,b=-9;for(let i=0;i<M.length;i++){if(M[i]<a)a=M[i];if(M[i]>b)b=M[i]}
+  for(let i=0;i<H.length;i++){H[i]=(H[i]-mn)/(mx-mn)*.95;M[i]=(M[i]-a)/(b-a)}
+  M0=M.slice();
+  calcTemp();
+}
+let terrDirty=true;
+function calcTemp(x0=0,y0=0,x1=TW-1,y1=TH-1){const all=x0===0&&y0===0&&x1===TW-1&&y1===TH-1;for(let y=Math.max(0,y0);y<=Math.min(TH-1,y1);y++)for(let x=Math.max(0,x0);x<=Math.min(TW-1,x1);x++){const i=y*TW+x;T[i]=clamp(1.05+tempOff+(W.dry||0)*.45-Math.abs(y/TH-.5)*1.9-Math.max(0,H[i]-WL)*1.1,0,1)}if(all)terrDirty=true;else invalidateTiles(x0,y0,x1,y1)}
+const tIdx=(x,y)=>clamp(y/TS|0,0,TH-1)*TW+clamp(x/TS|0,0,TW-1);
+const isWater=i=>H[i]<WL;
+const isSnow=i=>H[i]>=WL&&(H[i]>.86||T[i]<.1);
+const TYPE_N=i=>isWater(i)?(H[i]<WL-.08?'깊은 바다':'얕은 물'):isSnow(i)?'눈 덮인 땅':H[i]>.74?'바위산':H[i]<WL+.03?'모래밭':M[i]<.3&&(T[i]>.55||(W.dry||0)>.5)?'사막':M[i]>.65?'숲 땅':T[i]<.3?'툰드라':'풀밭';
+// ===== 지형 그림: 지도를 100px 조각으로 나눠, 확대한 만큼 촘촘하게 다시 그림 (확대해도 안 깨짐) =====
+const CW=100,CCX=Math.ceil(WW/CW),CCY=Math.ceil(WH/CW);
+const chunkCache=new Map(),queued=new Set();let genQueue=[];
+function hash2(x,y){let h=(x*374761393+y*668265263+seed*1442695041)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function vnoise(x,y){const x0=Math.floor(x),y0=Math.floor(y),fx=x-x0,fy=y-y0,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
+  const a=hash2(x0,y0),b=hash2(x0+1,y0),c=hash2(x0,y0+1),d=hash2(x0+1,y0+1);return a+(b-a)*sx+(c-a+(d-c-b+a)*sx)*sy}
+function bil(A,wx,wy){let fx=wx/TS-.5,fy=wy/TS-.5;if(fx<0)fx=0;else if(fx>TW-1.001)fx=TW-1.001;if(fy<0)fy=0;else if(fy>TH-1.001)fy=TH-1.001;
+  const x0=fx|0,y0=fy|0,ax=fx-x0,ay=fy-y0,i=y0*TW+x0,a=A[i],b=A[i+1],c=A[i+TW],d=A[i+TW+1];return a+(b-a)*ax+(c-a+(d-c-b+a)*ax)*ay}
+// 칸 사이를 부드럽게 잇고 자잘한 굴곡을 더한 높이
+// 무늬가 칸에 맞춰 네모나게 보이지 않도록 노이즈를 비스듬히 돌려서 씀
+const rn=(x,y,s,o)=>vnoise((x*.8+y*.6)/s+o,(y*.8-x*.6)/s-o);
+const hSim=(wx,wy)=>bil(H,wx,wy)+(rn(wx,wy,22,0)-.5)*.02+(rn(wx,wy,6,37)-.5)*.008; // 생물이 물/땅을 판단하는 높이 (그림의 해안선과 같음)
+const hAt=(wx,wy)=>hSim(wx,wy)+(rn(wx,wy,2.5,91)-.5)*.003;
+const waterAt=(x,y)=>hSim(x,y)<WL;
+// 조각 하나를 만드는 일을 여러 장면에 나눠서 함 (16줄마다 쉬어 감 → 확대해도 화면이 멈칫하지 않음)
+// 가장자리에 1픽셀씩 여유를 두고 그려서, 조각을 이어 붙여도 이음새 선이 안 보임
+function* chunkJob(ccx,ccy,L){
+  const n=CW*L+2,c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d'),img=g.createImageData(n,n),d=img.data;
+  const p=1/L,x0=ccx*CW-p,y0=ccy*CW-p,N1=n+1,hs=new Float32Array(N1*N1),grass=W.o2>=6,desert=(W.dry||0)>.5,hf=L>=4?hAt:hSim;
+  for(let j=0;j<N1;j++){for(let i=0;i<N1;i++)hs[j*N1+i]=hf(x0+(i-1)*p,y0+(j-1)*p);if((j&31)===31)yield}
+  for(let j=0;j<n;j++){if((j&15)===15)yield;for(let i=0;i<n;i++){
+    const wx=x0+i*p,wy=y0+j*p,h=hs[(j+1)*N1+i+1],hn=hs[j*N1+i],m=bil(M,wx,wy),t=bil(T,wx,wy),nz=((L>=2?rn(wx,wy,1.7,13):.5)+rn(wx,wy,5,71)*.7+rn(wx,wy,15,5)*.5)*.9-.99;
+    let r,gg,b;
+    if(h<WL){ // 물: 깊을수록 진하게, 물가엔 하얀 물거품
+      const dp=Math.min(1,(WL-h)/.28);r=42-dp*30;gg=128-dp*72;b=178-dp*55;
+      if(WL-h<.01){const f=1-(WL-h)/.01;r+=(225-r)*f*.65;gg+=(240-gg)*f*.65;b+=(245-b)*f*.65}
+      if(t<.12){r+=110;gg+=100;b+=60}
+      r+=nz*5;gg+=nz*7;b+=nz*7;
+    }else{
+      const e=h-WL;
+      if(h>.86||t<.1){r=232;gg=238;b=246;r+=nz*10;gg+=nz*9;b+=nz*6}                       // 눈
+      else if(h>.74){const k=(h-.74)/.12;r=118+k*36;gg=110+k*36;b=102+k*36;r+=nz*22;gg+=nz*22;b+=nz*20} // 바위산
+      else if(e<.018){r=228;gg=212;b=160;r+=nz*16;gg+=nz*16;b+=nz*12}                  // 모래밭
+      else if(m<.3&&(t>.55||desert)){r=216;gg=186;b=120;r+=nz*18;gg+=nz*16;b+=nz*10}               // 사막
+      else if(t<.3){r=146;gg=163;b=128;r+=nz*12;gg+=nz*12;b+=nz*8}                       // 툰드라
+      else if(!grass){r=152-m*30;gg=128-m*20;b=102-m*20;r+=nz*16;gg+=nz*14;b+=nz*10}    // 산소가 적을 땐 맨땅
+      else{r=112-m*62;gg=168-m*42;b=80-m*36;if(m>.62){gg-=(m-.62)*50;r-=(m-.62)*20}r+=nz*14;gg+=nz*22;b+=nz*10} // 풀밭·숲 땅
+      r+=e*30;gg+=e*25;b+=e*20;
+      let sh=(h-hn)*L*6500;sh=sh<-70?-70:sh>70?70:sh;r+=sh;gg+=sh;b+=sh;               // 언덕 그림자 (북서쪽에서 빛)
+    }
+    const k=(j*n+i)*4;d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=255;
+  }}
+  g.putImageData(img,0,0);c._n=n;return c;
+}
+function genChunk(x,y,L){const it=chunkJob(x,y,L);let r;while(!(r=it.next()).done);return r.value}
+const ckey=(x,y,L)=>(y*CCX+x)*10+L; // L: 1·2·4·8배 해상도
+function invalidateAll(){chunkCache.clear();queued.clear();genQueue=[];curJob=null;for(let y=0;y<CCY;y++)for(let x=0;x<CCX;x++)chunkCache.set(ckey(x,y,1),genChunk(x,y,1));terrDirty=false}
+function invalidateTiles(x0,y0,x1,y1){ // 칠한 곳이 걸친 조각만 다시
+  const a=Math.max(0,Math.floor((x0-1)*TS/CW)),b=Math.min(CCX-1,Math.floor((x1+2)*TS/CW)),c=Math.max(0,Math.floor((y0-1)*TS/CW)),d=Math.min(CCY-1,Math.floor((y1+2)*TS/CW));
+  for(let y=c;y<=d;y++)for(let x=a;x<=b;x++){for(const L of[2,4,8])chunkCache.delete(ckey(x,y,L));if(curJob&&((curJob.k/10|0)===y*CCX+x))curJob=null;chunkCache.set(ckey(x,y,1),genChunk(x,y,1))}}
+function wantChunk(x,y,L){const k=ckey(x,y,L);if(!chunkCache.has(k)&&!queued.has(k)){queued.add(k);genQueue.push([x,y,L,k])}}
+let curJob=null;
+function pumpChunks(ms){const t0=performance.now();
+  while(performance.now()-t0<ms){
+    if(!curJob){if(!genQueue.length)break;const [x,y,L,k]=genQueue.shift();curJob={it:chunkJob(x,y,L),k}}
+    const r=curJob.it.next();if(r.done){chunkCache.set(curJob.k,r.value);queued.delete(curJob.k);curJob=null}}
+  if(chunkCache.size>CCX*CCY+60)for(const k of chunkCache.keys()){if(k%10!==1){chunkCache.delete(k);if(chunkCache.size<=CCX*CCY+40)break}}} // 오래된 고해상도 조각부터 버림
+function renderTerrain(){invalidateAll()}
+// ===================== 생물 공통 =====================
+const W={t:0,o2:0,speed:1,animals:[],plants:[],species:[],spMap:new Map(),nextSp:1,log:[],sel:null,selSp:null,follow:false,stage:0,civs:[],nests:new Map(),tried:{},ended:false};
+const spById=id=>W.spMap.get(id);
+const yrs=()=>W.t*TICK;
+function mutate(g,table,tr){const o={};for(const d of table){let v=g[d.k];
+  if(Math.random()<.5)v+=(rnd(-1,1)+(tr?tr[d.k]||0:0)*.5)*d.step;
+  if(Math.random()<.008)v+=rnd(-1,1)*d.step*8;
+  o[d.k]=d.wrap?((v%d.max)+d.max)%d.max:clamp(v,d.min,d.max)}return o}
+function full(g,table){const o={};for(const d of table)o[d.k]=g[d.k]??d.init;return o}
+function dist(a,b,table){let s=0;for(const d of table){if(d.wrap){let r=Math.abs(a[d.k]-b[d.k])%360;r=Math.min(r,360-r)/180;s+=r*r*.3}else{const r=(a[d.k]-b[d.k])/(d.max-d.min);s+=r*r}}return Math.sqrt(s)}
+const COLN=h=>h<20||h>=340?'빨강':h<45?'주황':h<70?'노랑':h<160?'초록':h<200?'청록':h<255?'파랑':h<290?'보라':'분홍';
+const nameCnt={};
+// 외계 이름 음절 (아무 지구 동물과도 안 겹치게 지어냄)
+const SYL=['크','실','룬','조','바','젝','뮤','르','틀','룩','오','른','퀴','넵','자','쿠','비','엘','타','몬','그','레','주','핀','소','라','브','윤','키','덴','휘','멜','포','즈','텔'];
+const alienWord=n=>{let w='';for(let i=0;i<n;i++)w+=SYL[Math.random()*SYL.length|0];return w};
+function autoName(kind,g){
+  let pre,body;
+  if(kind==='a'){
+    const p=[COLN(g.hue)];if(g.spikes>.5)p.push('가시');if(g.armor>.5)p.push('껍데기');if(g.eyes>.75)p.push('큰눈');if(g.diet>.65)p.push('사냥꾼');else if(g.diet<.25)p.push('풀뜯이');if(g.social>.6)p.push('무리');
+    // 몸 모양을 나타내는 말 (지구 동물 이름은 절대 안 씀)
+    const L=Math.round(g.legs);
+    if(g.size<4&&L<1)p.push('젤');else if(L<1)p.push('너울');if(g.dig>.5)p.push('굴파기');if(L>=5)p.push('긴다리');if(g.size>15)p.push('거대');
+    pre=p[Math.random()*p.length|0];
+    body=g.intel>.6?alienWord(2)+'족':alienWord(g.size<4?2:3);
+  }else{
+    pre=COLN(g.hue)==='초록'?['푸른','싱싱','작은','넓은'][Math.random()*4|0]:COLN(g.hue);if(g.thorns>.5)pre='가시';
+    body=g.aqua>.5?'말':g.max<4?'풀':g.max<9?'덤불':'나무';if(g.moist<.2&&g.aqua<=.5)body='선인장';
+  }
+  const base=pre+' '+body,n=nameCnt[base]=(nameCnt[base]||0)+1;return n>1?base+' '+n+'호':base;
+}
+function newSpecies(kind,g,parent,name){
+  const sp={id:W.nextSp++,kind,name:name||autoName(kind,g),genes:{...g},parent:parent?parent.id:null,born:W.t,died:null,count:0,peak:0,dead:false,
+    trend:{},hue:g.hue,user:!!name,stage:parent?parent.stage:0,land:0,mean:{...g},owner:parent?parent.owner:null,civ:parent?parent.civ:null,
+    _n:0,_land:0,_sum:kind==='a'?new Float64Array(NG):null,_lc:0};
+  // 계통마다 진화 방향이 조금씩 다름 (똑같이 진화하지 않게)
+  const tb=kind==='a'?AG:PG;for(const d of tb)sp.trend[d.k]=parent&&parent.trend?parent.trend[d.k]*.5:0;
+  for(const d of tb)if(Math.random()<.35)sp.trend[d.k]=clamp(sp.trend[d.k]+rnd(-1,1)*.8,-1,1);
+  if(parent&&parent.owner)for(const k in sp.trend)sp.trend[k]=0;
+  W.species.push(sp);W.spMap.set(sp.id,sp);dirtyTree=true;return sp;
+}
+function addLog(s){W.log.unshift({t:W.t,s});if(W.log.length>300)W.log.pop();dirtyLog=true}
+function toast(s){const el=$('toast');el.textContent=s;el.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>el.style.display='none',3500)}
+// ===================== 식물 =====================
+let URB=new Uint8Array(TW*TH); // 시가지 칸 (0=아님, 값=문명 번호+1)
+function plantFert(g,x,y){ // '물속에서 자람'이 중간이면 물가 양쪽에서 조금씩 → 물에서 땅으로 올라올 수 있음
+  const i=tIdx(x,y),h=hSim(x,y),ht=Math.abs(g.heat-T[i]);
+  if(URB[i])return -1; // 시가지에선 식물이 못 자람
+  if(h<WL){const d=WL-h;return g.aqua*(d<.08?1:d<.16?.5:.15)*1.3-.3-ht*.8}
+  if(h>.86||T[i]<.1)return -.4;
+  return((h>.74?.35:1)-Math.abs(g.moist-M[i])*1.2-ht*.9)*(1-g.aqua*.9)-g.aqua*.3;
+}
+function addPlant(g,x,y,sp,size){const p={x,y,w:waterAt(x,y),g,sp,size:size??.4,age:0,dead:false,ph:Math.random()*60|0,ci:0,maxS:g.max,thorn:g.thorns,kind:g.aqua>.5?0:g.max<4?1:g.max<9?2:3};W.plants.push(p);return p}
+function plantStep(p,k){
+  const f=plantFert(p.g,p.x,p.y);p.age+=k;
+  if(f>0)p.size=Math.min(p.maxS,p.size+p.g.grow*f*.012*k*(1+p.maxS*.05));else p.size+=f*.01*k;
+  if(p.size<=.05||p.age>365*(2+p.maxS*1.2)){p.dead=true;return}
+  if(p.size>p.maxS*.6&&Math.random()<p.g.seeds*.012*k&&W.plants.length<MAXP){
+    const a=rnd(0,6.283),d=rnd(.3,1)*p.g.range,nx=clamp(p.x+Math.cos(a)*d,1,WW-1),ny=clamp(p.y+Math.sin(a)*d,1,WH-1);
+    if(pCellCount(nx,ny)>6)return;const g=mutate(p.g,PG,p.sp.trend);if(plantFert(g,nx,ny)<=0)return;
+    let sp=p.sp;if(dist(g,sp.genes,PG)>SPECIATE)sp=newSpecies('p',g,sp);addPlant(g,nx,ny,sp,.3);
+  }
+}
+// ===================== 동물 =====================
+function derive(o){
+  const g=o.g,L=Math.round(g.legs);o.size=g.size;o.L=L;
+  o.landF=L>=1?Math.min(1.25,.25+L*.2)*(1-g.fins*.35):.04;
+  o.waterF=g.fins*1.15+(L>=1?.12:.05);
+  o.spd0=g.speed*(1-g.armor*.35);
+  o.cBase=.0025*Math.pow(g.size,1.35)+.003*(g.armor+g.spikes+g.eyes*.5+g.arms*.5)+.0004*L+.01*g.intel;
+  o.cSpd=.004*g.size/3;o.cSense=.00008;
+  o.sense=g.sense*(.6+g.eyes*.8+g.intel*.5);
+  o.herb=g.diet<.65;o.carn=g.diet>.35;
+  o.plantGain=(1-g.diet)*3.2*(1+g.intel*.5);o.meatGain=(g.diet*.7+.1)*(1+g.intel*.5);
+  o.reproT=Math.max(35,g.size*6);o.maxAge=365*(1.5+g.size*.25);
+  o.def=g.armor*.55+g.spikes*.45;o.esc=g.speed*(.6+g.eyes*.4);o.reach=g.size*.9+3;o.digger=g.dig>.5;
+}
+function canLive(g,x,y){if(waterAt(x,y))return g.fins>=.25;return Math.round(g.legs)>=1} // 물엔 물결막이 어느 정도 있어야, 땅엔 다리가 있어야
+let aid=0;
+function addAnimal(g,x,y,sp,e){const o={x,y,vx:0,vy:0,g,sp,e:e??30,age:0,dead:false,hd:Math.random()*6.28,tgt:null,dig:0,kids:0,ci:0,ph:Math.random()*20,id:++aid,master:null,fleeX:0,fleeY:0};derive(o);W.animals.push(o);return o}
+// 칸 나누기 (계수 정렬)
+const G=40,GC=Math.ceil(WW/G),GR=Math.ceil(WH/G),NC=GC*GR;
+const aStart=new Int32Array(NC+1),aCnt=new Int32Array(NC),pStart=new Int32Array(NC+1),pCnt=new Int32Array(NC),tmp=new Int32Array(NC);
+const aList=[],pList=[];
+function bucket(arr,start,cnt,out){cnt.fill(0);const n=arr.length;
+  for(let i=0;i<n;i++){const a=arr[i];const c=clamp(a.x/G|0,0,GC-1)+clamp(a.y/G|0,0,GR-1)*GC;a.ci=c;cnt[c]++}
+  let t=0;for(let c=0;c<NC;c++){start[c]=t;tmp[c]=t;t+=cnt[c]}start[NC]=t;out.length=n;for(let i=0;i<n;i++){const a=arr[i];out[tmp[a.ci]++]=a}}
+const pCellCount=(x,y)=>pCnt[clamp(x/G|0,0,GC-1)+clamp(y/G|0,0,GR-1)*GC];
+function cellRange(x,y,r){let x0=(x-r)/G|0,x1=(x+r)/G|0,y0=(y-r)/G|0,y1=(y+r)/G|0;if(x0<0)x0=0;if(y0<0)y0=0;if(x1>=GC)x1=GC-1;if(y1>=GR)y1=GR-1;return[x0,x1,y0,y1]}
+// ===================== 한 틱 =====================
+function step(){
+  W.t++;
+  const A=W.animals,P=W.plants;
+  bucket(P,pStart,pCnt,pList);bucket(A,aStart,aCnt,aList);
+  for(let i=0;i<P.length;i++){const p=P[i];if(((W.t+p.ph)&3)===0&&!p.dead)plantStep(p,4)}
+  for(let i=0;i<A.length;i++)A[i].sp._lc=0;for(let i=0;i<A.length;i++)A[i].sp._lc++;
+  // 애완동물이 따라갈 주인 목록
+  // 살아 있는 문명(건물 안 인구가 있는 문명)과 문명별 애완동물 수
+  let owners=null;const petN=new Map();if(W.civs.length){owners=new Set();for(const civ of W.civs)if(civ.city&&civ.city.pop>0||A.some(o=>o.sp.civ===civ.id))owners.add(civ.id);for(const o of A)if(o.sp.owner)petN.set(o.sp.owner,(petN.get(o.sp.owner)||0)+1)}
+  // 도시 밭: 건물이 많을수록 먹을 것이 많이 나고, 도시에 있는 외계인끼리 나눠 먹음
+  for(const civ of W.civs){const c=civ.city;if(!c)continue;let n=0;for(const o of A)if(o.sp.civ===civ.id&&inCityAt(c,o.x,o.y))n++;c.share=Math.min(.25,(1.5+c.b.length*.15+Math.min(c.tiles.length,800)*.012)/Math.max(1,n))}
+  const NA=A.length,inv=1/(NA||1),dis=.12*clamp((NA-80)/80,0,1),born=[];
+  for(let i=0;i<NA;i++){
+    const o=A[i];if(o.dead)continue;
+    if(o.player){o.e=o.reproT*.8;continue} // 내가 조종하는 생명체는 계산에서 빠짐
+    if(o.sp.owner){const c=cityOf(o.sp.owner);if(c&&c.b.length){o.dead=true;c.pets=c.pets||{};c.pets[o.sp.id]=(c.pets[o.sp.id]||0)+1;if(o===W.sel){W.sel=null;W.follow=false}continue}} // 애완동물도 주인과 함께 건물 안에서 삶
+    if(o.sp.civ&&!o.sp.owner){const c=cityOf(o.sp.civ);if(c&&c.b.length){
+      let goIn=o.visit===undefined; // 나들이 나온 게 아니면 바로 건물 안으로
+      if(!goIn){o.visit--;o.e=o.reproT*.7;if(o.visit<=0){const h=o.home;if((o.x-h.x)**2+(o.y-h.y)**2<120||o.visit<-500)goIn=true}}
+      if(goIn){o.dead=true;c.pop=(c.pop||0)+1;if(o===W.sel){W.sel=null;W.follow=false;toast('건물 안으로 들어갔어요')}continue}}} // 도시 외계인은 건물(땅속·땅 위) 안에서 삶
+    const g=o.g,sp=o.sp;o.age++;
+    let x=o.x,y=o.y;const ti=tIdx(x,y),water=waterAt(x,y),spd=o.spd0*Math.min(1.3,water?o.waterF:o.landF);
+    o.e-=o.cBase+o.cSpd*spd*spd+o.cSense*o.sense;
+    o.e-=Math.abs(g.heat-T[ti])*.02;
+    const sh=sp._lc*inv-.25;if(sh>0)o.e-=sh*dis; // 흔한 종은 병에 걸림 (여러 종이 함께 살게)
+    if(o.dig>0)o.dig--;
+    const city=sp.civ?cityOf(sp.civ):null,inCity=city&&city.b.length&&inCityAt(city,x,y);
+    if(inCity)o.e+=city.share; // 도시 밭에서 먹을 것을 얻음 (건물 수만큼 나는 걸 나눠 먹음)
+    const hungry=city&&city.b.length?o.e<o.reproT*.5:o.e<o.reproT+2; // 도시 사는 외계인은 많이 배고플 때만 밖으로 먹이를 찾으러 감
+    let tx=NaN,ty=0;
+    // 무서운 포식자가 가까우면 도망
+    if(!(o.age%4)){const r=o.sense*.6;const [x0,x1,y0,y1]=cellRange(x,y,r);let n=0,fx=0,fy=0;
+      sF:for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){const c=gx+gy*GC;for(let j=aStart[c],je=aStart[c+1];j<je;j++){if(++n>60)break sF;const p=aList[j];
+        if(p.dead||p.sp===sp||!p.carn||p.size<o.size*1.15||sp.owner&&p.sp.civ===sp.owner)continue;const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy;if(d2<r*r){const d=Math.sqrt(d2)||1;fx+=dx/d;fy+=dy/d}}}
+      o.fleeX=fx;o.fleeY=fy}
+    const fx=o.fleeX,fy=o.fleeY;
+    // 먹이 찾기 (6틱에 한 번, 쫓던 게 없어지면 바로)
+    const tg=o.tgt;
+    if(tg&&!tg.dead&&(o.age%6)&&hungry){tx=tg.x;ty=tg.y}
+    else if(hungry){
+      o.tgt=null;let best=o.sense*o.sense;const [x0,x1,y0,y1]=cellRange(x,y,o.sense);
+      if(o.herb){let n=0;sP:for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){const c=gx+gy*GC;for(let j=pStart[c],je=pStart[c+1];j<je;j++){if(++n>80)break sP;const p=pList[j];
+        if(p.dead||p.size<.7)continue;const dx=p.x-x,dy=p.y-y,d=(dx*dx+dy*dy)*(1+p.thorn*2);if(d<best&&(p.w?g.fins>=.25:o.L>=1)){best=d;o.tgt=p}}}}
+      if(o.carn){let n=0,bb=best*(o.herb?.6:1);sA:for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){const c=gx+gy*GC;for(let j=aStart[c],je=aStart[c+1];j<je;j++){if(++n>80)break sA;const p=aList[j];
+        if(p.dead||p.player||p.sp===sp||p.sp.owner&&owners&&owners.has(p.sp.owner)||p.size>o.size*.95)continue; /* 주인 종족이 살아 있는 애완동물은 안 잡아먹음 */const dx=p.x-x,dy=p.y-y,d=dx*dx+dy*dy;if(d<bb){bb=d;best=d;o.tgt=p}}}}
+      if(o.tgt){tx=o.tgt.x;ty=o.tgt.y}
+    }
+    // 무리: 너무 붙으면 밀어내고, 떨어지면 모임
+    if(g.social>.2&&!(o.age%3)){const [x0,x1,y0,y1]=cellRange(x,y,50);let n=0,sx=0,sy=0,k=0;
+      sS:for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){const c=gx+gy*GC;for(let j=aStart[c],je=aStart[c+1];j<je;j++){if(++n>60)break sS;const p=aList[j];if(p===o||p.sp!==sp)continue;
+        const dx=p.x-x,dy=p.y-y,d2=dx*dx+dy*dy,gap=o.size+p.size;if(d2<gap*gap){const d=Math.sqrt(d2)||1;o.vx-=dx/d*.5;o.vy-=dy/d*.5}else{sx+=dx;sy+=dy;k++}}}
+      if(k){o.vx+=sx/k*.012*g.social;o.vy+=sy/k*.012*g.social}}
+    // 도시 산책: 건물 사이를 돌아다님 (건물에 닿으면 잠깐 머물다 다른 건물로)
+    const sc=city||(sp.owner?cityOf(sp.owner):null);
+    if(sp.owner&&sc&&inCityAt(sc,x,y))o.e+=.06; // 애완동물은 도시에서 밥을 얻어먹음
+    if(sc&&sc.b.length&&(!hungry||sp.owner)&&tx!==tx){const city=sc;let wp=o.wp;
+      if(!wp){if(Math.random()<.5||!city.tiles.length)wp=city.b[Math.random()*city.b.length|0];else{const t=city.tiles[Math.random()*city.tiles.length|0];wp={x:(t%TW+.5)*TS,y:((t/TW|0)+.5)*TS}}o.wp=wp}
+      const dx=wp.x-x,dy=wp.y-y;if(dx*dx+dy*dy<70){if(Math.random()<.015)o.wp=null}else{tx=wp.x;ty=wp.y}}
+    // 땅 파는 무리: 땅에 굴(둥지)을 파고, 배부르면 굴로 돌아옴
+    if(o.digger&&!water&&!city){let nest=W.nests.get(sp.id);if(!nest){nest={x,y};W.nests.set(sp.id,nest)}
+      if(tx!==tx&&!hungry&&!(o.age%2)){tx=nest.x+rnd(-25,25);ty=nest.y+rnd(-25,25)}}
+    if(o.visit!==undefined&&o.visit<=0){tx=o.home.x;ty=o.home.y} // 나들이 끝: 집으로
+    // 움직이기 (사냥할 땐 전력 질주)
+    const hunting=o.tgt&&o.tgt.maxS===undefined;
+    if(fx||fy){const d=Math.sqrt(fx*fx+fy*fy);o.vx+=fx/d*spd*.22;o.vy+=fy/d*spd*.22}
+    else if(tx===tx){const dx=tx-x,dy=ty-y,k=spd*(hunting?.35:.2)/(Math.sqrt(dx*dx+dy*dy)||1);o.vx+=dx*k;o.vy+=dy*k}
+    else{o.hd+=rnd(-.35,.35);o.vx+=Math.cos(o.hd)*spd*.1;o.vy+=Math.sin(o.hd)*spd*.1}
+    o.vx*=.88;o.vy*=.88;const vmax=hunting?spd*1.15:spd,v2=o.vx*o.vx+o.vy*o.vy;if(v2>vmax*vmax){const k=vmax/Math.sqrt(v2);o.vx*=k;o.vy*=k}
+    let nx=clamp(x+o.vx,1,WW-1),ny=clamp(y+o.vy,1,WH-1);
+    if(!canLive(g,nx,ny)){o.hd+=Math.PI;o.vx*=-.5;o.vy*=-.5;o.tgt=null}else{o.x=x=nx;o.y=y=ny}
+    if(x<=1||x>=WW-1||y<=1||y>=WH-1)o.hd+=Math.PI;
+    // 먹기
+    const tgt=o.tgt;
+    if(tgt&&!tgt.dead){const dx=tgt.x-x,dy=tgt.y-y,rr=o.reach+(tgt.size||0)*.6;
+      if(dx*dx+dy*dy<rr*rr){
+        if(tgt.maxS!==undefined){const bite=Math.max(0,Math.min(tgt.size-.3,.06+o.size*.012));tgt.size-=bite; // 뿌리(.3)는 남아서 다시 자람
+          o.e+=bite*o.plantGain*.8-tgt.thorn*.3;if(tgt.size<.5||!hungry)o.tgt=null}
+        else if(o.dig<=0){
+          if(Math.random()<tgt.def*(1.1-g.diet*.4-g.intel*.4))o.dig=20;           // 가시·껍데기가 지켜 줌 (똑똑하면 잘 사냥)
+          else if(tgt.esc>g.speed*(.6+g.eyes*.4)&&Math.random()<.5)o.dig=10;       // 빠른 먹잇감은 도망침
+          else{o.e+=(Math.max(0,tgt.e)*.6+tgt.size*3)*o.meatGain;tgt.dead=true;o.tgt=null;o.dig=40;
+            if(tgt===W.sel)toast(`${tgt.sp.name}이(가) ${sp.name}에게 잡아먹혔어요`)}
+        }}}
+    // 번식
+    if(o.e>o.reproT&&o.visit===undefined&&NA+born.length<MAXA&&!(sp.owner&&(petN.get(sp.owner)||0)>12)){ // 애완동물은 문명마다 12마리까지o.e*=.45;o.kids++;
+      const g2=mutate(g,AG,sp.trend);let bx=clamp(x+rnd(-1,1)*(o.size+5),1,WW-1),by=clamp(y+rnd(-1,1)*(o.size+5),1,WH-1);
+      if(!canLive(g2,bx,by)){bx=x;by=y}if(canLive(g2,bx,by))born.push({g:g2,x:bx,y:by,sp,e:o.e*.9})}
+    if(o.e<=0||o.age>o.maxAge){o.dead=true;if(o===W.sel)toast(o.e<=0?`${sp.name}이(가) 굶어 죽었어요`:`${sp.name}이(가) 늙어서 죽었어요`)}
+  }
+  let w=0;for(let i=0;i<A.length;i++)if(!A[i].dead)A[w++]=A[i];A.length=w;
+  w=0;for(let i=0;i<P.length;i++)if(!P[i].dead)P[w++]=P[i];P.length=w;
+  for(const b of born){let sp=b.sp;if(dist(b.g,sp.genes,AG)>SPECIATE)sp=newSpecies('a',b.g,sp);addAnimal(b.g,b.x,b.y,sp,b.e)}
+  if(W.t%60===0){cityLife();zooLife();census()}
+  if(W.t%250===0){guarantees();growCities();climateStep();rescueAnimals();if(W.civs.length)buildRoads()}
+  if(W.t%200===100&&W.civs.length)cityOutings();
+  if(W.t%10===0&&W.civs.length)spreadCities();
+  if(W.t%500===250)for(const c of W.civs)if(!c.city)foundCity(c,spById(c.id)); // 도시를 못 지었으면 다시 시도
+  if(W.civs.length&&W.t%500===0)breedPets();
+}
+// ===================== 집계 · 단계 =====================
+function census(){
+  for(const sp of W.species){sp._n=0;sp._land=0;if(sp._sum)sp._sum.fill(0)}
+  for(const sp of W.species)sp._v=0;for(const civ of W.civs){const c=civ.city;if(!c)continue;if(c.pop>0)spById(civ.id)._v=c.pop;if(c.pets)for(const id in c.pets)spById(+id)._v+=c.pets[id];if(c.zoo)for(const id in c.zoo)spById(+id)._v+=c.zoo[id]} // 보호소 동물도 셈 // 건물 안 외계인·애완동물도 셈
+  for(const o of W.animals){const sp=o.sp;sp._n++;if(!waterAt(o.x,o.y))sp._land++;const su=sp._sum,g=o.g;for(let k=0;k<NG;k++)su[k]+=g[GK[k]]}
+  let bio=0;for(const p of W.plants){p.sp._n++;bio+=p.size}
+  // 산소: 식물이 많을수록 + 8억 년부터 바위·화산에서 조금씩
+  const prev=W.o2>=6;W.o2+=(Math.max(Math.min(30,bio/120),clamp(yrs()-8,0,20))-W.o2)*.15;if((W.o2>=6)!==prev)terrDirty=true;
+  for(const sp of W.species){const rn=sp._n,n=rn+(sp._v||0);
+    if(!n){if(!sp.dead&&W.t-sp.born>60){sp.dead=true;sp.died=W.t;if(sp.peak>=8)addLog(`${sp.name} 멸종`);dirtyTree=true}sp.count=0;continue}
+    if(sp.dead){sp.dead=false;sp.died=null}
+    if(sp.peak<8&&n>=8&&sp.parent)addLog(`새 종 자리잡음: ${sp.name} (${spById(sp.parent).name}에서 갈라짐)`);
+    sp.count=n;sp.peak=Math.max(sp.peak,n);
+    if(sp.kind!=='a')continue;
+    if(rn){sp.land=sp._land/rn;for(let k=0;k<NG;k++)sp.mean[GK[k]]=sp._sum[k]/rn}
+    if(n>=5)while(sp.stage<STAGES.length-1&&STAGES[sp.stage+1].test(sp.mean,W,sp)){
+      sp.stage++;dirtyTree=true;
+      if(sp.stage>W.stage){W.stage=sp.stage;addLog(`최초 돌파! ${sp.name} → ${STAGES[sp.stage].n}`);toast(`${sp.stage+1}단계 최초 돌파 — ${sp.name}: ${STAGES[sp.stage].n}`)}
+      else addLog(`${sp.name}도 ${STAGES[sp.stage].n} 단계에 도달`);
+      if(sp.stage===STAGES.length-1)onIntelligent(sp);
+    }
+  }
+}
+// 이때까지 안 나왔으면 핵심 진화(큰 돌연변이)로 꼭 등장 — 1억 년마다 다시 시도
+function guarantees(){
+  const t=yrs(),tryOnce=k=>{if(W.tried[k]&&t-W.tried[k]<1)return false;W.tried[k]=t;return true};
+  const coast=()=>{const L=[];for(let i=0;i<TW*TH;i++)if(!isWater(i)&&H[i]<WL+.06&&!isSnow(i)&&!waterAt((i%TW+.5)*TS,((i/TW|0)+.5)*TS))L.push(i);return L};
+  const landA=W.animals.filter(o=>!waterAt(o.x,o.y)&&!o.sp.owner&&!o.sp.civ).length;
+  // 야생 동물이 거의 다 사라지면 바다에서 작은 생물이 다시 퍼짐 (생명은 끈질겨요)
+  const wild=W.animals.filter(o=>!o.sp.owner&&!o.sp.civ).length;
+  if(wild<10&&tryOnce('reseed')){const root=W.species.find(s=>s.kind==='a'),sea=[];for(let k=0;k<4000&&sea.length<30;k++){const x=rnd(0,WW),y=rnd(0,WH);if(waterAt(x,y)&&hSim(x,y)>WL-.08)sea.push([x,y])}
+    if(root&&sea.length){root.dead=false;for(let k=0;k<30;k++){const [x,y]=sea[k%sea.length];addAnimal(mutate(root.genes,AG),x,y,root,20)}addLog('야생 동물이 거의 사라져서, 바다에서 작은 생물이 다시 퍼지기 시작했어요')}}
+  if(t>=LANDP_T&&W.plants.filter(p=>!waterAt(p.x,p.y)).length<20&&tryOnce('landP')){
+    const donor=W.species.filter(s=>s.kind==='p'&&s.count>0).sort((a,b)=>b.count-a.count)[0];if(donor){
+      const g={...donor.genes,aqua:.2,max:2.5,moist:.5},sp=newSpecies('p',g,donor),C=coast();
+      for(let k=0;k<40&&C.length;k++){const i=C[Math.random()*C.length|0];addPlant(mutate(g,PG),(i%TW+.5)*TS,((i/TW|0)+.5)*TS,sp,1)}
+      addLog(`핵심 진화! ${donor.name}에서 땅에 사는 ${sp.name}이(가) 생겼어요`)}}
+  if(t>=LANDA_T&&landA<5&&tryOnce('landA')){
+    const donor=W.species.filter(s=>s.kind==='a'&&s._n>=3&&!s.owner&&!s.civ).sort((a,b)=>b._n-a._n)[0];if(donor){ // 문명 종족·애완동물은 조상으로 안 고름
+      const g={...donor.mean,legs:4,fins:.35,size:Math.max(5,donor.mean.size),eyes:Math.max(.4,donor.mean.eyes)},sp=newSpecies('a',g,donor),C=coast();
+      for(let k=0;k<12&&C.length;k++){const i=C[Math.random()*C.length|0];addAnimal(mutate(g,AG),(i%TW+.5)*TS,((i/TW|0)+.5)*TS,sp,g.size*6)}
+      addLog(`핵심 진화! ${donor.name}에서 다리가 생긴 ${sp.name}이(가) 땅으로 올라왔어요`);toast(`${sp.name}이(가) 땅으로 올라왔어요!`)}}
+  const hasCiv=f=>W.species.some(s=>s.count>0&&s.stage===7&&f(s));
+  if(t>=INTEL_T&&!hasCiv(s=>s.land>.3)&&tryOnce('intelL'))makeIntelligent('land');
+  if(t>=INTEL2_T&&!hasCiv(s=>s.land<.1)&&tryOnce('intelF'))makeIntelligent('fish');
+}
+function makeIntelligent(kind){
+  const water=kind==='fish';
+  const donor=W.species.filter(s=>s.kind==='a'&&s._n>=3&&!s.owner&&!s.civ&&(water?s.land<.2&&s.mean.fins>.4:s.land>.3)).sort((a,b)=>b.count-a.count)[0];if(!donor)return;
+  const g={...donor.mean,...INTEL_SEED[kind]},sp=newSpecies('a',g,donor);sp.trend.intel=1;sp.trend.social=1;sp.name=autoName('a',g);
+  const at=W.animals.filter(o=>o.sp===donor);
+  for(let k=0;k<12;k++){const a=at[k%at.length];addAnimal(mutate(g,AG),clamp(a.x+rnd(-15,15),1,WW-1),clamp(a.y+rnd(-15,15),1,WH-1),sp,g.size*6)}
+  addLog(`핵심 진화! ${donor.name}에서 생각하는 ${sp.name} 탄생`);
+}
+// ===================== 문명 · 애완동물 =====================
+const shortName=n=>n.replace(/ \d+호$/,'').replace(/^(길들인|방울눈|꼬마|튼튼|날쌘|순둥이|영리한|복슬|반짝이) /,'');
+// ===== 외계 도시 =====
+const cityOf=id=>{for(const c of W.civs)if(c.id===id)return c.city;return null};
+const BTYPES_LAND=['dome','dome','tower','crystal','farm','farm'],BTYPES_WATER=['bubble','bubble','spire','crystal','garden'];
+function foundCity(civ,sp){
+  const L=W.animals.filter(o=>o.sp.civ===civ.id);if(!L.length)return null;
+  let x=0,y=0;for(const o of L){x+=o.x;y+=o.y}x/=L.length;y/=L.length;
+  const water=sp.land<.3;if(waterAt(x,y)!==water){const o=L[0];x=o.x;y=o.y}
+  const city={pop:0,x,y,water,b:[],r:30,hue:sp.hue,tiles:[],ci:W.civs.indexOf(civ)+1,island:0,airport:null,spaceport:null};civ.city=city;
+  seedTiles(city);x=city.x;y=city.y;
+  city.b.push({x,y,type:'plaza',p:-1,s:9,ph:0});
+  for(let k=0;k<3;k++)addBuilding(city);
+  city.under=!water&&Math.random()<.5?makeUnder(city):null; // 절반쯤은 땅속 거대 건물에서 삶
+  buildRoads();
+  addLog(`${sp.name}이(가) 도시를 짓기 시작했어요!`);toast(`${sp.name}이(가) 도시를 짓기 시작했어요!`);return city;
+}
+function addBuilding(city){
+  const n=city.b.length,T=city.water?BTYPES_WATER:BTYPES_LAND;
+  for(let tries=0;tries<12;tries++){
+    const an=n*2.4+tries*.7+rnd(-.3,.3),rr=17*Math.sqrt(n+tries*.5)+rnd(-4,4),x=clamp(city.x+Math.cos(an)*rr,4,WW-4),y=clamp(city.y+Math.sin(an)*rr,4,WH-4);
+    if(waterAt(x,y)!==city.water)continue;
+    let bad=false;for(const b of city.b)if((b.x-x)**2+(b.y-y)**2<170){bad=true;break}if(bad)continue;
+    let pi=0,pd=1e9;city.b.forEach((b,i)=>{const d=(b.x-x)**2+(b.y-y)**2;if(d<pd){pd=d;pi=i}}); // 가장 가까운 건물과 길로 이음
+    city.b.push({x,y,type:T[Math.random()*T.length|0],p:pi,s:rnd(5,8),ph:Math.random()*6});
+    city.r=Math.max(city.r,rr+22);return true}
+  return false;
+}
+const inCityAt=(c,x,y)=>URB[tIdx(x,y)]===c.ci||(x-c.x)**2+(y-c.y)**2<c.r*c.r;
+const urbOK=(c,t)=>c.water?(isWater(t)&&H[t]>WL-.12):(!isWater(t)); // 땅 종족은 땅, 물 종족은 얕은 바다에 퍼짐
+// 시가지 시작: 도시 가운데에서 가장 가까운 알맞은 칸부터 (가운데가 물가 경계에 걸려도 시작할 수 있게)
+function seedTiles(c){
+  if(!c.water){ // 땅 도시: 가까우면서 큰 빈 섬을 골라 처음부터 섬 전체를 건물로 덮음 (작은 건물 하나로 시작하지 않게)
+    const comp=new Int32Array(TW*TH).fill(-1),info=[];
+    for(let t=0;t<TW*TH;t++){if(comp[t]>=0||isWater(t)||URB[t])continue;const id=info.length,q=[t];let n=0,best=t,bd=1e18;comp[t]=id;
+      while(q.length){const u=q.pop();n++;const d=(((u%TW)+.5)*TS-c.x)**2+(((u/TW|0)+.5)*TS-c.y)**2;if(d<bd){bd=d;best=u}
+        for(const nb of [u%TW>0?u-1:-1,u%TW<TW-1?u+1:-1,u-TW,u+TW])if(nb>=0&&nb<TW*TH&&comp[nb]<0&&!isWater(nb)&&!URB[nb]){comp[nb]=id;q.push(nb)}}
+      info.push({n,best,d:Math.sqrt(bd)})}
+    if(!info.length)return false;
+    info.sort((a,b)=>b.n/(1+b.d/300)-a.n/(1+a.d/300));const st=info[0].best;
+    c.x=(st%TW+.5)*TS;c.y=((st/TW|0)+.5)*TS;c.island=info[0].n;urbanize(c,st);fillIsland(c);return true}
+  const cx0=c.x/TS|0,cy0=c.y/TS|0;let st=-1;
+  for(let r=0;r<12&&st<0;r++)for(let dy=-r;dy<=r&&st<0;dy++)for(let dx=-r;dx<=r;dx++){const tx=cx0+dx,ty=cy0+dy;if(tx<0||ty<0||tx>=TW||ty>=TH)continue;const t=ty*TW+tx;if(urbOK(c,t)&&!URB[t]){st=t;break}}
+  if(st<0)return false;
+  // 섬 크기 (도시가 퍼질 수 있는 칸 수)
+  const seen=new Uint8Array(TW*TH),q=[st];seen[st]=1;let n=0;while(q.length){const t=q.pop();n++;for(const nb of [t-1,t+1,t-TW,t+TW]){if(nb<0||nb>=TW*TH||seen[nb]||Math.abs((nb%TW)-(t%TW))>1)continue;if(urbOK(c,nb)){seen[nb]=1;q.push(nb)}}}
+  c.island=n;urbanize(c,st);
+  for(const nb of [st-1,st+1,st-TW,st+TW])if(nb>=0&&nb<TW*TH&&urbOK(c,nb)&&!URB[nb])urbanize(c,nb);return true;
+}
+function urbanize(c,t){URB[t]=c.ci;c.tiles.push(t);drawUrbanTile(c,t);if(!c.water)for(const n of [t-1,t+1,t-TW,t+TW])if(n>=0&&n<URB.length&&URB[n]===c.ci)drawUrbanTile(c,n)} // 옆 칸 벽도 다시 그림
+// 시가지 넓히기: 가장자리에서 한 칸씩, 클수록 빨리 → 결국 섬 전체를 덮음
+function spreadCities(){
+  for(const civ of W.civs){const c=civ.city;if(!c)continue;if(!c.tiles.length&&!seedTiles(c))continue;
+    if(!(c.pop>0)&&!W.animals.some(o=>o.sp.civ===civ.id))continue;
+    const k=3+Math.floor(c.tiles.length/80),L=c.tiles.length;
+    for(let a=0;a<k*4;a++){const t=c.tiles[L-1-(Math.random()*Math.min(L,500)|0)], /* 최근에 생긴 가장자리 칸에서 넓힘 */nb=t+[1,-1,TW,-TW][Math.random()*4|0];
+      if(nb<0||nb>=TW*TH||URB[nb]||Math.abs((nb%TW)-(t%TW))>1||!urbOK(c,nb))continue;urbanize(c,nb)}
+    const cov=c.tiles.length/Math.max(1,c.island),sp=spById(civ.id);
+    if(!c.airport&&cov>.25)buildPort(c,'airport',sp);
+    if(!c.spaceport&&cov>.5)buildPort(c,'spaceport',sp);
+    for(const m of[25,50,75,100])if(!c['m'+m]&&cov*100>=m-.5){c['m'+m]=1;addLog(`${sp.name}의 도시가 섬의 ${m}%를 덮었어요`);if(m===100)toast(`${sp.name}의 도시가 섬 전체를 덮었어요!`)}}
+}
+// 공항·우주버스장: 도시 가운데에서 먼 시가지에 지음
+function buildPort(c,kind,sp){
+  let best=null,bd=-1;for(let k=0;k<300;k++){const t=c.tiles[Math.random()*c.tiles.length|0],x=(t%TW+.5)*TS,y=((t/TW|0)+.5)*TS,d=(x-c.x)**2+(y-c.y)**2;
+    let ok=true;for(const q of[c.airport,c.spaceport])if(q&&(q.x-x)**2+(q.y-y)**2<90*90)ok=false;if(ok&&d>bd){bd=d;best={x,y}}}
+  if(!best)return;best.ang=Math.random()*Math.PI;best.t0=performance.now()/1000;c[kind]=best;
+  const n=kind==='airport'?'공항':'우주버스장';addLog(`${sp.name}이(가) ${n}을(를) 지었어요!`);toast(`${sp.name}이(가) ${n}을(를) 지었어요!`);
+}
+// 건물 안 인구: 건물과 시가지가 넓을수록 많이 살 수 있음
+function cityLife(){for(const civ of W.civs){const c=civ.city;if(!c||!(c.pop>0))continue;const cap=20+(c.b.length-1)*3+Math.min(c.tiles.length,2000)*.05;
+  if(c.pop<cap)c.pop+=Math.max(1,Math.round((cap-c.pop)*.05));else c.pop-=Math.round((c.pop-cap)*.1)}}
+const civSpots=civ=>{const L=W.animals.filter(o=>o.sp.civ===civ.id);return L.length?L:(civ.city?civ.city.b:[])}; // 애완동물이 나타날 곳
+// ===== 늙어 가는 행성: 50억 년부터 해가 뜨거워져 70억 년에 사막 행성. 지적생명체가 행성을 지킴 =====
+const fmtY=y=>y>=10000?(y/10000).toFixed(2)+'조 년':y.toFixed(2)+'억 년';
+function climateStep(force){
+  const y=yrs(),D=clamp((y-50)/20,0,1);
+  for(const [yy,msg] of [[50,'해가 점점 뜨거워지고 있어요… 행성이 말라 가요'],[60,'바다가 줄어들고 숲이 사라지고 있어요'],[70,'사막 행성이 됐어요! 지적생명체가 물을 만들어 행성을 지키고 있어요']])
+    if(y>=yy&&!W['cl'+yy]){W['cl'+yy]=1;addLog(msg);toast(msg)}
+  if(!force&&Math.abs(D-(W.dry||0))<.04&&!(D===1&&W.dry<1))return;
+  W.dry=D;WL=.42-D*.22;
+  // 시가지와 그 둘레 4칸은 물을 대서 촉촉하게 (사막 속 초록 도시)
+  const dist=new Uint8Array(TW*TH).fill(255),q=[];for(let t=0;t<TW*TH;t++)if(URB[t]){dist[t]=0;q.push(t)}
+  for(let k=0;k<q.length;k++){const t=q[k];if(dist[t]>=4)continue;for(const nb of[t-1,t+1,t-TW,t+TW]){if(nb<0||nb>=TW*TH||Math.abs(nb%TW-t%TW)>1||dist[nb]<=dist[t]+1)continue;dist[nb]=dist[t]+1;q.push(nb)}}
+  for(let t=0;t<TW*TH;t++)M[t]=D>0&&dist[t]<=4?Math.max(M0[t]*(1-D*.9),.6):M0[t]*(1-D*.9);
+  for(const civ of W.civs){const c=civ.city;if(!c)continue;
+    if(c.water)for(const t of c.tiles)if(H[t]>=WL-.03)H[t]=WL-.05; // 물속 도시는 바다를 지킴
+    if(D>.2&&c.tiles.length)addTowers(c);
+
+  }
+  if(D>.5)buildRoads();
+  calcTemp();
+}
+// 물 만드는 탑 (도시 곳곳, 최대 6개)
+function addTowers(c){c.towers=c.towers||[];
+  for(let k=0;k<200&&c.towers.length<6;k++){const t=c.tiles[Math.random()*c.tiles.length|0],x=(t%TW+.5)*TS,y=((t/TW|0)+.5)*TS;if(c.towers.every(w=>(w.x-x)**2+(w.y-y)**2>90*90)){c.towers.push({x,y,ph:Math.random()*6});if(c.towers.length===1)addLog(`${spById(W.civs.find(v=>v.city===c).id).name}이(가) 물 만드는 탑을 세웠어요`)}}}
+// 땅속 거대 건물: 땅 위엔 출입구·환기구만 보임
+function makeUnder(c){let best=null;for(let k=0;k<200;k++){const t=c.tiles[Math.random()*c.tiles.length|0];if(c.water)break;const x=(t%TW+.5)*TS,y=((t/TW|0)+.5)*TS;if(!waterAt(x,y)){best={x,y,r:rnd(70,110),ph:Math.random()*6};break}}
+  if(best){const sp=spById(W.civs.find(v=>v.city===c).id);addLog(`${sp.name}이(가) 땅속에 거대한 건물을 숨겨 지었어요!`);toast(`${sp.name}이(가) 땅속에 거대한 건물을 숨겨 지었어요!`)}return best}
+// 행성 전체를 잇는 큰 도로: 땅 위에 가로·세로로 깔고, 도시·공항·우주버스장·물 탑·땅속 건물 입구를 서로 이음
+function buildRoads(){
+  const R=[];
+  for(let ty=6;ty<TH;ty+=12){let st=-1;for(let tx=0;tx<=TW;tx++){const land=tx<TW&&!isWater(ty*TW+tx);if(land&&st<0)st=tx;if(!land&&st>=0){if(tx-st>3)R.push([st*TS,(ty+.5)*TS,tx*TS,(ty+.5)*TS]);st=-1}}}
+  for(let tx=6;tx<TW;tx+=12){let st=-1;for(let ty=0;ty<=TH;ty++){const land=ty<TH&&!isWater(ty*TW+tx);if(land&&st<0)st=ty;if(!land&&st>=0){if(ty-st>3)R.push([(tx+.5)*TS,st*TS,(tx+.5)*TS,ty*TS]);st=-1}}}
+  const P=[];for(const civ of W.civs){const c=civ.city;if(!c)continue;P.push([c.x,c.y]);for(const q of[c.airport,c.spaceport,c.under])if(q)P.push([q.x,q.y]);for(const w of c.towers||[])P.push([w.x,w.y])}
+  for(let i=1;i<P.length;i++)R.push([P[i-1][0],P[i-1][1],P[i][0],P[i][1]]);
+  if(!W.roads&&R.length){addLog('행성 전체가 큰 도로로 이어졌어요');toast('행성 전체가 큰 도로로 이어졌어요!')}
+  W.roads=R;
+}
+// 가끔 한두 명이 땅속 출입구나 건물에서 나와 산책하다 돌아감 (문명마다 밖에 최대 4명)
+// ===== 지하 동물 보호소: 멸종 위기 동물과 사막 시대의 야생 동물을 땅속에서 지켜 줌 =====
+const zooSet=()=>{const S=new Set();for(const civ of W.civs)if(civ.city&&civ.city.zoo)for(const id in civ.city.zoo)if(civ.city.zoo[id]>0)S.add(+id);return S};
+function zooCity(){ // 보호소를 맡을 도시 (건물 안 인구가 가장 많은 땅 종족, 없으면 아무 도시)
+  let best=null;for(const civ of W.civs){const c=civ.city;if(!c||!(c.pop>0))continue;if(!best||(!c.water&&best.water)||(c.water===best.water&&c.pop>best.pop))best=c}return best}
+function rescueAnimals(){
+  const c=zooCity();if(!c)return;c.zoo=c.zoo||{};
+  if(!c.under&&!c.water){c.under=makeUnder(c);if(c.under)buildRoads()} // 보호소로 쓸 땅속 건물이 없으면 새로 지음
+  const civName=spById(W.civs.find(v=>v.city===c).id).name,wild=new Map();
+  for(const o of W.animals)if(!o.sp.civ&&!o.sp.owner&&o.visit===undefined){let a=wild.get(o.sp);if(!a)wild.set(o.sp,a=[]);a.push(o)}
+  const take=(sp,L,n)=>{let k=0;for(const o of L){if(k>=n)break;o.dead=true;k++}c.zoo[sp.id]=(c.zoo[sp.id]||0)+k;return k};
+  for(const [sp,L] of wild)if(L.length<=6&&sp.peak>=8&&!c.zoo[sp.id]){take(sp,L,L.length);addLog(`${civName}이(가) 멸종 위기인 ${sp.name}을(를) 땅속 보호소로 데려가 지켜요`)}
+  if((W.dry||0)>.3){const big=W.dry>.5,cap=big?80:20;let moved=0;for(const [sp,L] of wild){if(moved>=cap)break;moved+=take(sp,L,Math.min(big?12:3,L.length))} // 사막이면 동물들이 못 버티니 많이 옮김
+    if(moved&&!c.saidZoo){c.saidZoo=1;addLog(`행성이 말라서 ${civName}이(가) 야생 동물들을 땅속 보호소로 옮기고 있어요`);toast(`${civName}이(가) 동물들을 땅속 보호소에서 지켜요`)}}
+  W.animals=W.animals.filter(o=>!o.dead);
+}
+function zooLife(){for(const civ of W.civs){const z=civ.city&&civ.city.zoo;if(!z)continue;for(const id in z)if(z[id]>0&&z[id]<30&&Math.random()<.3)z[id]++}} // 보호소 안에서 천천히 새끼를 낳음 (종마다 30마리까지)
+function cityOutings(){
+  for(const civ of W.civs){const c=civ.city;if(!c||!(c.pop>5))continue;
+    const out=W.animals.filter(o=>o.sp.civ===civ.id).length;if(out>=4||Math.random()<.5)continue;
+    const sp=spById(civ.id),n=1+(Math.random()<.4);
+    for(let k=0;k<n&&c.pop>5;k++){let h;
+      if(c.under&&Math.random()<.5){const an=(Math.random()*4|0)/4*6.283+c.under.ph;h={x:c.under.x+Math.cos(an)*c.under.r*.85,y:c.under.y+Math.sin(an)*c.under.r*.85}}
+      else{const b=c.b[Math.random()*c.b.length|0];h={x:b.x,y:b.y}}
+      const g={...sp.mean};if(!canLive(g,h.x,h.y))continue;
+      const o=addAnimal(g,h.x,h.y,sp,g.size*5);o.visit=500+Math.random()*700|0;o.home=h;c.pop--;
+      if(!c.saidOut){c.saidOut=1;addLog(`${sp.name} 몇 명이 산책하러 나왔어요`);toast(`${sp.name} 몇 명이 산책하러 나왔어요`)}}}
+}
+// 땅 위 도시 건물이 섬 땅 전체를 덮음 (섬과 1대1)
+function fillIsland(c){if(c.water||!c.tiles.length)return;
+  const seen=new Uint8Array(TW*TH),Q=[];for(const t of c.tiles){if(!seen[t]){seen[t]=1;Q.push(t)}}let add=0;
+  for(let qi=0;qi<Q.length;qi++){const t=Q[qi],tx=t%TW,ty=t/TW|0;
+    for(const n of [tx>0?t-1:-1,tx<TW-1?t+1:-1,ty>0?t-TW:-1,ty<TH-1?t+TW:-1]){if(n<0||seen[n])continue;seen[n]=1;
+      if(waterAt((n%TW+.5)*TS,((n/TW|0)+.5)*TS)||URB[n]&&URB[n]!==c.ci)continue;if(!URB[n]){urbanize(c,n);add++}Q.push(n)}}
+  // 바다 위로도 건물을 넓힘: 이 도시 땅에서 25칸(200)까지 (다른 도시 칸은 건드리지 않음)
+  const dist=new Int16Array(TW*TH).fill(-1),Q2=[];for(const t of c.tiles)if(URB[t]===c.ci&&!waterAt((t%TW+.5)*TS,((t/TW|0)+.5)*TS)){dist[t]=0;Q2.push(t)}
+  for(let qi=0;qi<Q2.length;qi++){const t=Q2[qi],tx=t%TW,ty=t/TW|0;if(dist[t]>=25)continue;
+    for(const n of [tx>0?t-1:-1,tx<TW-1?t+1:-1,ty>0?t-TW:-1,ty<TH-1?t+TW:-1]){if(n<0||dist[n]>=0)continue;if(URB[n]&&URB[n]!==c.ci)continue;dist[n]=dist[t]+1;if(!URB[n]){urbanize(c,n);add++}Q2.push(n)}}
+  if(add||!c.gates)makeGates(c)}
+function makeGates(c){const G=[]; // 바닷가 쪽 벽에 입구(문 + 나무 부두)
+  for(const t of c.tiles){if(URB[t]!==c.ci)continue;const tx=t%TW,ty=t/TW|0;
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=tx+dx,ny=ty+dy;if(nx<0||ny<0||nx>=TW||ny>=TH)continue;const n=ny*TW+nx;
+      if(URB[n]||!waterAt((nx+.5)*TS,(ny+.5)*TS))continue;const x=(tx+.5)*TS,y=(ty+.5)*TS;
+      if(G.every(g=>(g.x-x)**2+(g.y-y)**2>170*170))G.push({x,y,dx,dy,px:x+dx*14,py:y+dy*14});break}
+    if(G.length>=14)break}
+  for(let ty=6;ty<TH;ty+=30)for(let tx=6+(ty/30%2)*20;tx<TW;tx+=40){const t=ty*TW+tx;if(URB[t]!==c.ci)continue;const x=(tx+.5)*TS,y=(ty+.5)*TS; // 지붕 위 옥상 입구
+    if(G.every(g=>(g.x-x)**2+(g.y-y)**2>170*170))G.push({x,y,dx:0,dy:0,px:x,py:y,roof:true})}
+  c.gates=G}
+const landCity=(x,y)=>{const u=URB[tIdx(x,y)],cc=u&&W.civs[u-1];return cc&&cc.city&&!cc.city.water?cc.city:null};
+function nearPier(x,y){for(const civ of W.civs){const c=civ.city;if(!c||!c.gates)continue;for(const g of c.gates)if((g.x+g.dx*10-x)**2+(g.y+g.dy*10-y)**2<64)return true}return false}
+function gateNear(o){let best=null,bd=20*20;for(const civ of W.civs){const c=civ.city;if(!c||!c.gates)continue;for(const g of c.gates){const d=(g.px-o.x)**2+(g.py-o.y)**2;if(d<bd){bd=d;best={g,c}}}}return best}
+function nearestGate(c,o){let best=null,bd=1e18;for(const g of c.gates||[]){const d=(g.x-o.x)**2+(g.y-o.y)**2;if(d<bd){bd=d;best=g}}return best}
+const canGo=(g,x,y)=>x>1&&y>1&&x<WW-1&&y<WH-1; // 조종할 땐 어디든: 지붕 위도 걷고, 물에선 헤엄침 (건물 안은 입구 버튼으로만)
+function drawGates(c,z){const tt=performance.now()/300;
+  for(const civ of W.civs){const ct=civ.city;if(!ct||ct.water||!ct.gates)continue;
+    for(const g of ct.gates){if(g.roof){c.fillStyle=`rgba(255,220,120,${.3+.2*Math.sin(tt)})`;c.beginPath();c.arc(g.x,g.y,8,0,6.283);c.fill();c.fillStyle='#5a4a30';c.fillRect(g.x-4,g.y-4,8,8);c.fillStyle='#ffd27a';c.fillRect(g.x-3,g.y-3,6,6);c.fillStyle='#5a4a30';c.fillRect(g.x-.4,g.y-3,.8,6);c.fillRect(g.x-3,g.y-.4,6,.8); // 옥상 입구(뚜껑 문)
+        if(z>2.5){c.fillStyle='#fff';c.font='bold 4px sans-serif';c.textAlign='center';c.fillText('옥상 입구',g.x,g.y-7)}continue}
+      c.save();c.translate(g.x,g.y);c.rotate(Math.atan2(g.dy,g.dx));
+      c.fillStyle='#8a6a44';c.fillRect(3,-3.5,14,7);c.fillStyle='rgba(0,0,0,.28)';for(let k=0;k<5;k++)c.fillRect(5+k*2.6,-3.5,.5,7); // 나무 부두
+      c.fillStyle=`rgba(255,220,120,${.3+.2*Math.sin(tt)})`;c.beginPath();c.arc(3,0,6,0,6.283);c.fill();c.fillStyle='#ffd27a';c.fillRect(1.6,-3,2.2,6); // 빛나는 문
+      c.restore();if(z>2.5){c.fillStyle='#fff';c.font='bold 4px sans-serif';c.textAlign='center';c.fillText('입구',g.x+g.dx*9,g.y+g.dy*9-5)}}}}
+function growCities(){
+  for(const civ of W.civs)if(civ.city&&!civ.city.water)fillIsland(civ.city);
+  for(const civ of W.civs){if(!civ.city)continue;const c=civ.city,pop=(c.pop||0)+W.animals.filter(o=>o.sp.civ===civ.id).length;
+    if(pop>=3&&c.b.length<31&&addBuilding(c)&&(c.b.length-1)%5===0){const sp=spById(civ.id);addLog(`${sp.name}의 도시가 커졌어요 (건물 ${c.b.length-1}채)`)}}
+}
+function onIntelligent(sp){
+  if(sp.owner||sp.civ)return;
+  sp.civ=sp.id;const civ={id:sp.id,t:W.t,wild:null,breeds:[],city:null};W.civs.push(civ);foundCity(civ,sp);
+  if(!W.ended)ending(sp);else toast(`또 다른 지적생명체! ${sp.name}`);
+}
+function pickPet(owner,civ){
+  const aq=owner.land<.1,ok=s=>s.kind==='a'&&s._n>=5&&!s.civ&&!s.owner&&s.mean.size<=owner.mean.size*1.5&&s.mean.diet<.7;
+  let c=W.species.filter(s=>ok(s)&&(aq?s.land<.2:s.land>.2));if(!c.length)c=W.species.filter(ok);
+  c.sort((a,b)=>(b.mean.eyes+b.mean.social)*30+b.count*.1-((a.mean.eyes+a.mean.social)*30+a.count*.1));
+  const w=c[0];if(w&&!civ.wild)civ.wild=w.id;return w||null;
+}
+function breedPets(){
+  for(const civ of W.civs){
+    if(civ.breeds.length>=7){ // 개량을 다 마쳤어도, 애완동물이 거의 없으면 마지막 품종을 다시 데려옴
+      const last=spById(civ.breeds[6]),pets=W.species.filter(q=>q.owner===civ.id).reduce((a,q)=>a+q.count,0),at=civSpots(civ);
+      if(pets<3&&at.length&&last){for(let k=0;k<5;k++){const a=at[k%at.length],g2=mutate(last.genes,AG,last.trend);if(canLive(g2,a.x,a.y))addAnimal(g2,a.x+rnd(-10,10),a.y+rnd(-10,10),last,g2.size*6)}addLog(`${spById(civ.id).name}이(가) ${last.name}을(를) 다시 데려왔어요`)}
+      continue}
+    const owner=W.species.filter(s=>s.civ===civ.id&&s.count>0).sort((a,b)=>b.count-a.count)[0];if(!owner)continue;
+    let base=null;for(let i=civ.breeds.length-1;i>=0;i--){const b=spById(civ.breeds[i]);if(b&&b.count>0){base=b;break}}
+    if(!base)base=pickPet(owner,civ);if(!base)continue;
+    const first=!civ.breeds.length,f=first?null:BREED_FEAT[Math.random()*BREED_FEAT.length|0],g={...base.mean};
+    g.diet-=.1;g.spikes-=.1;g.social+=.1;g.eyes+=.05; // 순해지고, 가시는 줄고, 주인과 친해짐
+    for(const k of['legs','fins','heat'])g[k]+=(owner.mean[k]-g[k])*(first?1:.4); // 주인이 사는 곳(물·땅)에 맞춰짐
+    g.size+=(owner.mean.size*.45-g.size)*.3;if(f)for(const k in f.ch)g[k]+=f.ch[k];
+    for(const d of AG)if(!d.wrap)g[d.k]=clamp(g[d.k],d.min,d.max);
+    const sp=newSpecies('a',g,base);sp.owner=civ.id;sp.civ=null;for(const k in sp.trend)sp.trend[k]=0;
+    sp.hue=g.hue=(base.hue+(f&&f.hue?f.hue:25))%360;sp.breedNo=civ.breeds.length+1;sp.featD=f?f.d:'야생에서 데려와 길들였어요';
+    sp.name=(f?f.n:'길들인')+' '+shortName(base.name);sp.user=true;civ.breeds.push(sp.id);
+    const at=civSpots(civ);
+    for(let k=0;k<5;k++){const a=at[k%at.length];if(!a)break;const g2=mutate(g,AG,sp.trend);if(canLive(g2,a.x,a.y))addAnimal(g2,a.x+rnd(-10,10),a.y+rnd(-10,10),sp,g.size*6)}
+    addLog(first?`${owner.name}이(가) ${base.name}을(를) 애완동물로 길들였어요`:`애완동물 개량! ${sp.name} (${sp.breedNo}대) — ${sp.featD}`);
+    toast(first?`${owner.name}의 첫 애완동물: ${sp.name}`:`애완동물 개량! ${sp.name} — ${sp.featD}`);
+  }
+}
+const hashN=n=>(n*2654435761)>>>0;
+const tasteOf=g=>g.size<4?'새콤달콤한 맛':g.spikes>.5?'톡 쏘는 맛':g.armor>.5?'바삭바삭한 맛':g.heat>.75?'얼큰한 맛':g.heat<.25?'시원한 맛':g.size>14?'푸짐하고 고소한 맛':g.diet>.5?'쫄깃한 맛':'담백한 맛';
+function recipes(civ,sp){
+  const water=!(sp.land>.3);
+  const M2=water?[['회','얇게 썰어 날로 먹어요'],['소금 절임','바닷소금에 절여요'],['해초 말이','해초로 돌돌 말아요'],['젓갈','조개 항아리에 넣고 삭혀요'],['거품 무침','공기방울과 버무려요']]
+                :[['숯불 구이','숯불에 구워요'],['돌판 볶음','뜨거운 돌판에 볶아요'],['흙가마 찜','흙가마에 넣고 쪄요'],['굴 속 훈제','굴 속에서 연기로 훈제해요'],['뿌리 수프','뿌리랑 같이 끓여요'],['꼬치','꼬챙이에 꿰어 구워요']];
+  const seen=new Set();
+  const zs=zooSet();
+  let ing=W.species.filter(s=>s.count>0&&!s.owner&&!s.civ&&!zs.has(s.id)&&s.peak>=5&&(s.kind==='p'?(water?s.genes.aqua>.5:s.genes.aqua<=.5):(water?s.land<.2:true))).sort((a,b)=>b.count-a.count)
+    .filter(s=>{const n=shortName(s.name);if(seen.has(n))return false;seen.add(n);return true}).slice(0,7);
+  const rows=ing.map(s=>{const m=M2[hashN(civ.id*31+s.id)%M2.length],n=shortName(s.name);
+    if(s.kind==='p')return{n:`${n} ${water?'샐러드':'나물 무침'}`,i:s.name,how:water?'바닷물에 헹궈 그대로 버무려요':'데쳐서 조물조물 무쳐요',taste:'아삭한 맛',star:1+hashN(s.id)%3};
+    if(s.mean.size<4)return{n:`${n} 발효 음료`,i:s.name,how:'작은 생물을 넣고 발효시켜요',taste:'새콤달콤한 맛',star:1+hashN(s.id)%3};
+    return{n:`${n} ${m[0]}`,i:s.name,how:m[1],taste:tasteOf(s.mean),star:1+hashN(s.id*7+civ.id)%3}});
+  if(ing.length>=2){const a=ing[0],b=ing[1],m=M2[hashN(civ.id)%M2.length];rows.unshift({n:`★ ${shortName(a.name)}·${shortName(b.name)} 모둠 ${m[0]}`,i:`${a.name}, ${b.name}`,how:'두 재료를 함께 넣고 '+m[1],taste:'최고로 맛있는 특별 요리',star:3})}
+  return rows;
+}
+// 문명 표에만 보이는 행성 전체 인구: 도시가 커질수록 늘어서 건물 30채면 100억(10,000,000,000)명
+function worldPop(civ){const c=civ.city;if(!c)return 2e8;const b=c.b.length-1,cov=c.tiles.length/Math.max(1,c.island);return Math.round(1e10*Math.min(1,Math.max(.02,b/30*.15,cov>=.99?1:cov)))} // 섬을 다 덮으면 100억 명
+function renderCiv(){
+  if(!W.civs.length){setHTML('p-civ','<div class="sub">아직 지적생명체가 없어요. 지적생명체가 나오면 그 종족이 먹는 요리 표와 애완동물이 여기에 생겨요.</div>');return}
+  let h='';
+  for(const civ of W.civs){
+    const sp=spById(civ.id),live=W.species.filter(s=>s.civ===civ.id&&s.count>0),n=live.reduce((a,s)=>a+s.count,0),main=live.sort((a,b)=>b.count-a.count)[0]||sp;
+    h+=`<h3>${dot(sp)} ${sp.name}</h3><div class="sub">${civ.city?`${civ.city.water?'물속':'땅 위'} 도시 · 건물 ${civ.city.b.length-1}채 · 섬의 ${Math.min(100,Math.round(civ.city.tiles.length/Math.max(1,civ.city.island)*100))}%를 덮음${civ.city.airport?' · 공항':''}${civ.city.spaceport?' · 우주버스장':''}${civ.city.towers&&civ.city.towers.length?` · 물 탑 ${civ.city.towers.length}개로 행성을 지킴`:''}${civ.city.under?' · 땅속에 숨은 거대 건물':''} · `:''}${main.land>.3?(main.mean.dig>.5?'땅에 굴을 파고 무리 지어 살아요':'땅 위에서 살아요'):'바다에서 살아요'} · ${(civ.t*TICK).toFixed(1)}억 년에 생각하기 시작 · 인구 <b>${n?worldPop(civ).toLocaleString('ko-KR'):0}명</b> (다른 지역까지${n?`, 이 도시 건물 안에 ${civ.city?civ.city.pop|0:n}명`:', 사라짐'})</div>`;
+    const rs=recipes(civ,main);
+    h+=`<h4>요리 표</h4><table><tr><th>요리</th><th>재료</th><th>만드는 법</th><th>맛</th></tr>`+(rs.map(r=>`<tr><td><b>${r.n}</b><br><span style="color:#e0a800">${'★'.repeat(r.star)}</span></td><td>${r.i}</td><td>${r.how}</td><td>${r.taste}</td></tr>`).join('')||'<tr><td colspan="4" class="sub">먹을 재료가 없어요</td></tr>')+`</table><div class="sub" style="margin-top:4px">애완동물은 절대 요리하지 않아요!</div>`;
+    const zoo=civ.city&&civ.city.zoo,zl=zoo?Object.entries(zoo).filter(([id,n])=>n>0):[];
+    if(zl.length){h+=`<h4>땅속 동물 보호소</h4><div class="sub">종 ${zl.length}개 · ${zl.reduce((a,[,n])=>a+n,0)}마리를 지키고 있어요</div>`+zl.slice(0,12).map(([id,n])=>{const q=spById(+id);return`<div class="pet">${dot(q)} ${q.name} · ${n}마리</div>`}).join('')}
+    h+='<h4>애완동물</h4>';const wild=civ.wild&&spById(civ.wild);
+    if(!wild)h+='<div class="sub">곧 야생 동물을 길들일 거예요 (0.2억 년마다 개량)</div>';
+    else{h+=`<div class="pet">야생 조상: <b>${wild.name}</b> ${wild.count?'':'(야생은 사라짐)'}</div>`;
+      for(const id of civ.breeds){const b=spById(id),r=b.mean.size/wild.mean.size,d=[];if(Math.abs(r-1)>.1)d.push(`크기 ${r.toFixed(1)}배`);if(b.mean.diet<wild.mean.diet-.05)d.push('순해짐');if(b.mean.eyes>wild.mean.eyes+.05)d.push('눈이 커짐');if(b.mean.intel>wild.mean.intel+.03)d.push('똑똑해짐');
+        h+=`<div class="pet">${dot(b)} <b>${b.breedNo}대 ${b.name}</b> — ${b.featD}<br><span class="sub">${d.join(' · ')||'야생과 비슷'} · ${b.count?b.count+'마리':'사라짐'}</span></div>`}
+      if(civ.breeds.length>=7)h+='<div class="sub">개량을 모두 마쳤어요!</div>'}
+    h+='<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">';
+  }
+  setHTML('p-civ',h);
+}
+function lineage(sp){const out=[];while(sp){out.unshift(sp);sp=sp.parent?spById(sp.parent):null}return out}
+function ending(sp){
+  W.ended=true;const keep=W.speed;W.speed=0;markSpeed();
+  const g=sp.mean,feat=['legs','arms','eyes','fins','armor','spikes'].filter(k=>k==='legs'?g.legs>=1:g[k]>.5).map(k=>AG.find(d=>d.k===k).n).join(', ')||'특별한 기관 없음';
+  $('endCard').innerHTML=`<h2>지적생명체 탄생!</h2><p><b>${sp.name}</b>이(가) ${yrs().toFixed(2)}억 년 만에 생각하기 시작했어요.</p>
+    <p class="sub">몸: ${feat} · ${sp.land>.3?'땅':'물'}에서 삶 · ${g.diet>.6?'사냥으로 먹고 삶':g.diet<.3?'풀을 먹고 삶':'풀도 고기도 먹고 삶'}</p>
+    <p>멸종한 종 ${W.species.filter(s=>s.dead&&s.peak>=8).length}개 · 생긴 종 모두 ${W.species.length}개</p>
+    <p><b>조상 줄기</b><br>${lineage(sp).map(s=>s.name).join(' → ')}</p>
+    <p>오른쪽 <b>문명</b> 탭에 이 종족이 먹는 <b>요리 표</b>와 <b>애완동물</b>이 생겼어요.</p><button class="btn pri" id="keep">계속 지켜보기</button>`;
+  $('ending').style.display='flex';$('keep').onclick=()=>{$('ending').style.display='none';W.speed=keep||10;markSpeed();showTab('civ')};
+}
+// ===================== 그리기 =====================
+const cv=$('cv'),cx=cv.getContext('2d');
+const cam={x:WW/2,y:WH/2,z:1};
+function resize(){const r=cv.parentElement.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=Math.max(1,r.width*d|0);cv.height=Math.max(1,r.height*d|0)}
+addEventListener('resize',()=>{resize();clampCam()});
+function fitCam(){cam.z=Math.min(cv.width/WW,cv.height/WH);cam.x=WW/2;cam.y=WH/2}
+function clampCam(){const mz=Math.min(cv.width/WW,cv.height/WH)*.9;cam.z=clamp(cam.z,mz,10*(devicePixelRatio||1));cam.x=clamp(cam.x,0,WW);cam.y=clamp(cam.y,0,WH)}
+const toWorld=(sx,sy)=>[(sx-cv.width/2)/cam.z+cam.x,(sy-cv.height/2)/cam.z+cam.y];
+const AK=.3; // 동물이 보이는 크기 비율 (작게, 확대하면 자세히 보임)
+// 지구 동물을 닮지 않게: 둥글게 울룩불룩한 몸(방사 대칭) + 몸 둘레로 고르게 뻗은 관절 다리 + 눈자루(1·3·5개) + 둥근 입
+function drawAnimal(c,o,z,t){
+  const g=o.g,r=o.size*(o.vk||AK),h=g.hue,h2=(h+150)%360;
+  if(r*z<6){const q=Math.max(r*.8,1.1/z);c.fillStyle=`hsl(${h},70%,60%)`;c.fillRect(o.x-q,o.y-q,q*2,q*2);return} // 멀리서 보면 작은 네모
+  const a=Math.atan2(o.vy,o.vx)||0,L=Math.round(g.legs);
+  c.save();c.translate(o.x,o.y);c.rotate(a);
+  // 원시 세포: 반투명 막 + 핵 + 알갱이 + 가장자리 섬모
+  if(g.size<4&&L<1){
+    c.strokeStyle=`hsla(${h},80%,75%,.8)`;c.lineWidth=Math.max(.5,r*.08);c.beginPath();
+    for(let k=0;k<14;k++){const an=k/14*6.283,w=Math.sin(t*.6+k*1.3)*r*.18;c.moveTo(Math.cos(an)*r,Math.sin(an)*r);c.lineTo(Math.cos(an+.12)*(r*1.35+w),Math.sin(an+.12)*(r*1.35+w))}c.stroke();
+    c.fillStyle=`hsla(${h},70%,55%,.45)`;c.beginPath();for(let k=0;k<=20;k++){const an=k/20*6.283,rr=r*(1+.08*Math.sin(an*3+t*.2));k?c.lineTo(Math.cos(an)*rr,Math.sin(an)*rr):c.moveTo(rr,0)}c.fill();
+    c.strokeStyle=`hsla(${h},90%,85%,.9)`;c.lineWidth=Math.max(.4,r*.07);c.stroke();
+    c.fillStyle=`hsla(${h2},80%,60%,.85)`;c.beginPath();c.arc(-r*.2,r*.1,r*.35,0,6.283);c.fill();
+    c.fillStyle='rgba(255,255,255,.6)';c.beginPath();c.arc(r*.35,-r*.3,r*.12,0,6.283);c.arc(r*.2,r*.4,r*.09,0,6.283);c.fill();
+    c.restore();return}
+  // 물결막: 몸 둘레를 감싸며 물결침 (물에서 헤엄치는 기관)
+  if(g.fins>.3){c.fillStyle=`hsla(${h2},75%,65%,.4)`;c.beginPath();
+    for(let k=0;k<=28;k++){const an=k/28*6.283,rr=r*(1.25+.25*g.fins+.15*Math.sin(an*7+t*.5));k?c.lineTo(Math.cos(an)*rr,Math.sin(an)*rr):c.moveTo(rr,0)}c.fill()}
+  // 관절 다리: 몸 둘레로 고르게, 끝이 빛남
+  if(L>0){c.strokeStyle=`hsl(${h},35%,28%)`;c.lineWidth=Math.max(.7,r*.11);c.lineCap='round';c.lineJoin='round';c.beginPath();
+    const tips=[];for(let k=0;k<L;k++){const an=(k+.5)/L*6.283+Math.sin(t*.4+k*2.1)*.22,kn=an+.45;
+      const x1=Math.cos(an)*r*.85,y1=Math.sin(an)*r*.85,x2=Math.cos(kn)*r*1.55,y2=Math.sin(kn)*r*1.55,x3=Math.cos(an)*r*2.05,y3=Math.sin(an)*r*2.05;
+      c.moveTo(x1,y1);c.lineTo(x2,y2);c.lineTo(x3,y3);tips.push(x3,y3)}c.stroke();
+    c.fillStyle=`hsla(${h2},95%,70%,.95)`;c.beginPath();for(let k=0;k<tips.length;k+=2){c.moveTo(tips[k]+r*.13,tips[k+1]);c.arc(tips[k],tips[k+1],r*.13,0,6.283)}c.fill();c.lineCap='butt';c.lineJoin='miter'}
+  // 팔: 앞으로 뻗은 덩굴손, 끝이 세 갈래
+  if(g.arms>.5){c.strokeStyle=`hsl(${h},40%,38%)`;c.lineWidth=Math.max(.6,r*.09);c.lineCap='round';c.beginPath();const sw=Math.sin(t*.3)*r*.2;
+    for(const s2 of[-1,1]){const ex=r*1.55,ey=s2*r*.55+sw;c.moveTo(r*.6,s2*r*.5);c.quadraticCurveTo(r*1.2,s2*r*.9,ex,ey);for(const f of[-.35,0,.35]){c.moveTo(ex,ey);c.lineTo(ex+Math.cos(f)*r*.3,ey+Math.sin(f)*r*.3)}}c.stroke();c.lineCap='butt'}
+  // 몸: 울룩불룩한 둥근 몸 (혹 개수는 크기에 따라)
+  const lobes=3+(g.size>8)+(g.size>15);
+  const grd=c.createRadialGradient(-r*.2,-r*.2,r*.1,0,0,r*1.1);grd.addColorStop(0,`hsl(${h},70%,${64-g.diet*10}%)`);grd.addColorStop(1,`hsl(${h},60%,${36-g.diet*8}%)`);
+  c.fillStyle=grd;c.beginPath();for(let k=0;k<=30;k++){const an=k/30*6.283,rr=r*(1+.14*Math.cos(an*lobes+t*.05));k?c.lineTo(Math.cos(an)*rr,Math.sin(an)*rr):c.moveTo(rr,0)}c.fill();
+  // 무늬: 빛나는 점 / 빛나는 고리
+  const pt=Math.round(g.pattern);
+  if(pt===1){c.fillStyle=`hsla(${h2},100%,75%,.85)`;c.beginPath();for(let k=0;k<6;k++){const an=k/6*6.283+.3,px=Math.cos(an)*r*.6,py=Math.sin(an)*r*.6;c.moveTo(px+r*.1,py);c.arc(px,py,r*.1,0,6.283)}c.fill()}
+  else if(pt===2){c.strokeStyle=`hsla(${h2},100%,75%,.7)`;c.lineWidth=Math.max(.5,r*.07);c.beginPath();c.arc(0,0,r*.45,0,6.283);c.moveTo(r*.8,0);c.arc(0,0,r*.8,0,6.283);c.stroke()}
+  // 껍데기: 육각형 결정판
+  if(g.armor>.35){c.fillStyle=`hsla(${(h+40)%360},35%,${45+g.armor*15}%,.8)`;c.strokeStyle='rgba(0,0,0,.3)';c.lineWidth=Math.max(.4,r*.05);
+    for(const [px,py] of [[-r*.3,-r*.35],[-r*.3,r*.35],[-r*.65,0],[r*.05,0]]){c.beginPath();for(let k=0;k<6;k++){const an=k/6*6.283;c.lineTo(px+Math.cos(an)*r*.27,py+Math.sin(an)*r*.27)}c.closePath();c.fill();c.stroke()}}
+  // 가시: 수정 조각
+  if(g.spikes>.35){c.fillStyle='rgba(190,240,255,.9)';c.beginPath();const n=5+(g.spikes*5|0);for(let k=0;k<n;k++){const an=(k+.25)/n*6.283;
+    c.moveTo(Math.cos(an-.12)*r*.95,Math.sin(an-.12)*r*.95);c.lineTo(Math.cos(an)*r*(1.45+g.spikes*.3),Math.sin(an)*r*(1.45+g.spikes*.3));c.lineTo(Math.cos(an+.12)*r*.95,Math.sin(an+.12)*r*.95)}c.fill()}
+  // 똑똑하면 몸속에서 빛이 깜빡임
+  if(g.intel>.3){c.fillStyle=`hsla(${h2},100%,80%,${.25+.25*Math.sin(t*.2)*g.intel})`;c.beginPath();c.arc(-r*.1,0,r*.35*(.6+g.intel),0,6.283);c.fill()}
+  // 입: 앞쪽 가장자리. 고기 먹으면 이빨이 빙 둘러난 둥근 입, 풀 먹으면 빨판
+  c.fillStyle='rgba(30,10,30,.85)';c.beginPath();c.arc(r*.95,0,r*.2,0,6.283);c.fill();
+  if(g.diet>.5){c.fillStyle='#f4f0ff';c.beginPath();for(let k=0;k<6;k++){const an=k/6*6.283;c.moveTo(r*.95+Math.cos(an)*r*.2,Math.sin(an)*r*.2);c.lineTo(r*.95+Math.cos(an+.3)*r*.07,Math.sin(an+.3)*r*.07);c.lineTo(r*.95+Math.cos(an+.6)*r*.2,Math.sin(an+.6)*r*.2)}c.fill()}
+  else{c.strokeStyle=`hsla(${h},60%,80%,.9)`;c.lineWidth=Math.max(.4,r*.06);c.beginPath();c.arc(r*.95,0,r*.25,0,6.283);c.stroke()}
+  // 눈: 1·3·5개, 눈자루 위 (색 있는 눈동자 + 세로 동공)
+  if(g.eyes>.15){const ne=g.eyes<.5?1:g.eyes<.8?3:5,er=Math.max(.7,r*(.1+g.eyes*.08));c.strokeStyle=`hsl(${h},35%,30%)`;c.lineWidth=Math.max(.5,r*.06);c.beginPath();
+    const pos=[];for(let k=0;k<ne;k++){const an=ne===1?0:(k/(ne-1)-.5)*1.3,sx=Math.cos(an)*r*.55,sy=Math.sin(an)*r*.55,ex=Math.cos(an)*r*(1.15+.1*Math.sin(t*.3+k)),ey=Math.sin(an)*r*1.15;c.moveTo(sx,sy);c.lineTo(ex,ey);pos.push(ex,ey)}c.stroke();
+    for(let k=0;k<pos.length;k+=2){c.fillStyle=`hsl(${(h+90)%360},90%,62%)`;c.beginPath();c.arc(pos[k],pos[k+1],er,0,6.283);c.fill();c.fillStyle='#120818';c.beginPath();c.ellipse(pos[k],pos[k+1],er*.22,er*.7,0,0,6.283);c.fill()}}
+  if(o.sp&&o.sp.civ&&o.sp.stage===7){ // 지적생명체: 머리 위에 떠 있는 빛 고리 + 손에 든 지팡이
+    c.strokeStyle='#ffd34d';c.lineWidth=Math.max(.8,r*.08);c.beginPath();c.ellipse(-r*.1,0,r*.5,r*.5,0,0,6.283);c.stroke();
+    c.strokeStyle='#c8a46a';c.lineWidth=Math.max(.7,r*.08);c.beginPath();c.moveTo(r*.2,r*.9);c.lineTo(r*2,r*.6);c.stroke();c.fillStyle='#9ff';c.beginPath();c.arc(r*2.05,r*.58,r*.14,0,6.283);c.fill()}
+  c.restore();
+  if(o.sp&&o.sp.owner){const k=Math.max(.35,r*.28),y=o.y-r*1.5-k*2;c.fillStyle='#ff7fae';c.beginPath();c.arc(o.x-k*.8,y,k,0,6.283);c.arc(o.x+k*.8,y,k,0,6.283);c.fill();c.beginPath();c.moveTo(o.x-k*1.75,y+k*.35);c.lineTo(o.x,y+k*2.1);c.lineTo(o.x+k*1.75,y+k*.35);c.fill()} // 애완동물 하트
+}
+function drawPlant(c,p,z){
+  const g=p.g,r=Math.max(.6,p.size),h=g.hue;
+  if(r*z<1.6){c.fillStyle=`hsl(${h},55%,${p.kind===0?45:35}%)`;c.fillRect(p.x-r,p.y-r,r*2,r*2);return}
+  if(p.kind===0){c.strokeStyle=`hsla(${h},55%,45%,.9)`;c.lineWidth=Math.max(.6,r*.2);c.beginPath();for(let k=0;k<4;k++){const a=k*1.57+Math.sin(W.t*.03+p.ph)*.3;c.moveTo(p.x,p.y);c.quadraticCurveTo(p.x+Math.cos(a)*r*.6,p.y+Math.sin(a)*r*.6+r*.3,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r)}c.stroke();return}
+  if(p.kind===1){c.strokeStyle=`hsl(${h},55%,40%)`;c.lineWidth=Math.max(.5,r*.25);c.beginPath();for(let k=0;k<5;k++){const a=k*1.256;c.moveTo(p.x,p.y);c.lineTo(p.x+Math.cos(a)*r*1.2,p.y+Math.sin(a)*r*1.2)}c.stroke();return}
+  if(p.kind===3){c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.arc(p.x+r*.3,p.y+r*.35,r,0,6.283);c.fill()}
+  c.fillStyle=`hsl(${h},50%,${p.kind===3?28:34}%)`;c.beginPath();c.arc(p.x,p.y,r,0,6.283);c.fill();
+  c.fillStyle=`hsl(${h},55%,${p.kind===3?40:46}%)`;c.beginPath();c.arc(p.x-r*.25,p.y-r*.25,r*.55,0,6.283);c.fill();
+  if(p.thorn>.4){c.fillStyle='#eee';c.beginPath();for(let k=0;k<6;k++){const a=k*1.047;c.moveTo(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r);c.arc(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,Math.max(.4,r*.1),0,6.283)}c.fill()}
+}
+function draw(){
+  if(terrDirty)invalidateAll();
+  if(W.follow&&W.sel&&!W.sel.dead){cam.x+=(W.sel.x-cam.x)*.15;cam.y+=(W.sel.y-cam.y)*.15}
+  const z=cam.z,ox=cv.width/2-cam.x*z,oy=cv.height/2-cam.y*z;
+  cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#0a1420';cx.fillRect(0,0,cv.width,cv.height);
+  cx.setTransform(z,0,0,z,ox,oy);
+  const [vx0,vy0]=toWorld(0,0),[vx1,vy1]=toWorld(cv.width,cv.height),m=30,vis=o=>o.x>vx0-m&&o.x<vx1+m&&o.y>vy0-m&&o.y<vy1+m;
+  // 지형 조각: 확대 정도에 맞는 해상도 (없으면 있는 것 중 가장 좋은 걸 먼저 그림)
+  const L=z<=1.3?1:z<=2.6?2:z<=5.2?4:8,ca=Math.max(0,vx0/CW|0),cb=Math.min(CCX-1,vx1/CW|0),cc=Math.max(0,vy0/CW|0),cd=Math.min(CCY-1,vy1/CW|0);
+  genQueue=genQueue.filter(q=>q[0]>=ca&&q[0]<=cb&&q[1]>=cc&&q[1]<=cd&&q[2]===L);queued.clear();for(const q of genQueue)queued.add(q[3]);if(curJob)queued.add(curJob.k);
+  for(let y=cc;y<=cd;y++)for(let x=ca;x<=cb;x++){let im=chunkCache.get(ckey(x,y,L));
+    if(!im){wantChunk(x,y,L);im=(L===8&&chunkCache.get(ckey(x,y,4)))||(L>=4&&chunkCache.get(ckey(x,y,2)))||chunkCache.get(ckey(x,y,1))}
+    if(im){const q=(im._n-2)/CW;cx.drawImage(im,1,1,im._n-2,im._n-2,x*CW,y*CW,CW+.4/q,CW+.4/q)}}
+  pumpChunks(10);
+  // 굴(둥지): 구멍 + 흙더미, 문명이면 횃불
+  for(const [id,n] of W.nests){const sp=spById(id);if(!sp||!sp.count||!vis(n))continue;
+    cx.fillStyle='rgba(120,85,50,.9)';cx.beginPath();cx.arc(n.x+6,n.y+5,9,0,6.283);cx.fill();cx.fillStyle='#1a0f08';cx.beginPath();cx.ellipse(n.x,n.y,8,6,0,0,6.283);cx.fill();
+    if(sp.civ){cx.fillStyle='rgba(255,190,90,.35)';cx.beginPath();cx.arc(n.x,n.y,20,0,6.283);cx.fill();cx.fillStyle='#ffb347';cx.fillRect(n.x-14,n.y-10,3,6);cx.fillRect(n.x+12,n.y-10,3,6)}}
+  for(const p of W.plants)if(vis(p))drawPlant(cx,p,z);
+  drawRoads(cx,z); // 길은 건물 지붕 아래로
+  if(W.civs.some(c=>c.city&&c.city.tiles.length))drawUrban(cx,z,vx0,vy0,vx1,vy1);
+  for(const civ of W.civs)if(civ.city){if(civ.city.water)drawCity(cx,civ.city,z);drawPorts(cx,civ.city,z)}
+  drawGates(cx,z); // 땅 위 도시는 큰 건물 하나라 따로 집을 안 그림
+  drawLeashes(cx,z,vis);
+  for(const o of W.animals)if(vis(o))drawAnimal(cx,o,z,o.age+o.ph);
+  {const P=W.player;if(P&&!W.inside&&waterAt(P.x,P.y)&&!nearPier(P.x,P.y)){const tt=performance.now()/400;cx.strokeStyle='rgba(220,245,255,.7)';cx.lineWidth=.6;for(let k=0;k<2;k++){cx.beginPath();cx.arc(P.x,P.y,4+((tt+k*.5)%1)*6,0,6.283);cx.stroke()}}} // 헤엄칠 때 물결
+  if(W.selSp){cx.strokeStyle='rgba(255,255,255,.7)';cx.lineWidth=1.5/z;const L=W.selSp.kind==='a'?W.animals:W.plants;for(const o of L)if(o.sp===W.selSp&&vis(o)){cx.beginPath();cx.arc(o.x,o.y,o.size*(o.maxS===undefined?AK:1)*1.6+3,0,6.283);cx.stroke()}}
+  if(W.sel&&!W.sel.dead){cx.strokeStyle='#ffd34d';cx.lineWidth=2.5/z;cx.beginPath();cx.arc(W.sel.x,W.sel.y,W.sel.size*(W.sel.maxS===undefined?AK:1)*1.8+4,0,6.283);cx.stroke()}
+  if(hover&&PAINT.includes(tool)){cx.strokeStyle='rgba(255,255,255,.6)';cx.lineWidth=1.5/z;cx.beginPath();cx.arc(hover[0],hover[1],brush*TS,0,6.283);cx.stroke()}
+}
+// 시가지 그림: 칸이 시가지가 될 때 한 번만 그려 둠
+const urbCv=document.createElement('canvas');urbCv.width=WW;urbCv.height=WH;const urbCtx=urbCv.getContext('2d');
+function drawUrbanTile(c,t){
+  const tx=t%TW,ty=t/TW|0,x=tx*TS,y=ty*TS,r1=hash2(t,7),r2=hash2(t,13),g=urbCtx;
+  const d=rn(tx*8,ty*8,140,3),h=(c.hue+(d-.5)*80+360)%360,h2=(h+150)%360; // 구역마다 색이 다름
+  if(!c.water){ // 땅 위 도시는 전부 하나로 이어진 큰 건물: 지붕 + 유리 천장 + 바깥 벽
+    const S=URB[t],hh=c.hue;g.fillStyle=`hsl(${hh},14%,${30+d*6}%)`;g.fillRect(x,y,TS,TS);
+    g.fillStyle=`hsla(${hh},20%,48%,.7)`;if(tx%4===0)g.fillRect(x,y,.7,TS);if(ty%4===0)g.fillRect(x,y,TS,.7); // 지붕 판 이음새
+    if(ty%6===3){g.fillStyle=`hsla(${h2},80%,72%,.55)`;g.fillRect(x,y+3,TS,2)} // 빛나는 유리 천장
+    if(r1>.88){g.fillStyle=`hsl(${hh},12%,52%)`;g.beginPath();g.arc(x+4,y+4,1.6,0,6.283);g.fill()} // 환기구
+    g.fillStyle=`hsl(${hh},22%,15%)`;
+    if(tx===0||URB[t-1]!==S)g.fillRect(x,y,1.6,TS);if(tx===TW-1||URB[t+1]!==S)g.fillRect(x+TS-1.6,y,1.6,TS);
+    if(ty===0||URB[t-TW]!==S)g.fillRect(x,y,TS,1.6);if(ty===TH-1||URB[t+TW]!==S)g.fillRect(x,y+TS-1.6,TS,1.6);
+    return}
+  if(c.water){g.fillStyle=`hsla(${h},45%,${45+d*15}%,.55)`;g.fillRect(x,y,TS,TS)}
+  else{g.fillStyle=`hsl(${h},16%,${22+d*12+r1*5}%)`;g.fillRect(x,y,TS,TS)}
+  if(r1<.12){ // 외계 공원
+    g.fillStyle=`hsl(${(c.hue+100)%360},45%,32%)`;g.fillRect(x+.5,y+.5,TS-1,TS-1);g.fillStyle=`hsla(${(h2+60)%360},100%,70%,.9)`;g.fillRect(x+2+r2*3,y+2+r1*20,1.2,1.2);g.fillRect(x+5-r2*2,y+5,1,1)}
+  else if(r1>.78){ // 둥근 지붕
+    g.fillStyle=`hsl(${h},28%,${55+r2*15}%)`;g.beginPath();g.arc(x+TS/2,y+TS/2,3.2,0,6.283);g.fill();g.fillStyle='rgba(255,255,255,.45)';g.beginPath();g.arc(x+TS/2-1,y+TS/2-1,1,0,6.283);g.fill()}
+  else if(r1>.66){ // 탑
+    g.fillStyle=`hsl(${h},25%,${40+r2*10}%)`;g.beginPath();for(let k=0;k<6;k++){const an=k/6*6.283;g.lineTo(x+4+Math.cos(an)*3,y+4+Math.sin(an)*3)}g.fill();g.fillStyle=`hsla(${h2},100%,72%,.95)`;g.beginPath();g.arc(x+4,y+4,1.1,0,6.283);g.fill()}
+  else{g.fillStyle=`hsl(${h},20%,${34+d*12+r2*8}%)`;g.fillRect(x+1,y+1,TS-2.5-r2*2,TS-2.5-r1*2)} // 네모나지 않게 크기가 제각각인 지붕
+  g.fillStyle=`hsla(${h2},100%,72%,.9)`; // 빛나는 큰길 (4칸마다)
+  if(tx%4===0)g.fillRect(x,y,1,TS);if(ty%4===0)g.fillRect(x,y,TS,1);
+  g.fillStyle=`hsla(${(h2+40)%360},100%,80%,.95)`;for(let k=0;k<3;k++){const a=hash2(t,k*5+1),b=hash2(t,k*5+2);g.fillRect(x+1.5+a*4.5,y+1.5+b*4.5,.9,.9)} // 불 켜진 창문
+}
+function drawUrban(c,z,vx0,vy0,vx1,vy1){
+  c.imageSmoothingEnabled=z<4;c.drawImage(urbCv,0,0,WW,WH);c.imageSmoothingEnabled=true;
+  if(z<3)return; // 확대하면 불빛을 또렷하게 다시 찍음
+  const tx0=Math.max(0,vx0/TS|0),tx1=Math.min(TW-1,vx1/TS|0),ty0=Math.max(0,vy0/TS|0),ty1=Math.min(TH-1,vy1/TS|0),tt=performance.now()/1000;
+  c.beginPath();for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++){const t=ty*TW+tx;if(!URB[t])continue;
+    for(let k=0;k<3;k++){const a=hash2(t,k*5+1),b=hash2(t,k*5+2);if(Math.sin(tt*.7+a*20)>-.3)c.rect(tx*TS+1.5+a*4.5,ty*TS+1.5+b*4.5,.9,.9)}}
+  c.fillStyle='rgba(255,240,170,.95)';c.fill();
+}
+// 공항: 활주로를 달려 날아오르는 외계 비행기 / 우주버스장: 둥근 발사대에서 불꽃을 뿜으며 떠나는 우주버스
+function drawRoads(c,z){
+  if(!W.roads)return;const tt=performance.now()/1000;
+  c.strokeStyle='rgba(40,40,50,.85)';c.lineWidth=4;c.beginPath();for(const r of W.roads){c.moveTo(r[0],r[1]);c.lineTo(r[2],r[3])}c.stroke();
+  c.strokeStyle=`rgba(140,240,255,${.55+.25*Math.sin(tt*2)})`;c.lineWidth=1.1;c.setLineDash([6,5]);c.lineDashOffset=-tt*20;c.beginPath();for(const r of W.roads){c.moveTo(r[0],r[1]);c.lineTo(r[2],r[3])}c.stroke();c.setLineDash([])
+}
+function drawPorts(c,city,z){
+  {const tt=performance.now()/1000,u=city.under;
+  if(u){ // 땅속 거대 건물: 출입구 4개 + 환기구 김, 확대하면 투시해서 윤곽이 보임
+    c.fillStyle='rgba(0,15,35,.45)';c.beginPath();c.arc(u.x,u.y,u.r,0,6.283);c.fill(); // 땅속이 비쳐 보이는 어두운 자리
+    if(z>1.5){c.strokeStyle='rgba(120,220,255,.75)';c.lineWidth=1.6;c.setLineDash([4,4]);for(const k of[1,.7,.4]){c.beginPath();c.arc(u.x,u.y,u.r*k,0,6.283);c.stroke()}c.setLineDash([]);
+      c.beginPath();for(let k=0;k<6;k++){const an=k/6*6.283+u.ph;c.moveTo(u.x+Math.cos(an)*u.r*.4,u.y+Math.sin(an)*u.r*.4);c.lineTo(u.x+Math.cos(an)*u.r,u.y+Math.sin(an)*u.r)}c.stroke()}
+    for(let k=0;k<4;k++){const an=k/4*6.283+u.ph,x=u.x+Math.cos(an)*u.r*.85,y=u.y+Math.sin(an)*u.r*.85;
+      c.fillStyle='rgba(255,190,90,.35)';c.beginPath();c.arc(x,y,10,0,6.283);c.fill();c.fillStyle='#1b1e26';c.beginPath();c.ellipse(x,y,7,5,an,0,6.283);c.fill();c.fillStyle='rgba(255,200,120,.95)';c.beginPath();c.ellipse(x,y,3.5,2.2,an,0,6.283);c.fill()}
+    for(let k=0;k<3;k++){const an=k/3*6.283+u.ph+.5,x=u.x+Math.cos(an)*u.r*.4,y=u.y+Math.sin(an)*u.r*.4,f=((tt*.6+k*.33)%1);
+      c.fillStyle='#3a3f4a';c.fillRect(x-2.5,y-2.5,5,5);c.fillStyle=`rgba(230,240,255,${.5*(1-f)})`;c.beginPath();c.arc(x,y-f*8,2+f*6,0,6.283);c.fill()}
+    if(z>1.2){c.fillStyle='#fff';c.font='bold 9px system-ui';c.textAlign='center';c.fillText(city.zoo&&Object.keys(city.zoo).length?'땅속 거대 건물 · 동물 보호소':'땅속 거대 건물',u.x,u.y-u.r*.85-8);c.textAlign='left'}}
+  for(const w of city.towers||[]){ // 물 만드는 탑: 퍼져 나가는 물안개 고리
+    const f=(tt*.5+w.ph)%1;c.strokeStyle=`rgba(120,200,255,${.6*(1-f)})`;c.lineWidth=1.5;c.beginPath();c.arc(w.x,w.y,5+f*28,0,6.283);c.stroke();
+    c.fillStyle='#d9e6f2';c.beginPath();c.arc(w.x,w.y,5,0,6.283);c.fill();c.fillStyle='#4aa8ff';c.beginPath();c.arc(w.x,w.y,2.6,0,6.283);c.fill();
+    if(z>1.5){c.fillStyle='#fff';c.font='bold 8px system-ui';c.textAlign='center';c.fillText('물 탑',w.x,w.y-9);c.textAlign='left'}}}
+  const tt=performance.now()/1000,h2=(city.hue+150)%360;
+  const ap=city.airport;if(ap){c.save();c.translate(ap.x,ap.y);c.rotate(ap.ang);
+    c.fillStyle='#2a2d36';c.fillRect(-45,-5,90,10);c.fillStyle='rgba(255,255,255,.7)';for(let i=-40;i<40;i+=10)c.fillRect(i,-.4,5,.8);
+    c.fillStyle=`hsla(${h2},100%,70%,${.5+.5*Math.sin(tt*6)})`;for(let i=-44;i<=44;i+=8){c.fillRect(i,-5.5,1.2,1.2);c.fillRect(i,4.3,1.2,1.2)}
+    const ph=((tt-ap.t0)%8)/8,px=-40+ph*140,alt=Math.max(0,ph-.45)*2.2,sc=1+alt*1.4; // 달려가다 날아오름
+    if(ph<.95){c.fillStyle='rgba(0,0,0,.3)';c.save();c.translate(px+alt*10,alt*10);c.beginPath();c.moveTo(6,0);c.lineTo(-5,-5);c.lineTo(-3,0);c.lineTo(-5,5);c.closePath();c.fill();c.restore();
+      c.save();c.translate(px,0);c.scale(sc,sc);c.fillStyle=`hsl(${city.hue},30%,80%)`;c.beginPath();c.moveTo(6,0);c.lineTo(-5,-5);c.lineTo(-3,0);c.lineTo(-5,5);c.closePath();c.fill();
+      c.fillStyle=`hsla(${h2},100%,70%,.9)`;c.beginPath();c.arc(-3.5,0,1.3,0,6.283);c.fill();c.restore()}
+    c.restore();if(z>1.2){c.fillStyle='#fff';c.font='bold 9px system-ui';c.textAlign='center';c.fillText('공항',ap.x,ap.y-12);c.textAlign='left'}}
+  const sp=city.spaceport;if(sp){const x=sp.x,y=sp.y;
+    c.fillStyle='#262a33';c.beginPath();c.arc(x,y,20,0,6.283);c.fill();
+    c.strokeStyle=`hsla(${h2},100%,70%,.8)`;c.lineWidth=1;for(const r of[8,14,19]){c.beginPath();c.arc(x,y,r,0,6.283);c.stroke()}
+    for(let k=0;k<3;k++){const an=k/3*6.283+.5,bx=x+Math.cos(an)*14,by=y+Math.sin(an)*14;c.fillStyle='#d8dde8';c.beginPath();c.ellipse(bx,by,3.2,1.8,an,0,6.283);c.fill()} // 서 있는 우주버스
+    const ph=((tt-sp.t0)%6)/6; // 가운데 우주버스가 떠오름
+    if(ph<.75){const up=ph/.75,s2=1+up*3,a=1-up;c.globalAlpha=Math.max(0,a);
+      c.fillStyle='rgba(255,170,60,.8)';c.beginPath();c.arc(x,y,4*s2*.8*(1+Math.sin(tt*30)*.1),0,6.283);c.fill();
+      c.fillStyle='#eef2fa';c.beginPath();c.ellipse(x,y-up*30,3.5*s2,2*s2,0,0,6.283);c.fill();c.fillStyle=`hsla(${h2},100%,70%,1)`;c.beginPath();c.arc(x,y-up*30,1*s2,0,6.283);c.fill();c.globalAlpha=1}
+    if(z>1.2){c.fillStyle='#fff';c.font='bold 9px system-ui';c.textAlign='center';c.fillText('우주버스장',x,y-24);c.textAlign='left'}}
+}
+// 외계 도시 그리기 (지구 건물을 닮지 않은 모양)
+function drawCity(c,city,z){
+  const B=city.b,tt=performance.now()/1000,h=city.hue,h2=(h+150)%360;
+  c.strokeStyle=city.water?'rgba(170,235,255,.45)':'rgba(235,220,175,.85)';c.lineWidth=2.4;c.lineCap='round';c.beginPath();
+  for(const b of B)if(b.p>=0){const q=B[b.p];c.moveTo(q.x,q.y);c.lineTo(b.x,b.y)}c.stroke();c.lineCap='butt';
+  for(const b of B){const s=b.s,x=b.x,y=b.y;
+    if(b.type==='plaza'){c.fillStyle=city.water?'rgba(150,230,255,.35)':'rgba(240,230,200,.8)';c.beginPath();c.arc(x,y,s,0,6.283);c.fill();
+      c.fillStyle=`hsla(${h2},100%,75%,${.6+.4*Math.sin(tt*2)})`;c.beginPath();c.moveTo(x,y-s*.8);c.lineTo(x+s*.25,y);c.lineTo(x,y+s*.3);c.lineTo(x-s*.25,y);c.fill()}
+    else if(b.type==='dome'||b.type==='bubble'){ // 둥근 집: 빛 창문 고리
+      c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.arc(x+s*.25,y+s*.3,s,0,6.283);c.fill();
+      c.fillStyle=b.type==='bubble'?`hsla(${h},60%,80%,.55)`:`hsl(${h},30%,72%)`;c.beginPath();c.arc(x,y,s,0,6.283);c.fill();
+      c.fillStyle=`hsla(${h2},100%,72%,.9)`;c.beginPath();for(let k=0;k<5;k++){const an=k/5*6.283+b.ph;c.moveTo(x+Math.cos(an)*s*.6+s*.12,y+Math.sin(an)*s*.6);c.arc(x+Math.cos(an)*s*.6,y+Math.sin(an)*s*.6,s*.12,0,6.283)}c.fill();
+      c.fillStyle='rgba(255,255,255,.55)';c.beginPath();c.arc(x-s*.35,y-s*.35,s*.25,0,6.283);c.fill()}
+    else if(b.type==='tower'||b.type==='spire'){ // 육각 탑: 꼭대기가 깜빡이며 빛남
+      c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(x+s*.6,y+s*.6,s*.9,s*.5,.6,0,6.283);c.fill();
+      for(const [k,col] of [[1,`hsl(${h},25%,40%)`],[.6,`hsl(${h},30%,58%)`]]){c.fillStyle=col;c.beginPath();for(let i=0;i<6;i++){const an=i/6*6.283;c.lineTo(x+Math.cos(an)*s*k,y+Math.sin(an)*s*k)}c.closePath();c.fill()}
+      c.fillStyle=`hsla(${h2},100%,75%,${.5+.5*Math.sin(tt*3+b.ph)})`;c.beginPath();c.arc(x,y,s*.3,0,6.283);c.fill()}
+    else if(b.type==='crystal'){ // 빛나는 수정 탑
+      c.fillStyle=`hsla(${(h2+40)%360},90%,75%,.85)`;c.beginPath();for(let k=0;k<3;k++){const an=k/3*6.283+b.ph;c.moveTo(x+Math.cos(an)*s*.3,y+Math.sin(an)*s*.3);c.lineTo(x+Math.cos(an+.25)*s*1.1,y+Math.sin(an+.25)*s*1.1);c.lineTo(x+Math.cos(an+.5)*s*.3,y+Math.sin(an+.5)*s*.3)}c.fill();
+      c.fillStyle='#fff';c.beginPath();c.arc(x,y,s*.18,0,6.283);c.fill()}
+    else{ // 외계 작물 밭 (물속은 빛 정원)
+      c.fillStyle=b.type==='garden'?'rgba(80,200,220,.35)':`hsla(${(h+60)%360},35%,35%,.85)`;c.beginPath();c.ellipse(x,y,s*1.3,s*.9,b.ph,0,6.283);c.fill();
+      c.fillStyle=`hsla(${(h2+90)%360},90%,70%,.9)`;c.beginPath();for(let i=-2;i<=2;i++)for(let j=-1;j<=1;j++){const px=x+(i*Math.cos(b.ph)-j*Math.sin(b.ph))*s*.45,py=y+(i*Math.sin(b.ph)+j*Math.cos(b.ph))*s*.45;c.moveTo(px+s*.1,py);c.arc(px,py,s*.1,0,6.283)}c.fill()}
+  }
+}
+// 애완동물 목줄: 주인과 가까이 있으면 빛나는 줄
+function drawLeashes(c,z,vis){
+  c.strokeStyle='rgba(255,170,220,.75)';c.lineWidth=Math.max(.4,1.2/z*(devicePixelRatio||1));c.beginPath();
+  for(const o of W.animals){const m=o.master;if(!o.sp.owner||!m||m.dead||!vis(o))continue;const dx=m.x-o.x,dy=m.y-o.y;if(dx*dx+dy*dy>900)continue;
+    c.moveTo(o.x,o.y);c.quadraticCurveTo((o.x+m.x)/2,(o.y+m.y)/2+3,m.x,m.y)}c.stroke();
+}
+// ===================== 거대 충돌로 달이 생김 (시작 장면) =====================
+const IMP_HIT=3,IMP_END=9;let intro=null;
+function moonBall(g,x,y,r){const mg=g.createRadialGradient(x-r*.4,y-r*.4,r*.1,x,y,r);mg.addColorStop(0,'#f2f2ee');mg.addColorStop(1,'#8d8d88');g.fillStyle=mg;g.beginPath();g.arc(x,y,r,0,6.283);g.fill();
+  g.fillStyle='rgba(90,90,85,.45)';g.beginPath();g.arc(x+r*.3,y-r*.1,r*.22,0,6.283);g.arc(x-r*.35,y+r*.3,r*.15,0,6.283);g.arc(x-r*.1,y-r*.45,r*.1,0,6.283);g.fill()}
+function drawIntro(){
+  const c=$('introCv'),d=devicePixelRatio||1;if(c.width!==c.clientWidth*d){c.width=c.clientWidth*d;c.height=c.clientHeight*d}
+  const g=c.getContext('2d'),w=c.width,h=c.height,cxp=w/2,cyp=h/2+h*.04,R=Math.min(w,h)*.27,t=(performance.now()-intro.t0)/1000;
+  g.setTransform(1,0,0,1,0,0);g.fillStyle='#02040a';g.fillRect(0,0,w,h);
+  g.fillStyle='rgba(255,255,255,.6)';for(let i=0;i<80;i++){g.fillRect((i*977)%w,(i*577)%h,1.5,1.5)}
+  const ma=performance.now()/2500,mx=cxp+Math.cos(ma)*R*1.5,my=cyp+Math.sin(ma)*R*.42,behind=Math.sin(ma)<0,done=t>=IMP_END;
+  if(done&&behind)moonBall(g,mx,my,R*.2);
+  const oc=g.createRadialGradient(cxp-R*.35,cyp-R*.35,R*.1,cxp,cyp,R);oc.addColorStop(0,'#7a6a5a');oc.addColorStop(1,'#2a2018');g.fillStyle=oc;g.beginPath();g.arc(cxp,cyp,R,0,6.283);g.fill();
+  const hx=cxp+R*.62,hy=cyp-R*.62;
+  if(t<IMP_HIT){const k=t/IMP_HIT,e=k*k*.6+k*.4,tx=cxp+R*1.7+(hx+R*.2-(cxp+R*1.7))*e,ty=cyp-R*1.5+(hy-R*.2-(cyp-R*1.5))*e,tr=R*.35;
+    const tg=g.createRadialGradient(tx-tr*.4,ty-tr*.4,tr*.1,tx,ty,tr);tg.addColorStop(0,'#d9a26b');tg.addColorStop(1,'#5a3a22');g.fillStyle=tg;g.beginPath();g.arc(tx,ty,tr,0,6.283);g.fill();
+    g.fillStyle='#fff';g.font=`bold ${Math.round(R*.12)}px system-ui`;g.textAlign='center';g.fillText('테이아',tx,ty-tr-8);g.textAlign='left'}
+  else{const u=t-IMP_HIT,a=Math.max(0,1-u/(IMP_END-IMP_HIT));
+    const mg=g.createRadialGradient(hx,hy,R*.05,cxp,cyp,R);mg.addColorStop(0,`rgba(255,240,150,${a})`);mg.addColorStop(.5,`rgba(255,110,30,${a*.9})`);mg.addColorStop(1,`rgba(120,20,10,${a*.8})`);g.fillStyle=mg;g.beginPath();g.arc(cxp,cyp,R,0,6.283);g.fill();
+    if(u<.8){g.fillStyle=`rgba(255,250,220,${1-u/.8})`;g.beginPath();g.arc(hx,hy,R*(.3+u*1.2),0,6.283);g.fill()}
+    const P=intro.parts||(intro.parts=Array.from({length:260},()=>({a:Math.atan2(hy-cyp,hx-cxp)+rnd(-1.3,1.3),r:rnd(1.05,1.6),w:rnd(.6,1.1),s:rnd(1.5,3.5)})));
+    const ga=clamp((t-(IMP_END-2.5))/2.2,0,1),ge=ga*ga*(3-2*ga);
+    for(const q of P){const out=Math.min(1,u/1.2),ang=q.a+q.w*u,rad=R*(1+(q.r-1)*out);let x=cxp+Math.cos(ang)*rad,y=cyp+Math.sin(ang)*rad*(1-.7*out);x+=(mx-x)*ge;y+=(my-y)*ge;
+      const hot=Math.max(0,1-u/4);g.fillStyle=`rgb(${200+55*hot|0},${120+100*(1-hot)|0},${80+90*(1-hot)|0})`;g.fillRect(x-q.s/2,y-q.s/2,q.s,q.s)}
+    if(ga>.6)moonBall(g,mx,my,R*.2*(ga-.6)/.4)}
+  if(done&&!behind)moonBall(g,mx,my,R*.2);
+  $('introTxt').textContent=t<IMP_HIT?'거대 충돌! 행성 "테이아"가 날아와요… (누르면 건너뛰기)':t<IMP_END?'쾅! 튀어나온 조각들이 고리가 되었다가 뭉쳐요…':'달이 생겼어요!';
+  if(t>=IMP_END+1.2)endIntro();
+}
+function endIntro(){if(!intro)return;intro=null;$('intro').style.display='none';W.moon=true;addLog('거대 충돌! 행성 테이아와 부딪혀 튀어나온 조각들이 뭉쳐서 달이 생겼어요');toast('달이 생겼어요! 이제 바다에서 생명이 시작돼요')}
+$('intro').onclick=endIntro; // 누르면 건너뛰기
+// ===================== 도구 · 조작 =====================
+const TOOLS=[['view','보기'],['animal','창조 · 풀어놓기'],['plant','씨앗 심기'],['raise','땅 올리기'],['lower','땅 깎기(물)'],['sand','모래'],['wet','물기 더하기'],['dry','메마르게'],['erase','없애기']];
+const PAINT=['raise','lower','sand','wet','dry','erase'];
+let tool='view',brush=4,hover=null,myA=[],myP=[],pickA=-1,pickP=-1;
+const PRESET_P=[{name:'풀',g:{max:2.5,grow:1.5,range:25,seeds:1.6,moist:.5,heat:.5,aqua:0,hue:110}},{name:'덤불',g:{max:6,grow:.8,range:40,seeds:.8,moist:.55,aqua:0,hue:95}},
+  {name:'나무',g:{max:14,grow:.35,range:70,seeds:.45,moist:.65,aqua:0,hue:125}},{name:'선인장',g:{max:5,grow:.4,range:30,seeds:.5,moist:.05,heat:.9,thorns:.8,aqua:0,hue:90}},{name:'해초',g:{max:4,grow:1,range:30,seeds:1.2,aqua:1,hue:150}}];
+function buildTools(){
+  $('tools').innerHTML=TOOLS.map(([k,n])=>`<button class="tb${k===tool?' on':''}" data-t="${k}">${n}</button>`).join('')+`<span id="brushBox">붓 크기 <input type="range" id="brush" min="1" max="12" value="${brush}"></span>`;
+  $('brushBox').style.display=PAINT.includes(tool)?'flex':'none';$('brush').oninput=e=>brush=+e.target.value;buildPalette();
+}
+$('tools').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;tool=b.dataset.t;buildTools();if(tool==='animal'&&!myA.length)openEditor(true)};
+function thumb(t,isA){const c=document.createElement('canvas');c.width=120;c.height=88;const x=c.getContext('2d');x.fillStyle=isA&&t.g.fins>.5&&Math.round(t.g.legs)<1?'#1d4a6b':'#2b4a2a';x.fillRect(0,0,120,88);
+  const sc=isA?Math.min(6,25/t.g.size):Math.min(9,34/Math.max(1,t.g.max));x.setTransform(sc,0,0,sc,60,44);
+  if(isA)drawAnimal(x,{x:0,y:0,vx:1,vy:0,g:t.g,size:t.g.size,vk:1},9,3);else drawPlant(x,{x:0,y:0,g:t.g,size:t.g.max,kind:t.g.aqua>.5?0:t.g.max<4?1:t.g.max<9?2:3,thorn:t.g.thorns||0,ph:0},9);return c}
+function buildPalette(){
+  const pal=$('palette');pal.innerHTML='';if(tool!=='animal'&&tool!=='plant'){pal.style.display='none';return}pal.style.display='flex';
+  const isA=tool==='animal',L=isA?myA:myP,pick=isA?pickA:pickP;
+  L.forEach((t,i)=>{const d=document.createElement('div');d.className='pc'+(i===pick?' on':'');d.appendChild(thumb(t,isA));d.appendChild(document.createTextNode(t.name));d.onclick=()=>{if(isA)pickA=i;else pickP=i;buildPalette()};pal.appendChild(d)});
+  const add=document.createElement('div');add.className='pc';add.innerHTML='<div style="font-size:26px;line-height:44px">+</div>'+(isA?'창조하기':'새 식물');add.onclick=()=>openEditor(isA);pal.appendChild(add);
+}
+function paint(wx,wy){
+  const cxT=wx/TS,cyT=wy/TS,r=brush;
+  if(tool==='erase'){const rr=(r*TS)**2;for(const o of W.animals){const dx=o.x-wx,dy=o.y-wy;if(dx*dx+dy*dy<rr)o.dead=true}for(const p of W.plants){const dx=p.x-wx,dy=p.y-wy;if(dx*dx+dy*dy<rr)p.dead=true}
+    W.animals=W.animals.filter(o=>!o.dead);W.plants=W.plants.filter(p=>!p.dead);return}
+  for(let y=Math.floor(cyT-r);y<=cyT+r;y++)for(let x=Math.floor(cxT-r);x<=cxT+r;x++){if(x<0||y<0||x>=TW||y>=TH)continue;
+    const d=Math.hypot(x+.5-cxT,y+.5-cyT)/r;if(d>1)continue;const f=(1-d)*(1-d),i=y*TW+x;
+    if(tool==='raise')H[i]=Math.min(.98,H[i]+.03*f);else if(tool==='lower')H[i]=Math.max(.02,H[i]-.03*f);else if(tool==='sand')H[i]+=(WL+.015-H[i])*.25*f;
+    else if(tool==='wet'){M[i]=Math.min(1,M[i]+.05*f);M0[i]=Math.min(1,M0[i]+.05*f)}else if(tool==='dry'){M[i]=Math.max(0,M[i]-.05*f);M0[i]=Math.max(0,M0[i]-.05*f)}}
+  calcTemp(Math.floor(cxT-r),Math.floor(cyT-r),Math.ceil(cxT+r),Math.ceil(cyT+r));
+}
+function place(wx,wy){
+  const i=tIdx(wx,wy);
+  if(tool==='animal'){const t=myA[pickA];if(!t){openEditor(true);return}const g=full(t.g,AG);
+    if(!canLive(g,wx,wy)){toast(waterAt(wx,wy)?`${t.name}은(는) 물에서 못 살아요 (물결막이 필요해요)`:`${t.name}은(는) 땅에서 못 살아요 (다리가 필요해요)`);return}
+    if(W.animals.length>=MAXA){toast('동물이 너무 많아요');return}
+    if(!t.sp||t.sp.dead||!W.spMap.has(t.sp.id))t.sp=newSpecies('a',g,null,t.name);
+    for(let k=0;k<5;k++){const x=clamp(wx+rnd(-20,20),1,WW-1),y=clamp(wy+rnd(-20,20),1,WH-1);if(canLive(g,x,y))addAnimal(mutate(g,AG),x,y,t.sp,g.size*4+20)}
+    addLog(`창조! ${t.name} 5마리를 풀어놓았어요`);
+  }else if(tool==='plant'){const t=myP[pickP];if(!t){openEditor(false);return}const g=full(t.g,PG);
+    if(plantFert(g,wx,wy)<=0){toast(`${t.name}은(는) 여기서 자라기 어려워요`);return}
+    if(!t.sp||t.sp.dead||!W.spMap.has(t.sp.id))t.sp=newSpecies('p',g,null,t.name);
+    for(let k=0;k<8;k++){const x=clamp(wx+rnd(-25,25),1,WW-1),y=clamp(wy+rnd(-25,25),1,WH-1);if(plantFert(g,x,y)>0)addPlant(mutate(g,PG),x,y,t.sp,g.max*.5)}
+    addLog(`${t.name} 씨앗을 심었어요`);
+  }
+  census();
+}
+function pickAt(wx,wy){let b=null,bd=1e9;const d0=devicePixelRatio||1;
+  for(const o of W.animals){const d=Math.hypot(o.x-wx,o.y-wy)-o.size;if(d<bd){bd=d;b=o}}
+  if(bd>12/cam.z*d0){b=null;bd=1e9;for(const p of W.plants){const d=Math.hypot(p.x-wx,p.y-wy)-p.size;if(d<bd){bd=d;b=p}}if(bd>10/cam.z*d0)b=null}
+  W.sel=b;W.selSp=b?b.sp:null;if(b){showTab('info');renderInfo()}}
+const ptrs=new Map();let drag=null,pinch=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);const d=devicePixelRatio||1;ptrs.set(e.pointerId,[e.offsetX*d,e.offsetY*d]);
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch=Math.hypot(a[0]-b[0],a[1]-b[1]);drag=null;return}
+  const [wx,wy]=toWorld(e.offsetX*d,e.offsetY*d);drag={sx:e.offsetX*d,sy:e.offsetY*d,cx:cam.x,cy:cam.y,moved:false,wx,wy};
+  if(tool==='animal'||tool==='plant')place(wx,wy);else if(tool!=='view')paint(wx,wy)});
+cv.addEventListener('pointermove',e=>{const d=devicePixelRatio||1,p=[e.offsetX*d,e.offsetY*d];hover=toWorld(p[0],p[1]);if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,p);
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()],nd=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pinch){cam.z*=nd/pinch;clampCam()}pinch=nd;return}
+  if(!drag)return;const dx=p[0]-drag.sx,dy=p[1]-drag.sy;if(Math.abs(dx)+Math.abs(dy)>6)drag.moved=true;
+  if(tool==='view'){cam.x=drag.cx-dx/cam.z;cam.y=drag.cy-dy/cam.z;clampCam();if(drag.moved){W.follow=false;markFollow()}}
+  else if(PAINT.includes(tool))paint(hover[0],hover[1])});
+cv.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=0;if(drag&&!drag.moved&&tool==='view')pickAt(drag.wx,drag.wy);drag=null});
+cv.addEventListener('pointerleave',()=>hover=null);
+cv.addEventListener('wheel',e=>{e.preventDefault();const d=devicePixelRatio||1,[wx,wy]=toWorld(e.offsetX*d,e.offsetY*d);cam.z*=Math.exp(-e.deltaY*.0015);clampCam();
+  const [nx,ny]=toWorld(e.offsetX*d,e.offsetY*d);cam.x+=wx-nx;cam.y+=wy-ny;clampCam()},{passive:false});
+$('zin').onclick=()=>{cam.z*=1.4;clampCam()};$('zout').onclick=()=>{cam.z/=1.4;clampCam()};$('fit').onclick=()=>{fitCam();W.follow=false;markFollow()};
+$('follow').onclick=()=>{if(!W.sel||W.sel.dead||W.sel.maxS!==undefined){toast('먼저 보기 도구로 동물을 눌러 고르세요');return}W.follow=!W.follow;if(W.follow&&cam.z<2*(devicePixelRatio||1))cam.z=2.5*(devicePixelRatio||1);markFollow()};
+function markFollow(){$('follow').classList.toggle('on',W.follow)}
+// ===================== 창조 (몸 부위를 있다/없다로) =====================
+let ed=null;
+function openEditor(isA){
+  ed={isA,g:isA?full({legs:4,eyes:.6,size:6,speed:1.2,sense:70,diet:.2,hue:30,fins:0},AG):full(PRESET_P[0].g,PG)};$('edName').value='';
+  $('edTitle').textContent=isA?'창조 — 몸 부위를 켜고 꺼 보세요':'새 식물 만들기';
+  if(isA){
+    $('edSl').innerHTML=`<div class="sub">있다 / 없다</div><div class="parts">${PARTS.map(p=>`<span class="part" data-p="${p.k}">${p.n}</span>`).join('')}</div>
+      <label><span>다리 수</span><b id="v_legsN"></b></label><input type="range" min="1" max="4" step="1" id="legsN" value="2">
+      ${ED_SLIDERS.map(k=>{const d=AG.find(x=>x.k===k);return`<label><span>${d.n}</span><b id="v_${k}"></b></label><input type="range" min="${d.min}" max="${d.max}" step="${(d.max-d.min)/100}" data-k="${k}" value="${ed.g[k]}">`}).join('')}
+      <div class="sub" id="edHint" style="margin-top:6px"></div>`;
+    $('edSl').onclick=e=>{const el=e.target.closest('.part');if(!el)return;const p=PARTS.find(x=>x.k===el.dataset.p),on=partOn(p);
+      ed.g[p.k]=on?p.off:(p.k==='legs'?(+$('legsN').value)*2:p.on);syncEd()};
+    $('edSl').oninput=e=>{if(e.target.id==='legsN'){if(ed.g.legs>=1)ed.g.legs=(+e.target.value)*2}else if(e.target.dataset.k)ed.g[e.target.dataset.k]=+e.target.value;syncEd()};
+  }else{
+    $('edSl').innerHTML=PG.map(d=>`<label><span>${d.n}</span><b id="v_${d.k}"></b></label><input type="range" min="${d.min}" max="${d.max}" step="${(d.max-d.min)/100}" data-k="${d.k}" value="${ed.g[d.k]}">`).join('');
+    $('edSl').onclick=null;$('edSl').oninput=e=>{const k=e.target.dataset.k;if(k){ed.g[k]=+e.target.value;syncEd()}};
+  }
+  syncEd();$('edM').style.display='flex';
+}
+const partOn=p=>p.k==='legs'?ed.g.legs>=1:ed.g[p.k]>.15;
+function syncEd(){
+  if(ed.isA){
+    for(const el of $('edSl').querySelectorAll('.part'))el.classList.toggle('on',partOn(PARTS.find(p=>p.k===el.dataset.p)));
+    $('v_legsN').textContent=ed.g.legs>=1?Math.round(ed.g.legs)+'개':'(다리 없음)';
+    const fmt={size:v=>v.toFixed(1),speed:v=>v.toFixed(1),diet:v=>v<.3?'풀':v>.7?'고기':'둘 다',hue:v=>COLN(v),pattern:v=>['없음','점','줄'][Math.round(v)]};
+    for(const k of ED_SLIDERS)$('v_'+k).textContent=fmt[k](ed.g[k]);
+    const L=Math.round(ed.g.legs);$('edHint').textContent=L<1&&ed.g.fins<.25?'다리도 물결막도 없으면 어디서도 못 움직여요!':L<1?'물에서만 살아요':ed.g.fins>=.25?'물과 땅 둘 다 살 수 있어요':'땅에서만 살아요';
+  }else{for(const d of PG){const v=ed.g[d.k];$('v_'+d.k).textContent=d.k==='hue'?COLN(v):d.k==='aqua'?(v>.5?'물속':'땅'):(+v).toFixed(d.max>10?0:2)}}
+}
+$('edRand').onclick=()=>{if(ed.isA){for(const p of PARTS)ed.g[p.k]=Math.random()<.45?(p.k==='legs'?[2,4,6][Math.random()*3|0]:p.on):p.off;if(ed.g.legs<1)ed.g.fins=1;
+    ed.g.size=rnd(3,14);ed.g.speed=rnd(.6,2.2);ed.g.diet=Math.random();ed.g.hue=rnd(0,360);ed.g.pattern=rnd(0,2)}
+  else for(const d of PG)ed.g[d.k]=rnd(d.min,d.max);
+  for(const el of $('edSl').querySelectorAll('input[data-k]'))el.value=ed.g[el.dataset.k];syncEd()};
+$('edCancel').onclick=()=>{$('edM').style.display='none';ed=null};
+$('edOk').onclick=()=>{
+  if(ed.isA&&Math.round(ed.g.legs)<1&&ed.g.fins<.25){toast('다리나 물결막 중 하나는 있어야 해요');return}
+  const nm=$('edName').value.trim()||autoName(ed.isA?'a':'p',ed.g).replace(/ \d+호$/,'');
+  if(ed.isA){ed.g.sense=40+ed.g.eyes*90;myA.push({name:nm,g:{...ed.g}});pickA=myA.length-1;tool='animal'}else{myP.push({name:nm,g:{...ed.g}});pickP=myP.length-1;tool='plant'}
+  $('edM').style.display='none';ed=null;buildTools();toast(`${nm} 완성! 지도를 눌러서 풀어놓으세요`)};
+function edLoop(){if(!ed)return;const c=$('edCv'),d=devicePixelRatio||1;if(c.width!==c.clientWidth*d){c.width=c.clientWidth*d;c.height=c.clientHeight*d}
+  const x=c.getContext('2d');x.setTransform(1,0,0,1,0,0);x.fillStyle=ed.isA&&ed.g.fins>.5&&Math.round(ed.g.legs)<1?'#1d4a6b':'#2b4a2a';x.fillRect(0,0,c.width,c.height);
+  const s=ed.isA?Math.min(7,c.height*.3/(ed.g.size*1.6)):Math.min(8,c.height*.35/Math.max(1,ed.g.max));x.setTransform(s,0,0,s,c.width/2,c.height/2);
+  if(ed.isA)drawAnimal(x,{x:0,y:0,vx:1,vy:0,g:ed.g,size:ed.g.size,vk:1},s,performance.now()/60);
+  else drawPlant(x,{x:0,y:0,g:ed.g,size:ed.g.max,kind:ed.g.aqua>.5?0:ed.g.max<4?1:ed.g.max<9?2:3,thorn:ed.g.thorns,ph:0},s)}
+// ===================== 오른쪽 창 (예전 미생물 게임과 같은 탭) =====================
+let dirtyTree=true,dirtyLog=true,frame=0;
+const lastH={};function setHTML(id,h){if(lastH[id]!==h){lastH[id]=h;$(id).innerHTML=h}}
+function showTab(p){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
+  if(p==='tree')drawTree();if(p==='info')renderInfo();if(p==='civ')renderCiv()}
+document.querySelector('.tabs').onclick=e=>{if(e.target.dataset.p)showTab(e.target.dataset.p)};
+const dot=sp=>`<span class="dot" style="background:hsl(${sp.hue},${sp.kind==='a'?65:50}%,${sp.kind==='a'?55:40}%)"></span>`;
+function renderUI(){
+  $('time').textContent=fmtY(yrs())+(W.player?` · 진짜 시간 ${Math.floor((W.rtSec||0)/60)}분 ${String(Math.floor(W.rtSec||0)%60).padStart(2,'0')}초`:'');$('farBtn').style.display=yrs()>=70&&yrs()<10000?'':'none';$('stage').textContent=`${W.stage+1}. ${STAGES[W.stage].n}`;$('na').textContent=W.animals.length;$('np').textContent=W.plants.length;$('o2').textContent=W.o2.toFixed(1);
+  const live=W.species.filter(s=>s.count>0).sort((a,b)=>(a.kind===b.kind?0:a.kind==='a'?-1:1)||b.stage-a.stage||b.count-a.count);
+  let h='',k='';for(const s of live.slice(0,50)){if(s.kind!==k){k=s.kind;h+=`<div class="sub" style="margin-top:6px">${k==='a'?'동물':'식물'}</div>`}
+    h+=`<div class="sp" data-id="${s.id}">${dot(s)}<span class="n">${s.name}${s.user?' ★':''}${s.kind==='a'?`<br><span class="st">${s.stage+1}. ${STAGES[s.stage].n}${s.owner?' · 애완동물':''}${s.civ?' · 문명':''}</span>`:''}</span><span class="c">${s.count}</span></div>`}
+  setHTML('p-species',(h||'<div class="sub">아직 아무것도 없어요.</div>')+`<div class="sub" style="padding-top:6px">살아 있는 종 ${live.length}개 · 지금까지 생긴 종 ${W.species.length}개 · ★ 내가 만들었거나 이름 지은 종</div>`);
+  if(dirtyLog){setHTML('p-log',W.log.slice(0,100).map(l=>`<div><span class="t">${fmtY(l.t*TICK)}</span>${l.s}</div>`).join(''));dirtyLog=false}
+  if($('p-info').classList.contains('on'))renderInfo();
+  if($('p-civ').classList.contains('on')&&frame%60===0)renderCiv();
+  if($('p-tree').classList.contains('on')&&(dirtyTree||frame%120===0))drawTree();
+}
+$('p-species').onclick=e=>{const el=e.target.closest('.sp');if(!el)return;const sp=spById(+el.dataset.id);W.selSp=sp;
+  const L=(sp.kind==='a'?W.animals:W.plants).filter(o=>o.sp===sp);W.sel=L.length?L[Math.random()*L.length|0]:null;if(W.sel){cam.x=W.sel.x;cam.y=W.sel.y}showTab('info')};
+function renderInfo(){
+  const sp=W.selSp;if(!sp){setHTML('p-info','<div class="sub">종을 누르거나, 보기 도구로 생물을 눌러 보세요.</div>');return}
+  const isA=sp.kind==='a',o=W.sel&&W.sel.sp===sp?W.sel:null,table=isA?AG:PG,g=isA&&sp.count?sp.mean:sp.genes;
+  const tr=table.filter(d=>!d.wrap&&Math.abs(sp.trend[d.k]||0)>.4).map(d=>`${d.n}${sp.trend[d.k]>0?'↑':'↓'}`).join(' ')||'뚜렷한 방향 없음';
+  const par=sp.parent&&spById(sp.parent);
+  let h=`<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">${dot(sp)}<b style="flex:1">${sp.name}</b><button class="btn" id="rn">이름 짓기</button></div>
+    <div class="sub" style="margin-bottom:4px">${sp.dead?'멸종':'개체 '+sp.count} · ${(sp.born*TICK).toFixed(2)}억 년에 등장${par?` · 조상 ${par.name}`:''}</div>`;
+  if(isA)h+=`<div style="margin-bottom:4px">단계: ${sp.stage+1}. ${STAGES[sp.stage].n}${sp.owner?' · 애완동물 '+sp.breedNo+'대':''}${sp.civ?' · 문명 종족':''}</div>`;
+  h+=`<div class="trend" style="margin-bottom:8px">이 계통의 진화 방향: ${tr}</div>`;
+  if(o&&isA)h+=`<div style="border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px"><b>고른 한 마리</b> <span class="sub">${o.dead?'(죽었어요)':''}</span>
+    <div class="sub">${(o.age/365).toFixed(1)}살 · 새끼 ${o.kids}마리 · 지금 ${TYPE_N(tIdx(o.x,o.y))}</div>
+    <div class="gene"><span>배부름</span><span>${Math.max(0,o.e/o.reproT*100)|0}%</span></div><div class="bar"><i style="width:${clamp(o.e/o.reproT,0,1)*100}%"></i></div>
+    <div class="sub">${o.tgt?(o.tgt.maxS!==undefined?'식물을 먹으러 가는 중':'사냥하러 가는 중'):(o.fleeX||o.fleeY)?'도망치는 중!':'돌아다니는 중'}</div></div>`;
+  else if(o)h+=`<div class="sub" style="margin-bottom:8px">고른 식물: 크기 ${o.size.toFixed(1)}/${o.maxS.toFixed(1)} · ${TYPE_N(tIdx(o.x,o.y))}에서 자람</div>`;
+  h+=table.filter(d=>!d.wrap).map(d=>{const v=g[d.k],p=(v-d.min)/(d.max-d.min)*100;return`<div class="gene"><span>${d.n}</span><span>${d.k==='legs'?Math.round(v)+'개':(+v).toFixed(2)}</span></div><div class="bar"><i style="width:${p}%"></i></div>`}).join('');
+  if(isA)h+=`<button class="btn" id="cp" style="margin-top:6px">이 종을 창조 목록에 복사</button>`;
+  setHTML('p-info',h);
+  const rn=$('rn');if(rn)rn.onclick=()=>{const v=prompt('새 이름',sp.name);if(v){sp.name=v.slice(0,16);sp.user=true;addLog(`이름 지음: ${sp.name}`);dirtyTree=true;lastH['p-info']='';renderInfo()}};
+  const cp=$('cp');if(cp)cp.onclick=()=>{myA.push({name:shortName(sp.name),g:{...g,hue:sp.hue}});pickA=myA.length-1;tool='animal';buildTools();toast('창조 목록에 넣었어요. 지도를 눌러 풀어놓으세요')};
+}
+let treeRows=[];
+function drawTree(){
+  const tc=$('tree'),pane=$('p-tree'),keep=new Set();
+  for(const s of W.species)if(s.peak>=8||s.count>0){let p=s;while(p&&!keep.has(p)){keep.add(p);p=p.parent?spById(p.parent):null}}
+  const kids=new Map();for(const s of keep){const k=s.parent&&spById(s.parent);if(k){if(!kids.has(k))kids.set(k,[]);kids.get(k).push(s)}}
+  treeRows=[];const pos=new Map(),visit=s=>{const ch=(kids.get(s)||[]).sort((a,b)=>a.born-b.born),half=Math.ceil(ch.length/2);ch.slice(0,half).forEach(visit);pos.set(s,treeRows.length);treeRows.push(s);ch.slice(half).forEach(visit)};
+  [...keep].filter(s=>!s.parent).sort((a,b)=>(a.kind>b.kind?1:-1)).forEach(visit);
+  const rowH=16,w=Math.max(200,pane.clientWidth-12),h=Math.max(60,treeRows.length*rowH+30),d=devicePixelRatio||1;tc.width=w*d;tc.height=h*d;tc.style.width=w+'px';tc.style.height=h+'px';
+  const c=tc.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);
+  const css=getComputedStyle(document.documentElement),ink=css.getPropertyValue('--ink'),sub=css.getPropertyValue('--sub');
+  const T0=Math.max(W.t,1),X=t=>6+t/T0*(w-130),Y=i=>14+i*rowH;c.font='11px system-ui';c.textBaseline='middle';
+  for(const s of treeRows){const y=Y(pos.get(s)),x0=X(s.born),x1=X(s.dead?s.died:W.t),col=s.dead?sub:`hsl(${s.hue},65%,50%)`;c.strokeStyle=col;c.lineWidth=s===W.selSp?3:1.6;
+    const par=s.parent&&spById(s.parent);if(par&&pos.has(par)){c.beginPath();c.moveTo(x0,Y(pos.get(par)));c.lineTo(x0,y);c.stroke()}
+    c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();
+    if(s.kind==='a'&&s.stage>0){c.fillStyle=col;c.beginPath();c.arc(x1,y,2+s.stage*.7,0,6.283);c.fill()}
+    c.fillStyle=s.dead?sub:ink;c.fillText((s.dead?'† ':'')+(s.kind==='p'?'· ':'')+s.name,x1+6+(s.stage||0)*.7,y)}
+  c.fillStyle=sub;c.fillText(`0 ─ 시간 → ${yrs().toFixed(2)}억 년`,6,h-8);dirtyTree=false;
+}
+$('tree').onclick=e=>{const r=e.target.getBoundingClientRect(),i=Math.round((e.clientY-r.top-14)/16),s=treeRows[i];if(s){W.selSp=s;const L=(s.kind==='a'?W.animals:W.plants).filter(o=>o.sp===s);W.sel=L[0]||null;if(W.sel){cam.x=W.sel.x;cam.y=W.sel.y}showTab('info')}};
+// ===================== 시작 (예전처럼 원시 수프에 미생물 심기) =====================
+let envSel=ENVS[2];
+$('envs').innerHTML=ENVS.map(e=>`<div class="env${e===envSel?' on':''}" data-id="${e.id}"><b>${e.n}</b><br><small>${e.d}</small></div>`).join('');
+$('envs').onclick=e=>{const el=e.target.closest('.env');if(!el)return;envSel=ENVS.find(x=>x.id===el.dataset.id);document.querySelectorAll('.env').forEach(x=>x.classList.toggle('on',x===el))};
+function startWorld(env){
+  URB=new Uint8Array(TW*TH);urbCtx.clearRect(0,0,WW,WH);Object.assign(W,{cl50:0,cl60:0,cl70:0,roads:null,dry:0,t:0,o2:0,animals:[],plants:[],species:[],spMap:new Map(),nextSp:1,log:[],sel:null,selSp:null,follow:false,stage:0,civs:[],nests:new Map(),tried:{},ended:false,moon:false});
+  for(const k in nameCnt)delete nameCnt[k];
+  WL=.42;W.dry=0;if(M0)M.set(M0);tempOff=env.temp;calcTemp();
+  myA=[];myP=PRESET_P.map(t=>({name:t.name,g:full(t.g,PG)}));pickA=-1;pickP=0;
+  const sea=[];for(let i=0;i<TW*TH;i++){const x=(i%TW+.5)*TS,y=((i/TW|0)+.5)*TS;if(isWater(i)&&H[i]>WL-.08&&waterAt(x,y))sea.push([x,y])}
+  const pick=()=>sea[Math.random()*sea.length|0];
+  const ag=full({heat:env.heat},PG),asp=newSpecies('p',ag,null,'원시 말');
+  for(let k=0;k<env.algae&&sea.length;k++){const [x,y]=pick();addPlant(mutate(ag,PG),x,y,asp,1)}
+  const mg=full({heat:env.heat},AG),msp=newSpecies('a',mg,null,'원시 미생물');
+  for(let k=0;k<40&&sea.length;k++){const [x,y]=pick();addAnimal(mutate(mg,AG),x,y,msp,20)}
+  addLog(`${env.n}에 원시 말과 원시 미생물을 심었어요`);
+  census();$('startM').style.display='none';tool='view';buildTools();fitCam();dirtyTree=true;
+  intro={t0:performance.now(),parts:null};$('intro').style.display='block'; // 먼저 달이 생기는 장면
+}
+$('go').onclick=()=>startWorld(envSel);
+$('reroll').onclick=()=>{seed=(seed*7+1234)%100000;genWorld();renderTerrain();$('seedTxt').textContent='지형 번호 '+seed};
+$('farBtn').onclick=()=>{W.t=Math.max(W.t,Math.round(10000/TICK));climateStep(true);
+  const alive=W.civs.filter(c=>c.city&&c.city.pop>0).map(c=>spById(c.id).name);
+  const msg=alive.length?`1조 년이 흘렀어요. 행성은 사막이 됐지만 ${alive.join(', ')}이(가) 물 탑과 도로로 행성을 지키고 있어요`:'1조 년이 흘렀어요. 행성은 조용한 사막이 됐어요';addLog(msg);toast(msg)};
+$('newWorld').onclick=()=>{$('startM').style.display='flex'};
+$('speed').innerHTML=SPEEDS.map(v=>`<button class="btn" data-v="${v}">${v?v+'x':'멈춤'}</button>`).join(' ');
+$('speed').onclick=e=>{const v=e.target.dataset.v;if(v!==undefined){W.speed=+v;markSpeed()}};
+function markSpeed(){document.querySelectorAll('#speed button').forEach(b=>b.classList.toggle('on',+b.dataset.v===W.speed))}
+// ===================== 메인 루프 =====================
+// ===== 내가 조종하기 =====
+const keys={};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const k=e.key.toLowerCase();keys[k]=1;if(W.player&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(k==='escape'&&W.player)stopDrive();if((k==='e'||k==='enter')&&W.player)actE()});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0});
+const padK={};
+for(const b of $('pad').querySelectorAll('button')){const d=b.dataset.d;b.addEventListener('pointerdown',e=>{padK[d]=1;b.setPointerCapture(e.pointerId)});b.addEventListener('pointerup',()=>padK[d]=0);b.addEventListener('pointercancel',()=>padK[d]=0)}
+function startDrive(){
+  let o=W.sel&&!W.sel.dead&&W.sel.maxS===undefined?W.sel:null;
+  if(!o){const civ=W.civs.find(c=>c.city&&c.city.pop>0&&!c.city.water)||W.civs.find(c=>c.city&&c.city.pop>0);
+    if(civ){const c=civ.city,sp=spById(civ.id),g={...sp.mean};if(canLive(g,c.x,c.y)){o=addAnimal(g,c.x,c.y,sp,g.size*5);o.spawned=civ.id;c.pop--}}}
+  if(!o){const L=W.animals.filter(a=>!a.sp.civ&&!a.sp.owner);o=L[Math.random()*L.length|0]}
+  if(!o){toast('조종할 생명체가 없어요');return}
+  o.player=true;W.player=o;W.rtSec=0;W.rtLast=0;
+  {const lc=landCity(o.x,o.y);if(lc){const g=nearestGate(lc,o);if(g){o.x=g.px;o.y=g.py}}} // 건물 안 외계인은 입구 앞에서 시작W.sel=o;W.selSp=o.sp;W.follow=false;markFollow();cam.z=6*(devicePixelRatio||1);clampCam();
+  $('drive').textContent='조종 그만';$('drive').classList.add('on');$('pad').style.display='grid';$('hud').style.display='block';tool='view';buildTools();
+  toast(`${o.sp.name}을(를) 조종해요! 이제 1초가 진짜 1초처럼 흘러요 (Esc로 그만)`);
+}
+function stopDrive(){const o=W.player;if(!o)return;W.inside=null;o.player=false;
+  if(o.spawned){const civ=W.civs.find(c=>c.id===o.spawned);if(civ&&civ.city){o.dead=true;civ.city.pop++;W.animals=W.animals.filter(a=>a!==o)}} // 외계인은 건물 안으로 돌아감
+  W.player=null;$('drive').textContent='내가 조종하기';$('drive').classList.remove('on');$('pad').style.display='none';$('hud').style.display='none'}
+function actE(){if(!W.player)return;const I=W.inside;
+  if(!I){const gn=gateNear(W.player);if(gn)enterInside(true,gn.c,gn.g);return}
+  if(I.shop){if(I.shop.me.y>I.shop.H-22&&Math.abs(I.shop.me.x-I.shop.W/2)<20)exitShop();return}
+  const b=shopNear();if(b){enterShop(b);return}
+  if(I.space){if(I.space.ph==='walk'&&Math.hypot(I.space.me.x-I.space.bus.x,I.space.me.y-I.space.bus.y)<30)spaceBack();return}
+  if(I.exits.some(e=>Math.hypot(I.me.x-e.x,I.me.y-e.y)<16))exitInside()}
+// ===== 우주여행: 우주버스장 → 달 / 붉은 모래 행성 / 고리 얼음 행성 =====
+const DEST={moon:{n:'달',g:'#8d8d94',s:'#6c6c76',sky:'#04050b',sp:1.5},red:{n:'붉은 모래 행성',g:'#c0643a',s:'#9c4a28',sky:'#3a1408',sp:1.1},ice:{n:'고리 얼음 행성',g:'#d4e9f4',s:'#a6cde2',sky:'#0b1630',sp:1.1}};
+function drawBus(x,y,a,k){const c=cx;c.save();c.translate(x,y);c.rotate(a);c.scale(k,k);
+  c.fillStyle='#8a94a8';c.fillRect(-24,-14,12,7);c.fillRect(-24,7,12,7); // 뒤쪽 엔진 두 개
+  c.fillStyle=`rgba(120,230,255,${.5+.3*Math.sin(frame*.3)})`;c.fillRect(-27,-13,3,5);c.fillRect(-27,8,3,5); // 엔진 빛
+  c.fillStyle='#e8eef5';c.beginPath();c.moveTo(-16,-9);c.lineTo(12,-9);c.arc(12,0,9,-1.571,1.571);c.lineTo(-16,9);c.closePath();c.fill(); // 네모난 몸통 + 둥근 앞
+  c.fillStyle='#ff9f43';c.fillRect(-16,-9,4,18);c.fillRect(2,-9,3,18); // 띠
+  c.fillStyle='#7fd4ff';for(let i=0;i<3;i++)c.fillRect(-10+i*5,-6,3,12);c.beginPath();c.arc(14,0,5,0,6.283);c.fill(); // 창문 + 앞 유리
+  c.restore()}
+function goSpace(k){const I=W.inside;if(!I||I.space)return;const me=fakeAnimal(I.me.sp,I.me.g,150,140,4.5);
+  I.space={k,ph:'go',t:0,me,bus:{x:110,y:140},cam:{x:250,y:150},rocks:Array.from({length:60},(_,i)=>({x:Math.random()*700,y:80+Math.random()*340,r:3+Math.random()*14,h:Math.random()}))};
+  toast(`🚀 ${DEST[k].n}(으)로 출발!`)}
+function spaceBack(){const S=W.inside.space;S.ph='back';S.t=0;toast('🚀 우리 행성으로 돌아가요')}
+function spaceFrame(){const S=W.inside.space,D=DEST[S.k],o=S.me;
+  if(S.ph!=='walk'){S.t++;if(S.t>=240){if(S.ph==='go'){S.ph='walk';toast(`${D.n}에 도착했어요! 걸어 다녀 봐요`)}else{W.inside.space=null;toast('우주버스장에 돌아왔어요')}}
+    if(frame%10===0)setHTML('hud',`<b>🚀 우주버스</b> · ${S.ph==='go'?D.n+'(으)로 날아가는 중':'우리 행성으로 돌아가는 중'}…`);return}
+  const dx=(keys.arrowright||keys.d||padK.r?1:0)-(keys.arrowleft||keys.a||padK.l?1:0),dy=(keys.arrowdown||keys.s||padK.d?1:0)-(keys.arrowup||keys.w||padK.u?1:0);
+  if(dx||dy){const L=Math.hypot(dx,dy);o.vx=dx/L;o.vy=dy/L;o.age++;o.x=clamp(o.x+dx/L*D.sp,10,690);o.y=clamp(o.y+dy/L*D.sp,90,430)}
+  S.cam.x+=(o.x-S.cam.x)*.2;S.cam.y+=(o.y-S.cam.y)*.2;
+  if(frame%10===0){const nb=Math.hypot(o.x-S.bus.x,o.y-S.bus.y)<30;setHTML('hud',`<b>${D.n}</b>${S.k==='moon'?' · 몸이 가벼워서 통통 튀어요':S.k==='red'?' · 해가 두 개예요':' · 하늘에 커다란 고리가 보여요'}`+(nb?`<br><button class="tb" onclick="spaceBack()">🚀 우주버스 타고 돌아가기 (E)</button>`:'<br><span style="opacity:.75">우주버스 옆으로 가면 돌아갈 수 있어요</span>'))}}
+function drawSpace(){const S=W.inside.space,D=DEST[S.k],t=frame,w=cv.width,h=cv.height;
+  cx.setTransform(1,0,0,1,0,0);
+  if(S.ph!=='walk'){ // 날아가는 장면: 별이 지나가고, 떠난 행성은 작아지고 갈 곳은 커짐
+    cx.fillStyle='#02030a';cx.fillRect(0,0,w,h);const u=S.t/240;
+    for(let k=0;k<160;k++){const hx=Math.abs(Math.sin(k*12.9898)*43758.55)%1,hy=Math.abs(Math.sin(k*78.233)*24634.63)%1,sx=(hx*w+t*(2+k%5)*3)%w,sy=hy*h;cx.fillStyle=`rgba(255,255,255,${.3+k%4*.15})`;cx.fillRect(w-sx,sy,1.5+k%3,1.5)}
+    const from=S.ph==='go'?'home':S.k,to=S.ph==='go'?S.k:'home',pl=(k,x,y,r)=>{const C={home:['#2f7fd0','#3fa45a'],moon:['#9a9aa2','#7a7a84'],red:['#c8643a','#8f3f20'],ice:['#cfe8f5','#9cc6dd']}[k];cx.fillStyle=C[0];cx.beginPath();cx.arc(x,y,r,0,6.283);cx.fill();cx.fillStyle=C[1];cx.beginPath();cx.arc(x-r*.3,y-r*.2,r*.45,0,6.283);cx.arc(x+r*.35,y+r*.3,r*.3,0,6.283);cx.fill();
+      if(k==='ice'){cx.strokeStyle='rgba(220,240,255,.7)';cx.lineWidth=r*.08;cx.beginPath();cx.ellipse(x,y,r*1.7,r*.4,-.3,0,6.283);cx.stroke()}};
+    pl(from,w*.12,h*.5,h*.35*(1-u)+4);pl(to,w*.9,h*.5,h*.05+h*.4*u);
+    cx.setTransform(1,0,0,1,0,0);const bx=w*.25+w*.5*u,by=h*.5+Math.sin(t*.1)*h*.02;cx.translate(bx,by);
+    cx.fillStyle=`rgba(255,${150+(t%6)*15},60,.9)`;cx.beginPath();cx.moveTo(-26*h/300,-4*h/300);cx.lineTo(-(46+(t%5)*4)*h/300,0);cx.lineTo(-26*h/300,4*h/300);cx.fill();cx.setTransform(1,0,0,1,0,0);
+    drawBus(bx,by,0,h/300);return}
+  const z=Math.max(w,h*1.4)/400;cx.fillStyle=D.sky;cx.fillRect(0,0,w,h);cx.setTransform(z,0,0,z,w/2-S.cam.x*z,h/2-S.cam.y*z);
+  // 하늘 (땅 위쪽)
+  cx.fillStyle=D.sky;cx.fillRect(-200,-300,1100,380);for(let k=0;k<80;k++){cx.fillStyle='rgba(255,255,255,.7)';cx.fillRect((k*97)%900-100,(k*53)%360-280,1.2,1.2)}
+  if(S.k==='moon'){cx.fillStyle='#2f7fd0';cx.beginPath();cx.arc(350,-20,46,0,6.283);cx.fill();cx.fillStyle='#3fa45a';cx.beginPath();cx.arc(335,-30,18,0,6.283);cx.arc(368,-5,12,0,6.283);cx.fill();cx.fillStyle='rgba(255,255,255,.5)';cx.fillRect(320,-50,50,4)} // 우리 행성이 보임
+  if(S.k==='red'){for(const [x,r] of [[220,20],[470,13]]){cx.fillStyle='rgba(255,220,120,.3)';cx.beginPath();cx.arc(x,10,r*1.8,0,6.283);cx.fill();cx.fillStyle='#ffe08a';cx.beginPath();cx.arc(x,10,r,0,6.283);cx.fill()}} // 해 두 개
+  if(S.k==='ice'){cx.fillStyle='#e9d9b0';cx.beginPath();cx.arc(380,-10,40,0,6.283);cx.fill();cx.strokeStyle='rgba(240,230,200,.8)';cx.lineWidth=5;cx.beginPath();cx.ellipse(380,-10,95,18,-.2,0,6.283);cx.stroke()} // 고리 행성
+  // 땅
+  cx.fillStyle=D.g;cx.fillRect(-200,80,1100,500);
+  for(const q of S.rocks){if(S.k==='moon'){cx.fillStyle=D.s;cx.beginPath();cx.arc(q.x,q.y,q.r,0,6.283);cx.fill();cx.fillStyle='rgba(255,255,255,.15)';cx.beginPath();cx.arc(q.x-q.r*.25,q.y-q.r*.25,q.r*.6,0,6.283);cx.fill()} // 구덩이
+    else if(S.k==='red'){if(q.h<.5){cx.fillStyle=D.s;cx.beginPath();cx.ellipse(q.x,q.y,q.r*2.2,q.r*.5,0,0,6.283);cx.fill()}else{cx.fillStyle=`hsla(${280+q.h*60},90%,70%,${.6+.3*Math.sin(t*.05+q.x)})`;cx.beginPath();cx.moveTo(q.x,q.y-q.r);cx.lineTo(q.x+3,q.y);cx.lineTo(q.x-3,q.y);cx.fill()}} // 모래 언덕 + 빛나는 수정 풀
+    else{cx.fillStyle=q.h<.5?D.s:'#f4fbff';cx.beginPath();cx.moveTo(q.x-q.r*.5,q.y);cx.lineTo(q.x,q.y-q.r*1.4);cx.lineTo(q.x+q.r*.5,q.y);cx.fill()}} // 얼음 가시
+  cx.fillStyle='rgba(0,0,0,.25)';cx.beginPath();cx.ellipse(S.bus.x,S.bus.y+10,24,5,0,0,6.283);cx.fill();drawBus(S.bus.x,S.bus.y,0,1);
+  const o=S.me,hop=S.k==='moon'?Math.abs(Math.sin(o.age*.12))*8:0;o.y-=hop;drawAnimal(cx,o,z,o.age*.05+o.ph);o.y+=hop;
+  cx.strokeStyle='#ffe066';cx.lineWidth=.6;cx.beginPath();cx.arc(o.x,o.y-hop,8,0,6.283);cx.stroke()}
+function goDown(){const c=W.inside&&W.inside.c;W.inside=null;enterInside(false,c)}
+$('padE').addEventListener('pointerdown',e=>{e.preventDefault();actE()});
+$('drive').onclick=()=>W.player?stopDrive():startDrive();
+const BNAME={plaza:'광장',dome:'빛 창문 둥근 집',tower:'육각 탑',crystal:'수정 탑',farm:'외계 작물 밭',bubble:'물속 방울 집',spire:'첨탑',garden:'빛 정원'};
+function driveFrame(){
+  const o=W.player;if(!o)return;if(o.dead){stopDrive();return}
+  const dx=(keys.arrowright||keys.d||padK.r?1:0)-(keys.arrowleft||keys.a||padK.l?1:0),dy=(keys.arrowdown||keys.s||padK.d?1:0)-(keys.arrowup||keys.w||padK.u?1:0);
+  if(dx||dy){const swim=waterAt(o.x,o.y)&&!nearPier(o.x,o.y),L=Math.hypot(dx,dy),sp=swim&&o.g.fins<.25?.9:1.6,nx=clamp(o.x+dx/L*sp,1,WW-1),ny=clamp(o.y+dy/L*sp,1,WH-1);o.vx=dx/L*.5;o.vy=dy/L*.5;o.age++;
+    if(canGo(o.g,nx,ny)){o.x=nx;o.y=ny}else if(canGo(o.g,nx,o.y))o.x=nx;else if(canGo(o.g,o.x,ny))o.y=ny}
+  cam.x+=(o.x-cam.x)*.25;cam.y+=(o.y-cam.y)*.25;
+  for(const a of W.animals){if(a===o||a.dead||Math.abs(a.x-o.x)>260||Math.abs(a.y-o.y)>180)continue; // 실시간: 근처 생물만 살살 걸어 다님
+    a.hd+=(Math.random()-.5)*.3;const v=.12+a.g.speed*.15,nx=a.x+Math.cos(a.hd)*v,ny=a.y+Math.sin(a.hd)*v;
+    if(canLive(a.g,nx,ny)){a.x=nx;a.y=ny;a.vx=Math.cos(a.hd);a.vy=Math.sin(a.hd)}else a.hd+=Math.PI*.7;a.ph+=.05}
+  if(frame%10===0){ // 지금 있는 곳 안내
+    let where=TYPE_N(tIdx(o.x,o.y))+(landCity(o.x,o.y)?' · 건물 지붕 위':waterAt(o.x,o.y)&&!nearPier(o.x,o.y)?' · 헤엄치는 중':''),near='',nd=24*24;const civOf=URB[tIdx(o.x,o.y)];
+    if(civOf){const civ=W.civs[civOf-1];if(civ)where=spById(civ.id).name+' 도시'+(landCity(o.x,o.y)?' · 건물 지붕 위':'')}
+    for(const civ of W.civs){const c=civ.city;if(!c)continue;
+      for(const b of c.b){const d=(b.x-o.x)**2+(b.y-o.y)**2;if(d<nd){nd=d;near=BNAME[b.type]||'건물'}}
+      for(const [q,n] of [[c.airport,'공항'],[c.spaceport,'우주버스장']])if(q&&(q.x-o.x)**2+(q.y-o.y)**2<45*45){near=n;nd=0}
+      for(const w of c.towers||[])if((w.x-o.x)**2+(w.y-o.y)**2<20*20){near='물 만드는 탑';nd=0}
+      if(c.under&&(c.under.x-o.x)**2+(c.under.y-o.y)**2<c.under.r*c.under.r)where+=' · 땅속 거대 건물 위'+(c.zoo&&Object.keys(c.zoo).length?' (아래에 동물 보호소)':'')}
+    const gn=gateNear(o);
+    setHTML('hud',`<b>${o.sp.name}</b> · ${where}${near?' · <b>'+near+'</b> 앞':''}`+(gn?`<br><button class="tb" onclick="actE()">🚪 건물 들어가기 (E)</button>`:'')+`<br><span style="opacity:.75">방향키·WASD로 움직여요 · Esc 그만</span>`)}
+}
+// ===== 땅속 도시 안 구경하기 (숙소·요리하는 방·빛 정원·중앙 홀·동물 보호소) =====
+function underHere(o){for(const civ of W.civs){const c=civ.city;if(c&&c.under&&(c.under.x-o.x)**2+(c.under.y-o.y)**2<c.under.r*c.under.r)return c}return null}
+function fakeAnimal(sp,g,x,y,vk){const o={x,y,vx:Math.random()-.5,vy:Math.random()-.5,g,sp,ph:Math.random()*20,age:0,tx:x,ty:y};derive(o);o.vk=vk/Math.max(1,o.size);return o}
+function enterInside(up,cArg,at){
+  const P=W.player;if(!P||W.inside)return;const c=cArg||underHere(P);if(!c)return;
+  const civ=W.civs.find(v=>v.city===c),csp=spById(civ.id),R=[],npc=[],solid=[];
+  const room=(x,y,w,h,kind,label,extra)=>{const r={x,y,w,h,kind,label,...extra};R.push(r);return r};
+  let homes=[],rows=1,zl=[];if(!up){
+  // 위: 사는 곳
+  homes=[room(30,10,118,54,'home','숙소'),room(156,10,118,54,'cook','요리하는 방'),room(282,10,118,54,'garden','빛 정원')];
+  for(const h of homes)room(h.x+h.w/2-9,56,18,18,'door');
+  room(0,70,410,20,'hall2','복도');
+  room(140,80,130,100,'hall','중앙 홀');
+  room(0,170,410,20,'hall2','복도');
+  // 아래: 동물 보호소 (종마다 방 하나, 한 줄에 4개)
+  zl=Object.entries(c.zoo||{}).filter(([,n])=>n>0).map(([id,n])=>[spById(+id),n]).filter(([q])=>q).sort((a,b)=>b[1]-a[1]).slice(0,24);rows=Math.max(1,Math.ceil(zl.length/4));
+  for(let r=0;r<rows;r++){const y0=196+r*86;
+    for(let k=0;k<4;k++){const i=r*4+k,e=zl[i],x0=30+k*96,q=e&&e[0];
+      const wet=q&&q.mean.fins>=.25&&Math.round(q.mean.legs)<1;
+      const rm=room(x0,y0,88,60,'zoo',q?`${q.name} · ${e[1]}마리`:'빈 보호 방',{sp:q,wet,hot:q&&q.mean.heat>.6});room(x0+35,y0-12,18,16,'door');
+      if(q)for(let j=0;j<Math.min(6,e[1]);j++){const a=fakeAnimal(q,{...q.mean},x0+10+Math.random()*68,y0+10+Math.random()*40,3.2);a.room=rm;npc.push(a)}}
+    if(r<rows-1)room(0,y0+66,410,20,'hall2','복도')}
+  room(0,170,20,rows*86+20,'hall2','복도'); // 왼쪽 세로 통로
+  // 외계인 몇 명
+  const homeRooms=[homes[0],homes[1],homes[2],R.find(r=>r.kind==='hall')];
+  for(let j=0;j<Math.min(10,Math.max(3,c.pop|0));j++){const rm=homeRooms[j%4],a=fakeAnimal(csp,{...csp.mean},rm.x+10+Math.random()*(rm.w-20),rm.y+10+Math.random()*(rm.h-20),4.5);a.room=rm;npc.push(a)}
+  }
+  const me=fakeAnimal(P.sp,P.g,205,150,4.5);
+  // 땅속 거리: 땅 위 섬 모양 그대로, 섬 크기만큼 (가로 160·세로 120마다 네거리)
+  const GX=160,GY=120,land=(x,y)=>x>4&&y>4&&x<WW-4&&y<WH-4&&(up?URB[tIdx(x,y)]===c.ci:!waterAt(x,y)),wx=i=>c.x+i*GX,wy=j=>c.y+j*GY,key=(i,j)=>i+','+j;
+  let si0=0,sj0=0;{let bd=1e9;for(let i=-10;i<=10;i++)for(let j=-10;j<=10;j++)if(land(wx(i),wy(j))){const d=(i*GX)**2+(j*GY)**2;if(d<bd){bd=d;si0=i;sj0=j}}}
+  const edgeOK=(i,j,u,v)=>{for(let f=.25;f<=1;f+=.25)if(!land(wx(i+u*f),wy(j+v*f)))return false;return true};
+  const nodes=new Map([[key(si0,sj0),[si0,sj0]]]),Q=[[si0,sj0]];
+  while(Q.length&&nodes.size<400){const [i,j]=Q.shift();for(const [u,v] of [[1,0],[-1,0],[0,1],[0,-1]]){const k=key(i+u,j+v);if(!nodes.has(k)&&edgeOK(i,j,u,v)){nodes.set(k,[i+u,j+v]);Q.push([i+u,j+v])}}}
+  const adj=new Map(),E=new Set();
+  for(const [k,[i,j]] of nodes){const L=[];for(const [u,v] of [[1,0],[-1,0],[0,1],[0,-1]])if(nodes.has(key(i+u,j+v))&&edgeOK(i,j,u,v)){L.push([i+u,j+v]);if(u>0)E.add(k+'h');if(v>0)E.add(k+'v')}adj.set(k,L)}
+  const iMin=Math.min(...[...nodes.values()].map(n=>n[0])),rowMin=Math.min(...[...nodes.values()].filter(n=>n[1]===sj0).map(n=>n[0]));
+  const K=2.5,SW=48,SX=up?i=>wx(i)*K-SW/2:i=>430+(i-iMin)*GX*K,SY=up?j=>wy(j)*K-SW/2:j=>110+(j-sj0)*GY*K,bld=[],walk=[],cars=[]; // 아주 크게: 바깥 지도의 2.5배 (위치는 그대로 맞음) // 땅 위 큰 건물은 바깥 지도와 같은 자리
+  if(!up)room(262,112,SX(rowMin)-262+4,22,'hall2','땅속 거리로 가는 길');
+  const STREET=up?'건물 안 복도':'땅속 거리';
+  for(const [k,[i,j]] of nodes){if(E.has(k+'h'))room(SX(i),SY(j),GX*K+SW,SW,'street',STREET);if(E.has(k+'v'))room(SX(i),SY(j),SW,GY*K+SW,'street',STREET);if(!adj.get(k).length)room(SX(i),SY(j),SW,SW,'street',STREET)}
+  const SHOP=['빛 열매 가게','수정 공방','방울 음료집','별 지도 가게','알 부화소','둥둥차 정류장','반짝 옷 가게','소리 조개 가게','꿈 그림 전시관','촉수 미용실','우주버스 표 파는 곳','외계 책방','공 굴리기 놀이터','빛 목욕탕','둥근 학교'];
+  const blocks=[];for(const [k,[i,j]] of nodes)if(E.has(k+'h')&&E.has(k+'v')&&E.has(key(i,j+1)+'h')&&E.has(key(i+1,j)+'v'))blocks.push([i,j]);
+  blocks.sort((a,b)=>(a[0]-si0)**2+(a[1]-sj0)**2-((b[0]-si0)**2+(b[1]-sj0)**2));
+  let si=0,ai=0;
+  const wetQ=q=>q&&q.mean&&q.mean.fins>=.25&&Math.round(q.mean.legs)<1;let fishes=[...new Set([...W.species.filter(q=>q.count>0&&!q.civ&&!q.owner&&wetQ(q)),...Object.keys(c.zoo||{}).map(id=>spById(+id)).filter(wetQ)])];
+  if(fishes.some(q=>q.mean.size>=4))fishes=fishes.filter(q=>q.mean.size>=4); // 원시 미생물보다 큰 물속 생물을 먼저 보여 줌
+  blocks.forEach(([i,j],n)=>{const x=SX(i)+SW,y=SY(j)+SW,w=GX*K-SW,h=GY*K-SW;
+    if(up&&n===1){room(x-4,y-4,w+8,h+8,'space','우주버스장');return}
+    if(n===0||n%11===6){room(x,y,w,h,'plaza',n===0?(up?'빛 중앙 홀':'빛 분수 광장'):'빛 공원');return}
+    if(up&&n%4===2){ // 아쿠아리움: 큰 물탱크 2개, 사이로 걸어 다님
+      const tanks=[0,1,2].map(r=>({x:x+16,y:y+14+r*82,w:w-32,h:60})),qs=[];
+      tanks.forEach((tk,t)=>{solid.push(tk);const q=fishes.length?fishes[(ai*3+t)%fishes.length]:null;if(!q)return;qs.push(q.name);
+        for(let k=0;k<6;k++){const a=fakeAnimal(q,{...q.mean},tk.x+10+Math.random()*(tk.w-20),tk.y+8+Math.random()*(tk.h-16),3);a.room={x:tk.x+2,y:tk.y+2,w:tk.w-4,h:tk.h-4};a.fish=1;npc.push(a)}});
+      ai++;room(x-4,y-4,w+8,h+8,'aqua',qs.length?'아쿠아리움 · '+[...new Set(qs)].join(', '):'아쿠아리움 (빈 물탱크)',{tanks});return}
+    const bw=(w-36)/2,bh=(h-36)/2;for(let k=0;k<4;k++){const bx=x+12+(k%2)*(bw+12),by=y+12+(k>>1)*(bh+12),nm=si%3===2?'이웃집':SHOP[si%SHOP.length];si++;bld.push({x:bx,y:by,w:bw,h:bh,name:nm,hue:(si*47+civ.id*13)%360,shape:si%3,door:{x:bx+bw/2,y:(k>>1)?by+bh:by}})}}); // 블록마다 큰 건물 4채
+  // 거리를 걷는 외계인 (일부는 애완동물과 함께) + 둥둥차 — 섬이 클수록 많이
+  const NL=[...nodes.values()],rn=()=>NL[Math.random()*NL.length|0];
+  const pets=Object.entries(c.pets||{}).filter(([,n])=>n>0).map(([id])=>spById(+id)).filter(Boolean);
+  for(let k=0;k<Math.min(160,NL.length*3);k++){const [ni,nj]=rn(),a=fakeAnimal(csp,{...csp.mean},SX(ni)+SW/2,SY(nj)+SW/2,4.5);a.walk=1;a.ni=ni;a.nj=nj;a.tx=a.x;a.ty=a.y;walk.push(a);
+    if(pets.length&&Math.random()<.4){const q=pets[Math.random()*pets.length|0],pt=fakeAnimal(q,{...q.mean},a.x,a.y-6,3);pt.owner=a;walk.push(pt)}}
+  if(!up)for(let k=0;k<Math.min(24,NL.length/2|0)+2;k++){const [ni,nj]=rn();cars.push({x:SX(ni)+SW/2,y:SY(nj)+SW/2,ni,nj,tx:SX(ni)+SW/2,ty:SY(nj)+SW/2,h:Math.random()*360,vx:1,vy:0})}
+  if(!up){ // 내 집: 처음 한 번 정하면 계속 같은 집
+    const hk=b=>Math.round(b.door.x)+','+Math.round(b.door.y);let h=W.myHome&&W.myHome.civ===civ.id&&bld.find(b=>hk(b)===W.myHome.k);
+    if(!h){h=bld.find(b=>b.name==='이웃집');if(h){W.myHome={civ:civ.id,k:hk(h)};toast('땅속 도시에 내 집이 생겼어요! 작은 지도의 초록 점이에요')}}
+    if(h){h.name='내 집';h.mine=true;h.hue=130}}
+  const bb=up?{x0:Math.min(...NL.map(n=>SX(n[0])))-6,x1:Math.max(...NL.map(n=>SX(n[0])))+SW+6,y0:Math.min(...NL.map(n=>SY(n[1])))-6,y1:Math.max(...NL.map(n=>SY(n[1])))+SW+6}:{x0:SX(iMin)-6,x1:Math.max(...NL.map(n=>SX(n[0])))+SW+6,y0:Math.min(...NL.map(n=>SY(n[1])))-6,y1:Math.max(...NL.map(n=>SY(n[1])))+SW+6};
+  let ei=si0,ej=sj0;if(at){let bd=1e18;for(const [i,j] of NL){const d=(wx(i)-at.x)**2+(wy(j)-at.y)**2;if(d<bd){bd=d;ei=i;ej=j}}} // 밟은 곳에서 가장 가까운 출입문
+  const ex=up?{x:SX(ei)+SW/2,y:SY(ej)+SW/2}:{x:205,y:130};if(up){me.x=ex.x;me.y=ex.y}
+  const exits=up?[]:[ex];if(up)for(const g of c.gates||[]){let bn=null,bd=1e18;for(const [i,j] of NL){const d=(wx(i)-g.x)**2+(wy(j)-g.y)**2;if(d<bd){bd=d;bn=[i,j]}}if(bn&&!exits.some(e=>e.x===SX(bn[0])+SW/2&&e.y===SY(bn[1])+SW/2))exits.push({x:SX(bn[0])+SW/2,y:SY(bn[1])+SW/2})} // 바깥 입구마다 안쪽 출입문
+  W.inside={c,civ,up,K,SW,R,npc,solid,me,bld,walk,cars,SX,SY,adj,NL,bb,key,exit:ex,exits,exitW:{x:wx(ei),y:wy(ej)},H:Math.max(400,196+rows*86),cam:{x:me.x,y:me.y},pl:up?[]:Array.from({length:40},()=>({r:homes[2],x:Math.random(),y:Math.random(),h:Math.random()*360}))};
+  toast(up?'하나로 이어진 큰 건물에 들어왔어요! 섬 전체가 건물이에요':zl.length?`땅속으로 내려왔어요! 아래쪽에 동물 보호소가 있어요`:'땅속으로 내려왔어요!');
+}
+function exitInside(){if(!W.inside)return;const I=W.inside,up=I.up;W.inside=null;
+  if(up&&W.player){const P=W.player,g=nearestGate(I.c,{x:I.me.x/I.K,y:I.me.y/I.K});if(g){P.x=g.px;P.y=g.py;cam.x=P.x;cam.y=P.y}} // 가장 가까운 입구 부두로 나감
+  if(!up&&W.player&&!I.c.water&&I.c.gates){enterInside(true,I.c,{x:I.c.under.x,y:I.c.under.y});toast('땅 위 큰 건물로 올라왔어요');return} /* 땅속 → 바로 위 큰 건물 안 */
+  toast(up?'건물 밖으로 나왔어요':'다시 땅 위로 올라왔어요')}
+const inWalk=(x,y)=>W.inside.R.some(r=>x>=r.x+2&&x<=r.x+r.w-2&&y>=r.y+2&&y<=r.y+r.h-2)&&!(W.inside.solid||[]).some(r=>x>r.x-3&&x<r.x+r.w+3&&y>r.y-3&&y<r.y+r.h+3);
+// ===== 가게 안 =====
+const SHOPK={'내 집':['myhome','','#3b3550'],'빛 창문 둥근 집':['home','우리 집에 온 걸 환영해요! 창문에서 빛이 나죠?','#3a2f55'],'육각 탑':['map','탑 꼭대기에서 별을 관찰해요','#26304a'],'수정 탑':['crystal','이 탑은 수정으로 빛을 모아요','#2c3346'],'외계 작물 밭':['fruit','오늘 수확한 열매예요. 하나 먹어 볼래요?','#2f4026'],'첨탑':['book','첨탑엔 행성의 기록을 모아 둬요','#3d3022'],'빛 정원':['fruit','정원 열매는 밤에 더 반짝여요','#1f3a2a'],'빛 열매 가게':['fruit','어서 와요! 오늘 딴 빛 열매가 제일 반짝여요','#3a2a44'],'수정 공방':['crystal','이 수정은 땅속 깊은 곳에서 캐 왔어요','#2c3346'],'방울 음료집':['drink','방울 음료 한 잔? 마시면 몸이 둥둥 떠요','#2f4a4a'],'별 지도 가게':['map','우주버스 타고 갈 별을 골라 봐요','#1d2340'],'알 부화소':['egg','쉿! 알이 곧 깨어날 것 같아요','#4a3f2a'],'둥둥차 정류장':['car','다음 둥둥차는 곧 도착해요','#2a2f38'],'반짝 옷 가게':['cloth','이 옷은 어두운 데서 빛나요','#41284a'],'소리 조개 가게':['shell','조개에 귀를 대 봐요. 바다 소리가 나요','#28404a'],'꿈 그림 전시관':['art','어젯밤 꿈을 그림으로 그렸어요','#3a3a3a'],'촉수 미용실':['salon','촉수 끝을 반짝이게 다듬어 줄까요?','#4a2a3a'],'우주버스 표 파는 곳':['ticket','달까지 가는 표 있어요!','#26364a'],'외계 책방':['book','이 책엔 행성의 역사가 다 적혀 있어요','#3d3022'],'공 굴리기 놀이터':['ball','공을 굴려 봐요! 통통 튀어요','#2a4a2e'],'빛 목욕탕':['bath','빛 물에 들어가면 피곤이 싹 풀려요','#1f3e52'],'둥근 학교':['school','오늘은 미생물이 어떻게 진화했는지 배워요','#3e3a28'],'이웃집':['home','놀러 왔어요? 들어와요!','#3a2f55']};
+function bldNear(o){let b0=null,bd=1e9,c0=null;for(const civ of W.civs){const c=civ.city;if(!c||c.water)continue;for(const b of c.b){if(b.type==='plaza')continue;const d=(b.x-o.x)**2+(b.y-o.y)**2;if(d<(b.s+9)**2&&d<bd){bd=d;b0=b;c0=civ}}}return b0?{b:b0,civ:c0}:null}
+function enterBuilding({civ}){enterInside(true,civ.city)}
+function oldEnterBuilding({b,civ}){ // 땅 위 건물: 가게 안 화면을 그대로 씀
+  const P=W.player;W.inside={surface:true,c:civ.city,civ,R:[],npc:[],bld:[],walk:[],cars:[],me:{sp:P.sp,g:P.g,x:b.x,y:b.y},cam:{x:0,y:0}};
+  enterShop({name:BNAME[b.type]||'건물',hue:(b.ph*60|0)%360,x:b.x,y:b.y,door:{x:b.x,y:b.y}})}
+function shopNear(){const I=W.inside;if(!I||I.shop)return null;let b0=null,bd=18*18;for(const b of I.bld){const d=(b.door.x-I.me.x)**2+(b.door.y-I.me.y)**2;if(d<bd){bd=d;b0=b}}return b0}
+function enterShop(b){
+  const I=W.inside,csp=spById(I.civ.id),[kind,line,floor]=SHOPK[b.name]||['home','안녕하세요!','#3a2f55'],W0=200,H0=130;
+  const home=kind==='myhome',solid=home?[{x:14,y:12,w:44,h:28,k:'bed'},{x:10,y:52,w:16,h:54,k:'shelf'},{x:174,y:40,w:16,h:66,k:'shelf'},{x:84,y:56,w:40,h:22,k:'table'},{x:120,y:12,w:50,h:12,k:'shelf'}]:[{x:50,y:16,w:100,h:16,k:'counter'},{x:10,y:40,w:16,h:66,k:'shelf'},{x:174,y:40,w:16,h:66,k:'shelf'}];
+  if(['drink','school','salon','book'].includes(kind))for(let k=0;k<3;k++)solid.push({x:48+k*40,y:62,w:22,h:16,k:'table'});
+  if(kind==='bath'||kind==='ball')solid.push({x:62,y:52,w:76,h:44,k:'pool'});
+  const items=[];if(home){const IK={};for(const k in ITEMN)IK[ITEMN[k]]=k;const spots=[];for(const sh of solid)if(sh.k!=='bed'){const n=sh.k==='table'?3:5;for(let k=0;k<n;k++)spots.push(sh.w>sh.h?{x:sh.x+8+k*(sh.w-16)/Math.max(1,n-1),y:sh.y+sh.h/2}:{x:sh.x+sh.w/2,y:sh.y+8+k*(sh.h-16)/Math.max(1,n-1)})}
+    (W.bag||[]).forEach((nm,i)=>{const q=spots[i]||{x:40+(i*37%120),y:92+(i*13%20)};items.push({x:q.x,y:q.y,h:(i*67)%360,k:IK[nm]||'home'})})} // 사 온 물건이 집에 놓임
+  else for(const sh of solid){const n=sh.k==='counter'?5:sh.k==='shelf'?5:sh.k==='table'?1:0;
+    for(let k=0;k<n;k++)items.push({x:sh.w>sh.h?sh.x+10+k*(sh.w-20)/Math.max(1,n-1):sh.x+sh.w/2,y:sh.w>sh.h?sh.y+sh.h/2:sh.y+8+k*(sh.h-16)/Math.max(1,n-1),h:(b.hue+k*50+sh.x)%360})}
+  const npc=[];if(home){const pets=Object.entries(I.c.pets||{}).filter(([,n])=>n>0).map(([id])=>spById(+id)).filter(Boolean);
+    if(pets.length){const q=pets[0],a=fakeAnimal(q,{...q.mean},100,100,3);a.room={x:30,y:84,w:140,h:36};a.myPet=1;npc.push(a)}} // 우리 집 애완동물
+  else{const keeper=fakeAnimal(csp,{...csp.mean},100,10,4.5);keeper.room={x:56,y:6,w:88,h:8};npc.push(keeper)}
+  if(!home)for(let k=0;k<2+(Math.random()*3|0);k++){const a=fakeAnimal(csp,{...csp.mean},40+Math.random()*120,100+Math.random()*15,4.5);a.room={x:30,y:36,w:140,h:84};npc.push(a)}
+  const me=fakeAnimal(I.me.sp,I.me.g,W0/2,H0-14,4.5);me.vy=-1;
+  const SC=2;for(const r of solid){r.x*=SC;r.y*=SC;r.w*=SC;r.h*=SC}for(const it of items){it.x*=SC;it.y*=SC} // 방을 2배로 넓게
+  for(const a of npc){a.x*=SC;a.y*=SC;a.tx=a.x;a.ty=a.y;const r=a.room;a.room={x:r.x*SC,y:r.y*SC,w:r.w*SC,h:r.h*SC}}me.x*=SC;me.y=H0*SC-14;
+  I.shop={b,kind,line,floor,solid,items,npc,me,W:W0*SC,H:H0*SC,sc:SC,cam:{x:me.x,y:me.y}};
+  toast(`${b.name}에 들어왔어요!`);
+}
+function exitShop(){const I=W.inside,b=I.shop.b;if(I.surface){W.inside=null;toast('다시 밖으로 나왔어요');return}I.shop=null;I.me.x=b.door.x;I.me.y=b.door.y+(b.door.y>b.y+40?12:-12);toast('다시 거리로 나왔어요')}
+const shopWalk=(S,x,y)=>x>8&&x<S.W-8&&y>8&&y<S.H-6&&!S.solid.some(r=>x>r.x-3&&x<r.x+r.w+3&&y>r.y-3&&y<r.y+r.h+3);
+function buyItem(){const S=W.inside&&W.inside.shop;if(!S)return;W.bag=W.bag||[];const nm=ITEMN[S.kind]||'선물';W.bag.push(nm);toast(`${nm}을(를) 샀어요! 내 집에 가면 놓여 있어요 (${W.bag.length}개)`)}
+const ITEMN={fruit:'빛 열매',crystal:'작은 수정',drink:'방울 음료',map:'별 지도',egg:'외계 알',car:'둥둥차 장난감',cloth:'반짝 옷',shell:'소리 조개',art:'꿈 그림',salon:'반짝 촉수 장식',ticket:'달 가는 표',book:'행성 역사책',ball:'통통 공',bath:'빛 물 한 병',school:'공책',home:'이웃의 선물'};
+function shopFrame(){
+  const I=W.inside,S=I.shop,o=S.me;
+  const dx=(keys.arrowright||keys.d||padK.r?1:0)-(keys.arrowleft||keys.a||padK.l?1:0),dy=(keys.arrowdown||keys.s||padK.d?1:0)-(keys.arrowup||keys.w||padK.u?1:0);
+  if(dx||dy){const L=Math.hypot(dx,dy),v=1.1,nx=o.x+dx/L*v,ny=o.y+dy/L*v;o.vx=dx/L;o.vy=dy/L;o.age++;
+    if(shopWalk(S,nx,ny)){o.x=nx;o.y=ny}else if(shopWalk(S,nx,o.y))o.x=nx;else if(shopWalk(S,o.x,ny))o.y=ny}
+  for(const a of S.npc){const r=a.room;a.age++;if(Math.hypot(a.tx-a.x,a.ty-a.y)<1.5||Math.random()<.006){for(let k=0;k<10;k++){a.tx=r.x+Math.random()*r.w;a.ty=r.y+Math.random()*r.h;if((a===S.npc[0]&&S.kind!=='myhome')||shopWalk(S,a.tx,a.ty))break}}
+    const d=Math.hypot(a.tx-a.x,a.ty-a.y)||1,v=Math.random()<.4?0:.3;a.vx+=((a.tx-a.x)/d-a.vx)*.1;a.vy+=((a.ty-a.y)/d-a.vy)*.1;const nx=a.x+a.vx*v,ny=a.y+a.vy*v;if((a===S.npc[0]&&S.kind!=='myhome')||shopWalk(S,nx,ny)){a.x=nx;a.y=ny}}
+  S.cam.x+=(o.x-S.cam.x)*.2;S.cam.y+=(o.y-S.cam.y)*.2;
+  if(S.sleep>0){S.sleep--;if(S.sleep===0)toast('푹 잤어요! 개운해요')}
+  if(frame%10===0&&S.kind==='myhome'){const atB=o.x<74*S.sc&&o.y<56*S.sc,atD=o.y>S.H-22&&Math.abs(o.x-S.W/2)<20,n=(W.bag||[]).length;
+    setHTML('hud',`<b>🏠 내 집</b> · ${n?`사 온 물건 ${n}개가 집에 놓여 있어요`:'아직 물건이 없어요. 거리의 가게에서 사 오면 집에 놓여요'}`+(S.npc.some(a=>a.myPet)?'<br>애완동물이 집을 지키고 있어요':'')+(atB?`<br><button class="tb" onclick="W.inside.shop.sleep=200">🛏 잠자기</button>`:'<br><span style="opacity:.75">왼쪽 위 침대로 가면 잘 수 있어요</span>')+(atD?`<br><button class="tb" onclick="exitShop()">🚪 밖으로 나가기 (E)</button>`:''));return}
+  if(frame%10===0){const atC=o.y<44*S.sc&&o.x>44*S.sc&&o.x<156*S.sc,atD=o.y>S.H-22&&Math.abs(o.x-S.W/2)<20;
+    setHTML('hud',`<b>${S.b.name}</b> 안`+(atC?`<br>🗨 가게 주인: "${S.line}" <button class="tb" onclick="buyItem()">하나 사기</button>`:'<br><span style="opacity:.75">위쪽 계산대로 가면 가게 주인이 말을 걸어요</span>')+(atD?`<br><button class="tb" onclick="exitShop()">🚪 밖으로 나가기 (E)</button>`:'')+(W.bag&&W.bag.length?`<br><span style="opacity:.75">🎒 가방: ${W.bag.slice(-4).join(', ')}${W.bag.length>4?' 외 '+(W.bag.length-4)+'개':''}</span>`:''))}
+}
+function drawItem(k,x,y,h,t){const c=cx;
+  if(k==='fruit'){c.fillStyle=`hsla(${h},90%,65%,${.7+.3*Math.sin(t*.08+h)})`;c.beginPath();c.arc(x,y,3,0,6.283);c.fill();c.fillStyle='#fff8';c.beginPath();c.arc(x-1,y-1,1,0,6.283);c.fill()}
+  else if(k==='crystal'||k==='salon'){c.fillStyle=`hsla(${h},80%,70%,.9)`;c.beginPath();c.moveTo(x,y-5);c.lineTo(x+3,y);c.lineTo(x,y+5);c.lineTo(x-3,y);c.fill()}
+  else if(k==='drink'){c.fillStyle='#ddeeff55';c.fillRect(x-2.5,y-4,5,8);c.fillStyle=`hsl(${h},80%,60%)`;c.fillRect(x-2.5,y-1,5,5);c.fillStyle='#fff';c.beginPath();c.arc(x,y-3-((t*.2+h)%4),.8,0,6.283);c.fill()}
+  else if(k==='map'||k==='ticket'||k==='art'){c.fillStyle=k==='map'?'#141a3a':'#efe6d0';c.fillRect(x-5,y-4,10,8);c.fillStyle=`hsl(${h},90%,70%)`;for(let q=0;q<4;q++)c.fillRect(x-4+(q*7+h)%8,y-3+(q*5+h)%6,1.2,1.2)}
+  else if(k==='egg'){c.fillStyle='#6b5030';c.beginPath();c.ellipse(x,y+2,5,2,0,0,6.283);c.fill();c.fillStyle=`hsl(${h},50%,80%)`;c.beginPath();c.ellipse(x+Math.sin(t*.3+h)*.4,y-1,2.6,3.6,0,0,6.283);c.fill()}
+  else if(k==='shell'){c.strokeStyle=`hsl(${h},60%,75%)`;c.lineWidth=1;c.beginPath();for(let a=0;a<12;a+=.5)c.lineTo(x+Math.cos(a)*a*.35,y+Math.sin(a)*a*.35);c.stroke()}
+  else if(k==='book'||k==='school'){for(let q=0;q<3;q++){c.fillStyle=`hsl(${(h+q*60)%360},50%,50%)`;c.fillRect(x-4,y-3+q*2.2,8,2)}}
+  else if(k==='cloth'){c.fillStyle=`hsla(${h},80%,60%,.9)`;c.beginPath();c.moveTo(x-4,y-3);c.lineTo(x+4,y-3);c.lineTo(x+3,y+4);c.lineTo(x-3,y+4);c.fill()}
+  else{c.fillStyle=`hsl(${h},70%,60%)`;c.beginPath();c.arc(x,y,2.6,0,6.283);c.fill()}}
+function drawShop(){
+  const S=W.inside.shop,z=Math.max(cv.width,cv.height*1.4)/215,t=frame;
+  cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#120c0a';cx.fillRect(0,0,cv.width,cv.height);
+  cx.setTransform(z,0,0,z,cv.width/2-S.cam.x*z,cv.height/2-S.cam.y*z);
+  cx.fillStyle=S.floor;cx.fillRect(0,0,S.W,S.H);
+  cx.fillStyle='rgba(255,255,255,.04)';for(let x=0;x<S.W;x+=12)for(let y=0;y<S.H;y+=12)if((x+y)/12%2)cx.fillRect(x,y,12,12);
+  cx.strokeStyle=`hsl(${S.b.hue},60%,60%)`;cx.lineWidth=4;cx.strokeRect(2,2,S.W-4,S.H-4);
+  cx.fillStyle='#ffd27a';cx.fillRect(S.W/2-14,S.H-4,28,4); // 문
+  for(let k=0;k<S.W/32;k++){cx.fillStyle=`hsla(${(S.b.hue+60)%360},90%,75%,${.5+.3*Math.sin(t*.04+k)})`;cx.fillRect(20+k*30,2,10,3)} // 천장 빛
+  for(const r of S.solid){
+    if(r.k==='pool'){cx.fillStyle=S.kind==='bath'?'#3fa6d8':'#7a5a3a';cx.beginPath();cx.ellipse(r.x+r.w/2,r.y+r.h/2,r.w/2,r.h/2,0,0,6.283);cx.fill();
+      if(S.kind==='bath'){cx.strokeStyle='rgba(255,255,255,.4)';cx.lineWidth=.6;for(let k=0;k<3;k++){cx.beginPath();cx.ellipse(r.x+r.w/2,r.y+r.h/2,(t*.2+k*12)%36,(t*.2+k*12)%36*.55,0,0,6.283);cx.stroke()}}
+      else for(let k=0;k<5;k++){const a=t*.03+k*1.3;cx.fillStyle=`hsl(${k*70},80%,60%)`;cx.beginPath();cx.arc(r.x+r.w/2+Math.cos(a)*26,r.y+r.h/2+Math.sin(a*1.3)*14,3.5,0,6.283);cx.fill()}continue}
+    if(r.k==='bed'){cx.fillStyle='#6b4f7a';cx.fillRect(r.x,r.y,r.w,r.h);cx.fillStyle='#9fd6ff';cx.beginPath();cx.ellipse(r.x+8,r.y+r.h/2,5,9,0,0,6.283);cx.fill(); // 베개
+      cx.fillStyle=`hsl(${(S.b.hue+200)%360},55%,55%)`;cx.fillRect(r.x+16,r.y+2,r.w-18,r.h-4);cx.fillStyle='rgba(255,255,255,.25)';for(let k=0;k<3;k++)cx.fillRect(r.x+20+k*8,r.y+4,3,r.h-8);continue}
+    cx.fillStyle=r.k==='counter'?'#8a6a4a':r.k==='shelf'?'#5a4636':'#6b5848';cx.fillRect(r.x,r.y,r.w,r.h);cx.fillStyle='rgba(255,255,255,.12)';cx.fillRect(r.x,r.y,r.w,2)}
+  for(const it of S.items)drawItem(it.k||S.kind,it.x,it.y,it.h,t);
+  for(const a of S.npc)drawAnimal(cx,a,z,a.age*.05+a.ph);
+  drawAnimal(cx,S.me,z,S.me.age*.05+S.me.ph);
+  cx.strokeStyle='#ffe066';cx.lineWidth=.6;cx.beginPath();cx.arc(S.me.x,S.me.y,8,0,6.283);cx.stroke();
+  if(S.sleep>0){const a=Math.min(1,Math.min(S.sleep,200-S.sleep)/40)*.8;cx.fillStyle=`rgba(5,8,25,${a})`;cx.fillRect(-50,-50,S.W+100,S.H+100);cx.fillStyle=`rgba(200,220,255,${a})`;cx.font='bold 9px sans-serif';cx.textAlign='left';for(let k=0;k<3;k++)cx.fillText('Z',S.me.x+6+k*6,S.me.y-6-k*6-((t*.3)%6))} // 쿨쿨
+  cx.font='bold 7px sans-serif';cx.textAlign='center';const w=cx.measureText(S.b.name).width+8;cx.fillStyle='rgba(0,0,0,.6)';cx.fillRect(S.W/2-w/2,S.H+4,w,10);cx.fillStyle=`hsl(${(S.b.hue+60)%360},90%,80%)`;cx.fillText(S.b.name,S.W/2,S.H+11.5)
+}
+function insideFrame(){
+  if(!W.player||W.player.dead){W.inside=null;return}
+  if(W.inside.space){spaceFrame();return}
+  if(W.inside.shop){shopFrame();return}
+  const I=W.inside,o=I.me;
+  const dx=(keys.arrowright||keys.d||padK.r?1:0)-(keys.arrowleft||keys.a||padK.l?1:0),dy=(keys.arrowdown||keys.s||padK.d?1:0)-(keys.arrowup||keys.w||padK.u?1:0);
+  if(dx||dy){const L=Math.hypot(dx,dy),v=2.2,nx=o.x+dx/L*v,ny=o.y+dy/L*v;o.vx=dx/L;o.vy=dy/L;o.age++;
+    if(inWalk(nx,ny)){o.x=nx;o.y=ny}else if(inWalk(nx,o.y))o.x=nx;else if(inWalk(o.x,ny))o.y=ny}
+  const nextNode=a=>{const d=I.adj.get(I.key(a.ni,a.nj))||[];if(d.length){const [u,v]=d[Math.random()*d.length|0];a.ni=u;a.nj=v}a.tx=I.SX(a.ni)+I.SW/2+(Math.random()-.5)*20;a.ty=I.SY(a.nj)+I.SW/2+(Math.random()-.5)*20};
+  for(const a of I.walk){a.age++;
+    if(a.owner){const o2=a.owner,dx=o2.x-a.x,dy=o2.y-a.y,d=Math.hypot(dx,dy)||1;if(d>7){a.vx=dx/d;a.vy=dy/d;a.x+=a.vx*.45;a.y+=a.vy*.45}continue} // 애완동물은 주인을 따라감
+    const dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);if(d<1)nextNode(a);else{a.vx=dx/d;a.vy=dy/d;a.x+=a.vx*.35;a.y+=a.vy*.35}}
+  for(const v of I.cars){const dx=v.tx-v.x,dy=v.ty-v.y,d=Math.hypot(dx,dy);if(d<1.5)nextNode(v);else{v.vx=dx/d;v.vy=dy/d;v.x+=v.vx*1.1;v.y+=v.vy*1.1}}
+  for(const a of I.npc){const r=a.room;a.age++;if(Math.hypot(a.tx-a.x,a.ty-a.y)<1.5||Math.random()<.004){a.tx=r.x+8+Math.random()*(r.w-16);a.ty=r.y+8+Math.random()*(r.h-16)}
+    const d=Math.hypot(a.tx-a.x,a.ty-a.y)||1,v=Math.random()<.3?0:.35;a.vx+=((a.tx-a.x)/d-a.vx)*.1;a.vy+=((a.ty-a.y)/d-a.vy)*.1;a.x+=a.vx*v;a.y+=a.vy*v}
+  I.cam.x+=(o.x-I.cam.x)*.2;I.cam.y+=(o.y-I.cam.y)*.2;
+  if(frame%10===0){const r=I.R.find(r=>r.kind!=='door'&&o.x>=r.x&&o.x<=r.x+r.w&&o.y>=r.y&&o.y<=r.y+r.h),lift=I.exits.some(e=>Math.hypot(o.x-e.x,o.y-e.y)<16),onPad=r&&r.kind==='space'&&Math.hypot(o.x-(r.x+r.w/2),o.y-(r.y+r.h/2))<80,overU=I.up&&I.c.under&&Math.hypot(o.x-I.c.under.x*I.K,o.y-I.c.under.y*I.K)<I.c.under.r*I.K;
+    let place=r?(r.kind==='zoo'?'동물 보호소 · '+r.label:r.label):'통로';
+    if(r&&r.kind==='street'){let b0=null,bd=55*55;for(const b of I.bld){const d=(b.door.x-o.x)**2+(b.door.y-o.y)**2;if(d<bd){bd=d;b0=b}}if(b0)place+=' · <b>'+b0.name+'</b> 앞'}
+    const sn=shopNear();
+    setHTML('hud',`<b>${spById(I.civ.id).name} ${I.up?'하나로 이어진 큰 건물':'땅속 도시'}</b> · ${place}`+(typeof sn!=='undefined'&&sn?`<br><button class="tb" onclick="actE()">🚪 ${sn.name} 들어가기 (E)</button>`:'')+(onPad?`<br>🚀 우주여행: <button class="tb" onclick="goSpace('moon')">달</button> <button class="tb" onclick="goSpace('red')">붉은 모래 행성</button> <button class="tb" onclick="goSpace('ice')">고리 얼음 행성</button>`:'')+(overU?`<br><button class="tb" onclick="goDown()">⬇ 땅속 도시로 내려가기</button>`:'')+(I.up?(lift?`<br><button class="tb" onclick="exitInside()">🚪 밖으로 나가기 (E)</button>`:'<br><span style="opacity:.75">노란 출입문으로 가면 밖으로 나가요 · 작은 지도의 노란 네모</span>'):lift?`<br><button class="tb" onclick="exitInside()">⬆ 땅 위로 올라가기 (E)</button>`:'<br><span style="opacity:.75">가운데 홀의 승강기로 가면 땅 위로 올라가요</span>')+`<br><span style="opacity:.75">방향키·WASD로 움직여요</span>`)}
+}
+function drawInside(){
+  if(W.inside.space){drawSpace();return}
+  if(W.inside.shop){drawShop();return}
+  const I=W.inside,d=devicePixelRatio||1,z=Math.max(cv.width,cv.height*1.4)/(I.me.x>420||I.up?400:230),t=frame; // 거리·큰 건물은 넓게 보여 줌
+  const UP=I.up;cx.setTransform(1,0,0,1,0,0);cx.fillStyle=UP?'#152029':'#1b120c';cx.fillRect(0,0,cv.width,cv.height);
+  cx.setTransform(z,0,0,z,cv.width/2-I.cam.x*z,cv.height/2-I.cam.y*z);
+  const v0x=I.cam.x-cv.width/2/z-30,v1x=I.cam.x+cv.width/2/z+30,v0y=I.cam.y-cv.height/2/z-30,v1y=I.cam.y+cv.height/2/z+30,inV=(x,y,w,h)=>x+w>v0x&&x<v1x&&y+h>v0y&&y<v1y; // 화면에 보이는 곳만 그림
+  // 흙 속 바위 무늬
+  if(!UP)cx.fillStyle='#2a1c12';if(!UP)for(let gx=Math.floor(v0x/40)*40;gx<v1x;gx+=40)for(let gy=Math.floor(v0y/40)*40;gy<v1y;gy+=40){const h=Math.abs(Math.sin(gx*12.9898+gy*78.233)*43758.5)%1;if(h<.45){cx.beginPath();cx.arc(gx+h*40,gy+(h*7%1)*40,3+h*8,0,6.283);cx.fill()}}
+  const FL={home:'#3a2f55',cook:'#4a3226',garden:'#1f3a2a',hall:'#38404c',hall2:'#2e3440',door:'#2e3440',street:UP?'#4a5662':'#24262e',plaza:'#2f3a48',aqua:'#183247',space:'#1c2134'};
+  // 거리 동네 바닥(동굴 천장 아래 넓은 공간)
+  cx.fillStyle=UP?'#26323c':'#1d1a22';cx.fillRect(I.bb.x0,I.bb.y0,I.bb.x1-I.bb.x0,I.bb.y1-I.bb.y0);
+  for(const r of I.R){if(!inV(r.x,r.y,r.w,r.h))continue;
+    if(r.kind==='zoo')cx.fillStyle=r.wet?'#1d5a8a':r.hot?'#9a7a44':'#3d5a2e';else cx.fillStyle=FL[r.kind];
+    cx.fillRect(r.x,r.y,r.w,r.h)}
+  for(const r of I.R){if(r.kind==='door'||!inV(r.x,r.y,r.w,r.h))continue;
+    // 바닥 장식
+    if(r.kind==='street'){cx.fillStyle=UP?'rgba(255,255,255,.18)':'rgba(120,240,255,.35)';if(r.w>r.h)for(let x=r.x+4;x<r.x+r.w;x+=14)cx.fillRect(x,r.y+r.h/2-.5,7,1);else for(let y=r.y+4;y<r.y+r.h;y+=14)cx.fillRect(r.x+r.w/2-.5,y,1,7)} // 빛나는 가운데 줄
+    if(r.kind==='plaza'){const x=r.x+r.w/2,y=r.y+r.h/2;cx.fillStyle='#3b6e9a';cx.beginPath();cx.arc(x,y,24,0,6.283);cx.fill();
+      for(let k=0;k<8;k++){const an=k/8*6.283+t*.02,L=10+4*Math.sin(t*.15+k);cx.strokeStyle=`hsla(${190+k*15},90%,75%,.8)`;cx.lineWidth=1.2;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+Math.cos(an)*L,y+Math.sin(an)*L);cx.stroke()}
+      cx.fillStyle='#bff3ff';cx.beginPath();cx.moveTo(x,y-9);cx.lineTo(x+4,y);cx.lineTo(x,y+9);cx.lineTo(x-4,y);cx.fill()} // 수정 분수
+    if(r.kind==='space'){const x=r.x+r.w/2,y=r.y+r.h/2,R=Math.min(r.w,r.h)*.42;cx.fillStyle='#2b2f45';cx.beginPath();cx.arc(x,y,R,0,6.283);cx.fill();
+      for(let k=0;k<20;k++){const an=k/20*6.283;cx.fillStyle=(k+(t>>3))%3?'#3a4a70':'#9fe8ff';cx.beginPath();cx.arc(x+Math.cos(an)*R*.9,y+Math.sin(an)*R*.9,3,0,6.283);cx.fill()} // 발사대 불빛
+      drawBus(x,y,0,2.5)}
+    if(r.kind==='aqua')for(const tk of r.tanks){cx.fillStyle='#1f6fa8';cx.fillRect(tk.x,tk.y,tk.w,tk.h);cx.fillStyle='rgba(120,220,255,.25)';cx.fillRect(tk.x,tk.y,tk.w,4);
+      for(let k=0;k<6;k++){const bx=tk.x+8+(k*29%(tk.w-16)),by=tk.y+tk.h-2-((t*.4+k*9)%(tk.h-4));cx.fillStyle='rgba(220,250,255,.6)';cx.beginPath();cx.arc(bx,by,.9,0,6.283);cx.fill()} // 물방울
+      cx.fillStyle='#3a7a4a';for(let k=0;k<4;k++){const px=tk.x+12+k*30;cx.beginPath();cx.moveTo(px,tk.y+tk.h);cx.quadraticCurveTo(px+4*Math.sin(t*.03+k),tk.y+tk.h-10,px+1,tk.y+tk.h-16);cx.lineTo(px+3,tk.y+tk.h);cx.fill()} // 물풀
+      cx.strokeStyle='rgba(170,240,255,.9)';cx.lineWidth=1.2;cx.strokeRect(tk.x,tk.y,tk.w,tk.h)} // 유리
+    if(r.kind==='hall'||r.kind==='hall2'){cx.fillStyle='rgba(255,255,255,.05)';for(let x=r.x;x<r.x+r.w;x+=10)for(let y=r.y;y<r.y+r.h;y+=10)if((x/10+y/10|0)%2)cx.fillRect(x,y,10,10)}
+    if(r.kind==='home'){for(let k=0;k<4;k++){cx.fillStyle=`hsl(${(k*70+260)%360},40%,45%)`;cx.beginPath();cx.ellipse(r.x+16+k*28,r.y+40,10,6,0,0,6.283);cx.fill();cx.fillStyle='rgba(255,255,255,.25)';cx.beginPath();cx.ellipse(r.x+14+k*28,r.y+38,5,2.5,0,0,6.283);cx.fill()}} // 둥근 잠자는 자리
+    if(r.kind==='cook'){cx.fillStyle='#6b5040';cx.fillRect(r.x+30,r.y+18,58,16);for(let k=0;k<3;k++){cx.fillStyle=`hsl(${k*110+20},70%,60%)`;cx.beginPath();cx.arc(r.x+40+k*19,r.y+26,4,0,6.283);cx.fill()}
+      cx.fillStyle=`rgba(255,140,60,${.5+.3*Math.sin(t*.2)})`;cx.beginPath();cx.arc(r.x+105,r.y+12,5,0,6.283);cx.fill()} // 식탁 + 화덕 불빛
+    if(r.kind==='garden')for(const q of I.pl){const x=r.x+6+q.x*(r.w-12),y=r.y+6+q.y*(r.h-12);cx.fillStyle=`hsla(${q.h},80%,65%,${.6+.3*Math.sin(t*.05+q.h)})`;cx.beginPath();cx.arc(x,y,2.2,0,6.283);cx.fill()} // 빛나는 외계 꽃
+    if(r.kind==='zoo'){
+      if(r.wet){cx.save();cx.beginPath();cx.rect(r.x,r.y,r.w,r.h);cx.clip();cx.strokeStyle='rgba(180,230,255,.35)';cx.lineWidth=.6;for(let k=0;k<5;k++){cx.beginPath();cx.arc(r.x+r.w/2,r.y+r.h/2,((t*.3+k*12)%60),0,6.283);cx.stroke()}cx.restore()}
+      else{for(let k=0;k<8;k++){const x=r.x+8+(k*37%72),y=r.y+8+(k*23%44);cx.fillStyle=r.hot?'#c9a060':'#5f8a3c';cx.beginPath();cx.arc(x,y,2.5+k%3,0,6.283);cx.fill()}}
+      // 보호용 유리 벽 + 위쪽 등불
+      cx.fillStyle=`rgba(255,240,180,${.08+.04*Math.sin(t*.03+r.x)})`;cx.fillRect(r.x,r.y,r.w,r.h)}
+    cx.strokeStyle=r.kind==='zoo'?'rgba(140,230,255,.9)':'#120c08';cx.lineWidth=r.kind==='zoo'?1.2:2.5;if(r.kind!=='hall2'&&r.kind!=='street'&&r.kind!=='plaza'&&r.kind!=='aqua'&&r.kind!=='space')cx.strokeRect(r.x,r.y,r.w,r.h)}
+  // 문은 벽 위에 다시 칠해서 뚫어 줌
+  for(const r of I.R)if(r.kind==='door'){cx.fillStyle=FL.door;cx.fillRect(r.x+1,r.y,r.w-2,r.h)}
+  // 중앙 승강기 (땅속) / 출입문 (땅 위 큰 건물)
+  if(UP)for(const e of I.exits){if(!inV(e.x-20,e.y-20,40,40))continue;cx.fillStyle=`rgba(255,220,120,${.25+.15*Math.sin(t*.08)})`;cx.beginPath();cx.arc(e.x,e.y,16,0,6.283);cx.fill();cx.fillStyle='#ffd27a';cx.fillRect(e.x-10,e.y-3,20,6);cx.fillStyle='#fff';cx.font='bold 6px sans-serif';cx.textAlign='center';cx.fillText('출입문',e.x,e.y-8)}
+  if(UP&&I.c.under){const K=I.K,u={x:I.c.under.x*K,y:I.c.under.y*K,r:I.c.under.r*K};cx.strokeStyle='rgba(120,220,255,.6)';cx.lineWidth=2;cx.setLineDash([8,6]);cx.beginPath();cx.arc(u.x,u.y,u.r,0,6.283);cx.stroke();cx.setLineDash([]);cx.fillStyle='#bfefff';cx.font='bold 9px sans-serif';cx.textAlign='center';cx.fillText('⬇ 이 아래가 땅속 도시',u.x,u.y-u.r+14)}
+  if(!UP){cx.fillStyle='#8899aa';cx.beginPath();cx.arc(205,130,10,0,6.283);cx.fill();cx.strokeStyle=`rgba(120,220,255,${.5+.4*Math.sin(t*.1)})`;cx.lineWidth=1.5;cx.stroke();
+  cx.fillStyle='#fff';cx.font='bold 7px sans-serif';cx.textAlign='center';cx.fillText('⬆',205,133)}
+  // 가게·집 (위에서 본 지붕 + 빛 창문 + 간판)
+  for(const b of I.bld){if(!inV(b.x,b.y,b.w,b.h))continue;cx.fillStyle=`hsl(${b.hue},35%,28%)`;
+    if(b.shape===1){cx.beginPath();cx.ellipse(b.x+b.w/2,b.y+b.h/2,b.w/2,b.h/2,0,0,6.283);cx.fill()}else cx.fillRect(b.x,b.y,b.w,b.h);
+    cx.fillStyle=`hsl(${b.hue},45%,40%)`;if(b.shape===2){cx.beginPath();for(let k=0;k<6;k++){const an=k/6*6.283;cx.lineTo(b.x+b.w/2+Math.cos(an)*22,b.y+b.h/2+Math.sin(an)*22)}cx.fill()}else{cx.beginPath();cx.arc(b.x+b.w/2,b.y+b.h/2,16,0,6.283);cx.fill()}
+    for(let k=0;k<6;k++){cx.fillStyle=`hsla(${(b.hue+60)%360},90%,75%,${.4+.4*Math.sin(t*.04+k+b.x)})`;cx.fillRect(b.x+6+(k%3)*18,b.y+(k<3?8:b.h-14),8,5)}
+    cx.fillStyle='#ffd27a';cx.fillRect(b.door.x-5,b.door.y-2,10,4); // 문
+    if(b.mine){cx.strokeStyle='#7dff9a';cx.lineWidth=1.5;cx.strokeRect(b.x-2,b.y-2,b.w+4,b.h+4);cx.fillStyle='#7dff9a';cx.beginPath();cx.moveTo(b.x+b.w/2,b.y-14);cx.lineTo(b.x+b.w/2+9,b.y-6);cx.lineTo(b.x+b.w/2-9,b.y-6);cx.fill();cx.fillRect(b.x+b.w/2-6,b.y-6,12,6)} // 내 집 지붕 표시
+    cx.font='bold 5px sans-serif';cx.textAlign='center';const w=cx.measureText(b.name).width+4;cx.fillStyle='rgba(0,0,0,.6)';cx.fillRect(b.x+b.w/2-w/2,b.y+b.h/2-4,w,7);cx.fillStyle=`hsl(${(b.hue+60)%360},90%,80%)`;cx.fillText(b.name,b.x+b.w/2,b.y+b.h/2+1.8)}
+  // 가로등 (네거리마다)
+  for(const [i,j] of I.NL){const x=I.SX(i)+I.SW/2,y=I.SY(j)+I.SW/2;if(!inV(x-14,y-14,28,28))continue;cx.fillStyle='rgba(255,230,150,.12)';cx.beginPath();cx.arc(x,y,14,0,6.283);cx.fill();cx.fillStyle='#ffe9a8';cx.beginPath();cx.arc(x,y,1.6,0,6.283);cx.fill()}
+  // 둥둥차
+  for(const v of I.cars){if(!inV(v.x-10,v.y-10,20,20))continue;const a=Math.atan2(v.vy,v.vx);cx.save();cx.translate(v.x,v.y);cx.rotate(a);cx.fillStyle=`rgba(120,240,255,${.25+.15*Math.sin(t*.3)})`;cx.beginPath();cx.ellipse(0,0,10,6,0,0,6.283);cx.fill();
+    cx.fillStyle=`hsl(${v.h},70%,55%)`;cx.beginPath();cx.ellipse(0,0,7,4,0,0,6.283);cx.fill();cx.fillStyle='rgba(220,250,255,.8)';cx.beginPath();cx.ellipse(1.5,0,3,2.2,0,0,6.283);cx.fill();cx.restore()}
+  for(const a of I.walk){if(!inV(a.x-8,a.y-8,16,16))continue;if(a.owner){cx.strokeStyle='rgba(255,200,230,.7)';cx.lineWidth=.4;cx.beginPath();cx.moveTo(a.owner.x,a.owner.y);cx.lineTo(a.x,a.y);cx.stroke()}drawAnimal(cx,a,z,a.age*.05+a.ph)}
+  for(const a of I.npc)if(inV(a.x-8,a.y-8,16,16))drawAnimal(cx,a,z,a.age*.05+a.ph);
+  drawAnimal(cx,I.me,z,I.me.age*.05+I.me.ph);
+  cx.strokeStyle='#ffe066';cx.lineWidth=.8;cx.beginPath();cx.arc(I.me.x,I.me.y,9,0,6.283);cx.stroke(); // 나 표시
+  // 방 이름
+  cx.font='bold 6px sans-serif';cx.textAlign='center';
+  for(const r of I.R){if(r.kind==='door'||r.kind==='hall2'||r.kind==='street'||!inV(r.x,r.y,r.w,r.h))continue;const lb=r.kind==='zoo'&&r.sp?'🛡 '+r.label:r.label;
+    cx.fillStyle='rgba(0,0,0,.55)';const w=cx.measureText(lb).width+6;cx.fillRect(r.x+r.w/2-w/2,r.y+2,w,9);cx.fillStyle='#fff';cx.fillText(lb,r.x+r.w/2,r.y+9)}
+  cx.fillStyle='#ffd166';if(!UP){cx.fillText('🛡 동물 보호소',205,193+1);cx.fillText('땅속 거리 →',350,126)}
+  // 작은 지도 (거리에 있을 때): 섬 모양 거리 + 내 위치
+  if(I.up||I.me.x>420){const B=I.bb,S=Math.min(170*d/(B.x1-B.x0),120*d/(B.y1-B.y0)),mx=cv.width-(B.x1-B.x0)*S-10*d,my=10*d;
+    cx.setTransform(1,0,0,1,0,0);cx.fillStyle='rgba(10,12,20,.75)';cx.fillRect(mx-6*d,my-6*d,(B.x1-B.x0)*S+12*d,(B.y1-B.y0)*S+12*d);
+    cx.fillStyle='#5a6070';for(const r of I.R)if(r.kind==='street'||r.kind==='plaza'||r.kind==='aqua'||r.kind==='space')cx.fillRect(mx+(r.x-B.x0)*S,my+(r.y-B.y0)*S,Math.max(1,r.w*S),Math.max(1,r.h*S));
+    cx.fillStyle='#ffd27a';for(const e of I.up?I.exits:[])cx.fillRect(mx+(e.x-B.x0)*S-2*d,my+(e.y-B.y0)*S-2*d,4*d,4*d);
+    const hb=I.bld.find(b=>b.mine);if(hb){cx.fillStyle='#7dff9a';cx.fillRect(mx+(hb.x-B.x0)*S-2*d,my+(hb.y-B.y0)*S-2*d,5*d,5*d)}
+    cx.fillStyle='#ffe066';cx.beginPath();cx.arc(mx+(I.me.x-B.x0)*S,my+(I.me.y-B.y0)*S,3*d,0,6.283);cx.fill()}
+}
+function loop(){
+  try{
+    if(intro)drawIntro();
+    else{
+      if(W.player){const now=performance.now();W.rtSec=(W.rtSec||0)+Math.min(.1,(now-(W.rtLast||now))/1000);W.rtLast=now}else W.rtLast=0;
+      if(!W.player&&W.speed&&$('startM').style.display==='none'&&!ed&&$('ending').style.display!=='flex'){const t0=performance.now();for(let i=0;i<W.speed;i++){step();if(performance.now()-t0>24)break}}
+      if(W.inside){insideFrame();drawInside()}else{driveFrame();draw()}
+    }
+    edLoop();if(++frame%15===0)renderUI();
+  }catch(err){console.error(err)}
+  requestAnimationFrame(loop);
+}
+resize();genWorld();renderTerrain();fitCam();$('seedTxt').textContent='지형 번호 '+seed;$('startM').style.display='flex';markSpeed();buildTools();loop();
+</script>
+</body>
+</html>

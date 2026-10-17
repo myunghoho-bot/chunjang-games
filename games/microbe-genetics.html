@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>미생물 유전학 실험실</title>
+<style>
+:root{--bg:#0e1522;--panel:#16213a;--panel2:#1e2d4a;--line:#2e4268;--text:#eef3fc;--dim:#9db0cf;--acc:#5ad1ff;--good:#7be37b;--warn:#ffcf5a;--red:#ff6b7a;--blue:#5fa8ff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;user-select:none}
+body{overflow:hidden}
+#app{display:grid;grid-template-columns:310px 1fr 340px;height:100vh}
+.panel{background:var(--panel);overflow-y:auto;padding:10px}
+#left{border-right:1px solid var(--line)}
+#right{border-left:1px solid var(--line)}
+h1{font-size:18px;margin:2px 0 8px}
+h2{font-size:13px;color:var(--dim);margin:12px 0 6px;font-weight:normal;letter-spacing:1px}
+.btn{background:var(--panel2);border:2px solid var(--line);color:var(--text);border-radius:9px;padding:6px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:#5a77a8}
+.btn.big{font-size:18px;padding:10px 22px;background:#2b5d3a;border-color:#4fae6a}
+.btn.big:hover{background:#357048}
+.btn.on{border-color:var(--acc);background:#1d3a55}
+.parent{background:var(--panel2);border-radius:12px;padding:8px;margin-bottom:10px;border:2px solid var(--line)}
+.parent.A{border-color:#a0507a}
+.parent.B{border-color:#4f7ab0}
+.parent .head{display:flex;align-items:center;gap:8px}
+.parent canvas{width:120px;height:90px;background:#0d1626;border-radius:10px;flex:none}
+.parent .title b{font-size:15px}
+.parent .title div{font-size:12px;color:var(--dim);margin-top:3px}
+.parent .tools{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.parent .tools .btn{padding:3px 7px;font-size:12px}
+.gene{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:13px}
+.gene .gn{width:44px;color:var(--dim)}
+.al{width:34px;height:30px;border-radius:8px;border:2px solid var(--line);background:#0d1626;color:var(--text);font-size:18px;font-weight:bold;cursor:pointer;font-family:'Consolas',monospace}
+.al.big{border-color:#e7b84a;color:#ffd76a}
+.al.small{color:#a9bad6}
+.al.lock{cursor:not-allowed;color:#888;border-style:dashed}
+.gene .ph{flex:1;text-align:right;font-size:12px}
+#center{display:flex;flex-direction:column;min-width:0}
+#top{display:flex;gap:8px;align-items:center;padding:8px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+#top label{font-size:13px;color:var(--dim)}
+#stage{position:relative;flex:1;min-height:0}
+#dish{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+#teacher{background:#1c2b45;border-top:1px solid var(--line);padding:10px 14px;font-size:14px;line-height:1.6;min-height:74px;max-height:34vh;overflow:auto}
+#teacher b{color:var(--warn)}
+.R{color:#ffd76a;font-weight:bold;font-family:'Consolas',monospace}
+.r{color:#a9bad6;font-weight:bold;font-family:'Consolas',monospace}
+table.pun{border-collapse:collapse;margin:4px auto}
+table.pun td,table.pun th{border:2px solid var(--line);width:72px;height:56px;text-align:center;font-size:13px;padding:2px}
+table.pun th{background:#0d1626;font-size:18px}
+table.pun th.corner{font-size:11px;color:var(--dim);font-weight:normal}
+table.pun td canvas{width:34px;height:26px;display:block;margin:0 auto}
+.res{font-size:13px;margin:4px 0}
+.res .bar{height:16px;border-radius:5px;background:#0d1626;position:relative;overflow:hidden;margin:2px 0}
+.res .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.res .bar span{position:relative;padding-left:6px;font-size:11px;line-height:16px}
+.res .exp{color:var(--dim);font-size:11px}
+select{background:var(--panel2);color:var(--text);border:2px solid var(--line);border-radius:8px;padding:4px;font-family:inherit;font-size:13px}
+.mis{display:flex;gap:7px;align-items:flex-start;font-size:13px;padding:6px;border-radius:8px;margin:3px 0;background:#121c30;cursor:pointer}
+.mis:hover{background:#1a2742}
+.mis .ck{font-size:16px;line-height:18px}
+.mis.done{color:var(--good)}
+.mis.cur{outline:2px solid var(--acc)}
+.mis small{color:var(--dim);display:block;margin-top:2px}
+#babyCard{background:var(--panel2);border-radius:10px;padding:8px;font-size:13px;margin-top:6px}
+#modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:10}
+#modal.show{display:flex}
+#mbox{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:18px;width:min(620px,94vw);max-height:90vh;overflow:auto;line-height:1.7;font-size:14px}
+#mbox h3{margin:0 0 8px}
+.card{background:var(--panel2);border-radius:10px;padding:10px;margin:8px 0}
+#toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:#264d33;border:2px solid var(--good);padding:10px 18px;border-radius:12px;font-size:16px;display:none;z-index:5;text-align:center}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="panel" id="left">
+    <h1>🧬 미생물 유전학 실험실</h1>
+    <div id="parents"></div>
+    <div style="font-size:12px;color:var(--dim);line-height:1.6">
+      글자를 클릭하면 유전자가 바뀌어.<br>
+      <span class="R">큰 글자</span> = 강한 유전자(우성) · <span class="r">작은 글자</span> = 약한 유전자(열성)<br>
+      유전자는 <b>두 개씩 짝</b>으로 있어. 하나는 엄마, 하나는 아빠한테 받은 거야.
+    </div>
+  </div>
+
+  <div id="center">
+    <div id="top">
+      <button class="btn big" id="crossB">💞 짝짓기!</button>
+      <label>아기 수</label>
+      <select id="nBaby"><option>4</option><option selected>16</option><option>100</option></select>
+      <button class="btn" id="learnB">📖 유전학 배우기</button>
+      <button class="btn" id="mysteryB">❓ 수수께끼 미생물</button>
+      <span id="genInfo" style="margin-left:auto;font-size:12px;color:var(--dim)"></span>
+    </div>
+    <div id="stage">
+      <canvas id="dish"></canvas>
+      <div id="toast"></div>
+    </div>
+    <div id="teacher"></div>
+  </div>
+
+  <div class="panel" id="right">
+    <h2>퍼넷 사각형 (아기가 받을 수 있는 유전자)</h2>
+    <select id="punGene"></select>
+    <div id="pun"></div>
+    <h2>결과 (실제로 나온 아기들)</h2>
+    <div id="results"><div style="color:var(--dim);font-size:13px">짝짓기를 하면 여기에 나와!</div></div>
+    <h2>고른 아기 (접시에서 클릭)</h2>
+    <div id="babyCard" style="color:var(--dim)">아기를 클릭하면 유전자를 볼 수 있어.</div>
+    <h2>미션 <span id="misCount"></span></h2>
+    <div id="missions"></div>
+  </div>
+</div>
+
+<div id="modal"><div id="mbox"></div></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+const rnd = () => Math.random();
+const iga = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return w + (c >= 0 && c <= 11171 && c % 28 ? '이' : '가'); };
+
+// ───────── 유전자 ─────────
+// type 'dom' = 강한 게 이김(우성/열성), 'mix' = 섞여서 중간이 나옴
+const GENES = [
+  { k: 'col', name: '색깔', B: 'R', s: 'r', dom: '빨강', rec: '파랑', type: 'dom', em: '🎨' },
+  { k: 'shape', name: '모양', B: 'S', s: 's', dom: '동글이', rec: '길쭉이', type: 'dom', em: '⚪' },
+  { k: 'hair', name: '털', B: 'H', s: 'h', dom: '털 있음', rec: '털 없음', type: 'dom', em: '〰️' },
+  { k: 'tail', name: '꼬리', B: 'T', s: 't', dom: '꼬리 있음', rec: '꼬리 없음', type: 'dom', em: '➰' },
+  { k: 'size', name: '크기', B: 'L', s: 'l', dom: '큼', rec: '작음', mid: '중간', type: 'mix', em: '📏' },
+];
+const GMAP = Object.fromEntries(GENES.map(g => [g.k, g]));
+const letter = (g, a) => a ? g.B : g.s;
+const pairText = (g, p) => `<span class="${p[0] ? 'R' : 'r'}">${letter(g, p[0])}</span><span class="${p[1] ? 'R' : 'r'}">${letter(g, p[1])}</span>`;
+function phen(g, p) {
+  const n = (p[0] ? 1 : 0) + (p[1] ? 1 : 0);
+  if (g.type === 'mix') return n === 2 ? g.dom : n === 1 ? g.mid : g.rec;
+  return n ? g.dom : g.rec;
+}
+function sortPair(p) { return p[0] || !p[1] ? p : [p[1], p[0]]; } // 큰 글자를 앞에
+function randGeno() { const o = {}; for (const g of GENES) o[g.k] = sortPair([rnd() < 0.5, rnd() < 0.5]); return o; }
+function cloneGeno(x) { const o = {}; for (const g of GENES) o[g.k] = [x[g.k][0], x[g.k][1]]; return o; }
+function cross(a, b) {
+  const o = {};
+  for (const g of GENES) o[g.k] = sortPair([a.geno[g.k][rnd() < 0.5 ? 0 : 1], b.geno[g.k][rnd() < 0.5 ? 0 : 1]]);
+  return o;
+}
+const NAMES = ['콩이', '몽글이', '방울이', '꼬물이', '보들이', '쪼꼬', '말랑이', '뽀글이', '동동이', '짱구', '토리', '모찌'];
+
+let parents = {
+  A: { geno: { col: [true, false], shape: [true, true], hair: [true, false], tail: [false, false], size: [true, true] }, gen: 1, name: '콩이' },
+  B: { geno: { col: [true, false], shape: [false, false], hair: [true, false], tail: [true, false], size: [false, false] }, gen: 1, name: '몽글이' },
+};
+let babies = [], lastCross = null, selBaby = null, mystery = null;
+
+// ───────── 미생물 그리기 ─────────
+function drawMicrobe(c, x, y, sc, geno, t, seed, opt) {
+  opt = opt || {};
+  const red = phen(GMAP.col, geno.col) === '빨강';
+  const nL = (geno.size[0] ? 1 : 0) + (geno.size[1] ? 1 : 0);
+  const r = 20 * sc * [0.72, 1, 1.28][nL];
+  const round = geno.shape[0] || geno.shape[1];
+  const rx = round ? r : r * 1.55, ry = round ? r : r * 0.68;
+  const hair = geno.hair[0] || geno.hair[1], tail = geno.tail[0] || geno.tail[1];
+  let hue = red ? 352 : 212;
+  if (opt.hideCol) hue = 0;
+  const sat = opt.hideCol ? 0 : 75;
+  const body = `hsl(${hue},${sat}%,62%)`, dark = `hsl(${hue},${sat}%,38%)`, light = `hsl(${hue},${sat}%,80%)`;
+  c.save(); c.translate(x, y);
+  const bob = Math.sin(t * 0.05 + seed) * 0.06;
+  c.rotate(bob);
+  if (tail) {
+    c.strokeStyle = dark; c.lineWidth = Math.max(1.2, r * 0.13); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-rx * 0.95, 0);
+    for (let k = 1; k <= 10; k++) c.lineTo(-rx * 0.95 - k * r * 0.17, Math.sin(t * 0.3 - k * 0.9 + seed) * r * 0.22 * (k / 10 + 0.3));
+    c.stroke();
+  }
+  if (hair) {
+    c.strokeStyle = dark; c.lineWidth = Math.max(0.8, r * 0.06);
+    c.beginPath();
+    const N = 26;
+    for (let k = 0; k < N; k++) {
+      const a = k / N * TAU, ex = Math.cos(a) * rx, ey = Math.sin(a) * ry;
+      const len = r * 0.2 * (1 + 0.5 * Math.sin(t * 0.4 + k * 0.9 + seed));
+      const nx = Math.cos(a) * ry, ny = Math.sin(a) * rx, nl = Math.hypot(nx, ny) || 1;
+      c.moveTo(ex, ey); c.lineTo(ex + nx / nl * len, ey + ny / nl * len);
+    }
+    c.stroke();
+  }
+  c.fillStyle = body; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fill();
+  c.strokeStyle = dark; c.lineWidth = Math.max(1, r * 0.08); c.stroke();
+  // 반짝이
+  c.fillStyle = light; c.beginPath(); c.ellipse(-rx * 0.35, -ry * 0.45, rx * 0.22, ry * 0.14, -0.3, 0, TAU); c.fill();
+  // 얼굴
+  const fx = rx * 0.45, eo = Math.min(ry * 0.32, r * 0.3);
+  c.fillStyle = '#1a1a2a';
+  c.beginPath(); c.arc(fx, -eo, r * 0.11, 0, TAU); c.arc(fx, eo, r * 0.11, 0, TAU); c.fill();
+  c.fillStyle = '#fff';
+  c.beginPath(); c.arc(fx + r * 0.04, -eo - r * 0.04, r * 0.04, 0, TAU); c.arc(fx + r * 0.04, eo - r * 0.04, r * 0.04, 0, TAU); c.fill();
+  c.strokeStyle = '#1a1a2a'; c.lineWidth = Math.max(0.8, r * 0.05);
+  c.beginPath(); c.arc(fx + r * 0.22, 0, r * 0.13, -1.1, 1.1); c.stroke();
+  if (opt.hideCol) { c.fillStyle = '#fff'; c.font = `bold ${r * 0.9}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', -rx * 0.1, 0); }
+  c.restore();
+}
+
+// ───────── 부모 카드 ─────────
+function buildParents() {
+  const box = $('parents'); box.innerHTML = '';
+  for (const key of ['A', 'B']) {
+    const p = parents[key], isM = mystery && key === 'A';
+    const d = document.createElement('div'); d.className = 'parent ' + key;
+    d.innerHTML = `<div class="head"><canvas id="pc${key}" width="240" height="180"></canvas>
+      <div class="title"><b>${key === 'A' ? '🩷 미생물 A' : '💙 미생물 B'}</b><div>${isM ? '수수께끼 미생물' : p.name} · ${p.gen}대째</div></div></div>`;
+    for (const g of GENES) {
+      const row = document.createElement('div'); row.className = 'gene';
+      row.innerHTML = `<span class="gn">${g.em} ${g.name}</span>`;
+      for (let i = 0; i < 2; i++) {
+        const b = document.createElement('button');
+        const hidden = isM && g.k === 'col' && i === 1;
+        b.className = 'al ' + (hidden ? 'lock' : p.geno[g.k][i] ? 'big' : 'small');
+        b.textContent = hidden ? '?' : letter(g, p.geno[g.k][i]);
+        b.title = hidden ? '숨은 유전자! 짝짓기로 알아내 봐' : '클릭하면 바뀌어';
+        if (!(isM && g.k === 'col')) b.onclick = () => { p.geno[g.k][i] = !p.geno[g.k][i]; p.name = '내가 바꾼 ' + p.name.replace('내가 바꾼 ', ''); p.gen = 1; onParentsChanged(); };
+        row.appendChild(b);
+      }
+      const ph = document.createElement('span'); ph.className = 'ph';
+      ph.textContent = phen(g, p.geno[g.k]);
+      if (g.type === 'mix') ph.textContent += ' (섞임)';
+      row.appendChild(ph);
+      d.appendChild(row);
+    }
+    const tools = document.createElement('div'); tools.className = 'tools';
+    tools.innerHTML = `<button class="btn" data-a="rand">🎲 무작위</button><button class="btn" data-a="pure1">모두 큰 글자</button><button class="btn" data-a="pure0">모두 작은 글자</button>`;
+    tools.querySelectorAll('button').forEach(b => b.onclick = () => {
+      if (isM) { if (!confirm('수수께끼를 그만둘까?')) return; mystery = null; }
+      const a = b.dataset.a;
+      p.geno = a === 'rand' ? randGeno() : Object.fromEntries(GENES.map(g => [g.k, [a === 'pure1', a === 'pure1']]));
+      p.name = NAMES[(rnd() * NAMES.length) | 0]; p.gen = 1;
+      onParentsChanged();
+    });
+    d.appendChild(tools);
+    box.appendChild(d);
+  }
+}
+function onParentsChanged() { for (const k of ['A', 'B']) for (const g of GENES) parents[k].geno[g.k] = sortPair(parents[k].geno[g.k]); buildParents(); renderPunnett(); }
+
+// ───────── 퍼넷 사각형 ─────────
+let punGene = 'col';
+function miniCanvas(geno, gk) {
+  const c = document.createElement('canvas'); c.width = 68; c.height = 52;
+  const base = { col: [true, true], shape: [true, true], hair: [false, false], tail: [false, false], size: [true, false] };
+  base[gk] = geno; // 이 유전자만 보여 줌
+  drawMicrobe(c.getContext('2d'), 36, 26, gk === 'size' ? 0.8 : 0.85, base, 20, 1);
+  return c;
+}
+function punnettCells(g) {
+  const a = parents.A.geno[g.k], b = parents.B.geno[g.k];
+  const cells = [];
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) cells.push(sortPair([a[j], b[i]]));
+  return { a, b, cells };
+}
+function expected(g) {
+  const { cells } = punnettCells(g), out = {};
+  for (const p of cells) { const ph = phen(g, p); out[ph] = (out[ph] || 0) + 0.25; }
+  return out;
+}
+function renderPunnett() {
+  const g = GMAP[punGene], { a, b, cells } = punnettCells(g);
+  const hideA = mystery && g.k === 'col';
+  const t = document.createElement('table'); t.className = 'pun';
+  const L = (x, h) => h ? '<span style="color:#888">?</span>' : `<span class="${x ? 'R' : 'r'}">${letter(g, x)}</span>`;
+  let h = `<tr><th class="corner">B ↓ &nbsp; A →</th><th style="color:#ff9fc0">${L(a[0], false)}</th><th style="color:#ff9fc0">${L(a[1], hideA)}</th></tr>`;
+  t.innerHTML = h;
+  for (let i = 0; i < 2; i++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<th>${L(b[i])}</th>`;
+    for (let j = 0; j < 2; j++) {
+      const p = cells[i * 2 + j], td = document.createElement('td');
+      const hid = hideA && j === 1;
+      if (hid) { td.innerHTML = `<b style="color:#888">?</b><div style="font-size:11px;color:var(--dim)">비밀</div>`; }
+      else {
+        td.appendChild(miniCanvas(p, g.k));
+        const s = document.createElement('div'); s.innerHTML = `${pairText(g, p)} <span style="font-size:11px">${phen(g, p)}</span>`; td.appendChild(s);
+      }
+      tr.appendChild(td);
+    }
+    t.appendChild(tr);
+  }
+  const box = $('pun'); box.innerHTML = ''; box.appendChild(t);
+  const ex = expected(g), note = document.createElement('div');
+  note.style.cssText = 'font-size:12px;color:var(--dim);text-align:center';
+  note.innerHTML = hideA ? '숨은 유전자 때문에 아직 알 수 없어!' : '아기 4마리 중 → ' + Object.entries(ex).map(([k, v]) => `${k} ${v * 4}마리`).join(', ') + ' 꼴';
+  box.appendChild(note);
+}
+
+// ───────── 짝짓기 ─────────
+const dish = $('dish'), dctx = dish.getContext('2d');
+let W = 1, H = 1, dpr = 1, anim = null, T = 0, layout = [];
+function resize() {
+  const r = $('stage').getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  W = Math.max(300, r.width | 0 || innerWidth - 650); H = Math.max(250, r.height | 0 || innerHeight - 160);
+  dish.width = W * dpr; dish.height = H * dpr;
+  doLayout();
+}
+function doLayout() {
+  const n = babies.length; layout = [];
+  if (!n) return;
+  const cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols);
+  const cw = (W - 40) / cols, ch = (H - 40) / rows;
+  const sc = Math.min(cw / 62, ch / 48, 1.6);
+  for (let i = 0; i < n; i++) {
+    const cx = i % cols, cy = (i / cols) | 0;
+    layout.push({ x: 20 + cw * (cx + 0.5), y: 20 + ch * (cy + 0.5), sc, cw, ch });
+  }
+}
+function doCross() {
+  if (anim) return;
+  const n = +$('nBaby').value;
+  const A = mystery ? { geno: mystery.real } : parents.A;
+  const gen = Math.max(parents.A.gen, parents.B.gen) + 1;
+  babies = [];
+  for (let i = 0; i < n; i++) babies.push({ geno: cross(A, parents.B), gen, seed: rnd() * 100, name: NAMES[i % NAMES.length] + (i >= NAMES.length ? (i / NAMES.length | 0) + 1 : '') });
+  lastCross = { A: cloneGeno(A.geno), B: cloneGeno(parents.B.geno), Agen: parents.A.gen, Bgen: parents.B.gen, n, gen, mystery: !!mystery };
+  selBaby = null; renderBabyCard();
+  doLayout();
+  anim = { t0: performance.now() };
+  setTimeout(() => { renderResults(); explain(); checkMissions(); }, 900);
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  T++;
+  draw(now || performance.now());
+  for (const k of ['A', 'B']) {
+    const c = $('pc' + k); if (!c) continue;
+    const g = c.getContext('2d'); g.clearRect(0, 0, 240, 180);
+    const geno = k === 'A' && mystery ? mystery.shown : parents[k].geno;
+    drawMicrobe(g, 120, 90, 2.0, geno, T, k === 'A' ? 1 : 7);
+  }
+}
+function draw(now) {
+  const c = dctx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const grd = c.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, Math.max(W, H) * 0.7);
+  grd.addColorStop(0, '#16304a'); grd.addColorStop(1, '#0a1220');
+  c.fillStyle = grd; c.fillRect(0, 0, W, H);
+  if (anim) {
+    const t = (now - anim.t0) / 1000;
+    if (t < 0.9) { // 두 부모가 가운데로 와서 합쳐짐
+      const k = Math.min(1, t / 0.6), e = k * k * (3 - 2 * k);
+      const Ag = mystery ? mystery.shown : parents.A.geno;
+      drawMicrobe(c, W * 0.2 + (W * 0.3 - 30) * e, H / 2, 2.2, Ag, T, 1);
+      drawMicrobe(c, W * 0.8 - (W * 0.3 - 30) * e, H / 2, 2.2, parents.B.geno, T, 7);
+      if (t > 0.5) { c.font = `${40 + (t - 0.5) * 80}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.globalAlpha = 1 - (t - 0.5) / 0.4; c.fillText('💞', W / 2, H / 2 - 60); c.globalAlpha = 1; }
+      return;
+    }
+    if (t > 0.9 + babies.length * 0.03 + 0.4) anim = null;
+  }
+  if (!babies.length) {
+    c.fillStyle = '#9db0cf'; c.font = '17px Malgun Gothic, sans-serif'; c.textAlign = 'center';
+    c.fillText('왼쪽에서 미생물 A와 B의 유전자를 정하고', W / 2, H / 2 - 14);
+    c.fillText('💞 짝짓기! 를 눌러 봐', W / 2, H / 2 + 16);
+    return;
+  }
+  const t = anim ? (now - anim.t0) / 1000 - 0.9 : 99;
+  for (let i = 0; i < babies.length; i++) {
+    const b = babies[i], L = layout[i]; if (!L) continue;
+    let s = L.sc;
+    if (t < 99) { const bt = t - i * 0.03; if (bt < 0) continue; s *= Math.min(1, bt / 0.25) * (1 + Math.max(0, 0.25 - Math.abs(bt - 0.25)) * 0.8); }
+    if (b === selBaby) {
+      c.strokeStyle = '#ffd84a'; c.lineWidth = 2; c.setLineDash([5, 4]);
+      c.strokeRect(L.x - L.cw / 2 + 3, L.y - L.ch / 2 + 3, L.cw - 6, L.ch - 6); c.setLineDash([]);
+    }
+    drawMicrobe(c, L.x + Math.sin(T * 0.02 + b.seed) * 2, L.y + Math.cos(T * 0.025 + b.seed) * 2, s, b.geno, T, b.seed);
+  }
+}
+dish.addEventListener('click', e => {
+  const r = dish.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  selBaby = null;
+  babies.forEach((b, i) => { const L = layout[i]; if (L && Math.abs(x - L.x) < L.cw / 2 && Math.abs(y - L.y) < L.ch / 2) selBaby = b; });
+  renderBabyCard();
+});
+
+// ───────── 결과 / 설명 ─────────
+function countPh(g) {
+  const out = {};
+  for (const b of babies) { const p = phen(g, b.geno[g.k]); out[p] = (out[p] || 0) + 1; }
+  return out;
+}
+function renderResults() {
+  if (!lastCross) return;
+  const box = $('results'); box.innerHTML = '';
+  const n = babies.length;
+  const fake = { A: { geno: lastCross.A }, B: { geno: lastCross.B } };
+  for (const g of GENES) {
+    const cnt = countPh(g);
+    const exp = {};
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { const p = phen(g, [lastCross.A[g.k][j], lastCross.B[g.k][i]]); exp[p] = (exp[p] || 0) + 0.25; }
+    const order = g.type === 'mix' ? [g.dom, g.mid, g.rec] : [g.dom, g.rec];
+    const d = document.createElement('div'); d.className = 'res';
+    let h = `<b>${g.em} ${g.name}</b>`;
+    for (const ph of order) {
+      const v = cnt[ph] || 0, e = exp[ph] || 0;
+      if (!v && !e) continue;
+      const col = g.k === 'col' ? (ph === '빨강' ? 'var(--red)' : 'var(--blue)') : ph === g.dom ? '#e7b84a' : ph === g.rec ? '#7b8fb0' : '#c9a0ff';
+      h += `<div class="bar"><i style="width:${v / n * 100}%;background:${col}"></i><span>${ph} ${v}마리 (${Math.round(v / n * 100)}%) <span class="exp">· 예상 ${Math.round(e * 100)}%</span></span></div>`;
+    }
+    d.innerHTML = h; box.appendChild(d);
+  }
+  // 색깔+모양 함께 세기
+  const combos = {};
+  for (const b of babies) { const k = phen(GMAP.col, b.geno.col) + ' ' + phen(GMAP.shape, b.geno.shape); combos[k] = (combos[k] || 0) + 1; }
+  const d = document.createElement('div'); d.className = 'res';
+  d.innerHTML = `<b>🎨+⚪ 색깔과 모양 함께</b><div style="font-size:12px;color:var(--dim)">` +
+    ['빨강 동글이', '빨강 길쭉이', '파랑 동글이', '파랑 길쭉이'].map(k => `${k}: <b style="color:var(--text)">${combos[k] || 0}</b>`).join(' · ') + '</div>';
+  box.appendChild(d);
+  $('genInfo').textContent = `아기들은 ${lastCross.gen}대째 · ${n}마리`;
+}
+function explain() {
+  if (!lastCross) return;
+  const g = GMAP[punGene];
+  const a = lastCross.A[g.k], b = lastCross.B[g.k];
+  let h = `👩‍🔬 <b>${g.em} ${g.name}</b> 이야기: `;
+  if (lastCross.mystery && g.k === 'col') {
+    const blue = (countPh(g)['파랑'] || 0);
+    h += `수수께끼 미생물(빨강)과 B(${pairText(g, b)})의 아기 중에 <b>파랑이 ${blue}마리</b> 나왔어. `;
+    h += blue ? '파랑이 나오려면 아기가 양쪽에서 작은 r을 받아야 해. 그러니까 수수께끼 미생물도 r을 숨기고 있었다는 뜻이야!' :
+      (b[0] || b[1]) ? 'B가 큰 R을 가지고 있으면 아기가 늘 빨강이라 알아내기 어려워. B를 <span class="r">rr</span>(파랑)로 바꿔 봐!' :
+        '파랑 B(rr)랑 짝지었는데 파랑이 하나도 없어. 아기가 많을수록 확실해져. 그럼 수수께끼 미생물은…?';
+    h += `<div style="margin-top:6px"><button class="btn" onclick="guessMystery(true)">RR이야!</button> <button class="btn" onclick="guessMystery(false)">Rr이야!</button></div>`;
+    $('teacher').innerHTML = h; return;
+  }
+  h += `A는 ${pairText(g, a)}, B는 ${pairText(g, b)}를 가지고 있어. 아기는 A한테서 하나, B한테서 하나를 <b>뽑기처럼 무작위로</b> 받아. `;
+  const ex = expected(g);
+  if (g.type === 'mix') h += `크기 유전자는 <b>섞이는 유전자</b>라서 <span class="R">L</span>이 2개면 큼, 1개면 중간, 0개면 작음이야. `;
+  else h += `큰 글자(<span class="R">${g.B}</span>)가 하나라도 있으면 <b>${g.dom}</b>, 작은 글자(<span class="r">${g.s}${g.s}</span>)만 둘이면 <b>${g.rec}</b>${iga(g.rec).slice(-1)} 돼. `;
+  h += `그래서 예상은 ` + Object.entries(ex).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(', ') + `인데, 실제로는 ` +
+    Object.entries(countPh(g)).map(([k, v]) => `${k} ${Math.round(v / babies.length * 100)}%`).join(', ') + ` 나왔어.`;
+  if (babies.length < 100) h += ' <span style="color:var(--dim)">(아기가 적으면 예상이랑 많이 다를 수 있어. 100마리로 해 봐!)</span>';
+  if (g.type === 'dom' && (a[0] && !a[1]) && (b[0] && !b[1])) h += ` <br>💡 A랑 B 둘 다 <b>${g.dom}</b>인데 <b>${g.rec}</b> 아기가 나올 수 있는 건, 둘 다 작은 <span class="r">${g.s}</span>를 <b>몰래 숨기고</b> 있어서야!`;
+  $('teacher').innerHTML = h + `<div style="font-size:12px;color:var(--dim);margin-top:4px">오른쪽 위에서 다른 유전자를 고르면 그 이야기를 해 줄게.</div>`;
+}
+
+function renderBabyCard() {
+  const el = $('babyCard');
+  if (!selBaby) { el.innerHTML = '아기를 클릭하면 유전자를 볼 수 있어.'; el.style.color = 'var(--dim)'; return; }
+  const b = selBaby; el.style.color = 'var(--text)';
+  let h = `<b>${b.name}</b> · ${b.gen}대째<br>`;
+  for (const g of GENES) h += `${g.em} ${g.name}: ${pairText(g, b.geno[g.k])} → ${phen(g, b.geno[g.k])}<br>`;
+  h += `<div style="display:flex;gap:5px;margin-top:6px"><button class="btn" id="toA">🩷 A 자리로</button><button class="btn" id="toB">💙 B 자리로</button></div>`;
+  el.innerHTML = h;
+  const put = k => { if (k === 'A' && mystery) mystery = null; parents[k] = { geno: cloneGeno(b.geno), gen: b.gen, name: b.name }; onParentsChanged(); toast(`${iga(b.name)} 미생물 ${k}가 됐어!`); checkMissions(); };
+  $('toA').onclick = () => put('A'); $('toB').onclick = () => put('B');
+}
+
+// ───────── 수수께끼 ─────────
+$('mysteryB').onclick = () => {
+  const isRR = rnd() < 0.5;
+  const real = randGeno(); real.col = isRR ? [true, true] : [true, false];
+  mystery = { real, shown: real, isRR };
+  parents.A = { geno: real, gen: 1, name: '수수께끼' };
+  parents.B = { geno: cloneGeno(parents.B.geno), gen: 1, name: parents.B.name };
+  punGene = 'col'; $('punGene').value = 'col';
+  onParentsChanged();
+  babies = []; lastCross = null; $('results').innerHTML = '';
+  $('teacher').innerHTML = '❓ <b>수수께끼 미생물</b>이 왔어! 색깔은 빨강인데, 유전자가 <span class="R">RR</span>일까 <span class="R">R</span><span class="r">r</span>일까? 겉모습만으로는 알 수 없어.<br>💡 힌트: 미생물 B를 <b>파랑(<span class="r">rr</span>)</b>으로 만들고 짝지어 봐. 아기 중에 파랑이 나오는지 보면 알 수 있어!';
+};
+function guessMystery(saidRR) {
+  if (!mystery) return;
+  const ok = saidRR === mystery.isRR;
+  if (ok) {
+    toast('🎉 정답! 숨은 유전자를 알아냈어!');
+    $('teacher').innerHTML = `🎉 <b>정답!</b> 수수께끼 미생물은 ${mystery.isRR ? '<span class="R">RR</span>' : '<span class="R">R</span><span class="r">r</span>'}이었어. 이렇게 <b>작은 글자 미생물이랑 짝지어서 숨은 유전자를 알아내는 방법</b>을 과학자들은 <b>"검정 교배"</b>라고 불러!`;
+    done('mystery');
+  } else {
+    $('teacher').innerHTML = `🤔 아쉽다! 다시 생각해 봐. 파랑 아기가 <b>한 마리라도</b> 나왔다면 수수께끼 미생물은 작은 <span class="r">r</span>을 숨기고 있는 거야. 하나도 안 나왔다면 아기 수를 100마리로 늘려서 다시 해 봐.`;
+    return;
+  }
+  mystery = null; parents.A.name = '수수께끼였던 친구'; onParentsChanged();
+}
+
+// ───────── 미션 ─────────
+const isAll = (g, ph) => babies.length >= 4 && babies.every(b => phen(GMAP[g], b.geno[g]) === ph);
+const anyB = (g, ph) => babies.some(b => phen(GMAP[g], b.geno[g]) === ph);
+const pairEq = (p, x, y) => p[0] === x && p[1] === y;
+const MISSIONS = [
+  { id: 'allred', t: '빨강 아기만 나오게 하기', d: '아기가 모두 빨강이 되게 해 봐 (4마리 이상)', ok: () => lastCross && !lastCross.mystery && isAll('col', '빨강') && anyB('col', '빨강') },
+  { id: 'hidden', t: '빨강 부모에게서 파랑 아기!', d: 'A와 B가 둘 다 빨강인데 파랑 아기가 나오게 해 봐', ok: () => lastCross && !lastCross.mystery && (lastCross.A.col[0] || lastCross.A.col[1]) && (lastCross.B.col[0] || lastCross.B.col[1]) && anyB('col', '파랑') },
+  { id: 'ratio31', t: '3 : 1 만들기', d: 'Rr × Rr 로 아기 100마리 → 빨강이 약 75%, 파랑이 약 25%인지 확인', ok: () => lastCross && lastCross.n >= 100 && pairEq(lastCross.A.col, true, false) && pairEq(lastCross.B.col, true, false) },
+  { id: 'mid', t: '섞이는 유전자: 중간 크기', d: '큰 미생물(LL) × 작은 미생물(ll) → 아기가 모두 중간!', ok: () => lastCross && ((pairEq(lastCross.A.size, true, true) && pairEq(lastCross.B.size, false, false)) || (pairEq(lastCross.B.size, true, true) && pairEq(lastCross.A.size, false, false))) && isAll('size', '중간') },
+  { id: 'nothing', t: '털도 꼬리도 없는 아기', d: '부모 둘 다 털과 꼬리가 있는데, 아기는 둘 다 없게!', ok: () => lastCross && ['hair', 'tail'].every(k => (lastCross.A[k][0] || lastCross.A[k][1]) && (lastCross.B[k][0] || lastCross.B[k][1])) && babies.some(b => !b.geno.hair[0] && !b.geno.hair[1] && !b.geno.tail[0] && !b.geno.tail[1]) },
+  { id: 'gen3', t: '3대째 미생물', d: '아기를 부모 자리로 옮겨서 다시 짝짓기 → 3대째 아기 만들기', ok: () => lastCross && lastCross.gen >= 3 },
+  { id: 'mystery', t: '수수께끼 미생물 풀기', d: '❓ 버튼을 눌러 숨은 유전자를 알아내 봐', ok: () => false },
+  { id: 'twogene', t: '두 가지 함께: 9 : 3 : 3 : 1', d: 'A, B 둘 다 RrSs 로 아기 100마리 → 색깔+모양 네 가지가 약 9:3:3:1', ok: () => lastCross && lastCross.n >= 100 && ['A', 'B'].every(k => pairEq(lastCross[k].col, true, false) && pairEq(lastCross[k].shape, true, false)) },
+  { id: 'perfect', t: '완벽한 파랑 길쭉이 가족', d: '아기 16마리 이상이 모두 파랑·길쭉이·털 없음·꼬리 없음·작음!', ok: () => lastCross && babies.length >= 16 && babies.every(b => GENES.every(g => !b.geno[g.k][0] && !b.geno[g.k][1])) },
+];
+let doneSet = new Set();
+try { doneSet = new Set(JSON.parse(localStorage.getItem('geneticsMissions') || '[]')); } catch (e) {}
+function done(id) {
+  if (doneSet.has(id)) return;
+  doneSet.add(id);
+  try { localStorage.setItem('geneticsMissions', JSON.stringify([...doneSet])); } catch (e) {}
+  const m = MISSIONS.find(x => x.id === id);
+  toast(`🏆 미션 성공! "${m.t}"`);
+  renderMissions();
+}
+function checkMissions() { for (const m of MISSIONS) if (!doneSet.has(m.id) && m.ok()) done(m.id); }
+function renderMissions() {
+  const box = $('missions'); box.innerHTML = '';
+  for (const m of MISSIONS) {
+    const d = document.createElement('div'); d.className = 'mis' + (doneSet.has(m.id) ? ' done' : '');
+    d.innerHTML = `<span class="ck">${doneSet.has(m.id) ? '✅' : '⬜'}</span><div>${m.t}<small>${m.d}</small></div>`;
+    box.appendChild(d);
+  }
+  $('misCount').textContent = `(${doneSet.size}/${MISSIONS.length})`;
+}
+let toastTimer = 0;
+function toast(t) {
+  const el = $('toast'); el.textContent = t; el.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.style.display = 'none', 2600);
+}
+
+// ───────── 배우기 ─────────
+$('learnB').onclick = () => {
+  $('mbox').innerHTML = `<h3>📖 유전학 배우기</h3>
+  <div class="card">🧬 <b>유전자</b>는 생물의 <b>설계도</b>야. 색깔, 모양, 크기 같은 걸 정해.</div>
+  <div class="card">✌️ 유전자는 <b>두 개씩 짝</b>으로 있어. 아기는 엄마한테 하나, 아빠한테 하나를 받아. 어느 쪽을 받을지는 <b>동전 던지기처럼</b> 무작위야.</div>
+  <div class="card">💪 <span class="R">큰 글자</span>는 <b>강한 유전자(우성)</b>, <span class="r">작은 글자</span>는 <b>약한 유전자(열성)</b>야. <span class="R">R</span><span class="r">r</span>처럼 둘이 같이 있으면 강한 쪽 모습이 나와. 그래서 <span class="r">r</span>은 <b>숨어 있을 수 있어!</b></div>
+  <div class="card">🎨 <b>겉모습</b>(빨강/파랑)과 <b>유전자 짝</b>(<span class="R">RR</span>, <span class="R">R</span><span class="r">r</span>, <span class="r">rr</span>)은 달라. <span class="R">RR</span>이랑 <span class="R">R</span><span class="r">r</span>은 둘 다 빨강이라 겉으로는 구별이 안 돼.</div>
+  <div class="card">🔲 <b>퍼넷 사각형</b>은 아기가 받을 수 있는 짝을 모두 적은 표야. 칸 4개가 다 똑같이 나올 수 있어.</div>
+  <div class="card">📏 <b>섞이는 유전자</b>: 크기는 <span class="R">L</span>이 많을수록 커져서 <span class="R">L</span><span class="r">l</span>은 <b>중간</b>이 돼.</div>
+  <div class="card">👨‍🔬 이걸 처음 알아낸 사람은 <b>멘델</b>이라는 신부님이야. 완두콩 수천 개를 길러서 알아냈어! 진짜 미생물(효모 같은)도 이렇게 짝지어서 유전자를 섞을 수 있어.</div>
+  <div style="text-align:right"><button class="btn" onclick="document.getElementById('modal').classList.remove('show')">알겠어!</button></div>`;
+  $('modal').classList.add('show');
+};
+
+// ───────── 시작 ─────────
+GENES.forEach(g => { const o = document.createElement('option'); o.value = g.k; o.textContent = `${g.em} ${g.name} (${g.B}/${g.s})`; $('punGene').appendChild(o); });
+$('punGene').onchange = e => { punGene = e.target.value; renderPunnett(); explain(); };
+$('crossB').onclick = doCross;
+addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'SELECT') { e.preventDefault(); doCross(); } });
+addEventListener('resize', resize);
+buildParents(); renderPunnett(); renderMissions(); resize();
+$('teacher').innerHTML = '👩‍🔬 안녕! 여기는 <b>미생물 유전학 실험실</b>이야. 미생물 A와 B를 짝지으면 아기들이 태어나. 아기는 부모의 유전자를 <b>반씩</b> 받아. 왼쪽에서 글자를 바꿔 보고 <b>💞 짝짓기!</b>를 눌러 봐. 오른쪽 <b>미션</b>도 도전해 봐!';
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

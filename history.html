@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>춘장게임즈 역사관</title>
+<meta name="description" content="춘장게임즈 게임들을 만든 순서대로 보는 역사관.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="춘장게임즈 역사관">
+<meta property="og:description" content="첫 게임부터 지금까지, 만든 순서대로 걸어 봐요.">
+<meta property="og:url" content="https://myunghoho-bot.github.io/chunjang-games/history.html">
+<meta property="og:image" content="https://myunghoho-bot.github.io/chunjang-games/img/og.jpg">
+<meta name="theme-color" content="#b5241c">
+<link rel="icon" href="bowl.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="wrap">
+  <a class="sign" href="./">
+    <img class="bowl" src="bowl.svg" alt="" width="104" height="90">
+    <div>
+      <h1>춘장게임즈</h1>
+      <p>머릿속 상상을 그대로 만든 게임</p>
+    </div>
+  </a>
+  <nav class="nav" aria-label="춘장게임즈 안내">
+    <a href="./">게임 고르기</a>
+    <a href="history.html" aria-current="page">역사관</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="hist-head">
+    <h2>역사관</h2>
+    <p class="lead" id="since">첫 게임부터 지금까지, 만든 순서대로 걸어 봐요.</p>
+  </div>
+  <div class="timeline" id="timeline"></div>
+  <noscript><p>역사관을 보려면 자바스크립트를 켜 주세요.</p></noscript>
+</main>
+
+<footer class="wrap">
+  <p>게임 아이디어는 춘장게임즈가 내고, 코드는 Claude와 같이 만들었어요.</p>
+</footer>
+
+<script src="games.js"></script>
+<script>
+const tl = document.getElementById('timeline');
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const md = d => { const [, m, day] = d.split('-').map(Number); return m + '.' + day; };
+const month = d => Number(d.split('-')[1]) + '월';
+
+const first = new Date(GAMES[0].date + 'T00:00:00');
+const days = Math.floor((Date.now() - first) / 86400000) + 1;
+document.getElementById('since').textContent =
+  '2026년 7월 27일에 첫 게임을 만들었어요. 오늘은 ' + days + '일째예요. 만든 순서대로 걸어 봐요.';
+
+let lastMonth = '';
+let html = '';
+const items = GAMES.concat([Object.assign({ opened: true }, OPENED)]);
+items.forEach(g => {
+  if (month(g.date) !== lastMonth) {
+    lastMonth = month(g.date);
+    html += '<h3 class="month">' + lastMonth + '</h3>';
+  }
+  const node = '<time class="node" datetime="' + g.date + '">' + md(g.date) + '</time>';
+  if (g.opened) {
+    html += '<article class="entry opened">' + node + '<div><h3>' + g.name + '</h3><p>' + esc(g.story) +
+      '</p><a class="play" href="./">게임 고르러 가기</a></div></article>';
+    return;
+  }
+  const link = 'games/' + g.slug + '.html';
+  html += '<article class="entry">' + node +
+    '<a class="shot" href="' + link + '" tabindex="-1" aria-hidden="true"><img src="img/' + g.slug +
+    '.webp" alt="" loading="lazy" width="800" height="450"></a>' +
+    '<div><h3><span class="eno">' + g.no + '</span>' + g.name + '</h3>' +
+    '<p>' + esc(g.story) + '</p>' +
+    (g.quote ? '<p class="order"><span>이렇게 주문했어요</span>“' + esc(g.quote) + '”</p>' : '') +
+    '<a class="play" href="' + link + '">' + g.name + ' 해 보기</a></div></article>';
+});
+tl.innerHTML = html;
+</script>
+</body>
+</html>

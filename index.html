@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>춘장게임즈</title>
+<meta name="description" content="머릿속 상상을 그대로 만든 게임 14가지. 누르면 바로 해 볼 수 있어요.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="춘장게임즈">
+<meta property="og:description" content="머릿속 상상을 그대로 만든 게임 14가지. 누르면 바로 해 볼 수 있어요.">
+<meta property="og:url" content="https://myunghoho-bot.github.io/chunjang-games/">
+<meta property="og:image" content="https://myunghoho-bot.github.io/chunjang-games/img/og.jpg">
+<meta name="theme-color" content="#b5241c">
+<link rel="icon" href="bowl.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="wrap">
+  <a class="sign" href="./">
+    <img class="bowl" src="bowl.svg" alt="" width="104" height="90">
+    <div>
+      <h1>춘장게임즈</h1>
+      <p>머릿속 상상을 그대로 만든 게임</p>
+    </div>
+  </a>
+  <nav class="nav" aria-label="춘장게임즈 안내">
+    <a href="./" aria-current="page">게임 고르기</a>
+    <a href="history.html">역사관</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <p class="lead">게임이 <span id="count">14</span>개 있어요. 그림을 누르면 바로 시작해요.</p>
+  <div class="filters" id="filters" role="group" aria-label="주제 고르기"></div>
+  <div class="grid" id="grid"></div>
+  <noscript><p>게임 목록을 보려면 자바스크립트를 켜 주세요.</p></noscript>
+</main>
+
+<footer class="wrap">
+  <p>게임 아이디어는 춘장게임즈가 내고, 코드는 Claude와 같이 만들었어요.</p>
+  <p>게임 저장은 지금 쓰는 브라우저에만 남아요.</p>
+</footer>
+
+<script src="games.js"></script>
+<script>
+const grid = document.getElementById('grid');
+const filters = document.getElementById('filters');
+document.getElementById('count').textContent = GAMES.length;
+
+const tiles = GAMES.map(g => {
+  const a = document.createElement('a');
+  a.className = 'tile';
+  a.href = 'games/' + g.slug + '.html';
+  a.dataset.theme = g.theme;
+  a.innerHTML =
+    '<div class="shot"><img src="img/' + g.slug + '.webp" alt="' + g.name + ' 게임 화면" loading="lazy" width="800" height="450">' +
+    '<span class="no" title="' + g.no + '번째로 만든 게임">' + g.no + '</span></div>' +
+    '<h2>' + g.name + '</h2><p>' + g.short + '</p>' +
+    '<div class="tags"><span class="tag">' + THEMES[g.theme] + '</span>' +
+    (g.device === 'phone' ? '<span class="tag phone">핸드폰도 돼요</span>' : '<span class="tag">컴퓨터로 해요</span>') +
+    (g.keys ? '<span class="tag">키보드 필요</span>' : '') + '</div>';
+  grid.appendChild(a);
+  return a;
+});
+
+const choices = [['all', '전체']].concat(Object.entries(THEMES));
+const buttons = choices.map(([key, label]) => {
+  const n = key === 'all' ? GAMES.length : GAMES.filter(g => g.theme === key).length;
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.innerHTML = label + '<b>' + n + '</b>';
+  b.onclick = () => pick(key);
+  b.dataset.key = key;
+  filters.appendChild(b);
+  return b;
+});
+
+function pick(key) {
+  buttons.forEach(b => b.setAttribute('aria-pressed', b.dataset.key === key));
+  tiles.forEach(t => { t.hidden = key !== 'all' && t.dataset.theme !== key; });
+  history.replaceState(null, '', key === 'all' ? location.pathname : '#' + key);
+}
+const start = location.hash.slice(1);
+pick(THEMES[start] ? start : 'all');
+</script>
+</body>
+</html>

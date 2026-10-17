@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>별의 일생 시뮬레이터</title>
+<style>
+:root{--bg:#f6f5f1;--fg:#1c1c1a;--mut:#65645d;--card:#fff;--bd:#dcdad2;--ac:#c2410c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14141a;--fg:#ecebe4;--mut:#a3a29a;--card:#1d1d25;--bd:#33333d;--ac:#fb923c}}
+:root[data-theme="dark"]{--bg:#14141a;--fg:#ecebe4;--mut:#a3a29a;--card:#1d1d25;--bd:#33333d;--ac:#fb923c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.6}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:20px;font-weight:500;margin:4px 0 12px}
+.opts{display:flex;flex-wrap:wrap;gap:8px 14px;margin-bottom:12px;font-size:13px;align-items:center}
+.opts label{display:flex;align-items:center;gap:5px}
+.opts select{font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
+canvas{width:100%;height:auto;display:block;border-radius:12px;background:#0a0e1f}
+.chips{display:flex;gap:6px;margin:12px 0;overflow-x:auto}
+.chips button{flex:1 0 auto;font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--mut);cursor:pointer;white-space:nowrap}
+.chips button.on{color:var(--fg);border-color:var(--ac);font-weight:500}
+.cap{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
+.cap h2{font-size:16px;font-weight:500;margin:0 0 4px}
+.cap p{margin:0;font-size:14px}
+.cap small{display:block;margin-top:6px;color:var(--mut);font-size:12px}
+.ctl{display:flex;gap:8px;align-items:center;margin-top:12px}
+.ctl button{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);cursor:pointer}
+.ctl input{flex:1;accent-color:var(--ac)}
+.note{font-size:12px;color:var(--mut);margin-top:10px}
+</style></head><body><main>
+<h1>별의 일생 시뮬레이터</h1>
+<div class="opts">
+<label>별 유형 <select id="st"><option value="O">O형 청색초거성</option><option value="B">B형 청백색별</option><option value="A">A형 백색별</option><option value="F">F형 황백색별</option><option value="G">G형 황색왜성(태양형)</option><option value="K">K형 주황왜성</option><option value="M" selected>M형 적색왜성</option><option value="L">L형 갈색왜성</option><option value="T">T형 갈색왜성</option><option value="Y">Y형 갈색왜성</option></select></label>
+<label>행성 수 <select id="pn"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
+<label><input type="checkbox" id="lf" checked>생명체</label>
+<label><input type="checkbox" id="ey" checked>눈</label>
+<label><input type="checkbox" id="bb" checked>말풍선</label>
+</div>
+<canvas id="c" width="680" height="380" role="img" aria-label="별이 태어나 행성과 함께 늙어가며 백색왜성이 되는 과정을 보여주는 애니메이션"></canvas>
+<div class="chips" id="chips"></div>
+<div class="cap"><h2 id="ct"></h2><p id="cd"></p><small id="cm"></small></div>
+<div class="ctl"><button id="pp">일시정지</button><button id="rs">처음부터</button><input id="sl" type="range" min="0" max="300" value="0" aria-label="시간"></div>
+<div class="note">전체 약 5분이고, 시간 축은 단계마다 크게 압축되어 있어요. 별 유형, 행성 수, 생명체를 바꾸거나 "처음부터"를 누르면 새로 뽑은 확률로 다시 재생돼요(행성 포획·충돌, 삼켜진 행성이 핵만 남는 크톤 행성 10%). 골디락스 존에서 벗어나 너무 뜨겁거나 추워지면 생명체가 멸종하고, 초신성 뒤에는 중성자별이나 블랙홀과 성운이 남아 새 별이 태어나요. 생명체, 다이슨 스피어, 청색왜성은 영상의 가정이고, M형 왜성의 팽창은 연출이에요.</div>
+</main>
+<script>
+const STAR={
+O:{n:'O형 청색초거성',c:[155,176,255],R:120,X:300,f:'sn',h:590,l:'수백만 년'},
+B:{n:'B형 청백색별',c:[170,191,255],R:110,X:300,f:'sn',h:540,l:'수천만 년'},
+A:{n:'A형 백색별',c:[202,215,255],R:100,X:330,f:'gi',h:470,l:'수억 년'},
+F:{n:'F형 황백색별',c:[248,244,230],R:105,X:350,f:'gi',h:400,l:'수십억 년'},
+G:{n:'G형 황색왜성',c:[255,214,90],R:110,X:380,f:'gi',h:345,l:'약 100억 년'},
+K:{n:'K형 주황왜성',c:[255,150,60],R:95,X:235,f:'gi',h:272,l:'수백억 년'},
+M:{n:'M형 적색왜성',c:[237,28,36],R:80,X:175,f:'dw',h:222,l:'수천억 ~ 수조 년'},
+L:{n:'L형 갈색왜성',c:[190,70,45],R:62,X:62,f:'bd',h:160,l:'핵융합 없음'},
+T:{n:'T형 갈색왜성',c:[170,80,150],R:54,X:54,f:'bd',h:135,l:'핵융합 없음'},
+Y:{n:'Y형 갈색왜성',c:[110,80,105],R:46,X:46,f:'bd',h:118,l:'핵융합 없음'}};
+const E=id=>document.getElementById(id),x=E('c').getContext('2d'),W=680,H=380,CY=190;
+const SEG=[[0,6,10],[6,12,10],[12,17,120],[17,18,30],[18,24,110],[24,30,20]];
+let t=0,playing=true,last=performance.now(),cur=-1,cfg,ST,SCK,BCK,LCK,PL=[],eatS=Infinity,REM='ns',BEXT=Infinity,BCAUSE='';
+const rnd=(()=>{let s=7;return()=>(s=(s*16807)%2147483647)/2147483647})();
+const sp=Array.from({length:60},()=>({x:rnd()*W,y:rnd()*H,r:.6+rnd(),p:rnd()*6}));
+const nb=Array.from({length:240},()=>{const a=rnd()*6.283,k=Math.sqrt(rnd());return{sx:230+Math.cos(a)*k*380,sy:CY+Math.sin(a)*k*190,r:.8+rnd()*1.6,c:rnd()}});
+const NB2=Array.from({length:160},()=>({a:rnd()*6.283,rf:60+rnd()*280,r:.8+rnd()*2,c:[[255,120,160],[120,220,230],[255,170,90]][rnd()*3|0]}));
+const NEW=[{x:300,y:190,r:26,a:25.5,c:[255,214,90],s:1,say:'새 별이 태어났다!',sa:27,sb:29},{x:360,y:190,r:7,a:27,c:[181,112,63]},{x:410,y:190,r:11,a:27.5,c:[61,187,224]},{x:470,y:190,r:16,a:28,c:[255,127,39]},{x:585,y:115,r:16,a:26.5,c:[237,28,36],s:1,say:'나도!',sa:28,sb:29.5},{x:625,y:140,r:9,a:28.3,c:[150,130,115]}];
+const q=(u,a,b)=>Math.min(1,Math.max(0,(u-a)/(b-a))),sg=(a,b)=>q(t,a,b),ez=p=>p*p*(3-2*p),lp=(a,b,p)=>a+(b-a)*p;
+function kf(k){for(let i=0;i<k.length-1;i++)if(t<=k[i+1][0]){const p=ez(q(t,k[i][0],k[i+1][0]));return k[i][1].map((v,j)=>Math.round(lp(v,k[i+1][1][j],p)))}return k[k.length-1][1]}
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const LD=Array.from({length:7},()=>({hx:(rnd()-.5)*.8,hy:(rnd()-.5)*.8,vx:(rnd()-.5)*.3,vy:(rnd()-.5)*.3,ph:rnd()*6,b:Array.from({length:5},()=>({ox:(rnd()-.5)*.4,oy:(rnd()-.5)*.4,sx:(rnd()-.5)*.1,sy:(rnd()-.5)*.1,s:.1+rnd()*.1,a:rnd()*3}))}));
+const circ=(px,py,r)=>{x.beginPath();x.arc(px,py,r,0,6.283);x.fill()};
+const rad=(px,py,r0,r1,st)=>{const g=x.createRadialGradient(px,py,r0,px,py,r1);st.forEach(s=>g.addColorStop(s[0],s[1]));return g};
+const lab=(s,px,y,a)=>{x.fillStyle=`rgba(216,216,232,${a*.85})`;x.font='12px sans-serif';x.textAlign='center';x.fillText(s,px,y);x.textAlign='left'};
+function Rof(u){const s=ST,a=(p,b)=>q(u,p,b),f=s.f;
+if(u<6)return 4+14*ez(a(0,6));if(u<12)return lp(18,s.R,ez(a(6,12)));
+if(f==='bd')return lp(s.R,s.R*.85,a(12,30));
+if(u<17)return s.R+2*Math.sin(u*3);if(u<18)return lp(s.R,s.X,ez(a(17,18)));
+if(f==='sn')return u<22?s.X:u<23?lp(s.X,10,ez(a(22,23))):10;
+const hi=f==='gi'?s.X:s.R*.7;return u<24?(f==='gi'?s.X:lp(s.X,hi,ez(a(18,24)))):lp(hi,22,ez(a(24,30)))}
+const cxof=u=>ST.f==='bd'?-20:ST.f==='sn'?lp(-20,30,ez(q(u,22.5,25))):lp(-20,30,ez(q(u,24,30)));
+function bandOf(u){const f=ST.f,s=(a,b)=>q(u,a,b),b0=ST.h-24,bo=Math.min(b0+170,590),bgx=lp(b0,bo,ez(s(17,19)));
+const ba=s(11,13)*(f==='sn'?1-s(22,22.6):1);
+const bx=f==='bd'?lp(b0,66,ez(s(12,30))):f==='dw'?(u<18?b0:u<24?lp(b0,b0+63,ez(s(18,24))):lp(b0+63,66,ez(s(24,30)))):(u<24?bgx:lp(bo,66,ez(s(24,30))));
+const bw=f==='bd'?lp(48,20,ez(s(12,30))):f==='dw'?(u<18?48:u<24?lp(48,60,ez(s(18,24))):lp(60,16,ez(s(24,30)))):(u<24?lp(48,80,ez(s(17,19))):lp(80,16,ez(s(24,30))));
+return{bx,bw,ba}}
+function eatOf(p){for(let u=17;u<=30;u+=.02){const d=p.x-cxof(u);if(Rof(u)>d-p.r*.5||(ST.f==='sn'&&u>=22&&(u-22)*300>d))return u}return Infinity}
+function build(){
+cfg={s:E('st').value,n:+E('pn').value,l:E('lf').checked};ST=STAR[cfg.s];const c=ST.c,f=ST.f,hz=ST.h,n=cfg.n,k=n<=4?1:n<=6?.75:.6;
+const T0=[[0,[110,50,40]],[6,[130,55,35]],[12,c]];
+SCK=f==='bd'?[...T0,[30,c.map(v=>v*.35|0)]]:f==='sn'?[...T0,[17,c],[18,[235,80,40]],[22,[255,70,40]],[22.4,[255,255,255]],[23,[190,215,255]],[30,[200,220,255]]]:f==='gi'?[...T0,[17,c],[18,[235,80,40]],[24,[220,60,40]],[28,[200,220,255]],[30,[242,246,255]]]:[...T0,[18,c],[20.5,[255,150,60]],[22,[255,235,200]],[24,[165,200,255]],[30,[242,246,255]]];
+BCK=f==='bd'?[[0,[61,187,224]],[14,[61,187,224]],[30,[200,225,240]]]:[[0,[61,187,224]],[18,[61,187,224]],[23,[150,95,60]],[28,[85,88,100]],[30,[85,88,100]]];
+LCK=f==='bd'?[[0,[130,85,45]],[14,[130,85,45]],[30,[225,235,240]]]:[[0,[130,85,45]],[18,[130,85,45]],[23,[205,175,120]],[28,[100,100,105]],[30,[100,100,105]]];
+const rr=j=>j%2===1?34*k*(j===1&&cfg.l?1.8:1):20*k,rl=i=>(i%2===0?13:15)*k;
+const lay=(G,Lc,Rc)=>{const out=[];let px=hz+20;for(let j=1;j<=Rc;j++){const r=rr(j);px+=G+r;out.push(px);px+=r}const re=px,inn=[];px=hz-20;for(let j=1;j<=Lc;j++){const r=rl(Lc-j);px-=G+r;inn.push(px);px-=r}return{inn:inn.reverse(),out,le:px,re,G}};
+let best=null;
+for(const G of [23,19,15,11])for(const ml of [150,120,90]){if(best)break;
+const L0=Math.round((n-1)*Math.max(0,hz-140)/470);
+for(let d=0;d<n&&!best;d++)for(const Lc of [L0-d,L0+d]){const Rc=n-1-Lc;if(Lc<0||Rc<0)continue;const o=lay(G,Lc,Rc);if(o.le>=ml-(Lc?0:1e9)&&o.re<=655){best=o;break}}}
+if(!best)best=lay(11,0,n-1);
+let ni=0,no=0;
+PL=[...best.inn.map(px=>{const h=ni++%2===0;return{k:h?'hot':'rock',x:px,r:(h?13:15)*k,a:8.5+Math.random()*1.5}}),{k:'blue',x:hz,r:20,talk:1},...best.out.map(px=>{if(no++%2===0)return{k:'gas',x:px,r:34*k,gc:no>2?[220,190,130]:[255,127,39],talk:no===1,dys:cfg.l&&no===1};return{k:'ice',x:px,r:20*k,a:8.5+Math.random()*1.5}})];
+const nonB=PL.filter(p=>p.k!=='blue'),need=n===10?(Math.random()<.5?1:3):n>=5?1+(Math.random()*Math.min(2,n-4)|0):0,hosts=new Set(),vics=new Set(),cnt=new Map();
+PL.forEach(p=>p.ev=null);
+const mk=d=>{const r=[];nonB.forEach(v=>{if(v.k==='gas')return;const hs=nonB.filter(h=>h!==v&&h.r>v.r&&Math.abs(h.x-v.x)<=d);if(hs.length)r.push([v,hs.reduce((a,b)=>Math.abs(b.x-v.x)<Math.abs(a.x-v.x)?b:a)])});return r.sort(()=>Math.random()-.5)};
+const pick=(v,h)=>{if(vics.has(v)||hosts.has(v)||vics.has(h))return;vics.add(v);hosts.add(h);const i=cnt.get(h)||0;cnt.set(h,i+1);v.ev={t:Math.random()<.5?'cap':'col',h,u:13.5+Math.random()*2.5,i,d:Math.random()<.5?'ring':'moon'}};
+if(need){for(const d of [130,170,260])for(const [v,h] of mk(d)){if(vics.size>=need)break;pick(v,h)}}else if(n===4){for(const [v,h] of mk(110)){if(vics.size>=1)break;if(Math.random()<.35)pick(v,h)}}
+PL.forEach(p=>{p.eat=eatOf(p);p.core=p.eat<Infinity&&f!=='sn'&&Math.random()<.1});
+PL.forEach(p=>{if(p.ev){if(p.ev.t==='col'){p.eat=Infinity;p.core=false}else{p.eat=p.ev.h.eat;p.core=false}}});
+eatS=Math.min(...PL.map(p=>p.eat));
+REM=f==='sn'&&Math.random()<(cfg.s==='O'?.6:.3)?'bh':'ns';BEXT=Infinity;BCAUSE='';
+const bl=PL.find(p=>p.k==='blue');
+if(cfg.l&&bl){for(let u=14;u<=30;u+=.02){const b=bandOf(u);if(b.ba>.5&&(bl.x<b.bx-4||bl.x>b.bx+b.bw+4)){BEXT=u;BCAUSE=bl.x<b.bx?'hot':'cold';break}}
+if(bl.eat<Infinity&&bl.eat<=BEXT){BEXT=bl.eat;BCAUSE='eat'}}
+const ch=E('chips');ch.innerHTML='';
+names().forEach((n2,i)=>{const bt=document.createElement('button');bt.textContent=n2;bt.onclick=()=>{t=[0,12,17,18,24][i]+.2;cur=-1};ch.appendChild(bt)});
+t=0;cur=-1;playing=true;E('pp').textContent='일시정지'}
+const names=()=>ST.f==='sn'?["분자구름·원시행성","짧은 주계열","팽창(초거성)","초신성",(REM==="bh"?"블랙홀":"중성자별")+"·새 별"]:ST.f==='bd'?["분자구름·원시행성","핵융합 없는 평화","변화 없음","식어가는 별","어두운 천체"]:["분자구름·원시행성","평화로운 주계열성","팽창",ST.f==='gi'?"적색거성":"청색왜성","백색왜성"];
+function caps(i){let o;const gas=PL.some(p=>p.dys||p.k==='gas'),ate=eatS<Infinity,f=ST.f,ev=PL.some(p=>p.ev),co=PL.some(p=>p.core);
+const life=(cfg.l?" 이 사이 생명체가 생겨 초록으로 번져요."+(PL.some(p=>p.dys)?" 후반에는 가스 거인을 감싸는 다이슨 스피어를 지어요.":""):"")+(ev?(cfg.n===10?" 행성들이 서로 가까워 충돌과 포획이 일어나 7개나 9개만 남아요.":cfg.n>=5?" 행성들이 가까워 충돌이나 포획이 일어나요.":" 가까운 행성끼리 포획하거나 충돌하기도 해요.")+" 충돌하면 위성이나 고리가 잠깐 생겨요.":"");
+const eaten=ate?" 안쪽 행성이 삼켜져요."+(co?" 일부는 핵만 남아 크톤 행성이 돼요.":""):"";
+o=[
+["가스와 먼지 구름이 모이며 중심에 별이 먼저 켜지고"+(gas?", 바깥에서 암석 핵이 가스를 끌어모아 가스 거인이 돼요. ":". ")+"이어 행성들이 만들어져요.","수십만 ~ 수억 년"],
+[(f==='bd'?"핵융합을 시작하지 못해 은은한 열만 내며 빛나요. 골디락스 존이 점점 별 쪽으로 좁혀져요.":f==='sn'?"수소를 아주 빠르게 태워 짧고 밝게 빛나요.":"수소를 태우며 오래 안정적으로 빛나요.")+" 파란 행성에서는 갈색 대륙이 계속 갈라지고 이동해요."+life,ST.l],
+[f==='bd'?"별이 되지 못했으니 팽창은 없어요. 조용히 시간이 흘러요.":f==='sn'?"연료가 바닥나 별이 적색초거성으로 크게 부풀어요."+eaten:f==='gi'?"연료가 다 떨어져 별이 적색거성으로 부풀어요."+eaten:"연료가 줄며 별이 부풀어 올라요. 이 장면은 연출이에요. 실제 M형 왜성은 크게 부풀지 않아요."+eaten,f==='bd'?"계속 이어져요":"별의 마지막 단계가 시작돼요"],
+[f==='bd'?"열이 빠지며 붉은빛이 어두워지고 골디락스 존이 안쪽으로 밀려 들어가요. 행성은 얼어붙어요.":f==='sn'?"별 중심이 무너지며 초신성이 폭발해요. 충격파가 행성들을 휩쓸어요.":f==='gi'?"적색거성이 오래도록 부푼 채 서서히 식어가요. 골디락스 존이 멀리 바깥으로 밀려나요.":"별 내부가 뜨거워지며 색이 붉은색에서 주황, 노랑, 푸른색 순으로 변해요. 골디락스 존이 바깥으로 밀려나 안쪽 행성은 달아올라요.",f==='bd'?"수십억 년":f==='sn'?"수백만 년 이내":f==='gi'?"수억 년":"수조 년 이후 (이론)"],
+[f==='bd'?"빛을 거의 잃은 어두운 천체로 식어가요.":f==='sn'?"중심에는 "+(REM==='bh'?'블랙홀':'중성자별')+"이 남고, 흩어진 가스는 성운이 돼요. 행성은 모두 사라졌지만 이 성운에서 새 별과 새 행성계가 태어나요.":"핵융합이 끝나고 지구 크기의 백색왜성만 남아 식어가요. 거주 가능 영역은 별에 바짝 붙어요.","이후 아주 오랫동안"]][i];if(cfg.l&&BEXT<Infinity&&BCAUSE!=='eat'&&i===(BEXT<18?2:3))o[0]+=" 파란 행성이 골디락스 존을 벗어나 너무 "+(BCAUSE==='hot'?"뜨거워":"추워")+"지면 생명체가 멸종해요.";return o}
+function blue(px,py,r,halo){const pc=kf(BCK);
+if(halo){x.fillStyle=rad(px,py,0,r*1.3,[[0,rgba(pc,.8)],[.76,rgba(pc,.6)],[1,rgba(pc,0)]]);circ(px,py,r*1.3)}
+x.save();x.beginPath();x.arc(px,py,r,0,6.283);x.clip();
+x.fillStyle=rad(px,py,0,r,[[0,rgba(pc.map(v=>v*.8|0),1)],[.7,rgba(pc,1)],[1,rgba(pc.map(v=>Math.min(255,v+60)),1)]]);x.fillRect(px-r,py-r,2*r,2*r);
+const f=ST.f,la=sg(12,13.5),tau=Math.max(0,t-12),lf=cfg.l?ez(sg(13.5,16.5))*(1-ez(sg(BEXT,BEXT+1))):0;
+const pass=sc=>LD.forEach(g=>{const gx=((g.hx+g.vx*tau+1.3)%2.6+2.6)%2.6-1.3,gy=g.hy+.35*Math.sin(g.vy*tau*1.5+g.ph);
+g.b.forEach(k=>{x.beginPath();x.ellipse(px+r*(gx+k.ox+k.sx*tau),py+r*(gy+k.oy+k.sy*tau),r*k.s*sc,r*k.s*sc*.7,k.a,0,6.283);x.fill()})});
+x.fillStyle=rgba(kf(LCK),la);pass(1);
+if(lf>0){x.fillStyle=`rgba(70,170,80,${lf})`;pass(.35+.5*lf)}
+x.restore()}
+function ball(px,py,r,c){x.fillStyle=rad(px,py,0,r*1.25,[[0,rgba(c,.7)],[.8,rgba(c,.5)],[1,rgba(c,0)]]);circ(px,py,r*1.25);x.fillStyle=rad(px,py,0,r,[[0,rgba(c.map(v=>v*.85|0),1)],[.7,rgba(c,1)],[1,rgba(c.map(v=>Math.min(255,v+50)),1)]]);circ(px,py,r)}
+const showLab=p=>cfg.n<=5||p.talk;
+function gas(p){const px=p.x,g2=ez(sg(4,6)),R2=(t<2?0:t<4?10*ez(sg(2,3)):lp(10,40,g2))*p.r/40,ds=p.dys?ez(sg(15.5,17.5)):0;p.cr=R2;if(R2<=0)return;
+const oc=[0,1,2].map(j=>Math.round(lp([112,98,88][j],p.gc[j],g2))),ac=p.gc;
+if(g2>0){x.fillStyle=rad(px,CY,0,R2*1.2,[[0,rgba(ac,.8*g2)],[.82,rgba(ac,.55*g2)],[1,rgba(ac,0)]]);circ(px,CY,R2*1.2)}
+x.fillStyle=rad(px,CY,0,R2,[[0,rgba(oc.map(v=>v*.85|0),1)],[.7,rgba(oc,1)],[1,rgba(oc.map(v=>Math.min(255,v+50)),1)]]);circ(px,CY,R2);
+if(g2<1){x.fillStyle=`rgba(60,50,45,${1-g2})`;[[-.3,-.2,.18],[.25,.1,.22],[-.1,.35,.14]].forEach(k=>circ(px+k[0]*R2,CY+k[1]*R2,k[2]*R2))}
+if(g2>0){x.save();x.globalAlpha*=g2;x.translate(px,CY);x.scale(R2/40,R2/40);x.strokeStyle='#fff200';x.lineWidth=3;x.lineCap='round';
+x.beginPath();x.ellipse(1,-21,8,4.5,0,0,6.283);x.stroke();
+x.beginPath();x.moveTo(-33,-3);x.quadraticCurveTo(-13,-7,-1,-1);x.quadraticCurveTo(11,5,-5,9);x.stroke();
+x.beginPath();x.moveTo(-25,19);x.quadraticCurveTo(-9,22,7,16);x.stroke();x.restore()}
+x.fillStyle=`rgba(10,14,31,${.45*ez(sg(24,30))})`;circ(px,CY,R2);
+if(ds>0){const SR=p.r*1.8,N=64,n=Math.floor(N*ds),rot=t*.05;p.sr=SR;
+x.fillStyle=`rgba(120,170,220,${.1*ds})`;circ(px,CY,SR);
+x.strokeStyle=`rgba(143,184,217,${.7*ds})`;x.lineWidth=1;
+if(ds>.6){[0,1.05,-1.05].forEach(a=>{x.beginPath();x.ellipse(px,CY,SR,SR*.38,a,0,6.283);x.stroke()});x.beginPath();x.arc(px,CY,SR,0,6.283);x.stroke()}
+x.fillStyle='#bfe3ff';for(let i=0;i<n;i++){const a=i/N*6.283+rot;x.save();x.translate(px+SR*Math.cos(a),CY+SR*Math.sin(a));x.rotate(a+1.5708);x.fillRect(-3,-1.5,6,3);x.restore()}
+lab('다이슨 스피어',px,CY+SR+14,Math.min(1,ds*2))}else p.sr=0;
+if(showLab(p))lab(g2<.5?'암석 행성':'가스 거인',px,CY+R2*1.2+16+(ds>0?34:0),Math.min(1,R2/10))}
+function drawP(p){const e=p.ev;let pa=1,px=p.x,py=CY,rs=1;
+if(e&&e.t==='col'&&t>=e.u+1.2&&t<e.u+1.8){const k=sg(e.u+1.2,e.u+1.8);x.fillStyle=`rgba(255,230,170,${.8*(1-k)})`;circ(e.h.x,CY,e.h.r*(1.1+.8*k))}
+if(e&&e.t==='col'&&t>=e.u+1.2&&t<e.u+4.2){const al=1-sg(e.u+1.2,e.u+4.2),h=e.h;
+if(e.d==='ring'){x.strokeStyle=`rgba(210,190,160,${.7*al})`;x.lineWidth=2;x.beginPath();x.ellipse(h.x,CY,h.r*1.8,h.r*.55,-.25,0,6.283);x.stroke()}
+else{x.fillStyle=`rgba(180,170,160,${al})`;circ(h.x-h.r*1.5,CY-h.r*1.2,Math.max(3,p.r*.5))}}
+if(t>=p.eat&&!p.core)pa=Math.max(0,1-(t-p.eat)/.3);
+if(e&&e.t==='col'&&t>=e.u+1.2)pa=0;
+p.pa=pa;p.cr=0;p.sr=p.sr||0;if(pa<=0)return;
+if(e&&t>=e.u){const h=e.h,a=ez(sg(e.u,e.u+1.2));
+if(e.t==='cap'){const mr=p.r*.7,tx=h.x+[0,-1,1,-2,2][e.i%5]*mr*2.4,ty=CY-h.r*1.5-mr-3;px=lp(p.x,tx,a);py=lp(CY,ty,a);rs=lp(1,.7,a)}
+else{px=lp(p.x,h.x,a);py=CY+Math.sin(a*Math.PI)*28*(p.x<h.x?-1:1)}}
+if(p.core)rs*=lp(1,.45,ez(q(t,p.eat-.4,p.eat)));
+p.px=px;p.py=py;x.globalAlpha=pa;
+if(p.core&&t>=p.eat){p.cr=Math.max(6,p.r*.45);ball(px,py,p.cr,[95,90,98]);lab('크톤 행성',px,py+p.cr*1.3+16,1)}
+else if(p.k==='blue'){const g=ez(sg(10,12));if(g>0){p.cr=20*g*rs;blue(px,py,p.cr,1);if(showLab(p))lab('거주 가능',px,py+p.cr*1.3+16,g)}}
+else if(p.k==='gas')gas(p);
+else{const g=ez(sg(p.a,p.a+1.5));if(g>0){p.cr=p.r*g*rs;ball(px,py,p.cr,p.k==='hot'?[181,112,63]:p.k==='rock'?[150,130,115]:[108,196,216]);if(showLab(p))lab({hot:'뜨거운 암석',rock:'암석 행성',ice:'얼음 거인'}[p.k],px,py+p.cr*1.25+16,g)}}
+x.globalAlpha=1}
+function face(px,py,r,m){const er=Math.max(1.4,r*.26),sp2=r*.34,ey=py-r*.1;
+[-1,1].forEach(d=>{const ex=px+d*sp2;
+if(m===3){x.strokeStyle='#111';x.lineWidth=Math.max(1.5,er*.4);x.beginPath();x.arc(ex,ey+er*.4,er*.8,Math.PI,2*Math.PI);x.stroke();return}
+x.fillStyle='#fff';circ(ex,ey,er*(m===1?1.3:1));
+x.fillStyle='#111';circ(ex+(m===0?er*.25:0),ey+(m===2?er*.3:0),er*(m===1?.3:.5));
+if(m===2){x.strokeStyle='#111';x.lineWidth=Math.max(1.2,er*.3);x.beginPath();x.moveTo(ex+d*er*1.1,ey-er*.9);x.lineTo(ex-d*er*1.1,ey-er*1.6);x.stroke();
+if(d===1){x.fillStyle='#6cc4f0';x.beginPath();x.ellipse(ex,ey+er*1.8,er*.3,er*.5,0,0,6.283);x.fill()}}})}
+function expr(p){const u=t,I=(a,b)=>u>=a&&u<b;
+if(p){if(I(p.eat-.3,p.eat+.3)||(p.core&&u>=p.eat))return 2;if(p.ev&&I(p.ev.u,p.ev.u+1.2))return 1}
+if(I(eatS,eatS+2.5))return 2;
+if(ST.f!=='bd'&&(I(17,17.9)||ST.f==='sn'&&I(21.4,22.2)))return 1;
+if(p&&p.k==='blue'&&cfg.l&&I(BEXT,BEXT+2.5))return 2;if(p&&p.k==='blue'&&cfg.l&&I(15,17))return 3;return 0}
+function say(p){const u=t,I=(a,b)=>u>=a&&u<b,k=p?p.k:'s',f=ST.f,e=p&&p.ev;
+if(p&&I(p.eat-.3,p.eat+.3))return['으앙…',1];
+if(I(eatS,eatS+2.5))return[p?'ㅠㅠ':'미안해…',0];
+if(e&&I(e.u,e.u+1.2))return[e.t==='cap'?'붙잡혔다!':'으아악!',1];
+if(p){const h=PL.find(s=>s.ev&&s.ev.h===p&&I(s.ev.u+1.2,s.ev.u+2.6));if(h)return[h.ev.t==='cap'?'붙잡았다!':'쿵!',1]}
+if(f!=='bd'&&I(17,17.9)||f==='sn'&&I(21.4,22.2))return[p?'헉!':'으악, 부푼다!',0];
+if(k==='s')return[I(2,5)?'내가 먼저다!':f==='bd'?(I(12,15)?'불이 안 붙는다…':I(17,20)?'난 별이 못 됐어…':I(26,30)?'점점 어두워져…':null):f==='sn'?(I(22,23)?'초신성 폭발!':I(23.5,27)?(REM==='bh'?'블랙홀이 됐다…':'중성자별이 됐다…'):null):I(19,22)?(f==='gi'?'나는 적색거성!':'뜨거워졌다!'):I(26,30)?'이제 쉴게…':null,0];
+if(k==='gas')return[I(3.5,5.8)?'가스를 모은다!':p.dys&&I(16.2,17)?'다이슨 스피어 완성!':null,0];
+if(k==='blue')return[cfg.l&&I(BEXT-.1,BEXT+1.5)?(BCAUSE==='hot'?'너무 뜨거워…':BCAUSE==='cold'?'너무 추워…':'…'):I(14,16.5)?(cfg.l?'생명이 생겼어!':'대륙이 움직여!'):null,0];
+return[null,0]}
+function bub(px,topY,s){x.font='12px sans-serif';const w=x.measureText(s).width+16,bx=Math.min(W-w-6,Math.max(6,px-w/2)),y=Math.max(4,topY-26);
+x.fillStyle='#f2f0e8';x.beginPath();x.roundRect?x.roundRect(bx,y,w,22,6):x.rect(bx,y,w,22);x.fill();
+const tx=Math.min(bx+w-10,Math.max(bx+10,px));x.beginPath();x.moveTo(tx-5,y+22);x.lineTo(tx+5,y+22);x.lineTo(tx,y+30);x.fill();
+x.fillStyle='#1a1a1a';x.textAlign='center';x.fillText(s,bx+w/2,y+15);x.textAlign='left'}
+function draw(){
+x.fillStyle='#0a0e1f';x.fillRect(0,0,W,H);
+x.save();x.translate(340,190);x.rotate(-.38);
+[[430,80,'rgba(90,74,154,.22)'],[390,52,'rgba(138,122,208,.2)'],[320,28,'rgba(201,184,240,.18)']].forEach(e=>{x.fillStyle=e[2];x.beginPath();x.ellipse(0,0,e[0],e[1],0,0,6.283);x.fill()});x.restore();
+sp.forEach(s=>{x.fillStyle=`rgba(255,255,255,${.5+.4*Math.sin(t*2+s.p)})`;circ(s.x,s.y,s.r)});
+const f=ST.f,cx=cxof(t),pn=ez(sg(0,6)),na=1-sg(5,8);
+if(na>0){x.fillStyle=`rgba(190,110,170,${.12*na})`;x.beginPath();x.ellipse(lp(230,cx,pn),CY,lp(330,50,pn),lp(170,30,pn),0,0,6.283);x.fill();
+nb.forEach(p=>{const dx=(p.sx-cx)*(1-.92*pn),dy=(p.sy-CY)*(1-.92*pn),a=pn*2.6;x.fillStyle=`rgba(255,${170+p.c*60|0},${200+p.c*40|0},${.7*na})`;circ(cx+dx*Math.cos(a)-dy*Math.sin(a),CY+dx*Math.sin(a)+dy*Math.cos(a),p.r)})}
+const R=Rof(t),sa=t<6?ez(sg(.2,2)):1,c=kf(SCK),gr=Math.min(R*2.4+20,520),gs=f==='bd'?.4:1;
+const bh=f==='sn'&&REM==='bh'&&t>=22.8,gs2=gs*(bh?1-sg(22.8,23.4):1);
+x.fillStyle=rad(cx,CY,R*.4,gr,[[0,rgba(c,.85*sa*gs2)],[.45,rgba(c,.3*sa*gs2)],[1,rgba(c,0)]]);circ(cx,CY,gr);
+if(f==='sn'&&t>22.2){const e1=1-Math.exp(-(t-22)*1.8),al=Math.min(1,(t-22.2)*1.5);
+[[110,-40,150,[255,120,160]],[200,40,170,[120,220,230]],[290,-10,130,[255,170,90]]].forEach(b=>{x.fillStyle=rad(cx+b[0]*e1,CY+b[1]*e1,0,b[2],[[0,rgba(b[3],.22*al)],[1,rgba(b[3],0)]]);circ(cx+b[0]*e1,CY+b[1]*e1,b[2])});
+NB2.forEach(p=>{x.fillStyle=rgba(p.c,.55*al);circ(cx+Math.cos(p.a+t*.03)*p.rf*e1,CY+Math.sin(p.a+t*.03)*p.rf*e1*.7,p.r)})}
+PL.forEach(drawP);
+if(bh){x.fillStyle='#000';circ(cx,CY,R*1.15);x.strokeStyle='rgba(255,170,80,.9)';x.lineWidth=3;x.beginPath();x.ellipse(cx,CY,R*2.4,R*.8,-.3,0,6.283);x.stroke();x.strokeStyle='rgba(255,220,160,.4)';x.lineWidth=1;x.beginPath();x.ellipse(cx,CY,R*3.1,R*1.05,-.3,0,6.283);x.stroke()}
+else{x.fillStyle=rad(cx,CY,0,R,[[0,rgba(c.map(v=>v*.85|0),sa)],[.75,rgba(c,sa)],[1,rgba(c.map(v=>Math.min(255,v+60)),.7*sa)]]);circ(cx,CY,R)}
+if(f==='sn'&&REM==='ns'&&t>=23.5){x.save();x.translate(cx,CY);x.rotate(t*6);x.strokeStyle='rgba(190,215,255,.45)';x.lineWidth=3;x.beginPath();x.moveTo(-70,0);x.lineTo(70,0);x.stroke();x.restore()}
+const {bx,bw,ba}=bandOf(t);
+if(ba>0){x.fillStyle=`rgba(76,194,106,${.35*ba})`;x.fillRect(bx,2,bw,H-4);x.strokeStyle=`rgba(34,177,76,${ba})`;x.lineWidth=3;x.strokeRect(bx,2,bw,H-4);x.fillStyle=`rgba(155,232,174,${ba})`;x.font='600 13px sans-serif';x.fillText('골디락스 존',Math.min(bx+bw+8,W-90),26);
+const bl=PL.find(p=>p.k==='blue'),lg=cfg.l&&bl&&t<bl.eat?ez(sg(13.5,16.5))*(1-sg(18,19.5)):0;if(lg>0){x.fillStyle=`rgba(155,232,174,${lg})`;x.font='12px sans-serif';x.fillText('생명체 탄생',Math.min(bx+bw+8,W-80),CY+4)}}
+const bl2=PL.find(p=>p.k==='blue');
+if(cfg.l&&bl2&&BEXT<Infinity&&t>=BEXT&&t<BEXT+3){x.fillStyle=`rgba(255,138,128,${1-sg(BEXT+1.5,BEXT+3)})`;x.font='600 12px sans-serif';x.textAlign='center';x.fillText(BCAUSE==='hot'?'너무 뜨거워 생명체 멸종':BCAUSE==='cold'?'너무 추워 생명체 멸종':'생명체 멸종',Math.min(Math.max(bl2.px||bl2.x,70),W-70),CY-(bl2.cr||20)*1.3-10);x.textAlign='left'}
+if(f==='sn'&&t>22){x.strokeStyle=`rgba(255,220,180,${.7*(1-sg(22,26))})`;x.lineWidth=4;x.beginPath();x.arc(cx,CY,(t-22)*300,0,6.283);x.stroke();const fl=Math.max(0,1-Math.abs(t-22.4)/.5);if(fl>0){x.fillStyle=`rgba(255,255,255,${fl*.9})`;x.fillRect(0,0,W,H)}}
+x.fillStyle=rgba(c.map(v=>Math.min(255,v+70)),Math.max(.5,sa));x.font='600 13px sans-serif';x.fillText(f==='sn'&&t>=23?(REM==='bh'?'블랙홀':'중성자별'):ST.n,10,352);
+const NW=f==='sn'&&t>25?NEW.map(o=>{const g=ez(sg(o.a,o.a+1.5));o.cr=o.r*g;if(g>0){if(o.s){x.fillStyle=rad(o.x,o.y,o.cr*.4,o.cr*2.6,[[0,rgba(o.c,.6*g)],[1,rgba(o.c,0)]]);circ(o.x,o.y,o.cr*2.6);x.fillStyle=rad(o.x,o.y,0,o.cr,[[0,rgba(o.c.map(v=>v*.9|0),1)],[1,rgba(o.c.map(v=>Math.min(255,v+50)),1)]]);circ(o.x,o.y,o.cr)}else ball(o.x,o.y,o.cr,o.c)}return o}):[];
+const eyes=E('ey').checked,bb=E('bb').checked,fr=Math.min(R*.8,70),fx=cx+Math.min(R*.55,120);
+if(eyes&&sa>.8&&R>8)face(fx,CY,fr,expr(null));
+if(eyes)PL.forEach(p=>{if(p.cr>3){x.globalAlpha=p.pa;face(p.px,p.py,p.cr,expr(p));x.globalAlpha=1}});
+if(eyes)NW.forEach(o=>{if(o.cr>5)face(o.x,o.y,o.cr,0)});
+if(bb){if(sa>.8&&R>8){const s=say(null)[0];if(s)bub(fx,CY-fr-6,s)}
+NW.forEach(o=>{if(o.say&&t>=o.sa&&t<o.sb&&o.cr>5)bub(o.x,o.y-o.cr*1.4,o.say)});
+PL.forEach((p,i)=>{if(p.cr>3){const a=say(p);if(a[0]&&(p.talk||a[1]))bub(p.px,p.py-Math.max(p.cr*1.3,p.sr||0)-6-(i%2)*28,a[0])}})}
+}
+function setCap(){const i=t<12?0:t<17?1:t<18?2:t<24?3:4;if(i===cur)return;cur=i;const d=caps(i);
+E('ct').textContent=names()[i];E('cd').textContent=d[0];E('cm').textContent='시간 규모: '+d[1];
+[...E('chips').children].forEach((b,j)=>{b.textContent=names()[j];b.classList.toggle('on',j===i)})}
+const sl=E('sl'),pp=E('pp');
+sl.oninput=()=>{t=sl.value/10;cur=-1};
+pp.onclick=()=>{playing=!playing;pp.textContent=playing?'일시정지':'재생'};
+E('rs').onclick=build;
+['st','pn','lf'].forEach(id=>E(id).onchange=build);
+build();
+function loop(n){const dt=Math.min(.1,(n-last)/1000);last=n;if(playing){const g=SEG.find(s=>t<s[1])||SEG[5];t+=dt*(g[1]-g[0])/g[2];if(t>=30)t=0}
+draw();setCap();sl.value=Math.round(t*10);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>

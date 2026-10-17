@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 104">
+  <defs>
+    <pattern id="hui" width="10" height="10" patternUnits="userSpaceOnUse" y="51">
+      <rect width="10" height="10" fill="#b5241c"/>
+      <path d="M2 8.2V1.8h6.2v6.4H4.2V4.2h2" fill="none" stroke="#fbf7ee" stroke-width="1.2"/>
+    </pattern>
+    <clipPath id="bodyClip"><path d="M10 50H110C108 76 88 92 60 92S12 76 10 50Z"/></clipPath>
+  </defs>
+  <line x1="56" y1="46" x2="100" y2="4" stroke="#c98b4a" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="62" y1="48" x2="110" y2="12" stroke="#a96f37" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M16 52C22 31 46 22 60 24C78 22 98 31 104 52Z" fill="#3b2311"/>
+  <path d="M38 35q10-8 22-7" fill="none" stroke="#6f4a2b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M18 50q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0" fill="none" stroke="#f2d36b" stroke-width="3.2" stroke-linecap="round"/>
+  <g stroke="#8fc54d" stroke-width="2.6" stroke-linecap="round"><path d="M50 27l9-3"/><path d="M57 31l9-1"/><path d="M48 33l8 1"/></g>
+  <path d="M10 50H110C108 76 88 92 60 92S12 76 10 50Z" fill="#fbf7ee"/>
+  <rect x="8" y="51" width="104" height="10" fill="url(#hui)" clip-path="url(#bodyClip)"/>
+  <path d="M30 80q30 10 60 0" fill="none" stroke="#e3d8c2" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M42 91h36l-3 8H45Z" fill="#e6dcc6"/>
+</svg>

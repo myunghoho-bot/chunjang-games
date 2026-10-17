@@ -1,0 +1,1477 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>미생물 두 집안</title>
+<style>
+:root{--bg:#0b111c;--panel:#141f31;--panel2:#1b2a42;--line:#2b3d5a;--text:#e6eefb;--dim:#93a6c4;--acc:#5ad1ff;--good:#7be37b;--warn:#ffcf5a;--bad:#ff7a7a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;overflow:hidden;user-select:none}
+#app{display:grid;grid-template-columns:214px 1fr 280px;height:100vh}
+.panel{background:var(--panel);overflow-y:auto;padding:10px;border-right:1px solid var(--line)}
+#right{border-right:none;border-left:1px solid var(--line)}
+h1{font-size:18px;margin:2px 0 10px}
+h2{font-size:13px;color:var(--dim);margin:14px 0 6px;font-weight:normal;letter-spacing:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.btn{background:var(--panel2);border:2px solid var(--line);color:var(--text);border-radius:9px;padding:6px 4px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+.btn:hover{border-color:#456}
+.btn.on{border-color:var(--acc);background:#1d3a55;box-shadow:0 0 8px #5ad1ff55}
+.btn canvas{width:40px;height:40px}
+.btn .em{font-size:20px;line-height:24px}
+.btn .x{position:absolute;top:1px;right:4px;font-size:11px;color:var(--dim)}
+.btn .x:hover{color:var(--bad)}
+.wide{width:100%;flex-direction:row;justify-content:center;padding:8px;font-size:13px;margin-top:6px}
+label.sl{display:block;font-size:12px;margin:8px 0 2px;color:var(--dim)}
+label.sl b{color:var(--text);float:right;font-weight:normal}
+input[type=range]{width:100%;accent-color:var(--acc)}
+#center{display:flex;flex-direction:column;min-width:0}
+#top{display:flex;gap:6px;align-items:center;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+#top .btn{flex-direction:row;padding:5px 9px;font-size:13px}
+select{background:var(--panel2);color:var(--text);border:2px solid var(--line);border-radius:8px;padding:5px;font-family:inherit;font-size:13px}
+#clock{margin-left:auto;font-size:12px;color:var(--dim)}
+#stage{position:relative;flex:1;min-height:0;overflow:hidden}
+#cv{position:absolute;inset:0;display:block;cursor:crosshair}
+#toasts{position:absolute;left:12px;top:10px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:60%}
+.toast{background:#0f1a2bdd;border:1px solid var(--line);border-left:4px solid var(--acc);padding:7px 10px;border-radius:8px;font-size:13px;animation:fin .3s}
+@keyframes fin{from{opacity:0;transform:translateY(-6px)}}
+#tv{position:absolute;inset:0;display:block;cursor:pointer}
+#treeBar{position:absolute;right:10px;top:6px;font-size:12px;color:var(--dim);background:#0f1a2bdd;padding:4px 8px;border-radius:8px}
+#treeBar select{font-size:12px;padding:2px}
+#treeInfo{position:absolute;right:10px;bottom:10px;width:250px;background:#0f1a2bee;border:1px solid var(--line);border-radius:10px;padding:9px;font-size:12px;line-height:1.6}
+#treeInfo .btn{flex-direction:row;padding:4px 8px;margin-top:5px;display:inline-flex}
+.fam{background:var(--panel2);border-radius:10px;padding:8px;margin-bottom:6px;border-left:5px solid;font-size:12px;position:relative}
+.fam .big{font-size:20px;font-weight:bold}
+.fam .crown{position:absolute;right:8px;top:6px;font-size:18px}
+.fam .gene{display:flex;align-items:center;gap:5px;margin:2px 0}
+.fam .gene span{width:62px;color:var(--dim)}
+.fam .gene i{flex:1;height:6px;background:#0d1626;border-radius:3px;overflow:hidden;display:block}
+.fam .gene i b{display:block;height:100%}
+#fmodal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:11}
+#fmodal.show{display:flex}
+#fbox{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:16px;width:min(560px,94vw)}
+#fbox h3{margin:0 0 6px}
+.fcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.fcol{background:var(--panel2);border:3px solid;border-radius:12px;padding:10px;text-align:center}
+.fcol input,.fcol select{width:100%;margin-top:6px;background:#0d1626;color:var(--text);border:2px solid var(--line);border-radius:8px;padding:5px;font-family:inherit;font-size:14px}
+.fcol canvas{width:90px;height:90px;display:block;margin:6px auto 0}
+.quick{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.quick .btn{flex-direction:row;padding:5px 8px}
+#hint{position:absolute;left:12px;bottom:8px;font-size:12px;color:var(--dim);pointer-events:none;text-shadow:0 1px 2px #000}
+#poplist .row{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 0}
+#poplist canvas{width:22px;height:22px;flex:none}
+#poplist .nm{flex:1}
+#poplist .bar{height:5px;border-radius:3px;margin-top:2px}
+#poplist .sub{color:var(--dim);font-size:11px}
+#graph{width:100%;height:120px;background:#0d1626;border-radius:8px;display:block}
+#card{background:var(--panel2);border-radius:10px;padding:9px;font-size:12px;min-height:60px}
+#card .gene{display:flex;align-items:center;gap:6px;margin:3px 0}
+#card .gene span{width:78px;color:var(--dim)}
+#card .gene i{flex:1;height:7px;background:#0d1626;border-radius:4px;overflow:hidden;display:block}
+#card .gene i b{display:block;height:100%;border-radius:4px}
+#card .acts{display:flex;gap:5px;margin-top:7px}
+#card .acts .btn{flex:1;flex-direction:row;justify-content:center;padding:5px;font-size:12px}
+#news{font-size:12px;color:var(--dim);line-height:1.5}
+#news div{border-bottom:1px dashed #2b3d5a;padding:3px 0}
+#news div:first-child{color:var(--text)}
+#modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:10}
+#modal.show{display:flex}
+#ed{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:16px;width:min(560px,94vw);max-height:94vh;overflow:auto}
+#ed h3{margin:0 0 10px}
+#ed .cols{display:grid;grid-template-columns:170px 1fr;gap:14px}
+#edPrev{width:170px;height:170px;background:#0d1626;border-radius:12px}
+#ed input[type=text]{width:100%;background:var(--panel2);color:var(--text);border:2px solid var(--line);border-radius:8px;padding:6px;font-family:inherit;font-size:14px}
+.shapes{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:4px}
+.shapes .btn canvas{width:32px;height:32px}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;margin:5px 0}
+.edBtns{display:flex;gap:8px;margin-top:12px}
+.edBtns .btn{flex:1;flex-direction:row;justify-content:center;padding:9px;font-size:14px}
+#edInfo{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="panel" id="left">
+    <h1>🌳 미생물 두 집안</h1>
+    <h2>미생물 넣기</h2>
+    <div class="grid2" id="spBtns"></div>
+    <button class="btn wide" id="newSp">✏️ 나만의 미생물 만들기</button>
+    <h2>도구</h2>
+    <div class="grid2" id="toolBtns"></div>
+    <label class="sl">붓 크기 <b id="brushV"></b></label>
+    <input type="range" id="brush" min="8" max="160" value="45">
+    <label class="sl">한 번에 넣는 수 <b id="perV"></b></label>
+    <input type="range" id="per" min="1" max="30" value="5">
+  </div>
+
+  <div id="center">
+    <div id="top">
+      <button class="btn" id="pauseB">⏸ 멈춤</button>
+      <button class="btn spd" data-s="1">1배</button>
+      <button class="btn spd" data-s="2">2배</button>
+      <button class="btn spd" data-s="4">4배</button>
+      <button class="btn spd" data-s="8">8배</button>
+      <button class="btn" id="newB">🌱 새로 시작</button>
+      <button class="btn view on" data-v="dish">🔬 접시</button>
+      <button class="btn view" data-v="tree">🌳 가계도</button>
+      <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:3px"><input type="checkbox" id="famRing" checked>집안 색 표시</label>
+      <button class="btn" id="fitB">🔍 전체 보기</button>
+      <span id="clock"></span>
+    </div>
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <canvas id="tv" style="display:none"></canvas>
+      <div id="treeBar" style="display:none">가지 색깔: <select id="treeColor">
+        <option value="spd">빠르기</option><option value="size">크기</option><option value="hue">몸 색깔</option>
+        <option value="ht">더위 견딤</option><option value="ares">항생제 견딤</option><option value="vres">바이러스 막기</option><option value="gen">세대</option></select>
+        <span id="treeLegend"></span></div>
+      <div id="treeInfo" style="display:none"></div>
+      <div id="toasts"></div>
+      <div id="hint">왼쪽 클릭: 도구 쓰기 · 휠: 확대/축소 · 오른쪽 끌기: 화면 옮기기 · 스페이스: 멈춤 · 테두리 색 = 집안 (🩷/💙), 테두리 없음 = 손님</div>
+    </div>
+  </div>
+
+  <div class="panel" id="right">
+    <h2>두 집안 비교</h2>
+    <div id="famCmp"></div>
+    <h2>접시 환경</h2>
+    <label class="sl">🌡 온도 <b id="tempV"></b></label>
+    <input type="range" id="temp" min="0" max="100" value="25">
+    <label class="sl">☀️ 햇빛 <b id="sunV"></b></label>
+    <input type="range" id="sun" min="0" max="100" value="60">
+    <label class="sl">🍯 자연 영양분 <b id="supV"></b></label>
+    <input type="range" id="sup" min="0" max="300" value="100">
+    <label class="sl">🧬 돌연변이 <b id="mutV"></b></label>
+    <input type="range" id="mut" min="0" max="300" value="100">
+    <h2>몇 마리? <span id="total"></span></h2>
+    <div id="poplist"></div>
+    <canvas id="graph"></canvas>
+    <h2>자세히 보기 (🔎 도구로 클릭)</h2>
+    <div id="card">🔎 돋보기 도구로 미생물을 클릭해 봐!</div>
+    <h2>소식</h2>
+    <div id="news"></div>
+  </div>
+</div>
+
+<div id="fmodal"><div id="fbox">
+  <h3>🌳 딱 두 마리로 시작하기</h3>
+  <div style="font-size:13px;color:var(--dim)">두 마리가 각각 한 집안의 첫 조상이 돼. 자손이 나뉘고 진화하면서 가계도가 자라나. 어느 집안이 더 번성할까?</div>
+  <div class="fcols">
+    <div class="fcol" style="border-color:#ff7fb0"><b>🩷 1호</b><input id="fName0" value="콩이" maxlength="8"><select id="fSp0"></select><canvas id="fIc0" width="180" height="180"></canvas></div>
+    <div class="fcol" style="border-color:#5fb4ff"><b>💙 2호</b><input id="fName1" value="몽글이" maxlength="8"><select id="fSp1"></select><canvas id="fIc1" width="180" height="180"></canvas></div>
+  </div>
+  <div style="font-size:13px">빨리 고르기</div>
+  <div class="quick" id="quick"></div>
+  <div class="chk"><input type="checkbox" id="fBg">🍽 먹이 미생물도 조금 넣기 (세균·남조류 손님 — 가계도엔 안 나와)</div>
+  <div id="fWarn" style="font-size:12px;color:var(--warn);min-height:18px"></div>
+  <div class="edBtns">
+    <button class="btn" id="fCancel">취소</button>
+    <button class="btn on" id="fGo">🌱 시작!</button>
+  </div>
+</div></div>
+
+<div id="modal"><div id="ed">
+  <h3>✏️ 나만의 미생물 만들기</h3>
+  <div class="cols">
+    <div>
+      <canvas id="edPrev" width="340" height="340"></canvas>
+      <div id="edInfo"></div>
+    </div>
+    <div>
+      <label class="sl">이름</label>
+      <input type="text" id="edName" maxlength="10" value="반짝이균">
+      <label class="sl">모양</label>
+      <div class="shapes" id="edShapes"></div>
+      <label class="sl">색깔 <b id="edHueV"></b></label>
+      <input type="range" id="edHue" min="0" max="359" value="330">
+      <label class="sl">크기 <b id="edSizeV"></b></label>
+      <input type="range" id="edSize" min="2" max="40" value="6">
+      <label class="sl">빠르기 <b id="edSpdV"></b></label>
+      <input type="range" id="edSpd" min="5" max="200" value="60">
+      <div id="edFood">
+        <label class="sl">먹는 것</label>
+        <div class="chk"><input type="checkbox" id="edNutr" checked>🍯 영양분 먹기</div>
+        <div class="chk"><input type="checkbox" id="edLight">☀️ 햇빛으로 영양분 만들기</div>
+        <div class="chk"><input type="checkbox" id="edHunt">🦷 자기보다 작은 미생물 잡아먹기</div>
+        <label class="sl">번식 <b id="edRepV"></b></label>
+        <input type="range" id="edRep" min="1" max="3" value="2">
+      </div>
+      <label class="sl">더위 견딤 <b id="edHeatV"></b></label>
+      <input type="range" id="edHeat" min="30" max="120" value="45">
+      <div class="chk"><input type="checkbox" id="edProk" checked>🦠 세균 종류 (항생제·바이러스에 약함)</div>
+    </div>
+  </div>
+  <div class="edBtns">
+    <button class="btn" id="edCancel">취소</button>
+    <button class="btn on" id="edOk">✅ 만들기!</button>
+  </div>
+</div></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const rnd = () => Math.random();
+const hasBatchim = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 !== 0; };
+const iga = w => w + (hasBatchim(w) ? '이' : '가'), eulreul = w => w + (hasBatchim(w) ? '을' : '를');
+
+// ───────── 세계 ─────────
+const WORLD = 1000, CX = 500, CY = 500, DR = 480;
+const G = 100, CS = WORLD / G;               // 환경 칸 (영양분·빛·온도·항생제)
+const nut = new Float32Array(G * G), lit = new Float32Array(G * G);
+const heat = new Float32Array(G * G), anti = new Float32Array(G * G);
+const tmpF = new Float32Array(G * G), mask = new Uint8Array(G * G);
+let crowd = new Uint16Array(0), spCnt = new Uint16Array(0);                // 칸마다 같은 종 몇 마리인지 (사냥꾼끼리 먹이 다툼)
+for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+  const dx = (x + 0.5) * CS - CX, dy = (y + 0.5) * CS - CY;
+  mask[y * G + x] = dx * dx + dy * dy < (DR + CS) * (DR + CS) ? 1 : 0;
+}
+const CAP = 4000;                            // 접시에 들어가는 최대 수
+const VCAP = 1200; let virusN = 0;           // 바이러스는 따로 최대 수
+const GC = 50, GN = WORLD / GC;              // 생물 찾기용 칸
+const head = new Int32Array(GN * GN);
+const photoCnt = new Uint16Array(GN * GN);    // 칸마다 햇빛 먹는 미생물 수 (서로 그늘을 만듦)
+let nxt = new Int32Array(CAP * 2);
+
+let orgs = [], born = [], T = 0, nextId = 1;
+let paused = false, speed = 1;
+let globalT = 25, sun = 0.6, supply = 1, mutRate = 1;
+
+const cellOf = (x, y) => clamp((y / CS) | 0, 0, G - 1) * G + clamp((x / CS) | 0, 0, G - 1);
+const lightAt = ci => clamp(sun + lit[ci], 0, 1.6);
+
+// ───────── 미생물 종류 ─────────
+const BUILTIN = [
+  { id: 'bact', name: '세균', shape: 'rod', hue: 95, sat: 60, lum: 55, size: 3, speed: 0.6, nutr: 0.03, light: 0, hunt: false, metab: 0.01, divE: 3.5, life: 3000, prok: true, heatMax: 48,
+    desc: '영양분을 먹고 엄청 빨리 둘로 나뉘어. 항생제와 바이러스에 약해.' },
+  { id: 'cyano', name: '남조류', shape: 'coccus', hue: 155, sat: 65, lum: 42, size: 3.5, speed: 0.12, nutr: 0, light: 0.03, hunt: false, metab: 0.008, divE: 4, life: 4000, prok: true, heatMax: 62,
+    desc: '햇빛으로 스스로 영양분을 만들어. 지구에 산소를 처음 만든 생물이야!' },
+  { id: 'eug', name: '유글레나', shape: 'flag', hue: 115, sat: 65, lum: 45, size: 8, speed: 0.8, nutr: 0.012, light: 0.035, hunt: false, metab: 0.014, divE: 10, life: 5000, heatMax: 40,
+    desc: '빨간 눈점으로 빛을 찾아 헤엄쳐 가. 식물이랑 동물 중간이야.' },
+  { id: 'amoeba', name: '아메바', shape: 'amoeba', hue: 200, sat: 35, lum: 72, size: 14, speed: 0.3, nutr: 0.004, light: 0, hunt: true, sense: 90, metab: 0.02, divE: 26, life: 9000, heatMax: 42,
+    desc: '몸 모양을 바꾸며 기어가서 작은 생물을 감싸서 먹어.' },
+  { id: 'para', name: '짚신벌레', shape: 'cilia', hue: 40, sat: 60, lum: 70, size: 12, speed: 1.1, nutr: 0, light: 0, hunt: true, sense: 110, metab: 0.018, divE: 26, life: 8000, heatMax: 40,
+    desc: '온몸의 털(섬모)로 빠르게 헤엄치며 세균을 먹어.' },
+  { id: 'virus', name: '바이러스', shape: 'virus', hue: 300, sat: 75, lum: 65, size: 1.6, speed: 0.25, virus: true, life: 700, heatMax: 60,
+    desc: '혼자서는 못 살아. 세균 몸에 들어가서 자기를 잔뜩 복사해.' },
+  { id: 'tardi', name: '물곰', shape: 'tardi', hue: 28, sat: 40, lum: 68, size: 36, speed: 0.35, nutr: 0, light: 0, hunt: true, sense: 170, metab: 0.08, divE: 300, life: 30000, heatMax: 150, tough: true,
+    desc: '다리 8개! 엄청 튼튼해서 끓는 물에서도 버티고, 배고프면 술통처럼 쪼그라들어 잠을 자.' },
+];
+let SPECIES = [];
+const SPMAP = {};
+function addSpecies(sp) {
+  SPECIES.push(sp); SPMAP[sp.id] = sp; sp.ix = SPECIES.length - 1;
+  sp.st = { n: 0, maxGen: 0, ares: 0, vres: 0, pow: 0, ever: false, peak: 0, ms: {} };
+}
+BUILTIN.forEach(addSpecies);
+
+// 나만의 미생물: 모양·크기·빠르기에서 나머지 값을 계산
+function buildCustom(d) {
+  const s = d.size, isV = d.shape === 'virus';
+  const repF = [0, 1.5, 1, 0.65][d.rep];
+  const sp = {
+    id: d.id, name: d.name, custom: true, shape: d.shape, hue: d.hue, sat: 70, lum: 58, size: isV ? Math.min(s, 3) : s,
+    speed: d.spd, virus: isV, prok: !isV && d.prok, heatMax: d.heat, life: isV ? 900 : Math.round(2500 + s * 500),
+    nutr: !isV && d.nutr ? 0.015 * Math.pow(s, 0.6) : 0,
+    light: !isV && d.light ? 0.012 * Math.pow(s, 0.7) : 0,
+    hunt: !isV && d.hunt, sense: 40 + s * 4,
+    metab: 0.004 * Math.pow(s, 0.9) * (0.6 + 0.5 * d.spd),
+    divE: Math.pow(s, 1.3) * repF,
+    tough: d.shape === 'tardi' && d.heat >= 100,
+    desc: '내가 만든 미생물!', data: d,
+  };
+  if (!sp.nutr && !sp.light && !sp.hunt && !isV) sp.nutr = 0.01; // 아무것도 안 먹으면 바로 굶으니까
+  return sp;
+}
+function loadCustoms() {
+  try {
+    const arr = JSON.parse(localStorage.getItem('microbeSandboxCustom') || '[]');
+    arr.forEach(d => addSpecies(buildCustom(d)));
+  } catch (e) {}
+}
+function saveCustoms() {
+  try { localStorage.setItem('microbeSandboxCustom', JSON.stringify(SPECIES.filter(s => s.custom).map(s => s.data))); } catch (e) {}
+}
+
+// ───────── 생물 만들기 / 유전자 ─────────
+function baseGenes() { return { size: 1, spd: 1, hue: 0, ares: 0, vres: 0, ht: 0, pow: 0 }; }
+function mutate(g) {
+  const m = mutRate, n = () => (rnd() - 0.5) * m;
+  const c = {
+    size: clamp(g.size + n() * 0.06, 0.6, 1.8), spd: clamp(g.spd + n() * 0.1, 0.4, 2.2),
+    hue: clamp(g.hue + n() * 8, -70, 70), ares: clamp(g.ares + n() * 0.08, 0, 1),
+    vres: clamp(g.vres + n() * 0.08, 0, 1), ht: clamp(g.ht + n() * 1.6, 0, 40), pow: clamp(g.pow + n() * 0.06, 0, 1),
+  };
+  if (rnd() < 0.012 * m) { // 가끔 큰 돌연변이
+    const k = ['ares', 'vres', 'ht', 'pow', 'spd'][(rnd() * 5) | 0];
+    c[k] = clamp(c[k] + (k === 'ht' ? 6 : 0.3), 0, k === 'ht' ? 40 : k === 'spd' ? 2.2 : 1);
+  }
+  return c;
+}
+function colorOf(o) {
+  const sp = o.sp, h = sp.hue + o.g.hue;
+  o.col = `hsl(${h},${sp.sat}%,${sp.lum}%)`;
+  o.col2 = `hsl(${h},${sp.sat}%,${Math.max(15, sp.lum - 25)}%)`;
+  o.colA = `hsla(${h},${sp.sat}%,${sp.lum}%,0.55)`;
+}
+function makeOrg(sp, x, y, g, gen, E) {
+  const o = {
+    id: nextId++, sp, x, y, a: rnd() * TAU, g: g || baseGenes(), gen: gen || 1, age: 0,
+    E: E != null ? E : (sp.divE || 1) * (0.35 + rnd() * 0.3), inf: 0, vsp: null, vg: null,
+    dig: 0, tgt: null, tun: false, dead: false, cause: '', lifeMax: sp.life * (0.7 + rnd() * 0.6),
+    fam: -1, pid: 0,                         // fam: 0=1호 집안, 1=2호 집안, -1=손님
+  };
+  colorOf(o);
+  return o;
+}
+function randInDish(x, y, rad) {
+  for (let k = 0; k < 20; k++) {
+    const a = rnd() * TAU, d = Math.sqrt(rnd()) * rad;
+    const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d;
+    if ((px - CX) ** 2 + (py - CY) ** 2 < (DR - 5) ** 2) return [px, py];
+  }
+  return null;
+}
+function spawn(sp, x, y, rad, n) {
+  let c = 0;
+  for (let k = 0; k < n && orgs.length + born.length < CAP; k++) {
+    const p = randInDish(x, y, rad); if (!p) continue;
+    born.push(makeOrg(sp, p[0], p[1])); c++;
+  }
+  flushBorn();
+  return c;
+}
+function flushBorn() { if (born.length) { for (const b of born) orgs.push(b); born.length = 0; } }
+
+function kill(o, cause, by, noNut) {
+  if (o.dead) return;
+  o.dead = true; o.cause = cause; o.by = by || null;
+  if (o.fam >= 0) noteDeath(o, cause, by);
+  if (!by && !noNut && !o.sp.virus) { // 죽으면 영양분으로 돌아감
+    const ci = cellOf(o.x, o.y);
+    nut[ci] = Math.min(4, nut[ci] + o.sp.size * o.g.size * 0.35);
+  }
+  if (o === selected) {
+    news(`🔎 지켜보던 ${o.sp.name} #${o.id}가 ${by ? by.sp.name + '에게 잡아먹혔어' : cause + ' 죽었어'}.`, true);
+  }
+}
+
+// ───────── 생물 찾기 칸 ─────────
+const gcell = (x, y) => clamp((y / GC) | 0, 0, GN - 1) * GN + clamp((x / GC) | 0, 0, GN - 1);
+function buildGrid() {
+  head.fill(-1); photoCnt.fill(0);
+  if (crowd.length !== SPECIES.length * GN * GN) crowd = new Uint16Array(SPECIES.length * GN * GN); else crowd.fill(0);
+  if (nxt.length < orgs.length) nxt = new Int32Array(orgs.length * 2);
+  for (let i = 0; i < orgs.length; i++) {
+    const o = orgs[i], c = gcell(o.x, o.y);
+    nxt[i] = head[c]; head[c] = i;
+    if (o.sp.light) photoCnt[c]++;
+    if (o.sp.hunt) crowd[o.sp.ix * GN * GN + c]++;
+  }
+}
+function nearby(x, y, rad, fn) {
+  const x0 = clamp(((x - rad) / GC) | 0, 0, GN - 1), x1 = clamp(((x + rad) / GC) | 0, 0, GN - 1);
+  const y0 = clamp(((y - rad) / GC) | 0, 0, GN - 1), y1 = clamp(((y + rad) / GC) | 0, 0, GN - 1);
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+    for (let i = head[cy * GN + cx]; i !== -1; i = nxt[i]) fn(orgs[i]);
+  }
+}
+const canEat = (p, q) => {
+  if (q.dead || q.sp === p.sp || q.sp.virus) return false;
+  const pr = p.sp.size * p.g.size, qr = q.sp.size * q.g.size;
+  return qr < pr * 0.7 && qr > pr * 0.1;
+};
+
+// ───────── 한 걸음 ─────────
+function tick() {
+  T++;
+  buildGrid();
+  virusN = 0;
+  for (const o of orgs) if (o.sp.virus) virusN++;
+  for (let i = 0; i < orgs.length; i++) {
+    const o = orgs[i]; if (o.dead) continue;
+    if (o.sp.virus) stepVirus(o); else stepOrg(o);
+  }
+  let j = 0;
+  for (let i = 0; i < orgs.length; i++) if (!orgs[i].dead) orgs[j++] = orgs[i];
+  orgs.length = j;
+  flushBorn();
+  if (T % 4 === 0) fieldStep();
+  if (T % 600 === 0 || (T % 60 === 0 && tree.size > 40000)) pruneTree();
+  if (T % 30 === 0) recordStats();
+}
+
+function bounce(o, r) {
+  const dx = o.x - CX, dy = o.y - CY, d2 = dx * dx + dy * dy, lim = DR - r;
+  if (d2 > lim * lim) {
+    const d = Math.sqrt(d2);
+    o.x = CX + dx / d * lim; o.y = CY + dy / d * lim;
+    o.a = Math.atan2(-dy, -dx) + (rnd() - 0.5) * 1.6;
+  }
+}
+function steerTo(o, ang, maxT) {
+  let d = ang - o.a;
+  d = ((d + Math.PI) % TAU + TAU) % TAU - Math.PI;
+  o.a += clamp(d, -maxT, maxT);
+}
+
+function stepOrg(o) {
+  const sp = o.sp, g = o.g, r = sp.size * g.size;
+  const ci = cellOf(o.x, o.y), temp = globalT + heat[ci];
+  o.age++;
+  if (o.dig > 0) o.dig--;
+  // 더위·항생제
+  const maxT = sp.heatMax + g.ht;
+  if (temp > maxT && rnd() < (temp - maxT) * 0.0015) return kill(o, '너무 뜨거워서');
+  if (sp.prok && anti[ci] > 0.02 && rnd() < anti[ci] * (1 - g.ares) * 0.04) return kill(o, '항생제 때문에');
+  const frozen = temp < 4;
+  const tf = frozen ? 0.15 : temp < 15 ? 0.6 : temp > 32 ? 1 + (temp - 32) * 0.03 : 1;
+  // 바이러스 감염
+  if (o.inf > 0) {
+    if (--o.inf === 0) {
+      for (let k = 0; k < 4 && orgs.length + born.length < CAP && virusN < VCAP; k++, virusN++) {
+        const v = makeOrg(o.vsp, o.x + (rnd() - 0.5) * r, o.y + (rnd() - 0.5) * r, mutate(o.vg), (o.vgen || 1) + 1);
+        v.fam = o.vfam; v.pid = o.vpid; register(v);
+        born.push(v);
+      }
+      return kill(o, '바이러스 때문에');
+    }
+  }
+  // 물곰 술통잠
+  const divE = sp.divE * g.size;
+  if (sp.tough) {
+    if (!o.tun && o.E < divE * 0.06) { o.tun = true; if (o === selected) news('😴 물곰이 술통 모양으로 쪼그라들어 잠들었어!'); }
+    if (o.tun && (T + o.id) % 30 === 0) { // 먹이 냄새가 나면 깸
+      let found = false; nearby(o.x, o.y, sp.sense, q => { if (!found && canEat(o, q)) found = true; });
+      if (found || temp > maxT - 60 && temp < maxT) { if (found) o.tun = false; }
+    }
+  }
+  let met = sp.metab * tf * g.size * (0.7 + 0.3 * g.spd) * (1 + 0.3 * g.ares + 0.3 * g.vres + 0.01 * g.ht);
+  if (sp.hunt) met *= 1 + Math.max(0, crowd[sp.ix * GN * GN + gcell(o.x, o.y)] - 2) * 0.25;
+  if (o.tun) met *= 0.03;
+  o.E -= met;
+  // 먹기
+  if (sp.nutr && !frozen) {
+    const take = Math.min(nut[ci], sp.nutr * g.size * Math.min(tf, 1.2));
+    nut[ci] -= take; o.E += take;
+  }
+  if (sp.light && !frozen) o.E += sp.light * g.size * lightAt(ci) * Math.min(1, 2 / photoCnt[gcell(o.x, o.y)]);
+  // 움직이기
+  let spd = o.tun || frozen ? 0 : sp.speed * g.spd * (temp < 15 ? 0.5 : 1);
+  if ((T + o.id) % 8 === 0 && spd > 0) {
+    if (sp.hunt) {
+      let best = null, bd = sp.sense * sp.sense;
+      if (spCnt.length !== SPECIES.length) spCnt = new Uint16Array(SPECIES.length); else spCnt.fill(0);
+      nearby(o.x, o.y, sp.sense, q => {
+        if (!canEat(o, q)) return;
+        const d = (q.x - o.x) ** 2 + (q.y - o.y) ** 2;
+        if (d > sp.sense * sp.sense) return;
+        spCnt[q.sp.ix]++;
+        if (d < bd) { bd = d; best = q; }
+      });
+      // 그 종류 먹이가 드물면 잘 못 찾음 → 먹이가 완전히 멸종하지 않게 해 주는 장치
+      o.tgt = best && rnd() < (spCnt[best.sp.ix] / 12) ** 2 ? best : null;
+    }
+    if (!o.tgt && sp.light) {
+      const ax = o.x + Math.cos(o.a) * 25, ay = o.y + Math.sin(o.a) * 25;
+      if (lightAt(cellOf(ax, ay)) < lightAt(ci) - 0.02) o.a += (rnd() - 0.5) * 3;
+    } else if (!o.tgt && sp.nutr) {
+      const ax = o.x + Math.cos(o.a) * 15, ay = o.y + Math.sin(o.a) * 15;
+      if (nut[cellOf(ax, ay)] < nut[ci] * 0.9) o.a += (rnd() - 0.5) * 2.5;
+    }
+  }
+  const t = o.tgt;
+  if (t) {
+    if (t.dead) o.tgt = null;
+    else {
+      const dx = t.x - o.x, dy = t.y - o.y, d = Math.hypot(dx, dy), tr = t.sp.size * t.g.size;
+      if (d < r + tr * 0.6 && o.dig === 0 && rnd() < 0.5) { o.dig = 10; o.tgt = null; } // 놓쳤다!
+      else if (d < r + tr * 0.6 && o.dig === 0) {
+        o.E += t.E * 0.35 + tr * 0.6;
+        kill(t, '잡아먹혀서', o);
+        o.tgt = null; o.dig = Math.round(15 + tr * 8); // 큰 먹이일수록 오래 소화
+        if (o.tun) o.tun = false;
+      } else if (d > sp.sense * 1.6) o.tgt = null;
+      else steerTo(o, Math.atan2(dy, dx), 0.15);
+    }
+  }
+  if (o !== dragOrg) {
+    o.a += (rnd() - 0.5) * (sp.shape === 'amoeba' ? 0.5 : 0.25);
+    o.x += Math.cos(o.a) * spd; o.y += Math.sin(o.a) * spd;
+    bounce(o, r);
+  }
+  // 나뉘기 / 죽기
+  if (o.E <= 0) return kill(o, '굶어서');
+  if (o.age > o.lifeMax) return kill(o, '늙어서');
+  if (o.E >= divE && o.inf === 0 && !frozen && o.age > 30) {
+    if (orgs.length + born.length < CAP) {
+      o.E /= 2;
+      const c = makeOrg(sp, o.x + (rnd() - 0.5) * r, o.y + (rnd() - 0.5) * r, mutate(g), o.gen + 1, o.E);
+      c.a = o.a + Math.PI;
+      c.fam = o.fam; c.pid = o.id; register(c);
+      born.push(c);
+      if (!sp.tough) o.age = 0;
+    } else if (!capWarned) { capWarned = true; news('📦 접시가 꽉 찼어! (최대 ' + CAP + '마리)'); }
+  }
+}
+
+function stepVirus(o) {
+  const ci = cellOf(o.x, o.y), temp = globalT + heat[ci];
+  o.age++;
+  if (o.age > o.lifeMax) return kill(o, '시간이 지나 부서져서');
+  if (temp > o.sp.heatMax + o.g.ht && rnd() < 0.01) return kill(o, '너무 뜨거워서');
+  if (o !== dragOrg) {
+    o.a += (rnd() - 0.5) * 1.2;
+    const s = o.sp.speed * o.g.spd;
+    o.x += Math.cos(o.a) * s; o.y += Math.sin(o.a) * s;
+    bounce(o, 2);
+  }
+  if ((T + o.id) % 2) return;
+  let host = null;
+  nearby(o.x, o.y, 12, q => {
+    if (host || q.dead || !q.sp.prok || q.inf > 0) return;
+    const rr = q.sp.size * q.g.size + 2;
+    if ((q.x - o.x) ** 2 + (q.y - o.y) ** 2 < rr * rr) host = q;
+  });
+  if (host) {
+    const chance = clamp(0.5 + o.g.pow - host.g.vres * 1.2, 0.02, 1);
+    if (rnd() < chance) { host.inf = 150; host.vsp = o.sp; host.vg = o.g; host.vgen = o.gen; host.vfam = o.fam; host.vpid = o.id; kill(o, '세균 속으로 들어가서', null, true); }
+    else { o.a += Math.PI; o.age += 80; } // 막히면 튕겨 나가서 다른 세균을 찾음
+  }
+}
+
+// ───────── 환경 퍼지기 ─────────
+function diffuse(f, k) {
+  for (let y = 1; y < G - 1; y++) for (let x = 1; x < G - 1; x++) {
+    const i = y * G + x; if (!mask[i]) { tmpF[i] = 0; continue; }
+    const v = f[i];
+    const a = mask[i - 1] ? f[i - 1] : v, b = mask[i + 1] ? f[i + 1] : v, c = mask[i - G] ? f[i - G] : v, d = mask[i + G] ? f[i + G] : v;
+    tmpF[i] = v + k * ((a + b + c + d) * 0.25 - v);
+  }
+  f.set(tmpF);
+}
+function fieldStep() {
+  const s = supply * 0.0024;
+  for (let i = 0; i < G * G; i++) if (mask[i]) {
+    nut[i] = Math.min(4, nut[i] + s);
+    anti[i] *= 0.997; heat[i] *= 0.996;
+    if (anti[i] < 0.002) anti[i] = 0;
+  }
+  diffuse(anti, 0.15); diffuse(heat, 0.12); diffuse(nut, 0.05);
+}
+function paint(f, wx, wy, rad, amt, lo, hi) {
+  const x0 = clamp(((wx - rad) / CS) | 0, 0, G - 1), x1 = clamp(((wx + rad) / CS) | 0, 0, G - 1);
+  const y0 = clamp(((wy - rad) / CS) | 0, 0, G - 1), y1 = clamp(((wy + rad) / CS) | 0, 0, G - 1);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const i = y * G + x; if (!mask[i]) continue;
+    const d = Math.hypot((x + 0.5) * CS - wx, (y + 0.5) * CS - wy);
+    if (d < rad) f[i] = clamp(f[i] + amt * (1 - d / rad * 0.7), lo, hi);
+  }
+}
+
+// ───────── 기록·소식 ─────────
+let history = [], capWarned = false;
+function computeStats() {
+  for (const sp of SPECIES) { const s = sp.st; s.n = 0; s.ares = 0; s.vres = 0; s.pow = 0; }
+  for (const o of orgs) {
+    const s = o.sp.st; s.n++;
+    if (o.gen > s.maxGen) s.maxGen = o.gen;
+    s.ares += o.g.ares; s.vres += o.g.vres; s.pow += o.g.pow;
+  }
+  for (const sp of SPECIES) {
+    const s = sp.st;
+    if (s.n) { s.ares /= s.n; s.vres /= s.n; s.pow /= s.n; }
+  }
+}
+function milestone(sp, key, text) {
+  if (sp.st.ms[key]) return; sp.st.ms[key] = true; news(text);
+}
+function recordStats() {
+  computeStats();
+  const row = {};
+  for (const sp of SPECIES) {
+    const s = sp.st, n = s.n;
+    row[sp.id] = n;
+    if (n > 0) s.ever = true;
+    if (n > s.peak) s.peak = n;
+    if (s.ever && n === 0 && s.peak >= 3 && !s.ms.gone) { s.ms.gone = true; news(`💀 ${iga(sp.name)} 접시에서 모두 사라졌어.`); }
+    if (n > 0) s.ms.gone = false;
+    for (const m of [100, 500, 1000, 2000]) if (n >= m) milestone(sp, 'n' + m, `📈 ${iga(sp.name)} ${m}마리를 넘었어!`);
+    for (const m of [10, 50, 100, 300, 1000]) if (s.maxGen >= m) milestone(sp, 'g' + m, `🧬 ${iga(sp.name)} ${m}대째 자손까지 태어났어!`);
+    if (n >= 10 && sp.prok) {
+      for (const [v, w] of [[0.3, '조금'], [0.6, '꽤'], [0.9, '거의 완벽하게']]) {
+        if (s.ares >= v) milestone(sp, 'a' + v, `💊➡🛡 ${iga(sp.name)} 항생제를 ${w} 견디게 진화했어! (${Math.round(s.ares * 100)}%)`);
+        if (s.vres >= v) milestone(sp, 'v' + v, `🦠➡🛡 ${iga(sp.name)} 바이러스를 ${w} 막게 진화했어! (${Math.round(s.vres * 100)}%)`);
+      }
+    }
+    if (n >= 10 && sp.virus) for (const v of [0.3, 0.6]) if (s.pow >= v) milestone(sp, 'p' + v, `⚔️ ${iga(sp.name)} 세균의 방패를 뚫도록 진화했어! (${Math.round(s.pow * 100)}%)`);
+  }
+  const alive = famAlive();
+  FAM.forEach((F, f) => {
+    row['f' + f] = alive[f];
+    if (alive[f] > F.peak) F.peak = alive[f];
+    for (const m of [10, 100, 500, 1000]) if (alive[f] >= m && !F.ms['n' + m]) { F.ms['n' + m] = 1; news(`📈 ${F.name} 집안이 ${m}마리가 됐어!`); }
+    for (const m of [10, 50, 100, 300]) if (F.maxGen >= m && !F.ms['g' + m]) { F.ms['g' + m] = 1; news(`🌳 ${F.name} 집안에 ${m}대째 자손이 태어났어!`); }
+    if (alive[f] === 0 && !F.gone) {
+      F.gone = T;
+      news(`💀 ${F.name} 집안이 모두 사라졌어… (${F.born}마리가 태어났었어)`, true);
+      const o = FAM[1 - f];
+      if (o && !o.gone) news(`🏆 ${o.name} 집안이 살아남았어!`, true);
+    }
+  });
+  history.push(row);
+  if (history.length > 240) history.shift();
+  if (orgs.length < CAP * 0.9) capWarned = false;
+}
+function news(text, important) {
+  const n = $('news'), d = document.createElement('div');
+  d.textContent = `[${fmtTime(T)}] ${text}`;
+  n.prepend(d);
+  while (n.children.length > 12) n.lastChild.remove();
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = text;
+  if (important) t.style.borderLeftColor = 'var(--warn)';
+  const box = $('toasts'); box.appendChild(t);
+  while (box.children.length > 4) box.firstChild.remove();
+  setTimeout(() => t.remove(), 4500);
+}
+const fmtTime = t => { const s = (t / 60) | 0; return `${(s / 60) | 0}분 ${s % 60}초`; };
+
+// ───────── 그리기 ─────────
+const cv = $('cv'), ctx = cv.getContext('2d');
+let W = 1, H = 1, dpr = 1, cam = { x: CX, y: CY, z: 1, set: false };
+function resize() {
+  const r = $('stage').getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  W = Math.max(1, (r.width | 0) || (innerWidth - 494));
+  H = Math.max(1, (r.height | 0) || (innerHeight - 50));
+  if (W < 50) W = 800; if (H < 50) H = 600;
+  cv.width = W * dpr; cv.height = H * dpr;
+  if (!cam.set) fitCam();
+}
+function fitCam() { cam.x = CX; cam.y = CY; cam.z = Math.min(W, H) / (DR * 2 + 40); }
+const toSX = x => (x - cam.x) * cam.z + W / 2, toSY = y => (y - cam.y) * cam.z + H / 2;
+const toWX = sx => (sx - W / 2) / cam.z + cam.x, toWY = sy => (sy - H / 2) / cam.z + cam.y;
+
+const fimg = document.createElement('canvas'); fimg.width = fimg.height = G;
+const fctx = fimg.getContext('2d'), fdata = fctx.createImageData(G, G);
+function updateFieldImage() {
+  const d = fdata.data;
+  for (let i = 0; i < G * G; i++) {
+    const p = i * 4;
+    if (!mask[i]) { d[p + 3] = 0; continue; }
+    const n = Math.min(nut[i], 3) / 3, L = lightAt(i), a = Math.min(anti[i], 1);
+    const tC = globalT + heat[i], warm = clamp((tC - 30) / 50, 0, 1), cold = clamp((15 - tC) / 25, 0, 1);
+    const m = 0.3 + 0.65 * L;
+    const glow = Math.max(0, lit[i]) * 45;       // 💡 비춘 곳은 노랗게
+    d[p] = clamp((14 + 70 * n + 90 * a) * m + warm * 170 + cold * 60 + glow, 0, 255);
+    d[p + 1] = clamp((40 + 52 * n) * m + warm * 30 + cold * 100 + glow * 0.9, 0, 255);
+    d[p + 2] = clamp((60 + 6 * n + 130 * a) * m + cold * 150, 0, 255);
+    d[p + 3] = 255;
+  }
+  fctx.putImageData(fdata, 0, 0);
+}
+
+// 모양 그리기 (원점 = 생물 가운데, 오른쪽이 앞)
+function drawBody(c, shape, r, col, col2, colA, t, o, detail) {
+  const id = o ? o.id : 0;
+  switch (shape) {
+    case 'rod': {
+      c.lineCap = 'round'; c.strokeStyle = col; c.lineWidth = r * 1.2;
+      c.beginPath(); c.moveTo(-r * 0.9, 0); c.lineTo(r * 0.9, 0); c.stroke();
+      if (detail) {
+        c.strokeStyle = col2; c.lineWidth = r * 0.35;
+        c.beginPath(); c.moveTo(-r * 0.45, 0); c.lineTo(r * 0.45, 0); c.stroke();
+        c.lineWidth = r * 0.12; c.strokeStyle = col;
+        c.beginPath(); c.moveTo(-r * 1.4, 0);
+        for (let k = 1; k <= 6; k++) c.lineTo(-r * 1.4 - k * r * 0.35, Math.sin(t * 0.4 + k + id) * r * 0.3);
+        c.stroke();
+      }
+      break;
+    }
+    case 'coccus': {
+      c.fillStyle = col; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      if (detail) {
+        c.fillStyle = col2; c.beginPath(); c.arc(r * 0.15, -r * 0.1, r * 0.42, 0, TAU); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = r * 0.12; c.beginPath(); c.arc(0, 0, r * 0.92, 0, TAU); c.stroke();
+      }
+      break;
+    }
+    case 'flag': {
+      if (detail) {
+        c.strokeStyle = col; c.lineWidth = r * 0.12; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(r * 1.45, 0);
+        for (let k = 1; k <= 8; k++) c.lineTo(r * 1.45 + k * r * 0.28, Math.sin(t * 0.35 - k * 0.9 + id) * r * 0.35 * (k / 8));
+        c.stroke();
+      }
+      c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, r * 1.5, r * 0.6, 0, 0, TAU); c.fill();
+      if (detail) {
+        c.fillStyle = col2;
+        for (let k = 0; k < 5; k++) { c.beginPath(); c.ellipse(-r * 0.9 + k * r * 0.4, (k % 2 ? 0.2 : -0.2) * r, r * 0.17, r * 0.11, 0, 0, TAU); c.fill(); }
+        c.fillStyle = '#ff4a3a'; c.beginPath(); c.arc(r * 1.0, -r * 0.12, r * 0.16, 0, TAU); c.fill();
+      }
+      break;
+    }
+    case 'amoeba': {
+      const N = 10, px = [], py = [];
+      for (let k = 0; k < N; k++) {
+        const ang = k / N * TAU;
+        const rr = r * (1 + 0.25 * Math.sin(t * 0.03 + k * 1.9 + id) + 0.12 * Math.sin(t * 0.071 + k * 3.1 + id * 2));
+        px.push(Math.cos(ang) * rr); py.push(Math.sin(ang) * rr);
+      }
+      c.beginPath();
+      c.moveTo((px[N - 1] + px[0]) / 2, (py[N - 1] + py[0]) / 2);
+      for (let k = 0; k < N; k++) { const n2 = (k + 1) % N; c.quadraticCurveTo(px[k], py[k], (px[k] + px[n2]) / 2, (py[k] + py[n2]) / 2); }
+      c.closePath(); c.fillStyle = colA; c.fill();
+      c.strokeStyle = col; c.lineWidth = r * 0.08; c.stroke();
+      c.fillStyle = col2; c.beginPath(); c.arc(r * 0.15, -r * 0.1, r * 0.3, 0, TAU); c.fill();
+      if (detail) {
+        c.fillStyle = 'rgba(255,255,255,0.25)';
+        for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(Math.cos(k * 2.3 + id) * r * 0.5, Math.sin(k * 2.3 + id) * r * 0.5, r * 0.1, 0, TAU); c.fill(); }
+      }
+      break;
+    }
+    case 'cilia': {
+      if (detail) {
+        c.strokeStyle = col; c.lineWidth = r * 0.06;
+        c.beginPath();
+        for (let k = 0; k < 24; k++) {
+          const ang = k / 24 * TAU, ex = Math.cos(ang) * r * 1.5, ey = Math.sin(ang) * r * 0.68;
+          const len = r * 0.22 * (1 + 0.6 * Math.sin(t * 0.6 + k * 0.8));
+          c.moveTo(ex, ey); c.lineTo(ex + Math.cos(ang) * len * 0.6, ey + Math.sin(ang) * len * 1.3);
+        }
+        c.stroke();
+      }
+      c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, r * 1.5, r * 0.68, 0, 0, TAU); c.fill();
+      c.fillStyle = col2; c.beginPath(); c.ellipse(r * 0.25, r * 0.18, r * 0.5, r * 0.17, 0.35, 0, TAU); c.fill();
+      if (detail) {
+        c.fillStyle = 'rgba(255,255,255,0.3)';
+        c.beginPath(); c.arc(-r * 0.6, 0, r * 0.2, 0, TAU); c.arc(r * 0.9, -r * 0.15, r * 0.15, 0, TAU); c.fill();
+      }
+      break;
+    }
+    case 'virus': {
+      if (!detail) { c.fillStyle = col; c.beginPath(); c.arc(0, 0, r * 1.2, 0, TAU); c.fill(); break; }
+      c.strokeStyle = col2; c.lineWidth = r * 0.35; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r * 0.3, 0); c.lineTo(-r * 1.2, 0);
+      for (const s of [-1, 1]) { c.moveTo(-r * 1.2, 0); c.lineTo(-r * 1.6, s * r * 0.5); c.lineTo(-r * 2.1, s * r * 0.9); }
+      c.moveTo(-r * 1.2, 0); c.lineTo(-r * 2.2, 0);
+      c.stroke();
+      c.fillStyle = col; c.beginPath();
+      for (let k = 0; k < 6; k++) { const ang = k / 6 * TAU; c.lineTo(r * 1.2 + Math.cos(ang) * r * 1.1, Math.sin(ang) * r * 1.1); }
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = r * 0.15; c.stroke();
+      break;
+    }
+    case 'tardi': {
+      if (o && o.tun) {
+        c.fillStyle = col2; c.beginPath(); c.ellipse(0, 0, r * 0.65, r * 0.45, 0, 0, TAU); c.fill();
+        c.strokeStyle = col; c.lineWidth = r * 0.06; c.beginPath();
+        for (let k = -2; k <= 2; k++) { c.moveTo(k * r * 0.2, -r * 0.4); c.lineTo(k * r * 0.2, r * 0.4); }
+        c.stroke();
+        if (detail) { c.fillStyle = '#fff'; c.font = `${r * 0.5}px sans-serif`; c.fillText('z', r * 0.5, -r * 0.5); }
+        break;
+      }
+      for (const s of [-1, 1]) for (let k = 0; k < 4; k++) {
+        const ph = Math.sin(t * 0.12 + k * 1.3 + (s > 0 ? Math.PI : 0) + id);
+        const lx = r * (-0.75 + k * 0.45) + ph * r * 0.08, ly = s * r * 0.6;
+        c.fillStyle = col2; c.beginPath(); c.ellipse(lx, ly, r * 0.15, r * 0.2, 0, 0, TAU); c.fill();
+        if (detail) { c.strokeStyle = '#fff8'; c.lineWidth = r * 0.04; c.beginPath(); c.moveTo(lx - r * 0.06, ly + s * r * 0.18); c.lineTo(lx - r * 0.1, ly + s * r * 0.27); c.moveTo(lx + r * 0.06, ly + s * r * 0.18); c.lineTo(lx + r * 0.1, ly + s * r * 0.27); c.stroke(); }
+      }
+      c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, r, r * 0.6, 0, 0, TAU); c.fill();
+      c.beginPath(); c.arc(r * 0.88, 0, r * 0.36, 0, TAU); c.fill();
+      if (detail) {
+        c.strokeStyle = col2; c.lineWidth = r * 0.04; c.beginPath();
+        for (let k = 0; k < 3; k++) { const sx = r * (-0.5 + k * 0.4); c.moveTo(sx, -r * 0.5); c.quadraticCurveTo(sx + r * 0.1, 0, sx, r * 0.5); }
+        c.stroke();
+        c.fillStyle = '#222'; c.beginPath(); c.arc(r * 1.0, -r * 0.16, r * 0.06, 0, TAU); c.arc(r * 1.0, r * 0.16, r * 0.06, 0, TAU); c.fill();
+        c.fillStyle = col2; c.beginPath(); c.arc(r * 1.2, 0, r * 0.09, 0, TAU); c.fill();
+      }
+      break;
+    }
+  }
+  if (o && o.inf > 0) { // 바이러스에 걸린 세균: 보라 점
+    c.fillStyle = '#e070ff';
+    const k = Math.min(5, 1 + ((150 - o.inf) / 30) | 0);
+    for (let i = 0; i < k; i++) { c.beginPath(); c.arc(Math.cos(i * 2.1) * r * 0.4, Math.sin(i * 2.1) * r * 0.3, Math.max(r * 0.18, 0.5), 0, TAU); c.fill(); }
+  }
+}
+
+function draw() {
+  const c = ctx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = '#05080e'; c.fillRect(0, 0, W, H);
+  const sx = toSX(CX), sy = toSY(CY), sr = DR * cam.z;
+  // 접시
+  c.save();
+  c.beginPath(); c.arc(sx, sy, sr, 0, TAU); c.clip();
+  c.imageSmoothingEnabled = true;
+  c.drawImage(fimg, toSX(0), toSY(0), WORLD * cam.z, WORLD * cam.z);
+  c.restore();
+  // 생물
+  const detailZ = cam.z, margin = 60;
+  for (let i = 0; i < orgs.length; i++) {
+    const o = orgs[i], r = o.sp.size * o.g.size;
+    const px = toSX(o.x), py = toSY(o.y);
+    if (px < -margin || py < -margin || px > W + margin || py > H + margin) continue;
+    const srr = r * detailZ;
+    if (srr < 1.3 && o.sp.shape !== 'tardi') {
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.fillStyle = o.inf > 0 ? '#e070ff' : showFam && o.fam >= 0 ? FCOL[o.fam] : o.col; c.fillRect(px - 1, py - 1, 2.2, 2.2);
+      continue;
+    }
+    const z = cam.z * dpr, co = Math.cos(o.a) * z, si = Math.sin(o.a) * z;
+    c.setTransform(co, si, -si, co, px * dpr, py * dpr);
+    drawBody(c, o.sp.shape, r, o.col, o.col2, o.colA, T, o, srr > 4);
+    if (showFam && o.fam >= 0) {
+      c.strokeStyle = FCOL[o.fam]; c.lineWidth = 1.6 / cam.z;
+      c.beginPath(); c.arc(0, 0, r * (o.sp.shape === 'rod' || o.sp.shape === 'flag' || o.sp.shape === 'cilia' ? 1.8 : o.sp.shape === 'virus' ? 2.4 : 1.4) + 2 / cam.z, 0, TAU); c.stroke();
+    }
+  }
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // 테두리
+  c.strokeStyle = 'rgba(170,215,255,0.35)'; c.lineWidth = 5;
+  c.beginPath(); c.arc(sx, sy, sr + 2, 0, TAU); c.stroke();
+  c.strokeStyle = 'rgba(170,215,255,0.12)'; c.lineWidth = 14;
+  c.beginPath(); c.arc(sx, sy, sr + 10, 0, TAU); c.stroke();
+  // 고른 생물
+  if (selected && !selected.dead) {
+    const r = Math.max(10, selected.sp.size * selected.g.size * cam.z * 1.8);
+    c.strokeStyle = '#ffd84a'; c.lineWidth = 2; c.setLineDash([5, 4]);
+    c.beginPath(); c.arc(toSX(selected.x), toSY(selected.y), r, 0, TAU); c.stroke();
+    c.setLineDash([]);
+  }
+  // 붓
+  if (mouse.in && tool !== 'look' && tool !== 'hand') {
+    c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1.5; c.setLineDash([4, 4]);
+    c.beginPath(); c.arc(mouse.sx, mouse.sy, brushR * cam.z, 0, TAU); c.stroke(); c.setLineDash([]);
+  }
+}
+
+// ───────── 도구 ─────────
+const TOOLS = [
+  { id: 'look', em: '🔎', name: '자세히 보기' },
+  { id: 'hand', em: '✋', name: '잡아 옮기기' },
+  { id: 'food', em: '🍯', name: '영양분' },
+  { id: 'light', em: '💡', name: '빛 비추기' },
+  { id: 'shade', em: '🌑', name: '그늘' },
+  { id: 'hot', em: '🔥', name: '뜨겁게' },
+  { id: 'cold', em: '🧊', name: '차갑게' },
+  { id: 'anti', em: '💊', name: '항생제' },
+  { id: 'erase', em: '🧽', name: '지우개' },
+  { id: 'clean', em: '🚿', name: '환경 씻기' },
+];
+let tool = 'sp:bact', brushR = 45, perClick = 5, selected = null, follow = false, dragOrg = null;
+const mouse = { sx: 0, sy: 0, wx: 0, wy: 0, down: false, pan: false, in: false, held: 0 };
+
+function makeIcon(shape, hue, sat, lum, px) {
+  const c = document.createElement('canvas'); c.width = c.height = px * 2;
+  const g = c.getContext('2d');
+  const k = px * 2 * ({ rod: 0.24, coccus: 0.36, flag: 0.2, amoeba: 0.32, cilia: 0.26, virus: 0.17, tardi: 0.34 }[shape] || 0.3);
+  g.setTransform(k, 0, 0, k, px * (shape === 'virus' ? 1.15 : shape === 'flag' ? 0.8 : 1), px);
+  drawBody(g, shape, 1, `hsl(${hue},${sat}%,${lum}%)`, `hsl(${hue},${sat}%,${Math.max(15, lum - 25)}%)`, `hsla(${hue},${sat}%,${lum}%,0.55)`, 20, null, true);
+  return c;
+}
+function buildButtons() {
+  const sb = $('spBtns'); sb.innerHTML = '';
+  for (const sp of SPECIES) {
+    const b = document.createElement('button');
+    b.className = 'btn'; b.dataset.tool = 'sp:' + sp.id; b.title = sp.desc;
+    b.appendChild(makeIcon(sp.shape, sp.hue, sp.sat, sp.lum, 20));
+    const s = document.createElement('span'); s.textContent = sp.name; b.appendChild(s);
+    if (sp.custom) {
+      const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕'; x.title = '이 미생물 지우기';
+      x.onclick = e => { e.stopPropagation(); removeCustom(sp); };
+      b.appendChild(x);
+    }
+    b.onclick = () => setTool('sp:' + sp.id);
+    sb.appendChild(b);
+  }
+  const tb = $('toolBtns'); tb.innerHTML = '';
+  for (const t of TOOLS) {
+    const b = document.createElement('button');
+    b.className = 'btn'; b.dataset.tool = t.id;
+    b.innerHTML = `<span class="em">${t.em}</span><span>${t.name}</span>`;
+    b.onclick = () => setTool(t.id);
+    tb.appendChild(b);
+  }
+  setTool(tool);
+}
+function setTool(t) {
+  if (t.startsWith('sp:') && !SPMAP[t.slice(3)]) t = 'sp:bact';
+  tool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  cv.style.cursor = t === 'hand' ? 'grab' : t === 'look' ? 'pointer' : 'crosshair';
+}
+function removeCustom(sp) {
+  if (!confirm(`'${sp.name}'${hasBatchim(sp.name) ? '을' : '를'} 목록에서 지울까? (접시에 있는 것도 사라져)`)) return;
+  for (const o of orgs) if (o.sp === sp) o.dead = true;
+  orgs = orgs.filter(o => !o.dead);
+  SPECIES = SPECIES.filter(s => s !== sp); delete SPMAP[sp.id];
+  SPECIES.forEach((s, i) => s.ix = i);
+  if (selected && selected.sp === sp) selected = null;
+  saveCustoms(); buildButtons();
+}
+function pickOrg(wx, wy, pxRad) {
+  let best = null, bd = Infinity;
+  const rad = pxRad / cam.z;
+  for (const o of orgs) {
+    const r = o.sp.size * o.g.size;
+    const d = Math.hypot(o.x - wx, o.y - wy) - r;
+    if (d < rad && d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+function toolPress() {
+  if (tool === 'look') {
+    selected = pickOrg(mouse.wx, mouse.wy, 14);
+    renderCard();
+  } else if (tool === 'hand') {
+    dragOrg = pickOrg(mouse.wx, mouse.wy, 18);
+    if (dragOrg) cv.style.cursor = 'grabbing';
+  } else if (tool.startsWith('sp:')) {
+    spawn(SPMAP[tool.slice(3)], mouse.wx, mouse.wy, brushR, perClick);
+  }
+}
+function toolHold() {
+  if (!mouse.down) return;
+  mouse.held++;
+  const x = mouse.wx, y = mouse.wy, R = brushR;
+  switch (tool) {
+    case 'hand': if (dragOrg && !dragOrg.dead) { dragOrg.x = x; dragOrg.y = y; bounce(dragOrg, 1); } break;
+    case 'food': paint(nut, x, y, R, 0.08, 0, 4); break;
+    case 'light': paint(lit, x, y, R, 0.03, -1, 1); break;
+    case 'shade': paint(lit, x, y, R, -0.03, -1, 1); break;
+    case 'hot': paint(heat, x, y, R, 1.5, -60, 90); break;
+    case 'cold': paint(heat, x, y, R, -1.5, -60, 90); break;
+    case 'anti': paint(anti, x, y, R, 0.03, 0, 1); break;
+    case 'clean':
+      paint(anti, x, y, R, -0.08, 0, 1); paint(lit, x, y, R, 0, 0, 0);
+      for (const f of [heat]) paint(f, x, y, R, 0, 0, 0);
+      break;
+    case 'erase':
+      for (const o of orgs) if ((o.x - x) ** 2 + (o.y - y) ** 2 < R * R) kill(o, '지우개로 지워져서', null, true);
+      orgs = orgs.filter(o => !o.dead);
+      break;
+    default:
+      if (tool.startsWith('sp:') && mouse.held % 8 === 0) spawn(SPMAP[tool.slice(3)], x, y, R, perClick);
+  }
+}
+
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  updMouse(e);
+  if (e.button === 2 || e.button === 1) { mouse.pan = true; mouse.px = e.clientX; mouse.py = e.clientY; follow = false; return; }
+  mouse.down = true; mouse.held = 0;
+  toolPress();
+});
+cv.addEventListener('pointermove', e => {
+  if (mouse.pan) {
+    cam.x -= (e.clientX - mouse.px) / cam.z; cam.y -= (e.clientY - mouse.py) / cam.z;
+    mouse.px = e.clientX; mouse.py = e.clientY; cam.set = true;
+  }
+  updMouse(e);
+});
+const endPtr = () => { mouse.down = false; mouse.pan = false; dragOrg = null; if (tool === 'hand') cv.style.cursor = 'grab'; };
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('pointerleave', () => { mouse.in = false; });
+cv.addEventListener('pointerenter', () => { mouse.in = true; });
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  updMouse(e);
+  const wx = mouse.wx, wy = mouse.wy, minZ = Math.min(W, H) / (DR * 2 + 40) * 0.7;
+  cam.z = clamp(cam.z * Math.exp(-e.deltaY * 0.0015), minZ, 40);
+  if (!follow) { cam.x = wx - (mouse.sx - W / 2) / cam.z; cam.y = wy - (mouse.sy - H / 2) / cam.z; }
+  cam.set = true;
+}, { passive: false });
+function updMouse(e) {
+  const r = cv.getBoundingClientRect();
+  mouse.sx = e.clientX - r.left; mouse.sy = e.clientY - r.top; mouse.in = true;
+  mouse.wx = toWX(mouse.sx); mouse.wy = toWY(mouse.sy);
+}
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); setPaused(!paused); }
+  if (e.key >= '1' && e.key <= '4') setSpeed([1, 2, 4, 8][e.key - 1]);
+  if (e.key === 'f' || e.key === 'F' || e.key === 'ㄹ') { if (selected) { follow = !follow; renderCard(); } }
+});
+
+// ───────── 오른쪽 판 ─────────
+const iconCache = {};
+function spIcon(sp) {
+  if (!iconCache[sp.id]) iconCache[sp.id] = makeIcon(sp.shape, sp.hue, sp.sat, sp.lum, 11);
+  const c = document.createElement('canvas'); c.width = c.height = 22; c.getContext('2d').drawImage(iconCache[sp.id], 0, 0); return c;
+}
+function updatePanels() {
+  computeStats();
+  $('clock').textContent = `⏱ ${fmtTime(T)}`;
+  $('total').textContent = `· 모두 ${orgs.length}마리`;
+  const box = $('poplist'); box.innerHTML = '';
+  const maxN = Math.max(1, ...SPECIES.map(s => s.st.n));
+  for (const sp of SPECIES) {
+    const s = sp.st; if (!s.ever && !s.n) continue;
+    const row = document.createElement('div'); row.className = 'row';
+    row.appendChild(spIcon(sp));
+    const nm = document.createElement('div'); nm.className = 'nm';
+    let sub = s.n ? `${s.maxGen}대째` : '사라짐';
+    if (s.n && sp.prok) sub += ` · 💊${Math.round(s.ares * 100)}% 🛡${Math.round(s.vres * 100)}%`;
+    if (s.n && sp.virus) sub += ` · ⚔️${Math.round(s.pow * 100)}%`;
+    nm.innerHTML = `${sp.name} <b style="float:right">${s.n}</b><div class="sub">${sub}</div><div class="bar" style="width:${s.n / maxN * 100}%;background:hsl(${sp.hue},${sp.sat}%,${sp.lum}%)"></div>`;
+    row.appendChild(nm);
+    box.appendChild(row);
+  }
+  drawGraph();
+  renderCard();
+  renderFam();
+}
+function drawGraph() {
+  const g = $('graph'), r = g.getBoundingClientRect();
+  const w = Math.max(10, r.width | 0) || 250, h = 120;
+  if (g.width !== w * dpr) { g.width = w * dpr; g.height = h * dpr; }
+  const c = g.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, w, h);
+  if (history.length < 2) { c.fillStyle = '#93a6c4'; c.font = '12px sans-serif'; c.fillText('시간이 지나면 그래프가 그려져', 10, 60); return; }
+  let mx = 10;
+  for (const row of history) for (const k in row) if (row[k] > mx) mx = row[k];
+  c.strokeStyle = '#2b3d5a'; c.lineWidth = 1;
+  for (let k = 1; k < 4; k++) { c.beginPath(); c.moveTo(0, h * k / 4); c.lineTo(w, h * k / 4); c.stroke(); }
+  FAM.forEach((F, f) => {
+    c.strokeStyle = FCOL[f]; c.lineWidth = 3;
+    c.beginPath();
+    history.forEach((row, i) => {
+      const x = i / (history.length - 1) * w, y = h - 4 - (row['f' + f] || 0) / mx * (h - 10);
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    });
+    c.stroke();
+  });
+  c.globalAlpha = 0.35;
+  for (const sp of SPECIES) {
+    if (!sp.st.ever) continue;
+    c.strokeStyle = `hsl(${sp.hue},${sp.sat}%,${Math.max(50, sp.lum)}%)`; c.lineWidth = 1;
+    c.beginPath();
+    history.forEach((row, i) => {
+      const x = i / (history.length - 1) * w, y = h - 4 - (row[sp.id] || 0) / mx * (h - 10);
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    });
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+  c.fillStyle = '#93a6c4'; c.font = '10px sans-serif'; c.fillText('최대 ' + mx + ' · 굵은 선 = 집안', 4, 11);
+}
+function geneBar(label, v, col, txt) {
+  return `<div class="gene"><span>${label}</span><i><b style="width:${clamp(v, 0, 1) * 100}%;background:${col}"></b></i><em style="width:38px;text-align:right;font-style:normal">${txt}</em></div>`;
+}
+let cardKey = '';
+function renderCard() {
+  const el = $('card');
+  if (!selected || selected.dead) {
+    if (cardKey !== 'none') { el.innerHTML = '🔎 돋보기 도구로 미생물을 클릭해 봐!'; cardKey = 'none'; }
+    if (selected && selected.dead) { selected = null; follow = false; }
+    return;
+  }
+  const o = selected, sp = o.sp, g = o.g;
+  const ci = cellOf(o.x, o.y), temp = Math.round(globalT + heat[ci]);
+  let state = '🏊 헤엄치는 중';
+  if (sp.virus) state = '🌀 떠다니며 세균을 찾는 중';
+  else if (o.inf > 0) state = '🦠 바이러스에 걸렸어! 곧 터져…';
+  else if (o.tun) state = '😴 술통잠 자는 중';
+  else if (temp < 4) state = '🧊 얼어서 멈춤';
+  else if (o.tgt) state = `🦷 ${o.tgt.sp.name} 쫓는 중`;
+  const divE = (sp.divE || 1) * g.size;
+  let h = `<div style="display:flex;gap:8px;align-items:center"><span id="cardIcon"></span><div><b style="font-size:14px">${sp.name} #${o.id}</b><br><span style="color:var(--dim)">${o.gen}대째 · 나이 ${Math.round(o.age / 60)}초 · ${temp}°C</span></div></div>`;
+  h += `<div style="margin:4px 0">${o.fam >= 0 ? `<b style="color:${FCOL[o.fam]}">● ${FAM[o.fam].name} 집안</b>` : '<span style="color:var(--dim)">손님 미생물 (가계도에 없음)</span>'}</div>`;
+  h += `<div style="margin:6px 0">${state}</div>`;
+  if (!sp.virus) h += geneBar('⚡ 배부름', o.E / divE, '#ffcf5a', `${Math.round(o.E / divE * 100)}%`);
+  h += geneBar('📏 크기', (g.size - 0.6) / 1.2, '#7fb8ff', `×${g.size.toFixed(2)}`);
+  h += geneBar('💨 빠르기', (g.spd - 0.4) / 1.8, '#7be37b', `×${g.spd.toFixed(2)}`);
+  if (sp.prok) {
+    h += geneBar('💊 항생제 견딤', g.ares, '#e88cff', `${Math.round(g.ares * 100)}%`);
+    h += geneBar('🛡 바이러스 막기', g.vres, '#ff9b6a', `${Math.round(g.vres * 100)}%`);
+  }
+  if (sp.virus) h += geneBar('⚔️ 방패 뚫기', g.pow, '#ff6a8a', `${Math.round(g.pow * 100)}%`);
+  h += geneBar('🔥 더위 견딤', (sp.heatMax + g.ht) / 160, '#ff7a7a', `${Math.round(sp.heatMax + g.ht)}°C`);
+  h += `<div style="color:var(--dim);margin-top:5px">${sp.desc}</div>`;
+  h += `<div class="acts"><button class="btn" id="cFollow">${follow ? '📌 그만 따라가기' : '🎥 따라가기'}</button>${o.fam >= 0 ? '<button class="btn" id="cTree">🌳 가계도</button>' : '<button class="btn" id="cCopy">🧬 복제 5마리</button>'}<button class="btn" id="cDel">❌</button></div>`;
+  const key = h;
+  if (key === cardKey) return;
+  cardKey = key;
+  el.innerHTML = h;
+  $('cardIcon').appendChild(spIcon(sp));
+  $('cFollow').onclick = () => { follow = !follow; if (follow) cam.z = Math.max(cam.z, 4); cam.set = true; renderCard(); };
+  if ($('cTree')) $('cTree').onclick = () => { treeSel = tree.get(o.id) || null; setView('tree'); };
+  if ($('cCopy')) $('cCopy').onclick = () => {
+    for (let k = 0; k < 5 && orgs.length < CAP; k++) {
+      const p = randInDish(o.x, o.y, 30); if (!p) continue;
+      orgs.push(makeOrg(sp, p[0], p[1], { ...g }, o.gen));
+    }
+  };
+  $('cDel').onclick = () => { kill(o, '지워져서', null, true); orgs = orgs.filter(q => !q.dead); selected = null; renderCard(); };
+}
+
+
+// ───────── 두 집안·가계도 ─────────
+const FCOL = ['#ff7fb0', '#5fb4ff'];
+let FAM = [], showFam = true, view = 'dish', treeSel = null, treeHits = [];
+const tree = new Map();                      // id → 가계도 마디 {id, pid, fam, gen, b(태어난 때), d(죽은 때), cause, hue, g, sp}
+function register(o) {
+  if (o.fam < 0 || !FAM[o.fam]) return;
+  const F = FAM[o.fam];
+  tree.set(o.id, { id: o.id, pid: o.pid, fam: o.fam, gen: o.gen, b: T, d: -1, cause: '', hue: o.sp.hue + o.g.hue, g: { ...o.g }, sp: o.sp });
+  F.born++;
+  if (o.gen > F.maxGen) F.maxGen = o.gen;
+}
+function noteDeath(o, cause, by) {
+  const nd = tree.get(o.id); if (!nd) return;
+  nd.d = T; nd.cause = by && !o.sp.virus ? by.sp.name + '에게 잡아먹혀서' : cause;
+  if (o.sp.virus && cause === '세균 속으로 들어가서') return; // 바이러스는 들어가서 새끼를 만드는 거라 죽음으로 안 셈
+  const F = FAM[o.fam], k = by && !o.sp.virus ? '잡아먹혀서' : cause;
+  F.deaths[k] = (F.deaths[k] || 0) + 1;
+}
+function famAlive() {
+  const a = FAM.map(() => 0);
+  for (const o of orgs) if (o.fam >= 0) a[o.fam]++;
+  return a;
+}
+// 살아 있는 자손이 없는 가지는 잘라냄 (사라진 집안은 그대로 남겨 둠)
+function pruneTree() {
+  const alive = famAlive(), keep = new Set();
+  const up = id => { while (id && !keep.has(id)) { keep.add(id); const nd = tree.get(id); id = nd ? nd.pid : 0; } };
+  for (const o of orgs) {
+    if (o.fam >= 0) up(o.id);
+    if (o.inf > 0 && o.vpid) up(o.vpid);    // 세균 속에 들어간 바이러스도 살아 있는 셈
+  }
+  for (const [id, nd] of tree) {
+    if (keep.has(id) || alive[nd.fam] === 0 || id === FAM[nd.fam].founder) continue;
+    tree.delete(id);
+  }
+}
+function startFamilies(sp0, sp1, n0, n1, bg) {
+  resetWorld(1.2);
+  setTemp(25);
+  [[sp0, n0], [sp1, n1]].forEach(([sp, name], f) => {
+    FAM.push({ name, sp, founder: 0, born: 0, maxGen: 1, deaths: {}, gone: 0, peak: 1, ms: {} });
+    const o = makeOrg(sp, CX + (f ? 90 : -90), CY + (rnd() - 0.5) * 30);
+    o.fam = f; o.E = (sp.divE || 1) * 0.6;
+    if (sp.virus) o.lifeMax = 6000;          // 첫 바이러스는 세균을 만날 때까지 오래 버팀
+    FAM[f].founder = o.id;
+    register(o);
+    orgs.push(o);
+  });
+  if (bg) { sAll('bact', 60); sAll('cyano', 60); }
+  cam.set = false; fitCam();
+  news(`🌱 ${n0}(${sp0.name})와 ${n1}(${sp1.name})가 접시에 들어왔어! 🌳 가계도 버튼으로 집안이 자라는 걸 봐.`);
+}
+
+// ── 시작 화면
+const QUICK = [
+  ['🎲 세균 vs 세균 (운 대결)', 'bact', 'bact', false],
+  ['세균 vs 남조류', 'bact', 'cyano', false],
+  ['☀️ 유글레나 vs 남조류', 'eug', 'cyano', false],
+  ['🦠 세균 vs 바이러스', 'bact', 'virus', false],
+  ['🦷 아메바 vs 짚신벌레', 'amoeba', 'para', true],
+  ['🐻 물곰 vs 아메바', 'tardi', 'amoeba', true],
+];
+function fIcon(f) {
+  const sp = SPMAP[$('fSp' + f).value], c = $('fIc' + f), g = c.getContext('2d');
+  g.clearRect(0, 0, 180, 180); g.drawImage(makeIcon(sp.shape, sp.hue, sp.sat, sp.lum, 90), 0, 0);
+  const w = [];
+  for (const k of [0, 1]) {
+    const s = SPMAP[$('fSp' + k).value], other = SPMAP[$('fSp' + (1 - k)).value];
+    if (s.hunt && !$('fBg').checked) w.push(`${s.name}는 다른 미생물을 잡아먹어야 해. 먹이 미생물을 넣어 주는 게 좋아!`);
+    if (s.virus && !other.prok && !$('fBg').checked) w.push('바이러스는 세균 종류가 있어야 살 수 있어!');
+  }
+  $('fWarn').textContent = w.length ? '⚠️ ' + w[0] : '';
+}
+function openFounders() {
+  for (const f of [0, 1]) {
+    const sel = $('fSp' + f), cur = sel.value;
+    sel.innerHTML = '';
+    for (const sp of SPECIES) { const o = document.createElement('option'); o.value = sp.id; o.textContent = sp.name + (sp.custom ? ' ✏️' : ''); sel.appendChild(o); }
+    sel.value = cur && SPMAP[cur] ? cur : 'bact';
+    sel.onchange = () => { fIcon(0); fIcon(1); };
+  }
+  const q = $('quick'); q.innerHTML = '';
+  for (const [t, a, b, bg] of QUICK) {
+    const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = t;
+    btn.onclick = () => { $('fSp0').value = a; $('fSp1').value = b; $('fBg').checked = bg; fIcon(0); fIcon(1); };
+    q.appendChild(btn);
+  }
+  $('fBg').onchange = () => fIcon(0);
+  fIcon(0); fIcon(1);
+  $('fmodal').classList.add('show');
+}
+$('fCancel').onclick = () => $('fmodal').classList.remove('show');
+$('fGo').onclick = () => {
+  $('fmodal').classList.remove('show');
+  startFamilies(SPMAP[$('fSp0').value], SPMAP[$('fSp1').value], $('fName0').value.trim() || '1호', $('fName1').value.trim() || '2호', $('fBg').checked);
+  setPaused(false); setView('dish');
+};
+
+// ── 집안 비교 판
+function renderFam() {
+  const box = $('famCmp');
+  if (!FAM.length) { box.innerHTML = ''; return; }
+  const alive = famAlive(), avg = FAM.map(() => ({ size: 0, spd: 0, ht: 0, ares: 0, vres: 0, pow: 0 }));
+  for (const o of orgs) if (o.fam >= 0) { const a = avg[o.fam]; for (const k in a) a[k] += o.g[k]; }
+  const lead = alive[0] === alive[1] ? -1 : alive[0] > alive[1] ? 0 : 1;
+  const bar = (lbl, v, col, txt) => `<div class="gene"><span>${lbl}</span><i><b style="width:${clamp(v, 0, 1) * 100}%;background:${col}"></b></i><em style="width:40px;text-align:right;font-style:normal">${txt}</em></div>`;
+  let h = '';
+  FAM.forEach((F, f) => {
+    const n = alive[f], a = avg[f];
+    if (n) for (const k in a) a[k] /= n;
+    const deaths = Object.entries(F.deaths).sort((p, q) => q[1] - p[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join(' · ') || '아직 없음';
+    h += `<div class="fam" style="border-left-color:${FCOL[f]}">${f === lead ? '<span class="crown">👑</span>' : ''}
+      <b style="color:${FCOL[f]}">${f ? '💙' : '🩷'} ${F.name} 집안</b> <span style="color:var(--dim)">(${F.sp.name})</span><br>
+      ${F.gone ? `<span class="big" style="color:var(--dim)">💀 사라짐</span> <span style="color:var(--dim)">${fmtTime(F.gone)}에</span>` : `<span class="big">${n}</span>마리 살아 있음`}<br>
+      <span style="color:var(--dim)">지금까지 ${F.born}마리 태어남 · 최고 ${F.maxGen}대째 · 가장 많을 때 ${F.peak}마리</span>`;
+    if (n) {
+      h += bar('📏 크기', (a.size - 0.6) / 1.2, '#7fb8ff', '×' + a.size.toFixed(2));
+      h += bar('💨 빠르기', (a.spd - 0.4) / 1.8, '#7be37b', '×' + a.spd.toFixed(2));
+      h += bar('🔥 더위', a.ht / 40, '#ff7a7a', '+' + a.ht.toFixed(1) + '°');
+      if (F.sp.prok) { h += bar('💊 항생제', a.ares, '#e88cff', Math.round(a.ares * 100) + '%'); h += bar('🛡 바이러스', a.vres, '#ff9b6a', Math.round(a.vres * 100) + '%'); }
+      if (F.sp.virus) h += bar('⚔️ 뚫기', a.pow, '#ff6a8a', Math.round(a.pow * 100) + '%');
+    }
+    h += `<div style="color:var(--dim);margin-top:3px">💀 죽은 이유: ${deaths}</div></div>`;
+  });
+  box.innerHTML = h;
+}
+
+// ── 가계도 그리기
+const tv = $('tv'), tctx = tv.getContext('2d');
+function setView(v) {
+  view = v;
+  document.querySelectorAll('.view').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  const t = v === 'tree';
+  cv.style.display = t ? 'none' : 'block'; tv.style.display = t ? 'block' : 'none';
+  $('treeBar').style.display = t ? 'block' : 'none'; $('hint').style.display = t ? 'none' : '';
+  if (t) drawTree();
+  renderTreeInfo();
+}
+function traitColor(nd, tr) {
+  if (tr === 'hue') return `hsl(${nd.hue},65%,62%)`;
+  let v;
+  if (tr === 'size') v = (nd.g.size - 0.6) / 1.2;
+  else if (tr === 'spd') v = (nd.g.spd - 0.4) / 1.8;
+  else if (tr === 'ht') v = nd.g.ht / 40;
+  else if (tr === 'gen') v = nd.gen / Math.max(10, FAM[nd.fam].maxGen);
+  else v = nd.g[tr];
+  v = clamp(v, 0, 1);
+  return `hsl(${220 - v * 220},85%,60%)`; // 파랑(낮음) → 초록 → 빨강(높음)
+}
+function drawTree() {
+  const w = W, h = H;
+  if (tv.width !== w * dpr || tv.height !== h * dpr) { tv.width = w * dpr; tv.height = h * dpr; }
+  const c = tctx; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = '#0b111c'; c.fillRect(0, 0, w, h);
+  const tr = $('treeColor').value;
+  $('treeLegend').innerHTML = tr === 'hue' ? '' : ' <span style="color:hsl(220,85%,60%)">■ 낮음</span> → <span style="color:hsl(0,85%,60%)">■ 높음</span>';
+  treeHits = [];
+  const top = 46, xl = 12, xr = w - 14, Tn = Math.max(T, 60);
+  const X = t => xl + (t / Tn) * (xr - xl);
+  c.font = '11px sans-serif';
+  for (let k = 0; k <= 4; k++) {
+    const t = Tn * k / 4, x = X(t);
+    c.strokeStyle = '#1a2840'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, top - 4); c.lineTo(x, h - 6); c.stroke();
+    c.fillStyle = '#7d90b0'; c.textAlign = k === 0 ? 'left' : k === 4 ? 'right' : 'center'; c.fillText(fmtTime(t), x, top - 8);
+  }
+  c.textAlign = 'left';
+  if (!FAM.length) return;
+  const hh = (h - top - 6) / 2;
+  FAM.forEach((F, f) => {
+    const y0 = top + f * hh, y1 = y0 + hh - 8;
+    c.strokeStyle = FCOL[f] + '66'; c.lineWidth = 1.5; c.strokeRect(4, y0, w - 8, hh - 6);
+    const kids = new Map(); let root = null;
+    for (const nd of tree.values()) {
+      if (nd.fam !== f) continue;
+      if (nd.id === F.founder) root = nd;
+      else { let a = kids.get(nd.pid); if (!a) kids.set(nd.pid, a = []); a.push(nd); }
+    }
+    c.fillStyle = FCOL[f]; c.font = 'bold 13px Malgun Gothic, sans-serif';
+    c.fillText(`${f ? '💙' : '🩷'} ${F.name} 집안 (${F.sp.name})`, 10, y0 + 16);
+    c.font = '11px Malgun Gothic, sans-serif'; c.fillStyle = '#93a6c4';
+    c.fillText(F.gone ? '💀 사라진 집안' : '지금 살아 있는 자손으로 이어진 가지만 남아', 10, y0 + 30);
+    if (!root) return;
+    // 늦게 태어난 아기를 부모 바로 아래에 두면 선이 덜 겹침
+    const order = [], stack = [root];
+    while (stack.length) {
+      const nd = stack.pop(); order.push(nd);
+      const a = kids.get(nd.id);
+      if (a) { a.sort((p, q) => p.b - q.b); for (const k of a) stack.push(k); }
+    }
+    const ya = y0 + 38, rowH = (y1 - ya) / Math.max(1, order.length);
+    const Y = new Map();
+    order.forEach((nd, i) => Y.set(nd.id, ya + (i + 0.5) * rowH));
+    const lw = clamp(rowH * 0.6, 0.5, 3);
+    c.lineWidth = lw;
+    for (const nd of order) {
+      const y = Y.get(nd.id), x0 = X(nd.b), x1 = Math.max(X(nd.d >= 0 ? nd.d : T), x0 + 1);
+      const col = traitColor(nd, tr);
+      c.strokeStyle = col; c.beginPath();
+      c.moveTo(x0, y); c.lineTo(x1, y);
+      if (Y.has(nd.pid)) { c.moveTo(x0, y); c.lineTo(x0, Y.get(nd.pid)); }
+      c.stroke();
+      if (rowH > 3) {
+        if (nd.d < 0) { c.fillStyle = col; c.beginPath(); c.arc(x1, y, Math.min(4, rowH * 0.4), 0, TAU); c.fill(); }
+        else if (rowH > 6) { c.fillStyle = '#56637a'; c.font = `${Math.min(11, rowH)}px sans-serif`; c.fillText('✕', x1 + 1, y + 3); }
+      }
+      treeHits.push([x0, x1, y, nd]);
+    }
+    if (treeSel && treeSel.fam === f && Y.has(treeSel.id)) { // 고른 미생물의 조상 길
+      let nd = treeSel, endX = X(nd.d >= 0 ? nd.d : T);
+      c.strokeStyle = '#ffd84a'; c.lineWidth = Math.max(2, lw + 1.5); c.beginPath();
+      while (nd && Y.has(nd.id)) {
+        const y = Y.get(nd.id), x0 = X(nd.b);
+        c.moveTo(endX, y); c.lineTo(x0, y);
+        const p = tree.get(nd.pid);
+        if (p && Y.has(p.id)) c.lineTo(x0, Y.get(p.id));
+        endX = x0; nd = p;
+      }
+      c.stroke();
+    }
+    const ry = Y.get(root.id);
+    c.fillStyle = FCOL[f]; c.beginPath(); c.arc(X(root.b) + 3, ry, 5, 0, TAU); c.fill();
+    c.fillStyle = '#93a6c4'; c.font = '11px sans-serif'; c.textAlign = 'right';
+    c.fillText(`가지 ${order.length}개`, w - 12, y0 + 16); c.textAlign = 'left';
+  });
+}
+tv.addEventListener('click', e => {
+  const r = tv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = null, bd = 12;
+  for (const [x0, x1, hy, nd] of treeHits) {
+    if (x < x0 - 4 || x > x1 + 4) continue;
+    const d = Math.abs(y - hy); if (d < bd) { bd = d; best = nd; }
+  }
+  treeSel = best;
+  drawTree(); renderTreeInfo();
+});
+function renderTreeInfo() {
+  const el = $('treeInfo');
+  if (!treeSel || view !== 'tree') { el.style.display = 'none'; return; }
+  const nd = treeSel, F = FAM[nd.fam];
+  let n = 0, p = nd; while (p) { n++; p = tree.get(p.pid); }
+  const live = nd.d < 0 ? orgs.find(o => o.id === nd.id) : null;
+  let h = `<b style="color:${FCOL[nd.fam]}">${F.name} 집안</b> · ${nd.sp.name} #${nd.id}${nd.id === F.founder ? ' 👑 첫 조상' : ''}<br>`;
+  h += `${nd.gen}대째 · ${fmtTime(nd.b)}에 태어남<br>`;
+  h += nd.d >= 0 ? `💀 ${fmtTime(nd.d)}에 ${nd.cause} 죽었어<br>` : '💚 지금 살아 있어!<br>';
+  h += `<span style="color:var(--dim)">📏 크기 ×${nd.g.size.toFixed(2)} · 💨 빠르기 ×${nd.g.spd.toFixed(2)} · 🔥 +${nd.g.ht.toFixed(1)}°C`;
+  if (nd.sp.prok) h += ` · 💊 ${Math.round(nd.g.ares * 100)}% · 🛡 ${Math.round(nd.g.vres * 100)}%`;
+  h += `</span><br><span style="color:#ffd84a">노란 길 = 첫 조상까지 이어진 ${n - 1}대 조상</span>`;
+  if (live) h += `<br><button class="btn" id="tGo">🔬 접시에서 보기</button>`;
+  el.innerHTML = h; el.style.display = 'block';
+  if (live) $('tGo').onclick = () => { selected = live; follow = true; cam.z = Math.max(cam.z, 4); cam.set = true; setView('dish'); renderCard(); };
+}
+$('treeColor').onchange = () => drawTree();
+
+// ───────── 실험(시작 상태) ─────────
+function resetWorld(nutLevel) {
+  orgs = []; born = []; T = 0; history = []; selected = null; follow = false; capWarned = false;
+  for (let i = 0; i < G * G; i++) { nut[i] = mask[i] ? nutLevel : 0; lit[i] = 0; heat[i] = 0; anti[i] = 0; }
+  for (const sp of SPECIES) sp.st = { n: 0, maxGen: 0, ares: 0, vres: 0, pow: 0, ever: false, peak: 0, ms: {} };
+  $('news').innerHTML = '';
+  tree.clear(); FAM = []; treeSel = null;
+}
+const sAll = (id, n) => spawn(SPMAP[id], CX, CY, DR, n);
+function setTemp(v) { $('temp').value = v; globalT = v; $('tempV').textContent = v + '°C'; }
+
+// ───────── 나만의 미생물 편집기 ─────────
+const ED_SHAPES = [['rod', '막대'], ['coccus', '동그라미'], ['flag', '꼬리털'], ['amoeba', '아메바'], ['cilia', '짚신'], ['tardi', '곰'], ['virus', '바이러스']];
+let edShape = 'coccus';
+function edData() {
+  return {
+    name: $('edName').value.trim() || '이름없는균', shape: edShape, hue: +$('edHue').value, size: +$('edSize').value,
+    spd: +$('edSpd').value / 100, nutr: $('edNutr').checked, light: $('edLight').checked, hunt: $('edHunt').checked,
+    rep: +$('edRep').value, heat: +$('edHeat').value, prok: $('edProk').checked,
+  };
+}
+function edRefresh() {
+  const d = edData();
+  $('edHueV').textContent = ''; $('edSizeV').textContent = d.size; $('edSpdV').textContent = d.spd.toFixed(2);
+  $('edRepV').textContent = ['', '느림', '보통', '빠름'][d.rep]; $('edHeatV').textContent = d.heat + '°C';
+  $('edFood').style.display = d.shape === 'virus' ? 'none' : '';
+  document.querySelectorAll('#edShapes .btn').forEach(b => b.classList.toggle('on', b.dataset.shape === edShape));
+  const sp = buildCustom({ ...d, id: 'tmp' });
+  let info = d.shape === 'virus' ? '바이러스는 혼자 못 살고 세균 종류 미생물에 들어가서 늘어나.' :
+    `하루 쓰는 힘: ${(sp.metab * 1000).toFixed(0)} · 나뉘려면 필요한 힘: ${sp.divE.toFixed(0)}`;
+  if (sp.hunt) info += `<br>🦷 크기 ${(d.size * 0.1).toFixed(1)}~${(d.size * 0.7).toFixed(1)} 사이 미생물을 잡아먹어.`;
+  if (d.size > 20 && !sp.hunt) info += '<br>⚠️ 큰데 잡아먹지 않으면 배고플 수 있어!';
+  $('edInfo').innerHTML = info;
+}
+function edLoop() {
+  if (!$('modal').classList.contains('show')) return;
+  requestAnimationFrame(edLoop);
+  const d = edData(), c = $('edPrev').getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#0d1626'; c.fillRect(0, 0, 340, 340);
+  const ext = { rod: 1.8, coccus: 1.1, flag: 2.2, amoeba: 1.3, cilia: 1.7, virus: 2.4, tardi: 1.3 }[edShape];
+  const k = 120 / ext / Math.max(1, 1);
+  const fake = { id: 3, inf: 0, tun: false };
+  c.setTransform(k, 0, 0, k, edShape === 'virus' ? 150 : 170, 170);
+  drawBody(c, edShape, 1, `hsl(${d.hue},70%,58%)`, `hsl(${d.hue},70%,33%)`, `hsla(${d.hue},70%,58%,0.55)`, performance.now() / 16, fake, true);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.fillStyle = '#93a6c4'; c.font = '13px sans-serif'; c.fillText(`실제 크기: 세균의 ${(d.size / 3).toFixed(1)}배`, 10, 330);
+}
+function openEditor() {
+  const box = $('edShapes'); box.innerHTML = '';
+  for (const [s, n] of ED_SHAPES) {
+    const b = document.createElement('button'); b.className = 'btn'; b.dataset.shape = s;
+    b.appendChild(makeIcon(s, +$('edHue').value, 70, 58, 16));
+    const t = document.createElement('span'); t.textContent = n; b.appendChild(t);
+    b.onclick = () => { edShape = s; if (s === 'virus') $('edProk').checked = false; edRefresh(); };
+    box.appendChild(b);
+  }
+  $('modal').classList.add('show'); edRefresh(); edLoop();
+}
+['edName', 'edHue', 'edSize', 'edSpd', 'edNutr', 'edLight', 'edHunt', 'edRep', 'edHeat', 'edProk'].forEach(id => $(id).addEventListener('input', edRefresh));
+$('newSp').onclick = openEditor;
+$('edCancel').onclick = () => $('modal').classList.remove('show');
+$('edOk').onclick = () => {
+  const d = edData(); d.id = 'c' + Date.now().toString(36);
+  const sp = buildCustom(d); addSpecies(sp); saveCustoms(); buildButtons(); setTool('sp:' + sp.id);
+  $('modal').classList.remove('show');
+  news(`✨ 새 미생물 '${sp.name}'${hasBatchim(sp.name) ? '을' : '를'} 만들었어! 접시를 클릭해서 넣어 봐.`);
+};
+
+// ───────── 위쪽·오른쪽 조절 ─────────
+function setPaused(p) { paused = p; $('pauseB').textContent = p ? '▶ 계속' : '⏸ 멈춤'; }
+function setSpeed(s) { speed = s; document.querySelectorAll('.spd').forEach(b => b.classList.toggle('on', +b.dataset.s === s)); }
+$('pauseB').onclick = () => setPaused(!paused);
+document.querySelectorAll('.spd').forEach(b => b.onclick = () => setSpeed(+b.dataset.s));
+$('newB').onclick = openFounders;
+document.querySelectorAll('.view').forEach(b => b.onclick = () => setView(b.dataset.v));
+$('famRing').onchange = e => { showFam = e.target.checked; };
+$('fitB').onclick = () => { follow = false; cam.set = false; fitCam(); };
+function bindSlider(id, fn) { const el = $(id); const f = () => fn(+el.value); el.addEventListener('input', f); f(); }
+bindSlider('temp', v => { globalT = v; $('tempV').textContent = v + '°C'; });
+bindSlider('sun', v => { sun = v / 100; $('sunV').textContent = v + '%'; });
+bindSlider('sup', v => { supply = v / 100; $('supV').textContent = (v / 100).toFixed(1) + '배'; });
+bindSlider('mut', v => { mutRate = v / 100; $('mutV').textContent = (v / 100).toFixed(1) + '배'; });
+bindSlider('brush', v => { brushR = v; $('brushV').textContent = v; });
+bindSlider('per', v => { perClick = v; $('perV').textContent = v + '마리'; });
+
+// ───────── 시작 ─────────
+let fcount = 0;
+function frame() {
+  requestAnimationFrame(frame);
+  if (!paused) for (let k = 0; k < speed; k++) tick();
+  toolHold();
+  if (follow && selected && !selected.dead) { cam.x += (selected.x - cam.x) * 0.15; cam.y += (selected.y - cam.y) * 0.15; }
+  if (fcount % 6 === 0) updateFieldImage();
+  if (view === 'dish') draw(); else if (fcount % 20 === 0) drawTree();
+  if (fcount % 15 === 0) updatePanels();
+  fcount++;
+}
+loadCustoms();
+buildButtons();
+setSpeed(1);
+addEventListener('resize', resize);
+resize();
+startFamilies(SPMAP.bact, SPMAP.bact, '콩이', '몽글이', false);
+openFounders();
+updateFieldImage();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
