@@ -88,7 +88,7 @@ aside{width:340px;border-left:1px solid var(--line);background:var(--panel);disp
     <canvas id="cv"></canvas>
     <div id="tools"></div>
     <div id="palette"></div>
-    <div id="cam"><button class="tb" id="zin">+</button><button class="tb" id="zout">−</button><button class="tb" id="fit">전체</button><button class="tb" id="follow">따라가기</button><button class="tb" id="drive">내가 조종하기</button></div>
+    <div id="cam"><button class="tb" id="zin">+</button><button class="tb" id="zout">−</button><button class="tb" id="fit">전체</button><button class="tb" id="follow">따라가기</button><button class="tb" id="lite">가볍게</button><button class="tb" id="drive">내가 조종하기</button></div>
     <div id="pad"><span></span><button class="tb" data-d="u">▲</button><span></span><button class="tb" data-d="l">◀</button><button class="tb" id="padE" style="font-size:14px">E</button><button class="tb" data-d="r">▶</button><span></span><button class="tb" data-d="d">▼</button><span></span></div>
     <div id="hud"></div>
     <div id="toast"></div>
@@ -726,7 +726,7 @@ function driftStep(){
     W.plates.forEach((pl,k)=>{const q=sx[k];if(!q[2])return;const x=q[0]/q[2],y=q[1]/q[2];if(x<45&&pl.vx<0||x>TW-45&&pl.vx>0)pl.vx=-pl.vx;if(y<30&&pl.vy<0||y>TH-30&&pl.vy>0)pl.vy=-pl.vy})} // 땅이 지도 밖으로 안 떨어지게 가장자리에서 튕김
   if(W.land0===undefined){W.land0=0;for(let t=0;t<TW*TH;t++)if(H[t]>WL)W.land0++}
   for(const pl of W.plates){pl.ax=clamp(pl.ax+pl.vx*.54,-3,3);pl.ay=clamp(pl.ay+pl.vy*.54,-3,3)} // 격렬하게: 예전의 3배 빠르기
-  const now=performance.now();if(now-(W.lastDriftT||0)<300)return;W.lastDriftT=now; // 렉 줄이기: 실제로 옮기는 건 0.3초에 한 번
+  const now=performance.now();if(now-(W.lastDriftT||0)<(LITE?1200:600))return;W.lastDriftT=now; // 렉 줄이기: 실제로 옮기는 건 0.3초에 한 번
   const mv=W.plates.map(pl=>{const mx=Math.trunc(pl.ax),my=Math.trunc(pl.ay);pl.ax-=mx;pl.ay-=my;return [mx,my]});
   if(mv.every(m=>!m[0]&&!m[1]))return;
   const N=TW*TH,nH=new Float32Array(N).fill(-1),nM=new Float32Array(N),nM0=new Float32Array(N),nPL=new Uint8Array(N),nU=new Uint8Array(N);let hit=0,rift=0;const hitL=[];
@@ -858,7 +858,7 @@ const AK=.3; // 동물이 보이는 크기 비율 (작게, 확대하면 자세�
 // 지구 동물을 닮지 않게: 둥글게 울룩불룩한 몸(방사 대칭) + 몸 둘레로 고르게 뻗은 관절 다리 + 눈자루(1·3·5개) + 둥근 입
 function drawAnimal(c,o,z,t){
   const g=o.g,r=o.size*(o.vk||AK),h=g.hue,h2=(h+150)%360;
-  if(r*z<6){const q=Math.max(r*.8,1.1/z);c.fillStyle=`hsl(${h},70%,60%)`;c.fillRect(o.x-q,o.y-q,q*2,q*2);return} // 멀리서 보면 작은 네모
+  if(r*z<(LITE?12:6)){const q=Math.max(r*.8,1.1/z);c.fillStyle=`hsl(${h},70%,60%)`;c.fillRect(o.x-q,o.y-q,q*2,q*2);return} // 멀리서 보면 작은 네모
   const a=Math.atan2(o.vy,o.vx)||0,L=Math.round(g.legs);
   c.save();c.translate(o.x,o.y);c.rotate(a);
   // 원시 세포: 반투명 막 + 핵 + 알갱이 + 가장자리 섬모
@@ -932,12 +932,12 @@ function draw(){
   const [vx0,vy0]=toWorld(0,0),[vx1,vy1]=toWorld(cv.width,cv.height),m=30,vis=o=>o.x>vx0-m&&o.x<vx1+m&&o.y>vy0-m&&o.y<vy1+m;
   if(fastOn){cx.imageSmoothingEnabled=true;cx.drawImage(fastCv,0,0,WW,WH)} // 움직이는 동안 밑그림
   // 지형 조각: 확대 정도에 맞는 해상도 (없으면 있는 것 중 가장 좋은 걸 먼저 그림)
-  const L=z<=1.3?1:z<=2.6?2:z<=5.2?4:8,ca=Math.max(0,vx0/CW|0),cb=Math.min(CCX-1,vx1/CW|0),cc=Math.max(0,vy0/CW|0),cd=Math.min(CCY-1,vy1/CW|0);
+  const L=LITE?(z<=2?1:2):(z<=1.3?1:z<=2.6?2:4),ca=Math.max(0,vx0/CW|0),cb=Math.min(CCX-1,vx1/CW|0),cc=Math.max(0,vy0/CW|0),cd=Math.min(CCY-1,vy1/CW|0);
   genQueue=genQueue.filter(q=>q[0]>=ca&&q[0]<=cb&&q[1]>=cc&&q[1]<=cd&&q[2]===L);queued.clear();for(const q of genQueue)queued.add(q[3]);if(curJob)queued.add(curJob.k);
   for(let y=cc;y<=cd;y++)for(let x=ca;x<=cb;x++){let im=chunkCache.get(ckey(x,y,L));
     if(!im){wantChunk(x,y,L);im=(L===8&&chunkCache.get(ckey(x,y,4)))||(L>=4&&chunkCache.get(ckey(x,y,2)))||chunkCache.get(ckey(x,y,1))}
     if(im){const q=(im._n-2)/CW;cx.drawImage(im,1,1,im._n-2,im._n-2,x*CW,y*CW,CW+.4/q,CW+.4/q)}}
-  const drifting=fastOn&&performance.now()-(W.lastDriftT||0)<1500;if(!drifting)pumpChunks(10);urbRefresh();
+  const drifting=fastOn&&performance.now()-(W.lastDriftT||0)<1500;if(!drifting)pumpChunks(LITE?2:W.speed>=100?4:7);urbRefresh();
   // 굴(둥지): 구멍 + 흙더미, 문명이면 횃불
   for(const [id,n] of W.nests){const sp=spById(id);if(!sp||!sp.count||!vis(n))continue;
     cx.fillStyle='rgba(120,85,50,.9)';cx.beginPath();cx.arc(n.x+6,n.y+5,9,0,6.283);cx.fill();cx.fillStyle='#1a0f08';cx.beginPath();cx.ellipse(n.x,n.y,8,6,0,0,6.283);cx.fill();
@@ -1408,6 +1408,10 @@ function drawSpace(){const S=W.inside.space,D=DEST[S.k],t=frame,w=cv.width,h=cv.
   cx.strokeStyle='#ffe066';cx.lineWidth=.6;cx.beginPath();cx.arc(o.x,o.y-hop,8,0,6.283);cx.stroke()}
 function goDown(){const c=W.inside&&W.inside.c;W.inside=null;enterInside(false,c)}
 $('padE').addEventListener('pointerdown',e=>{e.preventDefault();actE()});
+let LITE=false;try{LITE=localStorage.getItem('sapling2d.lite')==='1'}catch(e){}
+function markLite(){$('lite').classList.toggle('on',LITE);$('lite').textContent=LITE?'가볍게 켜짐':'가볍게'}markLite();
+$('lite').onclick=()=>{LITE=!LITE;try{localStorage.setItem('sapling2d.lite',LITE?'1':'0')}catch(e){}markLite();chunkCache.clear();queued.clear();genQueue=[];curJob=null;
+  toast(LITE?'가볍게 켰어요: 땅 그림을 덜 자세하게, 계산도 조금씩 해서 렉이 줄어요':'가볍게 껐어요: 다시 자세하게 그려요')};
 $('drive').onclick=()=>W.player?stopDrive():startDrive();
 const BNAME={plaza:'광장',dome:'빛 창문 둥근 집',tower:'육각 탑',crystal:'수정 탑',farm:'외계 작물 밭',bubble:'물속 방울 집',spire:'첨탑',garden:'빛 정원'};
 function driveFrame(){
@@ -1689,8 +1693,8 @@ function loop(){
     if(intro)drawIntro();
     else{
       if(W.player){const now=performance.now();W.rtSec=(W.rtSec||0)+Math.min(.1,(now-(W.rtLast||now))/1000);W.rtLast=now}else W.rtLast=0;
-      if(!W.player&&W.speed&&$('startM').style.display==='none'&&!ed&&$('ending').style.display!=='flex'){const t0=performance.now();for(let i=0;i<W.speed;i++){step();if(performance.now()-t0>24)break}}
-      if(W.inside){insideFrame();drawInside()}else{driveFrame();draw()}
+      if(!W.player&&W.speed&&$('startM').style.display==='none'&&!ed&&$('ending').style.display!=='flex'){const t0=performance.now(),bud=Math.max(3,(LITE?9:13)-(W.lastDraw||2));for(let i=0;i<W.speed;i++){step();if(performance.now()-t0>bud)break}} // 렉 줄이기: 그리기 시간을 빼고 남는 만큼만 계산
+      {const d0=performance.now();if(W.inside){insideFrame();drawInside()}else{driveFrame();draw()}W.lastDraw=W.lastDraw*.8+(performance.now()-d0)*.2||2}
     }
     edLoop();if(++frame%15===0)renderUI();
   }catch(err){console.error(err)}
