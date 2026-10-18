@@ -31,6 +31,7 @@
   <nav class="nav" aria-label="춘장게임즈 안내">
     <a href="./">게임 고르기</a>
     <a href="history.html" aria-current="page">역사관</a>
+    <a href="ranking.html">랭킹</a>
     <p class="visits" id="visits" hidden></p>
   </nav>
 </header>
@@ -46,9 +47,11 @@
 
 <footer class="wrap">
   <p>게임 아이디어는 춘장게임즈가 내고, 코드는 Claude와 같이 만들었어요.</p>
+  <p>이름 없이 유저 번호로 머문 시간과 들어간 게임을 기록해서 <a href="ranking.html">랭킹</a>을 만들어요.</p>
 </footer>
 
 <script src="counter.js"></script>
+<script src="track.js"></script>
 <script src="games.js"></script>
 <script>
 const tl = document.getElementById('timeline');

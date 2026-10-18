@@ -237,4 +237,5 @@ build();
 function loop(n){const dt=Math.min(.1,(n-last)/1000);last=n;if(playing){const g=SEG.find(s=>t<s[1])||SEG[5];t+=dt*(g[1]-g[0])/g[2];if(t>=30)t=0}
 draw();setCap();sl.value=Math.round(t*10);requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-</script></body></html>
+</script><script src="../track.js" defer></script>
+</body></html>

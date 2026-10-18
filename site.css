@@ -47,6 +47,23 @@ a{color:inherit}
 .visits b{font:400 18px/1 var(--display);color:var(--danmuji);margin:0 2px}
 @media (max-width:560px){.visits{margin-left:16px;width:100%}}
 
+/* ── 랭킹 ── */
+.mine{max-width:640px;margin:20px 0 0;background:var(--sauce-2);border-radius:12px;padding:14px 18px;font-size:17px}
+.mine b{font-family:var(--display);font-weight:400;color:var(--danmuji)}
+.rank{list-style:none;padding:0;margin:20px 0 10px;max-width:640px;display:grid;gap:8px}
+.rank .row{display:flex;align-items:center;gap:14px;background:var(--sauce-2);border-radius:12px;padding:10px 16px}
+.rank .place{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  font:400 18px/1 var(--display);color:var(--noodle-dim);border:2px solid var(--sauce-3)}
+.rank .top1 .place{background:var(--danmuji);border-color:var(--danmuji);color:var(--sauce)}
+.rank .top2 .place{background:#cfd3d8;border-color:#cfd3d8;color:var(--sauce)}
+.rank .top3 .place{background:#c98b4a;border-color:#c98b4a;color:var(--sauce)}
+.rank .who{flex:1;font:400 20px/1.2 var(--display);color:var(--onion)}
+.rank .who em{font-style:normal;font-size:14px;background:var(--sign);color:var(--onion);border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:2px}
+.rank .time{font:400 19px/1 var(--display);color:var(--danmuji);white-space:nowrap}
+.rank .me{outline:2px solid var(--danmuji)}
+.rank .empty{color:var(--noodle-dim)}
+.updated{max-width:640px;margin:0 0 64px;color:var(--noodle-dim);font-size:14.5px}
+
 .lead{margin:22px 0 0;font-size:18px;max-width:40em;color:var(--noodle)}
 
 /* ── 주제 고르기 ── */

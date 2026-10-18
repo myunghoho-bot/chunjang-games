@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>춘장게임즈 랭킹</title>
+<meta name="description" content="춘장게임즈에 누가 제일 오래 있었을까요? 유저 번호로 보는 접속 시간 랭킹.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="춘장게임즈 랭킹">
+<meta property="og:description" content="누가 춘장게임즈에 제일 오래 있었을까요?">
+<meta property="og:url" content="https://myunghoho-bot.github.io/chunjang-games/ranking.html">
+<meta property="og:image" content="https://myunghoho-bot.github.io/chunjang-games/img/og.jpg">
+<meta property="og:site_name" content="춘장게임즈">
+<meta name="theme-color" content="#b5241c">
+<link rel="canonical" href="https://myunghoho-bot.github.io/chunjang-games/ranking.html">
+<link rel="icon" href="bowl.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="wrap">
+  <a class="sign" href="./">
+    <img class="bowl" src="bowl.svg" alt="" width="104" height="90">
+    <div>
+      <h1>춘장게임즈</h1>
+      <p>머릿속 상상을 그대로 만든 게임</p>
+    </div>
+  </a>
+  <nav class="nav" aria-label="춘장게임즈 안내">
+    <a href="./">게임 고르기</a>
+    <a href="history.html">역사관</a>
+    <a href="ranking.html" aria-current="page">랭킹</a>
+    <p class="visits" id="visits" hidden></p>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="hist-head">
+    <h2>랭킹</h2>
+    <p class="lead">누가 춘장게임즈에 제일 오래 있었을까요? 이름 대신 유저 번호로 보여요.</p>
+  </div>
+
+  <p class="mine" id="mine">조금만 있으면 내 유저 번호가 생겨요.</p>
+
+  <ol class="rank" id="rank"><li class="empty">랭킹을 불러오는 중이에요.</li></ol>
+  <p class="updated" id="updated"></p>
+</main>
+
+<footer class="wrap">
+  <p>게임 아이디어는 춘장게임즈가 내고, 코드는 Claude와 같이 만들었어요.</p>
+  <p>이름 없이 유저 번호로 머문 시간과 들어간 게임을 기록해서 랭킹을 만들어요. 화면을 10분 동안 안 건드리면 시간을 세지 않아요.</p>
+</footer>
+
+<script src="counter.js"></script>
+<script src="track.js"></script>
+<script>
+const DATA = 'https://raw.githubusercontent.com/myunghoho-bot/chunjang-games/ranking-data/ranking.json';
+const fmt = s => {
+  s = Math.floor(s);
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  if (h) return h + '시간 ' + m + '분 ' + sec + '초';
+  if (m) return m + '분 ' + sec + '초';
+  return sec + '초';
+};
+const myNo = () => (window.CHUNJANG_ME ? CHUNJANG_ME().n : null);
+// 숫자 읽는 소리에 받침이 있으면 '이에요'(1·3·6·7·8, 그리고 십·백·천으로 끝나는 수), 없으면 '예요'
+const ieyo = n => (n % 10 === 0 || [1, 3, 6, 7, 8].includes(n % 10) ? '이에요' : '예요');
+
+function showMine() {
+  if (!window.CHUNJANG_ME) return;
+  const me = CHUNJANG_ME();
+  document.getElementById('mine').innerHTML = me.n
+    ? '나는 <b>유저 ' + me.n + '</b>' + ieyo(me.n) + '. 지금까지 <b>' + fmt(me.time) + '</b> 있었어요.'
+    : '조금만 있으면 내 유저 번호가 생겨요. 지금까지 <b>' + fmt(me.time) + '</b> 있었어요.';
+}
+showMine();
+setInterval(showMine, 1000);
+
+fetch(DATA + '?t=' + Math.floor(Date.now() / 300000))
+  .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
+  .then(data => {
+    const list = document.getElementById('rank');
+    list.textContent = '';
+    const top = data.users.slice(0, 50);
+    if (!top.length) {
+      list.innerHTML = '<li class="empty">아직 랭킹에 오른 사람이 없어요. 게임을 하고 있으면 곧 올라가요!</li>';
+    }
+    const mine = myNo();
+    top.forEach((u, i) => {
+      const li = document.createElement('li');
+      li.className = 'row' + (i < 3 ? ' top' + (i + 1) : '') + (u.n === mine ? ' me' : '');
+      li.innerHTML = '<span class="place">' + (i + 1) + '</span><span class="who">유저 ' + u.n +
+        (u.n === mine ? ' <em>나</em>' : '') + '</span><span class="time">' + fmt(u.t) + '</span>';
+      list.appendChild(li);
+    });
+    const myIdx = data.users.findIndex(u => u.n === mine);
+    const when = new Date(data.updated * 1000).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Seoul' });
+    document.getElementById('updated').textContent = '랭킹은 30분마다 새로 계산해요. 마지막 계산: ' + when +
+      (myIdx >= 50 ? '. 나는 ' + (myIdx + 1) + '등이에요.' : '.');
+  })
+  .catch(() => {
+    document.getElementById('rank').innerHTML = '<li class="empty">아직 랭킹을 계산하는 중이에요. 조금 뒤에 다시 와 주세요.</li>';
+  });
+</script>
+</body>
+</html>

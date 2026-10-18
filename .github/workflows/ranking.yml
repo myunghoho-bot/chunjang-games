@@ -1,0 +1,33 @@
+name: 랭킹 계산
+# 30분마다 abacus에서 기록을 모아 ranking-data 가지의 ranking.json으로 올린다.
+# 사이트(main 가지)는 건드리지 않아서, 내 컴퓨터에서 올리는 것과 부딪히지 않는다.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ranking
+  cancel-in-progress: false
+
+jobs:
+  ranking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: 기록 모으기
+        run: python3 .github/ranking.py "$RUNNER_TEMP/ranking.json"
+      - name: ranking-data 가지에 올리기
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir "$RUNNER_TEMP/data" && cd "$RUNNER_TEMP/data"
+          git init -q -b ranking-data
+          cp "$RUNNER_TEMP/ranking.json" ranking.json
+          git add ranking.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "랭킹 갱신"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ranking-data
