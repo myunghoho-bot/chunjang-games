@@ -5,7 +5,7 @@
 (function () {
   const BITS = ['airplane', 'block', 'factory', 'cruise', 'airline', 'sailor', 'star-life', 'observatory',
     'microbe-evolution', 'sapling2d', 'solar-timeline', 'microbe-sandbox', 'microbe-genetics', 'microbe-family',
-    'monkey-clicker'];
+    'monkey-clicker', 'dot-baseball'];
   window.CHUNJANG_BITS = BITS;
   if (location.protocol === 'file:') return;
   if (navigator.webdriver || /bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)) return;
