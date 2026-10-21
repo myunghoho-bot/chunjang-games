@@ -31,8 +31,11 @@ for n in range(1, count + 1):
     t = get(f'u{n}-time')
     time.sleep(0.45)
     if t:
-        users.append({'n': n, 't': t, 'g': get(f'u{n}-games') or 0})
+        g = get(f'u{n}-games') or 0
         time.sleep(0.45)
+        w = get(f'u{n}-when') or 0          # 처음분×10000000 + 마지막분 (2026-01-01 0시 UTC부터)
+        time.sleep(0.45)
+        users.append({'n': n, 't': t, 'g': g, 'w': w})
 users.sort(key=lambda u: (-u['t'], u['n']))
 with open(OUT, 'w', encoding='utf-8') as f:
     json.dump({'updated': int(time.time()), 'count': count, 'users': users}, f, separators=(',', ':'))
