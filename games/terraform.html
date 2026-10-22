@@ -84,7 +84,11 @@ html,body{margin:0;height:100%;overflow:hidden;background:#04060c;color:#e8f1ff;
 #mtop{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:9px 18px;font-size:18px;font-weight:800;white-space:nowrap}
 #mtop small{font-size:13px;font-weight:400;color:#9fc3ff;margin-left:8px}
 #mback{position:absolute;left:12px;top:12px;pointer-events:auto}
-#mcard{position:absolute;right:14px;bottom:14px;width:min(360px,92vw);padding:12px 14px;display:none;pointer-events:auto}
+#mcard{position:absolute;right:14px;bottom:14px;width:min(370px,92vw);max-height:calc(100vh - 90px);overflow:auto;padding:12px 14px;display:none;pointer-events:auto}
+#syslist{position:absolute;left:12px;top:56px;padding:8px;display:flex;flex-direction:column;gap:5px;pointer-events:auto;max-height:calc(100vh - 80px);overflow:auto;width:170px}
+#syslist .btn{text-align:left;white-space:normal}
+#syslist .btn small{display:block;font-size:10.5px;font-weight:400;opacity:.75}
+#syslist .btn.on{background:#2f6fc0;border-color:#9fd0ff}
 #mcard h2{margin:0 0 4px;font-size:22px}
 #touch{position:fixed;inset:0;pointer-events:none;display:none;z-index:3}
 @media (max-height:520px),(max-width:760px){
@@ -131,7 +135,7 @@ body.touch #me{left:auto;right:10px;bottom:170px}
   <div class="tbox">
     <div class="t0">TERRAFORMING</div>
     <h1>푸른 행성 만들기</h1>
-    <div class="t2">달 · 화성 · 유로파 · 금성 · 그리고 태양</div>
+    <div class="t2">달 · 화성 · 유로파 · 금성 · 태양 — 그리고 다른 별 7곳</div>
     <div class="t3">보급 상자를 뒤지고, 재료를 캐고, 기계를 지어서<br>죽은 행성을 바다와 숲이 있는 <b style="color:#7dd6ff">푸른 행성</b>으로 바꿔!<br>생물을 번식시키고, 너무 많아지면 사냥해서 균형을 맞춰.</div>
     <div class="tb"><button class="btn big go" id="bCont">이어 하기</button><button class="btn big" id="bNew">처음부터 새로</button></div>
   </div>
@@ -140,6 +144,7 @@ body.touch #me{left:auto;right:10px;bottom:170px}
 <div id="mapui">
   <div id="mtop" class="pan">어느 행성으로 갈까? <small>행성을 눌러 봐</small></div>
   <button class="btn" id="mback">← 돌아가기</button>
+  <div id="syslist" class="pan"></div>
   <div id="mcard" class="pan"></div>
 </div>
 
@@ -199,27 +204,27 @@ const RARN=['흔함','드묾','귀함','아주 귀함'];
 
 // ================= 행성 =================
 const PL={
- moon:{n:'달',lv:'제일 쉬움',easy:2.5,bioG:150,g:0.166,sun:1,T0:-20,P0:0,O0:0,W0:0,wMul:1,rough:0.75,
+ moon:{n:'달',sr:13,lv:'제일 쉬움',easy:2.5,bioG:150,g:0.166,sun:1,T0:-20,P0:0,O0:0,W0:0,wMul:1,rough:0.75,
   col:{top:'#b9b9b6',mid:'#8c8c89',deep:'#5b5b5a',sky:'#93a6bf',hor:'#d3dce6',hill:'#6f6f70'},
   ore:{iron:4,si:3,ti:2.5,ice:2.5,u:0.6},kit:{iron:8,si:6,ice:4,food:3,s_moss:2},
   hint:'제일 쉬운 행성이야! 공기가 없으니 태양 전지판 → 가스 추출기부터 지어 봐.',
   facts:['지구에서 38만 km 떨어진 지구의 위성이야.','중력이 지구의 1/6이라서 점프하면 엄청 높이 떠!','공기가 없어서 낮엔 127°C, 밤엔 -173°C까지 바뀌어. 게임에선 평균 온도(-20°C)로 했어.','작고 가까워서 이 게임에선 제일 바꾸기 쉬운 곳이야. 기계 힘이 2.5배!','극지방 크레이터 바닥은 햇빛이 안 들어서 얼음이 숨어 있어. 그래서 얼음은 깊은 곳에 있어.','달은 늘 같은 면만 지구를 봐. 그래서 하늘의 지구가 안 움직여.','중력이 약해서 진짜로는 공기가 아주 천천히 우주로 새어 나가 (몇천 년 걸려).']},
- mars:{n:'화성',lv:'보통',easy:1.2,g:0.38,sun:0.43,T0:-63,P0:0.006,O0:0.13,W0:0,wMul:1.5,rough:1,
+ mars:{n:'화성',sr:9,lv:'보통',easy:1.2,g:0.38,sun:0.43,T0:-63,P0:0.006,O0:0.13,W0:0,wMul:1.5,rough:1,
   col:{top:'#c4673a',mid:'#99472a',deep:'#5c2915',sky:'#c08a5e',hor:'#e8c09a',hill:'#9a5a3a'},
   ore:{iron:5,si:3,ice:2,ti:1.2,u:0.6},kit:{iron:4,si:3,ice:2,food:2},
   hint:'춥고 공기가 얇아. 태양 전지판 → 히터랑 가스 추출기를 지어 봐!',
   facts:['붉은 색은 흙 속의 녹슨 철(산화철) 때문이야.','공기는 지구의 0.6%뿐이고, 거의 다 이산화탄소야.','태양계에서 제일 높은 산, 올림푸스 산(약 22km)이 있어.','작은 위성 포보스와 데이모스가 하늘을 지나가.','양쪽 극지방에 얼음 모자가 있어. 그래서 물 펌프가 1.5배 잘 돼.','햇빛은 지구의 43%라서 태양 전지판 전기가 적게 나와.']},
- europa:{n:'유로파',lv:'어려움',g:0.134,sun:0.037,T0:-160,P0:0,O0:0,W0:2,wMul:3,rough:0.45,
+ europa:{n:'유로파',sr:3.5,lv:'어려움',g:0.134,sun:0.037,T0:-160,P0:0,O0:0,W0:2,wMul:3,rough:0.45,
   col:{top:'#efe8da',mid:'#cfe0ea',deep:'#9dbdd1',sky:'#9fb4d6',hor:'#e0e8f4',hill:'#c9c2b5'},
   ore:{ice:6,si:1.2,iron:1.6,ti:0.6,u:0.4},kit:{u:2,ti:1,iron:5,si:2,ice:4,food:2},
   hint:'햇빛이 너무 약해서 태양 전지판이 거의 안 돼! 원자력 전지(우라늄)로 전기를 만들자.',
   facts:['목성의 위성이야. 하늘에 목성이 엄청 크게 떠 있어 (늘 같은 자리에).','두꺼운 얼음 껍질 아래에 지구보다 물이 많은 바다가 있을 거래. 그래서 물 펌프가 3배 잘 돼.','햇빛이 지구의 1/27이라 태양 전지판이 거의 쓸모없어.','얼음 표면의 갈색 줄무늬는 갈라진 틈으로 올라온 소금 같은 물질이야.','-160°C! 태양계에서 아주 추운 곳 중 하나야.']},
- venus:{n:'금성',lv:'아주 어려움',g:0.9,sun:1.9,T0:464,P0:92,O0:0,W0:0,wMul:0.7,rough:0.85,
+ venus:{n:'금성',sr:19,lv:'아주 어려움',g:0.9,sun:1.9,T0:464,P0:92,O0:0,W0:0,wMul:0.7,rough:0.85,
   col:{top:'#7a5532',mid:'#583a22',deep:'#36241a',sky:'#c88a2e',hor:'#f2d27a',hill:'#8a6038'},
   ore:{iron:3,si:3,ti:2,u:1},kit:{iron:5,si:4,ice:3,ti:1,food:2},
   hint:'너무 뜨겁고 공기가 너무 많아! 냉각기랑 탄소 흡수기로 줄여야 해. 얼음 광석은 없으니 상자에서 구해.',
   facts:['표면이 464°C! 수성보다 뜨거운, 태양계에서 제일 뜨거운 행성이야.','기압이 지구의 92배야. 바닷속 900m 깊이랑 같아.','하늘은 황산 구름으로 꽉 막혀서 해가 안 보여. 그래서 처음엔 태양 전지판이 약해.','금성의 하루(자전)는 금성의 1년보다 길어!','다른 행성과 반대로 돌아서 해가 서쪽에서 떠.','물이 다 날아가 버려서 물을 만들기가 어려워. 혜성을 끌어오는 게 좋아.']},
- sun:{n:'태양',lv:'특별 도전',g:0.5,sun:10,T0:0,P0:0,O0:0,W0:0,wMul:1,rough:0,special:true,
+ sun:{n:'태양',sr:0,lv:'특별 도전',g:0.5,sun:10,T0:0,P0:0,O0:0,W0:0,wMul:1,rough:0,special:true,
   col:{top:'#9aa3b4',mid:'#6d7586',deep:'#3c4250',sky:'#000000',hor:'#000000',hill:'#000000'},
   ore:{iron:3,si:3,ti:2},kit:{iron:6,si:6,chip:2,food:2},
   hint:'여긴 태양 둘레를 도는 우주 정거장이야. 다이슨 패널 발사대를 지어서 태양을 패널로 둘러싸자!',
@@ -227,6 +232,93 @@ const PL={
 };
 const ORDER=['moon','mars','europa','venus','sun'];
 const NEEDP={moon:0,mars:0,europa:0.2,venus:0.35,sun:0.5};
+
+// ================= 다른 별의 행성 =================
+// 자료: NASA 외계행성 아카이브, exoplanet.eu, NASA 발표 (2026-10 기준).
+// 온도는 대부분 '평형 온도'(공기가 없다고 치고 계산한 온도)라서 '약'이라고 적었어.
+const SYS={
+ sol:{n:'태양계',star:'#fff2c8',ly:'',sr:30,d:'우리 태양과 행성들.'},
+ prox:{n:'프록시마 행성계',star:'#ff7a4a',ly:'4.2광년',sr:20,d:'태양에서 제일 가까운 별, 프록시마 센타우리. 작고 빨간 적색왜성이고 가끔 센 플레어(빛 폭발)를 뿜어.'},
+ t1:{n:'트라피스트-1',star:'#ff5a36',ly:'약 40광년',sr:16,d:'목성보다 조금 큰 아주 작은 빨간 별 둘레에 지구만 한 행성 7개가 다닥다닥 붙어서 돌아. 7개 다 수성보다 별에 가까워.'},
+ k444:{n:'케플러-444',star:'#ffc27a',ly:'약 117광년',sr:26,d:'110억 살이 넘은 아주 오래된 주황 별. 우주가 138억 살이니까 거의 처음부터 있었던 셈! 작은 빨간 별 두 개가 같이 돌아.'},
+ k1649:{n:'케플러-1649',star:'#ff7040',ly:'약 300광년',sr:18,d:'백조자리 쪽 작은 적색왜성. 2020년에 옛날 케플러 망원경 자료를 다시 보다가 지구 닮은 행성을 찾았어.'},
+ k186:{n:'케플러-186',star:'#ff9050',ly:'약 580광년',sr:22,d:'백조자리 쪽 적색왜성. 행성 5개 중 바깥쪽 f가 생명가능지대에 있어.'},
+ k452:{n:'케플러-452',star:'#fff0c0',ly:'약 1,800광년',sr:30,d:'태양이랑 아주 닮은 노란 별. 태양보다 15억 살쯤 많아(약 60억 살).'},
+ k666:{n:'케플러-666',star:'#fff0c8',ly:'',sr:30,d:'태양이랑 닮은 별. 행성 b가 4.5일마다 아주 가까이서 돌아.'},
+};
+const SYSORD=['sol','prox','t1','k444','k1649','k186','k452','k666'];
+const sysOf=id=>(PL[id]&&PL[id].sys)||'sol';
+const COLS={
+ rock:{top:'#8a7462',mid:'#6a5546',deep:'#43352b',sky:'#a89a8a',hor:'#d8cbb8',hill:'#6a5a4c'},
+ red:{top:'#8a5a46',mid:'#6a4234',deep:'#3e2820',sky:'#b08070',hor:'#e0b8a0',hill:'#6e4a3c'},
+ tan:{top:'#a88a5a',mid:'#856a42',deep:'#4e3e28',sky:'#b8a88a',hor:'#e6d8b8',hill:'#8a7450'},
+ icy:{top:'#dfe8ee',mid:'#b8cdd9',deep:'#8aa6b8',sky:'#9fb4d6',hor:'#e0e8f4',hill:'#aab8c4'},
+ hot:{top:'#4a3a34',mid:'#33282a',deep:'#1e1718',sky:'#3a2a24',hor:'#6a4a3a',hill:'#3a2c28'},
+ ash:{top:'#6a5a50',mid:'#4a3e38',deep:'#2a2220',sky:'#7a6a5a',hor:'#a89888',hill:'#55483f'},
+ frost:{top:'#cfd8e4',mid:'#9fb0c4',deep:'#6a7c90',sky:'#4a5a7a',hor:'#7a8aa8',hill:'#8a98aa'},
+};
+function exo(id,sys,o){
+ const farm=!!o.farm, sun=o.sun==null?1:o.sun;
+ PL[id]=Object.assign({sys,g:1,sun,T0:-30,P0:0,O0:0,W0:0,wMul:1,rough:0.8,
+  col:COLS[o.c||'rock'],sr:Math.min(90,13*(o.sz||1)),scol:SYS[sys].star,
+  ore:farm?(o.T0>-50?{iron:4,si:4,ti:3,u:2}:{ice:5,iron:3,si:2,ti:2,u:1.5}):{iron:4,si:3,ice:2,ti:1.5,u:0.6},
+  kit:farm?{food:3,o2can:2}:(sun<0.5?{iron:6,si:5,ice:3,food:3,ti:1,u:2}:{iron:6,si:5,ice:3,food:3,ti:1}),
+  lv:farm?'자원 행성':'보통',
+  hint:farm?'생물이 못 사는 자원 행성이야! 광석이 엄청 많아. 캐고, 외계 생물을 사냥하고, 자동 드릴을 지어 봐.':'다른 별의 행성에 왔어! 착륙 보급품을 열고 전기부터 만들자.',
+ },o);
+ const d=PL[id];
+ if(farm){ d.lava=d.T0>=200; d.ter=d.T0>=150?'dome':d.T0<=-80?'ridge':'crater'; d.natives=d.T0>=200?['sil']:d.T0<=-80?['tbeast']:['sil','tbeast']; }
+ else d.ter='crater';
+}
+// 프록시마 (데이터: ESO 발표, 후보는 '후보'라고 표시)
+exo('proxd','prox',{n:'프록시마 d',short:'d',farm:1,per:5.1,rad:0.8,g:0.4,sun:2,T0:87,c:'ash',sz:5.3,rough:0.7,
+ facts:['2022년에 찾은 행성 <b>후보</b>야. 진짜 있는지 아직 더 확인하는 중이야.','지구 질량의 1/4쯤 되는 작은 행성이야. 중력이 약해서 점프가 높아.','별에 아주 가까워서 5일마다 한 바퀴! 약 87°C로 뜨거워서 생물이 못 살아.']});
+exo('proxb','prox',{n:'프록시마 b',short:'b',per:11.2,rad:1.05,g:1.0,sun:0.65,T0:-39,c:'red',sz:3.2,
+ bodies:[{k:'star',x:0.88,y:0.1,r:3,c:'#fff6d8'},{k:'star',x:0.895,y:0.118,r:2.4,c:'#ffd8a0'}],
+ facts:['태양계 밖에서 우리랑 제일 가까운 행성이야 (4.2광년).','11일마다 별을 한 바퀴 돌아. 1년이 11일!','늘 같은 면만 별을 봐서(조석 고정) 한쪽은 계속 낮, 반대쪽은 계속 밤일 수도 있어.','하늘에 알파 센타우리 A와 B가 아주 밝은 별 두 개로 보여 (오른쪽 위).','별이 플레어를 자주 뿜어서 공기가 날아갔을 수도 있대. 그래서 게임에선 공기 0에서 시작해.']});
+exo('proxc','prox',{n:'프록시마 c',short:'c',farm:1,per:1928,rad:1.6,g:1.9,sun:0.01,T0:-234,c:'frost',sz:0.12,rough:0.6,
+ facts:['2020년에 찾은 행성 <b>후보</b>야. 지구보다 7배쯤 무거워서 걷기가 무거워.','별에서 멀어서 한 바퀴 도는 데 5년 넘게 걸려.','약 -234°C! 꽁꽁 언 행성이라 생물이 못 살아.']});
+// 트라피스트-1 (질량·반지름: 2021 Agol 등, 온도: 평형 온도)
+const T1=['t1b','t1c','t1d','t1e','t1f','t1g','t1h'];
+exo('t1b','t1',{n:'트라피스트-1 b',short:'b',farm:1,per:1.51,rad:1.12,g:1.1,sun:4.15,T0:127,c:'ash',sz:10.3,
+ facts:['하루 반(1.5일)마다 별을 한 바퀴 도는 제일 안쪽 행성이야.','평균 약 127°C. 제임스 웹 우주망원경이 재 보니 별을 보는 낮 쪽은 약 230°C였어.','두꺼운 공기는 없대. 그래서 생물이 못 살아.']});
+exo('t1c','t1',{n:'트라피스트-1 c',short:'c',farm:1,per:2.42,rad:1.1,g:1.09,sun:2.21,T0:69,c:'ash',sz:7.5,
+ facts:['2.4일마다 한 바퀴.','제임스 웹 우주망원경이 봤더니 두꺼운 이산화탄소 공기가 없었어. 금성이랑은 달라.','약 69°C로 뜨거워서 생물이 못 살아.']});
+exo('t1d','t1',{n:'트라피스트-1 d',short:'d',lv:'쉬움',easy:1.5,per:4.05,rad:0.79,g:0.62,sun:1.12,T0:15,c:'rock',sz:5.3,
+ facts:['지구보다 작아(0.79배). 중력이 약해서 점프가 높아!','생명가능지대 안쪽 끝이라 온도가 벌써 지구랑 비슷할 수도 있어 (약 15°C).','4일마다 별을 한 바퀴 돌아.']});
+exo('t1e','t1',{n:'트라피스트-1 e',short:'e',per:6.1,rad:0.92,g:0.82,sun:0.66,T0:-22,c:'rock',sz:4.1,
+ facts:['7개 중에 지구랑 제일 닮았다는 말을 많이 들어.','지구보다 조금 작고(0.92배), 받는 햇빛은 지구의 2/3쯤이야.','하늘에 옆 행성들이 달만 하게, 또는 더 크게 보여!']});
+exo('t1f','t1',{n:'트라피스트-1 f',short:'f',lv:'어려움',per:9.2,rad:1.05,g:0.95,sun:0.38,T0:-54,c:'icy',sz:3.1,
+ facts:['지구만 한 크기야(1.05배).','물이 많은 얼음 행성일 수도 있대.','햇빛이 약해서 원자력 전지가 있으면 좋아.']});
+exo('t1g','t1',{n:'트라피스트-1 g',short:'g',lv:'어려움',per:12.4,rad:1.13,g:1.04,sun:0.26,T0:-74,c:'icy',sz:2.5,
+ facts:['7개 중에 제일 큰 행성이야 (지구의 1.13배).','약 -74°C로 추워. 생명가능지대 바깥쪽 끝이야.','12일마다 한 바퀴.']});
+exo('t1h','t1',{n:'트라피스트-1 h',short:'h',farm:1,per:18.8,rad:0.76,g:0.57,sun:0.13,T0:-100,c:'frost',sz:1.9,
+ facts:['제일 바깥쪽 행성이야. 그래도 19일이면 한 바퀴!','약 -100°C로 꽁꽁 얼어서 생물이 못 살아.','지구보다 작아서(0.76배) 중력이 약해.']});
+T1.forEach((id,i)=>{ const b=[]; if(i>0) b.push({k:'planet',x:0.3,y:0.25,r:15,c:PL[T1[i-1]].col.top}); if(i<6) b.push({k:'planet',x:0.86,y:0.12,r:10,c:PL[T1[i+1]].col.top}); PL[id].bodies=b; });
+// 케플러-444 (2015 Campante 등) — 다 뜨거운 자원 행성
+const K444=[['b',3.6,0.40,719,18],['c',4.5,0.50,645,15.4],['d',6.2,0.53,555,12.5],['e',7.7,0.55,496,10.8],['f',9.7,0.74,440,9.2]];
+for(const [L,per,rad,T,sz] of K444) exo('k444'+L,'k444',{n:'케플러-444 '+L,short:L,farm:1,per,rad,g:rad,sun:5,T0:T,c:'hot',sz,rough:0.9,
+ bodies:[{k:'star',x:0.1,y:0.09,r:2.6,c:'#ff8a6a'},{k:'star',x:0.118,y:0.1,r:2.2,c:'#ff7a5a'}],
+ facts:[`지구 크기의 ${rad}배인 작은 행성이야${rad<0.55?' (화성만 하거나 더 작아)':''}.`,`${per}일마다 별을 한 바퀴 돌아.`,`약 ${T}°C! 너무 뜨거워서 생물이 못 살아.`,'110억 살 넘은 별을 도는, 아주아주 오래된 행성이야.']});
+// 케플러-666
+exo('k666b','k666',{n:'케플러-666 b',short:'b',farm:1,per:4.5,rad:2.4,g:1.1,sun:5,T0:857,c:'hot',sz:18,rough:0.9,
+ facts:['지구보다 2.4배 큰 슈퍼지구야.','4.5일마다 태양 닮은 별을 아주 가까이서 돌아.','약 860°C! 바위도 녹을 만큼 뜨거워서 생물이 못 살아.']});
+// 케플러-1649 (2020 Vanderburg 등)
+exo('k1649b','k1649',{n:'케플러-1649 b',short:'b',farm:1,per:8.7,rad:1.02,g:1.02,sun:2.3,T0:69,c:'ash',sz:4.5,
+ facts:['지구만 한 크기야(1.02배).','햇빛을 지구의 2.3배나 받아. 금성 같은 행성일 거래.','너무 뜨거워서 생물이 못 살아.']});
+exo('k1649c','k1649',{n:'케플러-1649 c',short:'c',per:19.5,rad:1.06,g:1.06,sun:0.75,T0:-39,c:'rock',sz:3.5,
+ facts:['2020년에 옛날 케플러 자료를 다시 보다가 찾았어.','크기(지구의 1.06배)랑 받는 햇빛(75%)이 지구랑 제일 닮은 행성 중 하나야.','19.5일마다 별을 한 바퀴 돌아.']});
+// 케플러-186 (안쪽 4개 온도는 거리로 계산한 대강의 값)
+const K186=[['b',3.9,1.07,375,13.8,5],['c',7.3,1.25,253,9,5],['d',13.3,1.4,156,6,5],['e',22.4,1.27,88,4.3,4]];
+for(const [L,per,rad,T,sz,sun] of K186) exo('k186'+L,'k186',{n:'케플러-186 '+L,short:L,farm:1,per,rad,g:rad,sun,T0:T,c:T>=150?'hot':'ash',sz,
+ facts:[`지구 크기의 ${rad}배야.`,`${per}일마다 별을 한 바퀴 돌아.`,`별에 가까워서 약 ${T}°C! 생물이 못 살아.`]});
+exo('k186f','k186',{n:'케플러-186 f',short:'f',lv:'어려움',per:130,rad:1.17,g:1.05,sun:0.32,T0:-81,c:'red',sz:1.2,
+ facts:['2014년에 처음 찾은 "생명가능지대에 있는 지구만 한 행성"이야.','지구보다 조금 커(1.17배). 1년이 130일.','햇빛을 지구의 1/3쯤만 받아서 추워 (약 -81°C).','빨간 별빛 때문에 식물이 생기면 빨갛거나 까만 색일 수도 있대!']});
+// 케플러-452
+exo('k452b','k452',{n:'케플러-452 b',short:'b',per:385,rad:1.63,g:1.9,sun:1.1,T0:-8,P0:0.01,c:'tan',sz:1.06,
+ facts:['2015년에 찾은 "지구의 사촌"이야. 태양 닮은 별을 1년(385일)에 한 바퀴 돌아.','지구보다 1.6배 커. 무거워서 점프가 낮아!','공기가 있는지는 아직 몰라. 게임에선 아주 얇은 공기로 시작해.','나중에 다른 과학자들이 "진짜 행성이 맞는지 더 확인해야 한다"고 했어.']});
+const FARM_OK=['solar','wind','rtg','drill'];
+function pidx(id){ const i=ORDER.indexOf(id); if(i>=0) return i; let h=0; for(const ch of id) h=(h*31+ch.charCodeAt(0))|0; return 100+(Math.abs(h)%100000); }
 
 // ================= 기계 =================
 const MACH={
@@ -282,10 +374,14 @@ const LIFE={
   d:'꽃가루를 옮겨서 식물이 더 빨리 퍼지게 해 줘. 너무 작아서 사냥은 안 돼.'},
  rabbit:{n:'토끼',kind:'animal',bio:4,cap:26,br:0.005,need:{T:[3,35],P:[0.5,5],O:14},food:['grass',8,'풀이 8개 넘게 자라야 해'],meat:1,hide:1,
   d:'풀을 먹고 빨리 늘어나. 너무 많아지면 풀이 사라지니까 사냥해서 줄여 줘.'},
+ sil:{n:'실리콘 생물',kind:'native',bio:0,cap:14,br:0.006,need:{},hit:[13,8,11],drops:[['si',2,3,1],['ti',1,1,0.35]],where:'뜨거운 자원 행성',
+  d:'몸이 탄소 대신 규소(실리콘)로 된 외계 생물. 뜨거운 곳에서도 살 수 있을지 모른다고 과학자들이 상상하는 생명이야. 사냥하면 규소가 나와.'},
+ tbeast:{n:'나무짐승',kind:'native',bio:0,cap:12,br:0.005,need:{},hit:[14,26,24],drops:[['s_tree',1,2,1],['meat',1,1,0.6]],where:'추운 자원 행성',
+  d:'나무처럼 생긴 외계 동물. 뿌리 다리로 천천히 걸어 다녀. 사냥하면 나무 씨앗이 나와서 다른 행성에 심을 수 있어.'},
  wolf:{n:'늑대',kind:'animal',bio:8,cap:6,br:0.0025,need:{T:[-5,35],P:[0.5,5],O:16},food:['rabbit',5,'토끼가 5마리 넘게 있어야 해'],meat:2,hide:2,
   d:'토끼를 사냥하는 육식 동물. 늑대가 있으면 토끼 수가 저절로 맞춰져.'},
 };
-const PLANTS=['moss','grass','tree','weed'], ANIMALS=['fish','bee','rabbit','wolf'];
+const PLANTS=['moss','grass','tree','weed'], ANIMALS=['fish','bee','rabbit','wolf','sil','tbeast'];
 
 // ================= 상자 =================
 const LOOT={
@@ -336,7 +432,7 @@ function dexAdd(t){ if(!S.dex[t]){ S.dex[t]=1; if(mode==='play') toast(`도감�
 // ================= 지형 =================
 function ensureTer(id){
  if(TER[id]) return TER[id];
- const seed=(S?S.seed:12345)+ORDER.indexOf(id)*7919;
+ const seed=(S?S.seed:12345)+pidx(id)*7919;
  const R=mulberry(seed), d=PL[id];
  const h=new Float32Array(NC);
  if(id==='sun'){ for(let i=0;i<NC;i++) h[i]=360; }
@@ -346,10 +442,10 @@ function ensureTer(id){
   let mn=1e9,mx=-1e9; for(let i=0;i<NC;i++){ mn=Math.min(mn,h[i]); mx=Math.max(mx,h[i]); }
   for(let i=0;i<NC;i++){ const n=(h[i]-mn)/(mx-mn); h[i]=250+100*(1-d.rough)+(1-n)*200*d.rough; }
   const bump=(cx,r,dep,rim)=>{ for(let i=0;i<NC;i++){ const dx=wd(i*COL-cx)/r, a=Math.abs(dx); if(a<1) h[i]+=dep*(1-dx*dx); else if(rim&&a<1.35) h[i]-=dep*rim*(1-(a-1)/0.35); } };
-  if(id==='moon'){ for(let c=0;c<16;c++){ const r=40+R()*140; bump(R()*W,r,0.22*r+R()*16,0.28); } }
+  if(id==='moon'||d.ter==='crater'){ for(let c=0;c<16;c++){ const r=40+R()*140; bump(R()*W,r,0.22*r+R()*16,0.28); } }
   if(id==='mars'){ for(let c=0;c<6;c++){ const r=50+R()*110; bump(R()*W,r,0.2*r,0.25); } bump(W*0.82,420,-150,0); }
-  if(id==='venus'){ for(let c=0;c<5;c++){ const cx=R()*W, r=90+R()*80; for(let i=0;i<NC;i++){ const a=Math.abs(wd(i*COL-cx))/r; if(a<1) h[i]-=34*clamp((1-a)*4,0,1); } } }
-  if(id==='europa'){ for(let c=0;c<30;c++){ const cx=R()*W; for(let i=0;i<NC;i++){ const a=Math.abs(wd(i*COL-cx)); if(a<14) h[i]-=7*(1-a/14); } } }
+  if(id==='venus'||d.ter==='dome'){ for(let c=0;c<5;c++){ const cx=R()*W, r=90+R()*80; for(let i=0;i<NC;i++){ const a=Math.abs(wd(i*COL-cx))/r; if(a<1) h[i]-=34*clamp((1-a)*4,0,1); } } }
+  if(id==='europa'||d.ter==='ridge'){ for(let c=0;c<30;c++){ const cx=R()*W; for(let i=0;i<NC;i++){ const a=Math.abs(wd(i*COL-cx)); if(a<14) h[i]-=7*(1-a/14); } } }
   // 기지 자리는 높고 평평하게 (바다가 70%까지 차도 안 잠기게)
   const asc=Array.from(h).sort((a,b)=>a-b), q=asc[Math.floor(NC*0.08)];
   for(let i=0;i<NC;i++){ const a=Math.abs(wd(i*COL-BASEX)); if(a<170){ const t=clamp((170-a)/70,0,1); h[i]=lerp(h[i],q,t); } }
@@ -357,7 +453,7 @@ function ensureTer(id){
  const sd=Array.from(h).sort((a,b)=>b-a);
  const deco=[]; for(let i=0;i<260;i++) deco.push({x:R()*W,dy:8+R()*170,r:1+R()*3.2,c:R()});
  const rocks=[]; for(let i=0;i<90;i++) rocks.push({x:R()*W,r:2+R()*5,c:R()});
- const lines=[]; for(let i=0;i<(id==='venus'?26:id==='europa'?40:0);i++) lines.push({x:R()*W,w:20+R()*90});
+ const lines=[]; for(let i=0;i<(id==='venus'||d.lava?26:id==='europa'?40:0);i++) lines.push({x:R()*W,w:20+R()*90});
  const hills=new Float32Array(NC); { const ws=[]; for(let k=1;k<=10;k++) ws.push([k,(0.5+R())/k,R()*6.283]); for(let i=0;i<NC;i++){ const a=i/NC*6.283; let y=0; for(const w of ws) y+=w[1]*Math.sin(w[0]*a+w[2]); hills[i]=y; } }
  // 둥근 행성 그림용 무늬
  const vn=(gw,gh)=>{ const g=new Float32Array(gw*gh); for(let i=0;i<g.length;i++) g[i]=R()*2-1; return {g,gw,gh}; };
@@ -376,16 +472,18 @@ function gnd(x){ const h=hAt(x); return (FROZEN&&h>SEA)?SEA:h; }
 const oreY=o=>hAt(o.x)+o.dy;
 
 function genObjects(id,s){
- const T=ensureTer(id), d=PL[id], R=mulberry((S.seed^0x5bd1)+ORDER.indexOf(id)*131);
+ const T=ensureTer(id), d=PL[id], R=mulberry((S.seed^0x5bd1)+pidx(id)*131);
  const deepQ=T.sd[Math.floor(NC*0.25)];
  const far=x=>Math.abs(wd(x-BASEX))>150;
- for(let i=0;i<52;i++){
+ for(let i=0;i<(d.farm?110:52);i++){
   const t=wpick(d.ore,R); let x=0;
   for(let k=0;k<40;k++){ x=R()*W; if(!far(x)) continue; if(t==='ice'&&(id==='moon'||id==='mars')&&hAtT(T,x)<deepQ) continue; break; }
   s.ores.push({t,x,dy:R()<0.5?-2:10+R()*42,r:8+R()*4});
  }
  const place=(k,n,minD)=>{ for(let i=0;i<n;i++){ let x=0; for(let tr=0;tr<50;tr++){ x=R()*W; if(!far(x)) continue; if(s.boxes.some(b=>Math.abs(wd(b.x-x))<minD)) continue; break; } s.boxes.push({k,x,items:null,op:false}); } };
- place('wreck',1,400); place('res',3,400); place('small',6,300);
+ if(d.farm){ place('wreck',1,400); place('res',1,400); place('small',4,400); }
+ else { place('wreck',1,400); place('res',3,400); place('small',6,300); }
+ if(d.natives) for(let i=0;i<10;i++){ let x=0; for(let k=0;k<20;k++){ x=R()*W; if(far(x)) break; } s.animals.push({t:d.natives[Math.floor(R()*d.natives.length)],x,y:hAtT(T,x),vx:0,tm:0,age:60,fed:0,ph:R()*6}); }
  s.boxes.push({k:'kit',x:BASEX+95,items:{...d.kit},op:false});
 }
 function initPlanet(id){
@@ -400,7 +498,8 @@ function viewPS(id){ return (S&&S.pl[id])||{T:PL[id].T0,P:PL[id].P0,O:PL[id].O0,
 function prog(id,s){
  if(id==='sun'){ const t=clamp(s.D/100,0,1); return {t,pT:t,pP:t,pO:t,pW:t,pB:t}; }
  const d=PL[id];
- const pT=clamp(1-Math.abs(s.T-15)/Math.abs(d.T0-15),0,1);
+ if(d.farm) return {t:0,pT:0,pP:0,pO:0,pW:0,pB:0};
+ const pT=Math.abs(d.T0-15)<0.01?1:clamp(1-Math.abs(s.T-15)/Math.abs(d.T0-15),0,1);
  const l0=Math.log10(Math.max(d.P0,0.001)), l=Math.log10(Math.max(s.P,0.001));
  const pP=clamp(1-Math.abs(l)/Math.abs(l0),0,1);
  const pO=clamp(s.O/21,0,1), pW=clamp(s.W/70,0,1), pB=clamp(s.bio/(d.bioG||BIOG),0,1);
@@ -415,6 +514,7 @@ function pushStat(id,s,k,a){
 }
 function statPerSec(id,k,rate){
  const d=PL[id]; rate*=(d.easy||1);
+ if(k==='T'&&Math.abs(d.T0-15)<0.01) return '온도는 벌써 딱 좋아!';
  if(k==='T') return (d.T0>15?'온도 -':'온도 +')+(rate*Math.abs(d.T0-15)).toFixed(2)+'°C/초';
  if(k==='P') return d.P0>1?'공기를 줄여 (목표 1기압)':'공기를 늘려 (목표 1기압)';
  if(k==='W') return '물 +'+(rate*70*d.wMul*100).toFixed(1)+'%/100초';
@@ -432,8 +532,9 @@ function simStep(id,s,dt){
   const M=MACH[m.t];
   if(M.stat) pushStat(id,s,M.stat,M.rate*pw.r*mult*dt);
   if(m.t==='dyson') s.D=Math.min(100,s.D+0.02*pw.r*dt);
-  if(m.t==='drill'){ m.tm=(m.tm||0)+dt*pw.r; if(m.tm>=25){ m.tm=0; m.buf=m.buf||{}; let tot=0; for(const k in m.buf) tot+=m.buf[k]; if(tot<12){ const it=wpick(PL[id].ore); m.buf[it]=(m.buf[it]||0)+1; } } }
+  if(m.t==='drill'){ m.tm=(m.tm||0)+dt*pw.r; if(m.tm>=25){ m.tm=0; m.buf=m.buf||{}; let tot=0; for(const k in m.buf) tot+=m.buf[k]; const fm=PL[id].farm?2:1; if(tot<12*fm){ for(let q=0;q<fm;q++){ const it=wpick(PL[id].ore); m.buf[it]=(m.buf[it]||0)+1; } } } }
  }
+ if(PL[id].farm) return;
  if(id!=='sun'){
   for(const sp of s.space) if(sp==='mirror'||sp==='shade') pushStat(id,s,'T',SP_RATE*mult*dt);
   let o2=0; for(const p of s.plants) o2+=LIFE[p.t].o2*p.g; s.O=Math.min(21,s.O+o2*dt);
@@ -461,12 +562,13 @@ function checkMS(id,s){
     banner(m===100?'푸른 행성 완성!':`푸른 정도 ${m}%`,MSN[m]+gift); sfx('fanfare');
     if(m===100) setTimeout(()=>nameIt(id),2200);
    }else toast(`${PL[id].n} 푸른 정도 ${m}%!${gift}`);
+   if(m===100&&sysOf(id)==='sol'&&!S.inter){ S.inter=1; setTimeout(()=>{ banner('성간 여행이 열렸어!','지도(M)에서 다른 별을 골라 봐'); sfx('fanfare'); },4200); }
    for(const o of ORDER) if(!S.opened[o] && bestProg()>=NEEDP[o]){ S.opened[o]=1; setTimeout(()=>toast(`새 곳이 열렸어: <b>${PL[o].n}</b>! (M 지도)`),1500); }
   }
  }
 }
-function bestProg(){ let b=0; for(const id of ['moon','mars','europa','venus']) if(S.pl[id]) b=Math.max(b,prog(id,S.pl[id]).t); return b; }
-const isOpen=id=>!!S.opened[id];
+function bestProg(){ let b=0; for(const id in S.pl) if(id!=='sun'&&PL[id]&&!PL[id].farm) b=Math.max(b,prog(id,S.pl[id]).t); return b; }
+const isOpen=id=>sysOf(id)==='sol'?!!S.opened[id]:!!S.inter;
 function nameIt(id){
  const s=S.pl[id]; if(!s) return;
  let nm=null; try{ nm=prompt(`${PL[id].n}이(가) 푸른 행성이 됐어! 새 이름을 지어 줄래?`, s.named||('푸른 '+PL[id].n)); }catch(e){}
@@ -574,9 +676,9 @@ function updAnimal(a,dt,sdt,g){
   const gy=gnd(a.x)-20-12*Math.sin(a.ph*2); a.y+=(gy-a.y)*Math.min(1,dt*3);
   return;
  }
- let sp=a.t==='rabbit'?28:36;
+ let sp=a.t==='rabbit'?28:a.t==='sil'?40:a.t==='tbeast'?12:36;
  a.flee=0;
- if(a.t==='rabbit'&&near){ a.vx=-Math.sign(dpx||1)*115; a.tm=0.5; a.flee=1; }
+ if((a.t==='rabbit'||a.t==='sil')&&near){ a.vx=-Math.sign(dpx||1)*(a.t==='sil'?95:115); a.tm=0.5; a.flee=1; }
  else if(a.t==='wolf'){
   a.fed+=sdt;
   if(a.fed>60&&ps.animals.filter(b=>b.t==='rabbit').length>4){
@@ -698,7 +800,7 @@ function shoot(tx,ty){
 function autoShoot(){
  let best=null,bd=1e9;
  for(const a of ps.animals){ if(a.t==='bee') continue; const dx=wd(a.x-P.x); const d=Math.abs(dx)+Math.abs(a.y-P.y)*0.5+(Math.sign(dx)===P.face?0:200); if(Math.abs(dx)<430&&d<bd){bd=d;best=a;} }
- if(best) shoot(best.x+(best.vx||0)*0.12,best.y-(best.t==='wolf'?10:5));
+ if(best) shoot(best.x+(best.vx||0)*0.12,best.y-(LIFE[best.t].hit?LIFE[best.t].hit[1]:best.t==='wolf'?10:5));
  else shoot(P.x+P.face*300,P.y-40);
 }
 function updDarts(dt){
@@ -709,7 +811,7 @@ function updDarts(dt){
   d.vy+=g*0.12*dt; if(wet){ d.vx*=Math.pow(0.3,dt); d.vy*=Math.pow(0.3,dt); }
   d.x=wrapX(d.x+d.vx*dt); d.y+=d.vy*dt;
   let hit=null;
-  for(const a of ps.animals){ if(a.t==='bee') continue; const r=a.t==='wolf'?16:11; if(Math.abs(wd(a.x-d.x))<r&&Math.abs(a.y-(a.t==='wolf'?10:a.t==='fish'?0:5)-d.y)<12){ hit=a; break; } }
+  for(const a of ps.animals){ if(a.t==='bee') continue; const H=LIFE[a.t].hit||[a.t==='wolf'?16:11,a.t==='wolf'?10:a.t==='fish'?0:5,12]; if(Math.abs(wd(a.x-d.x))<H[0]&&Math.abs(a.y-H[1]-d.y)<H[2]){ hit=a; break; } }
   if(hit){ kill(hit); darts.splice(i,1); continue; }
   if(d.y>gnd(d.x)||d.l<=0){ puff(d.x,d.y,'#cccccc',3); darts.splice(i,1); }
  }
@@ -720,6 +822,7 @@ function kill(a){
  const big=a.age>=45;
  if(L.meat) ps.drops.push({it:'meat',n:big?L.meat:1,x:a.x,y:a.y-6,vy:-120});
  if(L.hide&&big) ps.drops.push({it:'hide',n:L.hide,x:a.x+4,y:a.y-6,vy:-150});
+ if(L.drops) for(const [it,a1,b1,ch] of L.drops) if(Math.random()<ch) ps.drops.push({it,n:ri(a1,b1),x:a.x+rnd(-5,5),y:a.y-12,vy:-140});
  puff(a.x,a.y-6,'#ffffff',10); sfx('hit');
  S.hunted++; if(S.hunted===1) toast('사냥 성공! 고기는 기지에서 구우면 더 배불러');
 }
@@ -852,6 +955,7 @@ function doAct(a,b){
  if(a==='memb'){ const m=MCTX.mach; if(!m||inv(b)<1) return; const an=ITEMS[b].animal; if(m.emb&&m.emb!==an&&m.left>0){ toast('지금 다른 생물이 번식 중이야'); return; } S.inv[b]--; m.emb=an; m.left=(m.left||0)+3; sfx('pop'); toast(`${LIFE[an].n} 3마리를 키우기 시작했어`); return openMach(m); }
  if(a==='mremove'){ const m=MCTX.mach; if(!m) return; const M=MACH[m.t]; for(const k in M.cost){ const n=Math.floor(M.cost[k]/2); if(n) addInv(k,n,true); } if(m.buf) for(const k in m.buf) addInv(k,m.buf[k],true); ps.machines.splice(ps.machines.indexOf(m),1); toast('치웠어 (재료 절반 돌려받음)'); return closeModal(); }
  if(a==='dex'){ return openDex(b); }
+ if(a==='dexs'){ return openDex('planet',b); }
  if(a==='go'){ return travelTo(b); }
 }
 function openBox(box,re){
@@ -874,6 +978,7 @@ function useItem(it){
  if(it==='o2can'){ if(S.o2>=maxO2()-1){ toast('산소가 가득해!'); return; } S.inv.o2can--; S.o2=Math.min(maxO2(),S.o2+60); sfx('pop'); return openBag(); }
  if(I.plant){
   if(pid==='sun'){ toast('태양 정거장엔 심을 땅이 없어'); return; }
+  if(PL[pid].farm){ toast('자원 행성엔 식물이 못 자라. 바꿀 수 있는 행성에 심어 줘'); return; }
   const x=wrapX(P.x+P.face*16);
   if(isWater(x)){ toast('물속엔 못 심어'); return; }
   for(const p of ps.plants) if(Math.abs(wd(p.x-x))<8){ toast('바로 옆에 이미 식물이 있어. 조금 옆으로 가 봐'); return; }
@@ -900,7 +1005,7 @@ function openBag(){
 function openBuild(){
  let h=`<h2>짓기</h2><p style="margin:0 0 6px;font-size:13px;color:#bcd0ee">고르면 주인공 앞에 지을 수 있어. 전기가 모자라면 기계가 느려져.</p>`;
  const groups={'전기':[],'행성':[],'생명':[],'기타':[]};
- for(const t in MACH){ const M=MACH[t]; if(pid==='sun'?!SUN_OK.includes(t):M.sunOnly) continue; groups[M.g].push(t); }
+ for(const t in MACH){ const M=MACH[t]; if(pid==='sun'?!SUN_OK.includes(t):M.sunOnly) continue; if(PL[pid].farm&&!FARM_OK.includes(t)) continue; groups[M.g].push(t); }
  const gn={'전기':'⚡ 전기 만들기','행성':pid==='sun'?'☀ 다이슨 구':'🌍 행성 바꾸기','생명':'🌱 생명','기타':'⛏ 기타'};
  for(const gk in groups){ if(!groups[gk].length) continue; h+=`<h3>${gn[gk]}</h3><div class="grid">`;
   for(const t of groups[gk]){ const M=MACH[t], lock=M.lock&&!S.unl[t], can=has(M.cost);
@@ -910,7 +1015,7 @@ function openBuild(){
    else if(M.sup==='rtg') eff='전기 +6 (늘)';
    else if(M.stat) eff=statPerSec(pid,M.stat,M.rate)+` · 전기 ${M.use} 씀`;
    else if(t==='breed') eff='배아를 넣으면 동물이 태어나 · 전기 1';
-   else if(t==='drill') eff='25초마다 광석 1개를 캐 줘 · 전기 1';
+   else if(t==='drill') eff=(PL[pid].farm?'자원 행성이라 25초마다 광석 2개!':'25초마다 광석 1개를 캐 줘')+' · 전기 1';
    else if(t==='dyson') eff='다이슨 구 +2%/100초 · 전기 4 씀';
    h+=`<div class="card ${lock||!can?'off':''}" data-act="build:${t}"><img class="th" src="${machThumb(t)}"><div class="nm">${machName(t,pid)}</div><div class="ds">${eff}</div>${lock?'<div class="lockt">🔒 설계도 칩 필요</div>':costHTML(M.cost)}</div>`; }
   h+='</div>'; }
@@ -927,6 +1032,7 @@ function openBase(tab){
   h+='</div>';
  }else{
   if(pid==='sun'){ h+='<p>태양에선 우주 프로젝트 대신 <b>다이슨 패널 발사대</b>를 지어 (짓기 B).</p>'; }
+  else if(PL[pid].farm){ h+='<p>여긴 자원 행성이라 우주 프로젝트를 할 수 없어. 재료를 모아서 다른 행성에서 써!</p>'; }
   else{
    h+='<p style="font-size:13px;color:#bcd0ee;margin:0 0 8px">우주에서 하는 큰 공사야. 지으면 하늘에 보여!</p><div class="grid">';
    for(const k in SPACE){ const X=SPACE[k]; if(X.only&&X.only!==pid) continue; if(X.not&&X.not===pid) continue; const lock=!S.unl[X.lock]; const n=ps.space.filter(s=>s===k).length; const max=k==='comet'?99:3;
@@ -962,11 +1068,13 @@ function openMach(m){
  h+=`<div style="margin-top:14px;text-align:right"><button class="btn" data-act="mremove">치우기 (재료 절반 돌려받기)</button></div>`;
  openModal(h);
 }
-function openDex(tab){
+function openDex(tab,dsys){
  tab=tab||'planet';
  let h=`<h2>도감</h2><div class="tabs"><button class="btn ${tab==='planet'?'on':''}" data-act="dex:planet">행성</button><button class="btn ${tab==='life'?'on':''}" data-act="dex:life">생물</button><button class="btn ${tab==='item'?'on':''}" data-act="dex:item">재료</button><button class="btn ${tab==='how'?'on':''}" data-act="dex:how">하는 법</button></div>`;
- if(tab==='planet'){ for(const id of ORDER){ const s=viewPS(id); h+=`<h3>${PL[id].n} ${S.pl[id]?`— 푸른 정도 ${Math.floor(prog(id,s).t*100)}%`:''}</h3>`+PL[id].facts.map(f=>`<div class="fact">· ${f}</div>`).join(''); } }
- if(tab==='life'){ h+='<div class="grid">'; for(const t in LIFE){ const L=LIFE[t], seen=S.dex[t]; const N=L.need; const req=[]; if(N.T) req.push(`온도 ${N.T[0]}~${N.T[1]}°C`); if(N.P) req.push(`공기 ${N.P[0]}기압 이상`); if(N.W) req.push(`물 ${N.W}% 이상`); if(N.O) req.push(`산소 ${N.O}% 이상`); if(L.food) req.push(L.food[2]);
+ if(tab==='planet'){ const sy=dsys||sysOf(pid); h+='<div class="tabs">'+SYSORD.map(k=>`<button class="btn ${k===sy?'on':''}" data-act="dexs:${k}">${SYS[k].n}</button>`).join('')+'</div>';
+  h+=`<div class="fact" style="color:#ffd98a">${SYS[sy].d}${SYS[sy].ly?' ('+SYS[sy].ly+')':''}</div>`;
+  for(const id in PL){ if(sysOf(id)!==sy) continue; const s=viewPS(id); h+=`<h3>${PL[id].n} ${PL[id].farm?'— ⛏ 자원 행성':S.pl[id]&&id!=='sun'?`— 푸른 정도 ${Math.floor(prog(id,s).t*100)}%`:''}</h3>`+PL[id].facts.map(f=>`<div class="fact">· ${f}</div>`).join(''); } }
+ if(tab==='life'){ h+='<div class="grid">'; for(const t in LIFE){ const L=LIFE[t], seen=S.dex[t]; const N=L.need; const req=[]; if(N.T) req.push(`온도 ${N.T[0]}~${N.T[1]}°C`); if(N.P) req.push(`공기 ${N.P[0]}기압 이상`); if(N.W) req.push(`물 ${N.W}% 이상`); if(N.O) req.push(`산소 ${N.O}% 이상`); if(L.food) req.push(L.food[2]); if(L.where) req.push('사는 곳: '+L.where+' (상상 생물)');
   h+=`<div class="card" style="cursor:default"><div class="nm">${seen?L.n:'??? ('+L.n+')'}</div><div class="ds">${L.d}<br><span style="color:#9fffb0">살 수 있는 조건: ${req.join(', ')}</span></div></div>`; } h+='</div>'; }
  if(tab==='item'){ h+='<div class="grid">'; for(const k in ITEMS){ const I=ITEMS[k]; h+=`<div class="slot" style="cursor:default"><img src="${iconURL(k)}"><div><div style="font-weight:800;color:${RAR[I.r]}">${I.n}</div><div class="sub">${I.d}</div></div></div>`; } h+='</div>'; }
  if(tab==='how'){ h+=['<b>1. 상자 파밍</b> — 땅에 떨어진 보급 상자(주황), 연구 컨테이너(하양), 추락한 우주선을 E로 열어. 가끔 하늘에서 보급 캡슐도 떨어져!','<b>2. 재료 캐기</b> — 반짝이는 광석 옆에서 F를 꾹 (또는 광석을 마우스로 꾹). 땅속에 보이는 광석도 캘 수 있어.','<b>3. 전기</b> — 기계는 전기가 필요해. 태양 전지판, 풍력, 원자력 전지를 지어.','<b>4. 행성 바꾸기</b> — 히터(온도), 가스 추출기(공기), 물 펌프(물), 산소 발생기(산소). 금성은 거꾸로 식히고 공기를 줄여야 해.','<b>5. 생명</b> — 조건이 맞으면 가방에서 씨앗을 심어. 번식장에 배아를 넣으면 동물이 태어나고, 둘 이상이면 저절로 새끼를 낳아.','<b>6. 사냥</b> — Q(또는 동물을 클릭)로 작살을 쏴. 토끼가 너무 많으면 풀이 없어지니까 사냥해서 줄여 줘. 고기는 먹고 가죽은 우주복을 만들어.','<b>7. 푸른 행성</b> — 온도·공기·산소·물·생명 다섯 가지가 다 차면 100%! 하나를 50% 만들면 태양도 열려.','<b>숨쉬기</b> — 산소가 16% 넘고 공기가 0.5기압 넘으면 헬멧 없이도 숨쉴 수 있어서 산소가 안 줄어.'].map(t=>`<div class="fact">${t}</div>`).join(''); }
@@ -1063,6 +1171,17 @@ function drawCritter(g,t,X,y,sc,tt,dir){
  if(t==='rabbit'){ g.fillStyle='#e8e0d4'; g.beginPath(); g.ellipse(0,-5,7,5,0,0,7); g.fill(); g.beginPath(); g.arc(6,-9,3.6,0,7); g.fill(); g.beginPath(); E(g,5,-15,1.3,4.2,-0.2); E(g,7.3,-14.5,1.3,4,0.25); g.fill(); g.fillStyle='#f0b0b8'; g.beginPath(); g.ellipse(5,-15,0.6,2.8,-0.2,0,7); g.fill(); g.fillStyle='#fff'; g.beginPath(); g.arc(-7,-6,2.2,0,7); g.fill(); g.fillStyle='#222'; g.beginPath(); g.arc(7.6,-9.5,0.8,0,7); g.fill(); }
  else if(t==='wolf'){ const lg=Math.sin(tt*10)*2; g.fillStyle='#6f7280'; g.fillRect(-8+lg,-7,2.5,7); g.fillRect(-3-lg,-7,2.5,7); g.fillRect(5+lg,-7,2.5,7); g.fillRect(9-lg,-7,2.5,7); g.fillStyle='#8a8d99'; g.beginPath(); g.ellipse(1,-11,12,5.5,0,0,7); g.fill(); g.beginPath(); g.moveTo(10,-15); g.lineTo(19,-12); g.lineTo(18,-9); g.lineTo(10,-8); g.closePath(); g.fill(); g.beginPath(); g.moveTo(11,-15); g.lineTo(12,-20); g.lineTo(14.5,-15); g.closePath(); g.fill(); g.strokeStyle='#8a8d99'; g.lineWidth=3; g.beginPath(); g.moveTo(-11,-12); g.quadraticCurveTo(-17,-12,-18,-6); g.stroke(); g.fillStyle='#d8dae0'; g.beginPath(); g.ellipse(2,-8,8,2,0,0,7); g.fill(); g.fillStyle='#222'; g.beginPath(); C(g,15,-13,0.9); C(g,19,-11,1); g.fill(); }
  else if(t==='fish'){ const w=Math.sin(tt*8)*2.2; g.fillStyle='#ff9a4a'; g.beginPath(); g.ellipse(0,0,7,3.4,0,0,7); g.fill(); g.beginPath(); g.moveTo(-6,0); g.lineTo(-11,-4+w); g.lineTo(-11,4+w); g.closePath(); g.fill(); g.fillStyle='#ffd0a0'; g.beginPath(); g.ellipse(1,1.2,4,1.3,0,0,7); g.fill(); g.fillStyle='#222'; g.beginPath(); g.arc(4,-0.8,0.8,0,7); g.fill(); }
+ else if(t==='sil'){ const lg=Math.sin(tt*14)*1.5; g.strokeStyle='#5a6a8a'; g.lineWidth=1.2; g.beginPath(); for(let i=-1;i<=1;i++){ const s2=i%2?1:-1; g.moveTo(i*6,-5); g.lineTo(i*6-3+lg*s2,0); g.moveTo(i*6,-5); g.lineTo(i*6+3-lg*s2,0); } g.stroke();
+  for(const [x,y,r,c] of [[-7,-7,4.6,'#5fd0e8'],[0,-8.5,5.6,'#7fe8ff'],[7,-9,4.6,'#a88aff']]){ g.fillStyle=c; g.beginPath(); for(let k=0;k<6;k++){ const a=k/6*6.283+0.5, px=x+Math.cos(a)*r, py=y+Math.sin(a)*r*0.8; k?g.lineTo(px,py):g.moveTo(px,py); } g.closePath(); g.fill(); g.fillStyle='rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(x-r*0.4,y-r*0.5); g.lineTo(x,y-r*0.7); g.lineTo(x+r*0.1,y-r*0.2); g.closePath(); g.fill(); }
+  g.fillStyle='#d0f6ff'; for(const [a,b,c2,d2] of [[-6,-11,-4,-17],[0,-13,1,-20],[6,-12,8,-17]]){ g.beginPath(); g.moveTo(a-1.6,b); g.lineTo(c2,d2); g.lineTo(a+1.6,b); g.closePath(); g.fill(); }
+  g.fillStyle='#ff5ad0'; g.beginPath(); C(g,10.5,-9.5,1.2); C(g,12,-8,0.9); g.fill(); }
+ else if(t==='tbeast'){ const sw=Math.sin(tt*3)*1.5; g.lineCap='round'; g.strokeStyle='#5a3a1e'; g.lineWidth=2.6;
+  for(let i=0;i<4;i++){ const bx=-6+i*4, ph=Math.sin(tt*4+i*1.6)*2.5; g.beginPath(); g.moveTo(bx,-12); g.quadraticCurveTo(bx+(i<2?-4:4),-5,bx+(i<2?-6:6)+ph,0); g.stroke(); }
+  g.fillStyle='#6b4423'; rr(g,-6,-34,12,24,4); g.fill(); g.strokeStyle='#4a2e16'; g.lineWidth=0.8; g.beginPath(); g.moveTo(-3,-32); g.lineTo(-2,-14); g.moveTo(2,-30); g.lineTo(3,-13); g.stroke();
+  g.strokeStyle='#6b4423'; g.lineWidth=2.2; g.beginPath(); g.moveTo(5,-26); g.quadraticCurveTo(11,-30+sw,13,-36+sw); g.moveTo(-5,-24); g.quadraticCurveTo(-11,-27-sw,-12,-33-sw); g.stroke();
+  g.fillStyle='#3f8f4a'; g.beginPath(); C(g,13,-38+sw,4); C(g,-12,-35-sw,3.5); g.fill();
+  g.fillStyle='#2f7d3a'; g.beginPath(); C(g,-6,-38,8); C(g,6,-38,8); C(g,0,-45,9); g.fill(); g.fillStyle='#5bbf5f'; g.beginPath(); C(g,-2,-47,4); C(g,5,-42,3); g.fill();
+  g.fillStyle='#ffe66a'; g.beginPath(); C(g,1,-26,1.7); C(g,4.4,-26,1.7); g.fill(); g.fillStyle='#222'; g.beginPath(); C(g,1.6,-26,0.7); C(g,5,-26,0.7); g.fill(); }
  else if(t==='bee'){ g.fillStyle='rgba(255,255,255,.7)'; const f=Math.sin(tt*60)>0?1:0.6; g.beginPath(); E(g,-1,-3.5*f,2.6,1.6*f,-0.4); E(g,1.5,-3.5*f,2.6,1.6*f,0.4); g.fill(); g.fillStyle='#ffcf2a'; g.beginPath(); g.ellipse(0,0,3.6,2.4,0,0,7); g.fill(); g.fillStyle='#2a2216'; g.fillRect(-1.2,-2.3,1.2,4.6); g.fillRect(1.2,-2.2,1,4.4); }
  g.restore();
 }
@@ -1206,9 +1325,14 @@ function drawSky(pr,sk){
  if(sa>0.03){ for(const s of STARS){ const x=((s.x*CW*1.3-camX*0.02)%(CW*1.3)+CW*1.3)%(CW*1.3)-CW*0.15; const y=s.y*CH*0.8; ctx.fillStyle=`rgba(255,255,255,${sa*(0.5+0.5*Math.sin(TIME*2+s.t))})`; ctx.fillRect(x,y,s.s,s.s); } }
  const zs=Math.min(1.6,Z);
  // 해
- const sunR={moon:13,mars:9,europa:3.5,venus:19,sun:0}[pid]*zs;
+ const dP=PL[pid], exs=sysOf(pid)!=='sol';
+ const sunR=Math.max(dP.sr>0?1.5:0,(dP.sr||0)*zs);
  let sunA=1; if(pid==='venus') sunA=1-clamp(Math.log10(Math.max(ps.P,1))/1.5,0,1);
- if(sunR>0&&sunA>0.02){ const sx=CW*0.2, sy=CH*0.14; const gr=ctx.createRadialGradient(sx,sy,0,sx,sy,sunR*5); gr.addColorStop(0,`rgba(255,250,220,${sunA})`); gr.addColorStop(0.2,`rgba(255,230,160,${0.5*sunA})`); gr.addColorStop(1,'rgba(255,200,120,0)'); ctx.fillStyle=gr; ctx.fillRect(sx-sunR*5,sy-sunR*5,sunR*10,sunR*10); ctx.fillStyle=`rgba(255,255,240,${sunA})`; ctx.beginPath(); ctx.arc(sx,sy,sunR,0,7); ctx.fill(); }
+ if(sunR>0&&sunA>0.02){ const sx=CW*(exs?0.62:0.2), sy=CH*(exs?0.2:0.14), sc=hx(exs?dP.scol:'#fff6dc'), gR=Math.min(320,sunR*5+8); const gr=ctx.createRadialGradient(sx,sy,0,sx,sy,gR); gr.addColorStop(0,col(mixA(sc,[255,255,255],0.5),sunA)); gr.addColorStop(Math.min(0.6,sunR/gR*1.2),col(sc,0.5*sunA)); gr.addColorStop(1,col(sc,0)); ctx.fillStyle=gr; ctx.fillRect(sx-gR,sy-gR,gR*2,gR*2); ctx.fillStyle=col(mixA(sc,[255,255,255],0.35),sunA); ctx.beginPath(); ctx.arc(sx,sy,sunR,0,7); ctx.fill(); }
+ if(dP.bodies) for(const b of dP.bodies){ const x=CW*b.x, y=CH*b.y, r=b.r*zs; ctx.globalAlpha=Math.max(0.25,1-sk.blue*0.7);
+  if(b.k==='star'){ const gr=ctx.createRadialGradient(x,y,0,x,y,r*5); gr.addColorStop(0,b.c); gr.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=gr; ctx.fillRect(x-r*5,y-r*5,r*10,r*10); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(x,y,r*0.6,0,7); ctx.fill(); }
+  else { ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); ctx.save(); ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.clip(); const dx=x-CW*0.62, dy=y-CH*0.2, L=Math.hypot(dx,dy)||1; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(x+dx/L*r*0.9,y+dy/L*r*0.9,r,0,7); ctx.fill(); ctx.restore(); }
+  ctx.globalAlpha=1; }
  // 거울·가리개
  if(ps.space&&ps.space.length){ let k=0; for(const sp of ps.space){ const x=CW*(0.32+k*0.07), y=CH*(0.07+0.02*(k%2)); if(sp==='mirror'){ ctx.fillStyle=`rgba(255,255,255,${0.7+0.3*Math.sin(TIME*3+k)})`; ctx.beginPath(); ctx.moveTo(x,y-5); ctx.lineTo(x+3,y); ctx.lineTo(x,y+5); ctx.lineTo(x-3,y); ctx.fill(); } else { ctx.fillStyle='rgba(30,30,40,.7)'; ctx.fillRect(x-6,y-1,12,2); } k++; } }
  const fade=1-0.7*Math.max(sk.blue,pid==='venus'?1:0);
@@ -1250,7 +1374,7 @@ function drawTerrain(pr){
  ctx.fillStyle=col(mixA(hx(C.mid),[0,0,0],0.2));
  for(const r of T.rocks){ const X=wd(r.x-camX); if(Math.abs(X)>VW/2+8) continue; if(isWater(r.x)) continue; ctx.beginPath(); ctx.ellipse(X,hAt(r.x)+1,r.r,r.r*0.6,0,Math.PI,0); ctx.fill(); }
  // 금성 용암 · 유로파 줄무늬
- if(pid==='venus'&&ps.T>200){ const a=clamp((ps.T-200)/264,0,1); ctx.strokeStyle=`rgba(255,${120+60*Math.sin(TIME*3)|0},30,${a})`; ctx.lineWidth=2.2; ctx.shadowColor='#ff7a1a'; ctx.shadowBlur=8*a; for(const l of T.lines){ const X=wd(l.x-camX); if(X<-VW/2-l.w||X>VW/2+10) continue; ctx.beginPath(); for(let k=0;k<=l.w;k+=6) ctx.lineTo(X+k,hAt(l.x+k)+3+Math.sin(k*0.3)*1.5); ctx.stroke(); } ctx.shadowBlur=0; }
+ if((pid==='venus'||PL[pid].lava)&&ps.T>200){ const a=clamp((ps.T-200)/264,0,1); ctx.strokeStyle=`rgba(255,${120+60*Math.sin(TIME*3)|0},30,${a})`; ctx.lineWidth=2.2; ctx.shadowColor='#ff7a1a'; ctx.shadowBlur=8*a; for(const l of T.lines){ const X=wd(l.x-camX); if(X<-VW/2-l.w||X>VW/2+10) continue; ctx.beginPath(); for(let k=0;k<=l.w;k+=6) ctx.lineTo(X+k,hAt(l.x+k)+3+Math.sin(k*0.3)*1.5); ctx.stroke(); } ctx.shadowBlur=0; }
  if(pid==='europa'){ ctx.strokeStyle='rgba(150,80,45,.75)'; ctx.lineWidth=2; for(const l of T.lines){ const X=wd(l.x-camX); if(X<-VW/2-l.w||X>VW/2+10) continue; ctx.beginPath(); for(let k=0;k<=l.w;k+=6) ctx.lineTo(X+k,hAt(l.x+k)+4+Math.sin(k*0.2+l.x)*2.5); ctx.stroke(); } }
  // 서리
  if(pid!=='europa'&&ps.W>1&&ps.T<0){ ctx.strokeStyle='rgba(240,248,255,.65)'; ctx.lineWidth=1.6; ctx.beginPath(); for(let i=0;i<n;i++) ctx.lineTo(xs[i],hs[i]+0.5); ctx.stroke(); }
@@ -1316,6 +1440,7 @@ function buildTex(id,s){
    if(h>sea){ c=frozen?ice:mixA(ocean,deep,clamp((h-sea)/120,0,1)); }
    else{ c=mixA(top,mid,clamp(0.5+n,0,1)*0.6); if(den2[x]>0) c=mixA(c,(n>0?green:green2),clamp(den2[x]/14,0,0.92)*(1-al*0.5)); }
    if(id==='europa'&&!(h>sea&&!frozen)&&Math.abs(T.nc[y*TW*2+x])<0.05) c=mixA(c,[150,85,50],0.7);
+   if(d.lava&&s.T>200&&!(h>sea)&&n>0.42) c=mixA(c,[255,110,30],0.85);
    if(capOn&&al>capLat+n*0.08) c=white;
    if(cloud>0){ const cn=T.nc[y*TW*2+((x+off)%(TW*2))]; if(cn>0.15) c=mixA(c,white,clamp((cn-0.15)*3,0,1)*cloud); }
    if(vhaze>0){ const cn=T.nc[y*TW*2+((x+off)%(TW*2))]; c=mixA(c,mixA([236,200,110],[250,232,170],cn*0.5+0.5),vhaze*0.97); }
@@ -1358,7 +1483,58 @@ const MAPPOS={};
 let mapSel=null, travel=null;
 const mini={};
 function miniGlobe(id,N){ const k=id+N; let c=mini[k]; if(!c){ c=mini[k]=document.createElement('canvas'); c.width=c.height=N; } return c; }
+let mapSys='sol';
 function drawMap(interactive){
+ for(const k in MAPPOS) delete MAPPOS[k];
+ if(mode==='travel'&&travel&&travel.warp) return drawWarp();
+ const sys=(mode==='title'||!S)?'sol':mapSys;
+ if(sys==='sol') drawSolMap(interactive); else drawSysMap(sys,interactive);
+}
+function drawRocket(a,b){ const t=clamp(travel.t/1.8,0,1), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; const x=lerp(a[0],b[0],e), y=lerp(a[1],b[1],e)-Math.sin(e*Math.PI)*60; const an=Math.atan2(b[1]-a[1],b[0]-a[0]);
+ ctx.save(); ctx.translate(x,y); ctx.rotate(an); ctx.fillStyle='#e8ecf2'; ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(-6,-5); ctx.lineTo(-6,5); ctx.closePath(); ctx.fill(); ctx.fillStyle='#ff9a2a'; ctx.beginPath(); ctx.moveTo(-6,-3); ctx.lineTo(-14-Math.random()*6,0); ctx.lineTo(-6,3); ctx.fill(); ctx.restore(); }
+function drawSysMap(sys,interactive){
+ ctx.setTransform(DPR,0,0,DPR,0,0);
+ ctx.fillStyle='#03050b'; ctx.fillRect(0,0,CW,CH);
+ for(const s of STARS){ ctx.fillStyle=`rgba(255,255,255,${0.35+0.35*Math.sin(TIME*1.5+s.t)})`; ctx.fillRect(s.x*CW,s.y*CH,s.s,s.s); }
+ const sd=SYS[sys], ids=Object.keys(PL).filter(id=>PL[id].sys===sys);
+ const cx=CW/2+(CW>760?70:0), cy=CH/2+18;
+ const sr=sd.sr*Math.max(0.6,Math.min(1,CH/700)), maxR=Math.max(sr+60,Math.min(CW-(CW>760?420:40),CH-120)/2), minR=sr+22;
+ const sc=hx(sd.star);
+ const gl=ctx.createRadialGradient(cx,cy,0,cx,cy,sr*3.2); gl.addColorStop(0,col(sc,0.9)); gl.addColorStop(1,col(sc,0)); ctx.fillStyle=gl; ctx.fillRect(cx-sr*3.2,cy-sr*3.2,sr*6.4,sr*6.4);
+ const sg=ctx.createRadialGradient(cx-sr*0.3,cy-sr*0.3,sr*0.1,cx,cy,sr); sg.addColorStop(0,col(mixA(sc,[255,255,255],0.6))); sg.addColorStop(1,col(sc)); ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(cx,cy,sr,0,7); ctx.fill();
+ label(cx,cy+sr+16,sd.n,'#ffd98a',12);
+ const op=!!S.inter;
+ ids.forEach((id,i)=>{
+  const d=PL[id], R=minR+(i+0.7)*(maxR-minR)/ids.length;
+  ctx.strokeStyle=d.farm?'rgba(255,170,110,.18)':'rgba(140,200,255,.25)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+  const a=i*2.4+TIME*0.35/Math.sqrt(d.per||10);
+  const x=cx+Math.cos(a)*R, y=cy+Math.sin(a)*R, r=clamp(6+4*(d.rad||1),8,17);
+  const N=Math.max(16,Math.round(r*2*DPR)); const c=miniGlobe(id,N); paintGlobe(c.getContext('2d'),id,viewPS(id),N,TIME*0.03,id===pid?1.2:5);
+  ctx.drawImage(c,x-r,y-r,r*2,r*2);
+  MAPPOS[id]=[x,y,r];
+  if(id===pid&&mode!=='title'){ ctx.strokeStyle='#ff5a4a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,r+5,0,7); ctx.stroke(); }
+  if(mapSel===id){ ctx.strokeStyle='#ffe14a'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(x,y,r+8+Math.sin(TIME*4)*2,0,7); ctx.stroke(); }
+  if(interactive){ const pr=Math.floor(prog(id,viewPS(id)).t*100); label(x,y+r+14,d.short+(!op?' 🔒':d.farm?' ⛏자원':S.pl[id]?` ${pr}%`:''),!op?'#8a96a8':d.farm?'#ffc08a':'#ffffff',12); }
+ });
+ if(travel&&MAPPOS[travel.from]&&MAPPOS[travel.to]) drawRocket(MAPPOS[travel.from],MAPPOS[travel.to]);
+}
+function drawWarp(){
+ ctx.setTransform(DPR,0,0,DPR,0,0); ctx.fillStyle='#02030a'; ctx.fillRect(0,0,CW,CH);
+ const t=travel.t, cx=CW/2, cy=CH/2, M=Math.max(CW,CH)*0.8;
+ for(const s of STARS){ const a=s.x*6.283, d0=(s.y+t*(0.4+s.s*0.5))%1, r1=d0*d0*M, r2=r1*(1-0.35*Math.min(1,t)); ctx.strokeStyle=`rgba(200,225,255,${0.25+0.7*d0})`; ctx.lineWidth=0.6+s.s*d0*1.5; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke(); }
+ ctx.save(); ctx.translate(cx,cy+60); ctx.fillStyle='#e8ecf2'; ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(9,6); ctx.lineTo(-9,6); ctx.closePath(); ctx.fill(); ctx.fillStyle='#7fd0ff'; ctx.beginPath(); ctx.arc(0,-6,3,0,7); ctx.fill(); ctx.fillStyle='#ff9a2a'; ctx.beginPath(); ctx.moveTo(-5,6); ctx.lineTo(0,16+Math.random()*10); ctx.lineTo(5,6); ctx.fill(); ctx.restore();
+ const sd=SYS[sysOf(travel.to)];
+ label(cx,cy-30,`${sd.n}(으)로 가는 중...`,'#ffffff',26);
+ label(cx,cy-4,(sd.ly?sd.ly+' 떨어져 있어. ':'')+'진짜로는 빛의 속도로 가도 몇 년, 몇백 년이 걸려!','#9fd0ff',14);
+}
+function renderSysList(){
+ let h='<div style="font-weight:800;margin-bottom:2px">별 고르기</div>';
+ for(const k of SYSORD){ const sd=SYS[k]; const lock=k!=='sol'&&!S.inter; h+=`<button class="btn ${mapSys===k?'on':''}" data-sys="${k}">${sd.n}${lock?' 🔒':''}<small>${k==='sol'?'우리 태양계':sd.ly||'아주 멀어'}</small></button>`; }
+ $('syslist').innerHTML=h;
+ $('syslist').querySelectorAll('[data-sys]').forEach(b=>b.onclick=()=>{ mapSys=b.dataset.sys; mapSel=null; $('mcard').style.display='none'; renderSysList(); });
+ $('mtop').innerHTML=mapSys!=='sol'&&!S.inter?'🔒 다른 별은 아직 잠겨 있어 <small>태양계 행성 하나를 100% 만들면 열려</small>':mapSys==='sol'?'어느 행성으로 갈까? <small>행성을 눌러 봐</small>':`${SYS[mapSys].n} <small>${SYS[mapSys].ly||''} · 행성을 눌러 봐</small>`;
+}
+function drawSolMap(interactive){
  ctx.setTransform(DPR,0,0,DPR,0,0);
  ctx.fillStyle='#03050b'; ctx.fillRect(0,0,CW,CH);
  for(const s of STARS){ ctx.fillStyle=`rgba(255,255,255,${0.35+0.35*Math.sin(TIME*1.5+s.t)})`; ctx.fillRect(s.x*CW,s.y*CH,s.s,s.s); }
@@ -1390,20 +1566,22 @@ function drawMap(interactive){
   if(mapSel===id){ ctx.strokeStyle='#ffe14a'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(x,y,r+8+Math.sin(TIME*4)*2,0,7); ctx.stroke(); }
   if(interactive){ label(x,y+r+15,PL[id].n+(op?(S.pl[id]?` ${pr}%`:''):' 🔒'),op?'#ffffff':'#8a96a8',13); }
  }
- if(travel){ const a=MAPPOS[travel.from]||MAPPOS.moon, b=MAPPOS[travel.to]; const t=clamp(travel.t/1.8,0,1), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; const x=lerp(a[0],b[0],e), y=lerp(a[1],b[1],e)-Math.sin(e*Math.PI)*60; const an=Math.atan2(b[1]-a[1],b[0]-a[0]);
-  ctx.save(); ctx.translate(x,y); ctx.rotate(an); ctx.fillStyle='#e8ecf2'; ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(-6,-5); ctx.lineTo(-6,5); ctx.closePath(); ctx.fill(); ctx.fillStyle='#ff9a2a'; ctx.beginPath(); ctx.moveTo(-6,-3); ctx.lineTo(-14-Math.random()*6,0); ctx.lineTo(-6,3); ctx.fill(); ctx.restore(); }
+ if(travel&&MAPPOS[travel.to]) drawRocket(MAPPOS[travel.from]||MAPPOS.moon,MAPPOS[travel.to]);
 }
 function label(x,y,t,c,s){ ctx.font=`bold ${s}px "Malgun Gothic",sans-serif`; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.8)'; ctx.strokeText(t,x,y); ctx.fillStyle=c; ctx.fillText(t,x,y); }
-function openMap(){ if(!S) return; mode='map'; mapSel=null; $('banner').style.opacity=0; $('hud').style.display='none'; $('mapui').style.display='block'; $('mcard').style.display='none'; $('mback').style.display=pid?'block':'none'; $('touch').style.display='none'; }
+function openMap(){ if(!S) return; mode='map'; mapSel=null; mapSys=pid?sysOf(pid):'sol'; renderSysList(); $('banner').style.opacity=0; $('hud').style.display='none'; $('mapui').style.display='block'; $('mcard').style.display='none'; $('mback').style.display=pid?'block':'none'; $('touch').style.display='none'; }
 function mapClick(x,y){
- let best=null,bd=1e9; for(const id of ORDER){ const p=MAPPOS[id]; if(!p) continue; const d=Math.hypot(x-p[0],y-p[1]); if(d<p[2]+16&&d<bd){bd=d;best=id;} }
+ let best=null,bd=1e9; for(const id in MAPPOS){ const p=MAPPOS[id]; if(!p) continue; const d=Math.hypot(x-p[0],y-p[1]); if(d<p[2]+16&&d<bd){bd=d;best=id;} }
  if(!best) return;
  mapSel=best; const id=best, op=isOpen(id), s=viewPS(id), pr=Math.floor(prog(id,s).t*100);
- let h=`<h2>${PL[id].n} <small style="font-size:13px;color:#ffd98a">난이도: ${PL[id].lv}</small></h2>`;
- if(id==='sun') h+=`<div style="font-size:13px;color:#ffd98a">태양 정거장 · 다이슨 구 ${Math.floor(s.D)}%</div>`;
+ let h=`<h2>${PL[id].n} <small style="font-size:13px;color:#ffd98a">${PL[id].farm?'⛏ 자원 행성':'난이도: '+PL[id].lv}</small></h2>`;
+ if(sysOf(id)!=='sol') h+=`<div style="font-size:12.5px;color:#ffc08a">${SYS[sysOf(id)].n}${SYS[sysOf(id)].ly?' · '+SYS[sysOf(id)].ly:''} · 지구 크기의 ${PL[id].rad}배 · 중력 ${PL[id].g}배</div>`;
+ if(PL[id].farm) h+=`<div style="font-size:13px;color:#ffd98a">생물이 못 살아서 바꿀 수는 없어. 대신 광석이 엄청 많고 외계 생물(${PL[id].natives.map(t=>LIFE[t].n).join('·')})이 살아. 약 ${Math.round(PL[id].T0)}°C</div>`;
+ else if(id==='sun') h+=`<div style="font-size:13px;color:#ffd98a">태양 정거장 · 다이슨 구 ${Math.floor(s.D)}%</div>`;
  else h+=`<div style="font-size:13px;color:#9fd0ff">${S.pl[id]?`푸른 정도 ${pr}% · ${Math.round(s.T)}°C · ${fmtP(s.P)}`:`처음 가 보는 곳 · ${Math.round(PL[id].T0)}°C · ${fmtP(PL[id].P0)}`}</div>`;
- h+=PL[id].facts.slice(0,3).map(f=>`<div class="fact">· ${f}</div>`).join('');
- if(!op) h+=`<p class="wn">🔒 다른 행성 하나를 ${Math.round(NEEDP[id]*100)}% 푸르게 만들면 열려. (지금 제일 높은 곳: ${Math.floor(bestProg()*100)}%)</p>`;
+ h+=PL[id].facts.slice(0,sysOf(id)==='sol'?3:5).map(f=>`<div class="fact">· ${f}</div>`).join('');
+ if(!op&&sysOf(id)!=='sol') h+='<p class="wn">🔒 태양계 행성 하나를 100% 만들면 다른 별로 갈 수 있어.</p>';
+ else if(!op) h+=`<p class="wn">🔒 다른 행성 하나를 ${Math.round(NEEDP[id]*100)}% 푸르게 만들면 열려. (지금 제일 높은 곳: ${Math.floor(bestProg()*100)}%)</p>`;
  else if(id===pid) h+='<p class="ok">지금 여기 있어!</p><button class="btn big" onclick="closeMapBack()">돌아가기</button>';
  else h+=`<button class="btn big go" data-go="${id}">🚀 ${PL[id].n}(으)로 가기</button>`;
  $('mcard').innerHTML=h; $('mcard').style.display='block';
@@ -1414,7 +1592,7 @@ $('mback').onclick=closeMapBack;
 function travelTo(id){
  if(!isOpen(id)) return;
  closeModal(); save();
- travel={from:pid||'moon',to:id,t:0}; mode='travel'; $('mcard').style.display='none'; sfx('boom');
+ const fr=pid||'moon', warp=sysOf(fr)!==sysOf(id); travel={from:fr,to:id,t:0,warp,dur:warp?3.6:1.9}; mode='travel'; $('mcard').style.display='none'; sfx('boom');
 }
 function arrive(id){
  if(!S.pl[id]) initPlanet(id);
@@ -1426,6 +1604,7 @@ function arrive(id){
  const first=!ps.visited; ps.visited=true;
  banner(ps.named||PL[id].n, first?PL[id].hint:'다시 왔어!');
  if(first) setTimeout(()=>toast('초록 상자 <b>착륙 보급품</b>부터 열어 봐 (E)'),2600);
+ for(const a of ps.animals) if(LIFE[a.t].kind==='native') dexAdd(a.t);
  save();
 }
 function showHud(){ $('hud').style.display='block'; $('title').style.display='none'; if(isTouch){ $('touch').style.display='block'; document.body.classList.add('touch'); } hudT=0; }
@@ -1435,8 +1614,9 @@ function nextTip(){
  if(placing) return `🔨 <b>${machName(placing,pid)}</b> 지을 곳을 골라 → E (Esc 취소)`;
  const kit=ps.boxes.find(b=>b.k==='kit'); if(kit&&!kit.op) return '👉 기지 옆 초록 상자 <b>착륙 보급품</b>을 E로 열어 봐';
  const pw=power(pid,ps);
- if(!ps.machines.some(m=>MACH[m.t].sup)) return pid==='europa'?'👉 <b>원자력 전지</b>를 지어 (B). 여긴 햇빛이 너무 약해':'👉 B를 눌러 <b>태양 전지판</b>부터 지어 봐';
+ if(!ps.machines.some(m=>MACH[m.t].sup)) return PL[pid].sun<0.2?'👉 <b>원자력 전지</b>를 지어 (B). 여긴 햇빛이 너무 약해':'👉 B를 눌러 <b>태양 전지판</b>부터 지어 봐';
  if(pid==='sun'){ if(!ps.machines.some(m=>m.t==='dyson')) return '👉 <b>다이슨 패널 발사대</b>를 지어 (B). 전자부품은 기지에서 만들 수 있어'; return pw.r<1?'⚡ 전기가 모자라! 태양 전지판을 더 지어':'👉 발사대를 더 지으면 다이슨 구가 빨리 완성돼'; }
+ if(PL[pid].farm){ if(!ps.machines.some(m=>m.t==='drill')) return '⛏ 자원 행성! <b>자동 드릴</b>을 지으면 광석을 2개씩 캐 줘 (전자부품은 기지에서 만들어)'; return '⛏ 광석을 캐고 외계 생물을 사냥해서 재료를 모아. 모은 재료는 다른 행성을 바꿀 때 써!'; }
  if(!ps.machines.some(m=>MACH[m.t].stat)) return '👉 히터·가스 추출기·물 펌프·산소 발생기로 행성을 바꾸자 (B)';
  if(pw.r<0.7) return '⚡ 전기가 모자라서 기계가 느려! 발전기를 더 지어';
  const c=countLife();
@@ -1452,13 +1632,15 @@ function nextTip(){
 }
 function hud(){
  const pr=prog(pid,ps), pw=power(pid,ps);
- const stage=pid==='sun'?'태양 정거장':pr.t>=1?'푸른 행성!':pr.t>=0.7?'숲과 바다':pr.t>=0.4?'살아나는 중':pr.t>=0.1?'깨어나는 중':'죽은 행성';
+ const farm=PL[pid].farm;
+ const stage=farm?'⛏ 자원 행성':pid==='sun'?'태양 정거장':pr.t>=1?'푸른 행성!':pr.t>=0.7?'숲과 바다':pr.t>=0.4?'살아나는 중':pr.t>=0.1?'깨어나는 중':'죽은 행성';
  $('pname').innerHTML=`${ps.named||PL[pid].n}<small>${stage}</small>`;
  $('blue').firstElementChild.style.width=(pr.t*100)+'%';
- $('bluet').textContent=(pid==='sun'?'다이슨 구 ':'푸른 정도 ')+Math.floor(pr.t*100)+'%';
+ $('bluet').textContent=farm?'자원 행성 — 생물이 못 살아서 바꿀 수 없어':(pid==='sun'?'다이슨 구 ':'푸른 정도 ')+Math.floor(pr.t*100)+'%';
  const chip=(ic,nm,val,p,cl)=>`<div class="st">${ic} ${nm} <b>${val}</b>${p>=0.999?' <span class="ok">✓</span>':''}<div class="bar"><i style="width:${p*100}%;background:${cl}"></i></div></div>`;
  let h='';
- if(pid==='sun') h+=chip('☀','다이슨 구',Math.floor(ps.D)+'%',pr.t,'#ffcf5a');
+ if(farm){ const nat=ps.animals.length; h+=chip('🌡','온도',Math.round(ps.T)+'°C',0,'#ff8a5a'); h+=chip('☁','공기',fmtP(ps.P),0,'#c9d8ee'); h+=chip('⛏','광석',ps.ores.length+'개',Math.min(0.99,ps.ores.length/110),'#ffd24a'); h+=chip('👾','외계 생물',nat+'마리',Math.min(0.99,nat/14),'#7fe8ff'); }
+ else if(pid==='sun') h+=chip('☀','다이슨 구',Math.floor(ps.D)+'%',pr.t,'#ffcf5a');
  else{
   h+=chip('🌡','온도',Math.round(ps.T)+'°C',pr.pT,'#ff8a5a');
   h+=chip('☁','공기',fmtP(ps.P),pr.pP,'#c9d8ee');
@@ -1484,7 +1666,7 @@ function updatePlay(dt){
  S.t+=dt; P.cd=Math.max(0,P.cd-dt);
  SEA=seaYof(pid,ps.W,ps.T); FROZEN=ps.T<0;
  const sdt=dt*S.speed;
- simAcc+=sdt; let guard=0; while(simAcc>=0.25&&guard++<40){ simAcc-=0.25; for(const id of ORDER) if(S.pl[id]) simStep(id,S.pl[id],0.25); }
+ simAcc+=sdt; let guard=0; while(simAcc>=0.25&&guard++<40){ simAcc-=0.25; for(const id in S.pl) if(PL[id]) simStep(id,S.pl[id],0.25); }
  lifeStep(sdt,dt);
  updPlayer(dt); updMine(dt); updDarts(dt); updDrops(dt); updParts(dt); updFall(dt);
  secT+=dt; if(secT>=1){ secT=0;
@@ -1551,7 +1733,7 @@ function loop(now){
  try{
   const dt=Math.min(0.05,Math.max(0,(now-last)/1000)); last=now; TIME+=dt;
   if(mode==='play') updatePlay(dt);
-  else if(mode==='travel'){ travel.t+=dt; if(travel.t>=1.9){ const to=travel.to; travel=null; arrive(to); } }
+  else if(mode==='travel'){ travel.t+=dt; if(travel.t>=travel.dur){ const to=travel.to; travel=null; arrive(to); } }
   draw();
  }catch(e){ console.error(e); if(!window._errShown){ window._errShown=1; toast('앗, 작은 오류가 났어: '+e.message); } }
 }
@@ -1622,6 +1804,7 @@ function startGame(fresh){
 $('bNew').onclick=()=>{ if(load()&&!confirm('처음부터 새로 할까? 지금까지 한 건 지워져.')) return; startGame(true); };
 $('bCont').onclick=()=>startGame(false);
 S=load();
+if(S&&!S.inter){ for(const id of ORDER) if(S.pl[id]&&S.pl[id].ms&&S.pl[id].ms[100]) S.inter=1; }
 if(S&&!S.fewBox){ S.fewBox=1; const lim={small:6,res:3,wreck:1}; for(const id in S.pl){ const s2=S.pl[id], cnt={}; s2.boxes=s2.boxes.filter(b=>{ if(b.op||!lim[b.k]) return true; cnt[b.k]=(cnt[b.k]||0)+1; return cnt[b.k]<=lim[b.k]; }); } save(); }
 if(!S){ $('bCont').style.display='none'; }
 resize();
