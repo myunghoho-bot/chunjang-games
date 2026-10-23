@@ -198,6 +198,8 @@ const ITEMS={
  e_bee:{n:'벌 애벌레',r:1,animal:'bee',d:'번식장에 넣으면 벌 3마리. 벌이 있으면 식물이 더 잘 퍼져.'},
  e_rabbit:{n:'토끼 배아',r:2,animal:'rabbit',d:'번식장에 넣으면 토끼 3마리. 풀을 먹어.'},
  e_wolf:{n:'늑대 배아',r:3,animal:'wolf',d:'번식장에 넣으면 늑대 3마리. 토끼를 사냥해.'},
+ si_sample:{n:'실리콘 샘플',r:1,d:'실리콘 생물의 몸 조각. 실리콘 실험실에서 2개로 실험하면 실리콘 액체 생물이 돼.'},
+ si_life:{n:'실리콘 액체 생물',r:2,deco:1,d:'반짝이는 액체로 된 실리콘 생물. 공기 없는 자원 행성에 풀어 주면 고른 모양으로 자라서 행성을 꾸며 줘.'},
 };
 const RAR=['#cfd6e2','#6fb6ff','#c58bff','#ffd24a'];
 const RARN=['흔함','드묾','귀함','아주 귀함'];
@@ -317,7 +319,11 @@ exo('k186f','k186',{n:'케플러-186 f',short:'f',lv:'어려움',per:130,rad:1.1
 // 케플러-452
 exo('k452b','k452',{n:'케플러-452 b',short:'b',per:385,rad:1.63,g:1.9,sun:1.1,T0:-8,P0:0.01,c:'tan',sz:1.06,
  facts:['2015년에 찾은 "지구의 사촌"이야. 태양 닮은 별을 1년(385일)에 한 바퀴 돌아.','지구보다 1.6배 커. 무거워서 점프가 낮아!','공기가 있는지는 아직 몰라. 게임에선 아주 얇은 공기로 시작해.','나중에 다른 과학자들이 "진짜 행성이 맞는지 더 확인해야 한다"고 했어.']});
-const FARM_OK=['solar','wind','rtg','drill'];
+const FARM_OK=['solar','wind','rtg','drill','lab'];
+// 실리콘 액체 생물로 꾸미는 장식 (아이: "공기 없는 자원 행성을 데코할 수 있게")
+const DECO={jelly:{n:'젤리 친구'},pool:{n:'빛나는 웅덩이'},spire:{n:'수정 탑'},arch:{n:'액체 아치'},flower:{n:'실리콘 꽃'}};
+const DCOL=['#7fe8ff','#b07aff','#ff7ad9','#7dff9a','#ffd24a','#ff8a4a'];
+const DECO_GOAL=20;
 function pidx(id){ const i=ORDER.indexOf(id); if(i>=0) return i; let h=0; for(const ch of id) h=(h*31+ch.charCodeAt(0))|0; return 100+(Math.abs(h)%100000); }
 
 // ================= 기계 =================
@@ -336,6 +342,7 @@ const MACH={
  breed:{n:'생명 번식장',cost:{iron:4,si:2,chip:1},use:1,g:'생명'},
  drill:{n:'자동 드릴',cost:{iron:4,chip:1},use:1,g:'기타'},
  dyson:{n:'다이슨 패널 발사대',cost:{iron:6,si:6,chip:2},use:4,sunOnly:1,g:'행성'},
+ lab:{n:'실리콘 실험실',cost:{iron:4,si:4,chip:1},use:2,g:'생명'},
 };
 const SUN_OK=['solar','rtg','drill','dyson'];
 const SPACE={
@@ -374,10 +381,10 @@ const LIFE={
   d:'꽃가루를 옮겨서 식물이 더 빨리 퍼지게 해 줘. 너무 작아서 사냥은 안 돼.'},
  rabbit:{n:'토끼',kind:'animal',bio:4,cap:26,br:0.005,need:{T:[3,35],P:[0.5,5],O:14},food:['grass',8,'풀이 8개 넘게 자라야 해'],meat:1,hide:1,
   d:'풀을 먹고 빨리 늘어나. 너무 많아지면 풀이 사라지니까 사냥해서 줄여 줘.'},
- sil:{n:'실리콘 생물',kind:'native',bio:0,cap:14,br:0.006,need:{},hit:[13,8,11],drops:[['si',2,3,1],['ti',1,1,0.35]],where:'뜨거운 자원 행성',
-  d:'몸이 탄소 대신 규소(실리콘)로 된 외계 생물. 뜨거운 곳에서도 살 수 있을지 모른다고 과학자들이 상상하는 생명이야. 사냥하면 규소가 나와.'},
- tbeast:{n:'나무짐승',kind:'native',bio:0,cap:12,br:0.005,need:{},hit:[14,26,24],drops:[['s_tree',1,2,1],['meat',1,1,0.6]],where:'추운 자원 행성',
-  d:'나무처럼 생긴 외계 동물. 뿌리 다리로 천천히 걸어 다녀. 사냥하면 나무 씨앗이 나와서 다른 행성에 심을 수 있어.'},
+ sil:{n:'실리콘 생물',kind:'native',bio:0,cap:14,br:0.006,need:{},hit:[13,8,11],drops:[['si',2,3,1],['si_sample',1,1,0.75],['ti',1,1,0.3]],where:'뜨거운 자원 행성',
+  d:'몸이 탄소 대신 규소(실리콘)로 된 외계 생물. 뜨거운 곳에서도 살 수 있을지 모른다고 과학자들이 상상하는 생명이야. 사냥하면 규소와 실리콘 샘플이 나와. 샘플로 실험하면 실리콘 액체 생물이 돼.'},
+ tbeast:{n:'나무짐승',kind:'native',bio:0,cap:12,br:0.005,need:{},hit:[15,20,21],drops:[['s_tree',1,2,1],['meat',1,1,0.6]],where:'추운 자원 행성',
+  d:'해면(바다 스펀지)처럼 몸에 구멍이 숭숭 뚫린 외계 동물. 식물처럼 생겼지만 동물이야 (진짜 해면도 동물이야!). 사냥만 할 수 있어. 사냥하면 나무 씨앗이 나와.'},
  wolf:{n:'늑대',kind:'animal',bio:8,cap:6,br:0.0025,need:{T:[-5,35],P:[0.5,5],O:16},food:['rabbit',5,'토끼가 5마리 넘게 있어야 해'],meat:2,hide:2,
   d:'토끼를 사냥하는 육식 동물. 늑대가 있으면 토끼 수가 저절로 맞춰져.'},
 };
@@ -489,7 +496,7 @@ function genObjects(id,s){
 function initPlanet(id){
  const d=PL[id];
  const s={T:d.T0,P:d.P0,O:d.O0,W:d.W0,bio:0,D:0,machines:[],space:[],plants:[],animals:[],ores:[],boxes:[],drops:[],ms:{},
-  capT:100,capN:0,named:'',storm:0,stormT:500,visited:false,respawn:[]};
+  capT:100,capN:0,named:'',storm:0,stormT:500,visited:false,respawn:[],decos:[]};
  genObjects(id,s); S.pl[id]=s; return s;
 }
 function viewPS(id){ return (S&&S.pl[id])||{T:PL[id].T0,P:PL[id].P0,O:PL[id].O0,W:PL[id].W0,bio:0,D:0,plants:[],machines:[],space:[],storm:0}; }
@@ -532,6 +539,7 @@ function simStep(id,s,dt){
   const M=MACH[m.t];
   if(M.stat) pushStat(id,s,M.stat,M.rate*pw.r*mult*dt);
   if(m.t==='dyson') s.D=Math.min(100,s.D+0.02*pw.r*dt);
+  if(m.t==='lab'){ if((m.inq||0)>=2){ m.tm=(m.tm||0)+dt*pw.r; if(m.tm>=20){ m.tm=0; m.inq-=2; m.out=(m.out||0)+1; if(id===pid) toast('🧪 실험 성공! <b>실리콘 액체 생물</b>이 생겼어 (실험실 앞에서 E)'); } } else m.tm=0; }
   if(m.t==='drill'){ m.tm=(m.tm||0)+dt*pw.r; if(m.tm>=25){ m.tm=0; m.buf=m.buf||{}; let tot=0; for(const k in m.buf) tot+=m.buf[k]; const fm=PL[id].farm?2:1; if(tot<12*fm){ for(let q=0;q<fm;q++){ const it=wpick(PL[id].ore); m.buf[it]=(m.buf[it]||0)+1; } } } }
  }
  if(PL[id].farm) return;
@@ -876,14 +884,17 @@ function findTarget(){
  cons('base',null,BASEX,hAt(BASEX),60);
  for(const m of ps.machines) cons('mach',m,m.x,hAt(m.x),34);
  for(const p of ps.plants) if(p.g>=1&&p.t!=='weed') cons('plant',p,p.x,hAt(p.x),22);
+ for(const d of (ps.decos||[])) cons('deco',d,d.x,hAt(d.x),24);
  return best;
 }
 function promptText(t){
  if(!t) return '';
  if(t.k==='box'){ const b=t.o; const empty=b.op&&b.items&&!Object.keys(b.items).length; return empty?`${LOOT[b.k].n} (비었어)`:`E  ${LOOT[b.k].n} ${b.op?'다시 보기':'열기'}`; }
  if(t.k==='base') return 'E  기지 (만들기 · 우주 · 다른 행성)';
- if(t.k==='mach'){ const m=t.o; if(m.t==='drill'){ let n=0; for(const k in (m.buf||{})) n+=m.buf[k]; return `E  자동 드릴 (${n}개 모였어)`; } if(m.t==='breed') return 'E  생명 번식장'; return 'E  '+machName(m.t,pid); }
+ if(t.k==='mach'){ const m=t.o; if(m.t==='lab') return 'E  실리콘 실험실'+((m.out||0)>0?` (액체 생물 ${m.out}마리!)`:''); if(m.t==='drill'){ let n=0; for(const k in (m.buf||{})) n+=m.buf[k]; return `E  자동 드릴 (${n}개 모였어)`; } if(m.t==='breed') return 'E  생명 번식장'; return 'E  '+machName(m.t,pid); }
  if(t.k==='plant') return `E  ${LIFE[t.o.t].n} 씨앗 따기`;
+ if(t.k==='deco') return `E  ${DECO[t.o.k].n} 꾸미기 (색·모양)`;
+ if(t.k==='mach'&&t.o.t==='lab') return 'E  실리콘 실험실';
  return '';
 }
 function interact(){
@@ -892,6 +903,7 @@ function interact(){
  if(t.k==='box') openBox(t.o);
  else if(t.k==='base') openBase('make');
  else if(t.k==='mach') openMach(t.o);
+ else if(t.k==='deco') openDeco(t.o);
  else if(t.k==='plant'){ const p=t.o, L=LIFE[p.t]; const n=p.t==='tree'?1:ri(1,2); addInv(L.seed,n); p.g=0.5; puff(p.x,hAt(p.x)-8,'#9fe07a',6); sfx('pick'); }
 }
 function tryPlace(){
@@ -953,7 +965,13 @@ function doAct(a,b){
  if(a==='gomap'){ closeModal(); return openMap(); }
  if(a==='mcollect'){ const m=MCTX.mach; if(!m||!m.buf) return; for(const k in m.buf){ addInv(k,m.buf[k],true); } m.buf={}; sfx('pick'); toast('드릴이 캔 재료를 챙겼어'); return openMach(m); }
  if(a==='memb'){ const m=MCTX.mach; if(!m||inv(b)<1) return; const an=ITEMS[b].animal; if(m.emb&&m.emb!==an&&m.left>0){ toast('지금 다른 생물이 번식 중이야'); return; } S.inv[b]--; m.emb=an; m.left=(m.left||0)+3; sfx('pop'); toast(`${LIFE[an].n} 3마리를 키우기 시작했어`); return openMach(m); }
- if(a==='mremove'){ const m=MCTX.mach; if(!m) return; const M=MACH[m.t]; for(const k in M.cost){ const n=Math.floor(M.cost[k]/2); if(n) addInv(k,n,true); } if(m.buf) for(const k in m.buf) addInv(k,m.buf[k],true); ps.machines.splice(ps.machines.indexOf(m),1); toast('치웠어 (재료 절반 돌려받음)'); return closeModal(); }
+ if(a==='labin'){ const m=MCTX.mach; if(!m) return; const n=inv('si_sample'); if(!n){ toast('실리콘 샘플이 없어. 실리콘 생물을 사냥해 봐'); return; } S.inv.si_sample=0; m.inq=(m.inq||0)+n; sfx('pop'); toast(`샘플 ${n}개를 넣었어`+((m.inq)<2?' (2개가 있어야 실험해)':'')); return openMach(m); }
+ if(a==='labout'){ const m=MCTX.mach; if(!m||!m.out) return; addInv('si_life',m.out); m.out=0; sfx('pick'); return openMach(m); }
+ if(a==='decoput'){ return putDeco(b); }
+ if(a==='decoc'){ const d=MCTX.deco; if(!d) return; d.c=+b; sfx('pop'); return openDeco(d); }
+ if(a==='decok'){ const d=MCTX.deco; if(!d) return; d.k=b; sfx('pop'); return openDeco(d); }
+ if(a==='decotake'){ const d=MCTX.deco; if(!d) return; ps.decos.splice(ps.decos.indexOf(d),1); addInv('si_life',1); toast('실리콘 액체 생물을 다시 데려왔어'); return closeModal(); }
+ if(a==='mremove'){ const m=MCTX.mach; if(!m) return; const M=MACH[m.t]; for(const k in M.cost){ const n=Math.floor(M.cost[k]/2); if(n) addInv(k,n,true); } if(m.inq) addInv('si_sample',m.inq,true); if(m.out) addInv('si_life',m.out,true); if(m.buf) for(const k in m.buf) addInv(k,m.buf[k],true); ps.machines.splice(ps.machines.indexOf(m),1); toast('치웠어 (재료 절반 돌려받음)'); return closeModal(); }
  if(a==='dex'){ return openDex(b); }
  if(a==='dexs'){ return openDex('planet',b); }
  if(a==='go'){ return travelTo(b); }
@@ -989,6 +1007,8 @@ function useItem(it){
   return;
  }
  if(I.animal){ toast('생명 번식장(짓기 B)을 짓고, 번식장 앞에서 E를 눌러 넣어 줘'); return; }
+ if(it==='si_life'){ if(!PL[pid].farm||ps.P>=0.01){ toast('실리콘 액체 생물은 <b>공기 없는 자원 행성</b>에서만 살아'); return; } return openDecoPick(); }
+ if(it==='si_sample'){ toast('<b>실리콘 실험실</b>(짓기 B)을 짓고 실험실 앞에서 E를 눌러 넣어 줘'); return; }
  toast(I.d);
 }
 function openBag(){
@@ -1015,6 +1035,7 @@ function openBuild(){
    else if(M.sup==='rtg') eff='전기 +6 (늘)';
    else if(M.stat) eff=statPerSec(pid,M.stat,M.rate)+` · 전기 ${M.use} 씀`;
    else if(t==='breed') eff='배아를 넣으면 동물이 태어나 · 전기 1';
+   else if(t==='lab') eff='실리콘 샘플 2개 → 실리콘 액체 생물 · 전기 2';
    else if(t==='drill') eff=(PL[pid].farm?'자원 행성이라 25초마다 광석 2개!':'25초마다 광석 1개를 캐 줘')+' · 전기 1';
    else if(t==='dyson') eff='다이슨 구 +2%/100초 · 전기 4 씀';
    h+=`<div class="card ${lock||!can?'off':''}" data-act="build:${t}"><img class="th" src="${machThumb(t)}"><div class="nm">${machName(t,pid)}</div><div class="ds">${eff}</div>${lock?'<div class="lockt">🔒 설계도 칩 필요</div>':costHTML(M.cost)}</div>`; }
@@ -1057,6 +1078,8 @@ function openMach(m){
  if(M.sup){ h+=`<p>지금 전기 <b>+${supOf(pid,ps,M.sup).toFixed(1)}</b> 만들고 있어.</p>`; if(M.sup==='wind'&&ps.P<0.1) h+='<p class="wn">공기가 너무 얇아서 바람개비가 안 돌아.</p>'; }
  if(M.use) h+=`<p>전기 ${M.use} 써. 행성 전체 전기: <b class="${pw.r<1?'bd':'ok'}">${pw.sup.toFixed(1)} / ${pw.use}</b> ${pw.r<1?'→ 모자라서 '+Math.round(pw.r*100)+'% 힘으로 돌아':''}</p>`;
  if(M.stat) h+=`<p>${statPerSec(pid,M.stat,M.rate*pw.r*(S.dyson?2:1))}</p>`;
+ if(m.t==='lab'){ h+=`<p>실리콘 샘플 <b>2개</b>로 20초 동안 실험하면 <b>실리콘 액체 생물</b> 1마리가 생겨. 공기 없는 자원 행성에 풀어 주면 행성을 꾸밀 수 있어.</p><p>실험실 안 샘플: <b>${m.inq||0}개</b>${(m.inq||0)>=2?` · 실험 중 ${Math.floor((m.tm||0)/20*100)}%`:''} · 다 된 액체 생물: <b>${m.out||0}마리</b></p>`;
+  h+=`<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px"><button class="btn big" data-act="labin">샘플 넣기 (가방에 ${inv('si_sample')}개)</button>${m.out?'<button class="btn big green" data-act="labout">액체 생물 챙기기</button>':''}</div>`; }
  if(m.t==='drill'){ const b=m.buf||{}; const ks=Object.keys(b).filter(k=>b[k]>0); h+='<p>25초마다 광석을 하나씩 캐서 모아 둬 (12개까지).</p><div class="grid">'+(ks.map(k=>`<div class="slot"><img src="${iconURL(k)}">${ITEMS[k].n}<div class="q">×${b[k]}</div></div>`).join('')||'<p>아직 비었어.</p>')+'</div>'; if(ks.length) h+='<div style="text-align:center;margin-top:10px"><button class="btn big green" data-act="mcollect">다 챙기기</button></div>'; }
  if(m.t==='breed'){
   if(m.emb&&m.left>0) h+=`<p>${LIFE[m.emb].n} <b>${m.left}마리</b>가 태어날 차례를 기다려.${m.wait?` <span class="wn">(기다리는 중: ${m.wait})</span>`:''}</p>`;
@@ -1067,6 +1090,47 @@ function openMach(m){
  }
  h+=`<div style="margin-top:14px;text-align:right"><button class="btn" data-act="mremove">치우기 (재료 절반 돌려받기)</button></div>`;
  openModal(h);
+}
+const DTH={};
+function decoThumb(k,ci){ const key=k+ci; if(DTH[key]) return DTH[key]; const c=document.createElement('canvas'); c.width=192; c.height=144; const g=c.getContext('2d'); g.fillStyle='rgba(0,0,0,.35)'; g.fillRect(0,0,192,144); g.fillStyle='#3a3030'; g.fillRect(0,124,192,20); g.translate(96,124); g.scale(1.8,1.8); drawDeco(g,k,0,0,ci,1,0); return DTH[key]=c.toDataURL(); }
+function openDecoPick(){
+ MCTX={};
+ let h='<h2>어떤 모양으로 꾸밀까?</h2><p style="margin:0 0 8px;font-size:13px;color:#bcd0ee">실리콘 액체 생물을 주인공 앞에 풀어 주면 이 모양으로 자라. 나중에 E로 색이랑 모양을 바꿀 수 있어.</p><div class="grid">';
+ for(const k in DECO) h+=`<div class="card" data-act="decoput:${k}"><img class="th" src="${decoThumb(k,0)}"><div class="nm">${DECO[k].n}</div></div>`;
+ openModal(h+'</div>');
+}
+function putDeco(k){
+ if(inv('si_life')<1) return closeModal();
+ const x=wrapX(P.x+P.face*26);
+ for(const d of ps.decos) if(Math.abs(wd(d.x-x))<16){ toast('바로 옆에 장식이 있어. 조금 옆으로 가 봐'); return; }
+ if(Math.abs(wd(x-BASEX))<45){ toast('기지에 너무 가까워'); return; }
+ S.inv.si_life--; ps.decos.push({x,k,c:ri(0,DCOL.length-1),ph:Math.random()*6});
+ puff(x,hAt(x)-6,DCOL[0],12); sfx('pop'); closeModal();
+ const n=ps.decos.length;
+ if(n>=DECO_GOAL&&!ps.decoDone){ ps.decoDone=1; banner('반짝이는 실리콘 행성 완성!','공기 없는 행성이 실리콘 생물로 반짝반짝해'); sfx('fanfare'); fireworks(); }
+ else toast(`${DECO[k].n}을(를) 꾸몄어! (실리콘 정원 ${n}/${DECO_GOAL})`);
+ save();
+}
+function openDeco(d){
+ MCTX={deco:d};
+ let h=`<h2>${DECO[d.k].n} 꾸미기</h2><h3>색</h3><div style="display:flex;gap:8px;flex-wrap:wrap">`;
+ DCOL.forEach((c,i)=>{ h+=`<button class="btn" data-act="decoc:${i}" style="width:44px;height:44px;border-radius:50%;background:${c};${i===d.c?'outline:3px solid #fff;':''}"></button>`; });
+ h+='</div><h3>모양</h3><div class="grid">';
+ for(const k in DECO) h+=`<div class="card ${k===d.k?'':'off'}" data-act="decok:${k}"><img class="th" src="${decoThumb(k,d.c)}"><div class="nm">${DECO[k].n}</div></div>`;
+ h+='</div><div style="margin-top:12px;text-align:right"><button class="btn" data-act="decotake">거둬들이기 (가방으로)</button></div>';
+ openModal(h);
+}
+function drawDeco(g,k,X,y,ci,t,ph){
+ const c=DCOL[ci%DCOL.length], cA=hx(c);
+ g.save(); g.translate(X,y);
+ const pulse=0.75+0.25*Math.sin(t*2+ph);
+ g.shadowColor=c; g.shadowBlur=10*pulse;
+ if(k==='jelly'){ const sq=1+Math.sin(t*3+ph)*0.08; g.scale(1/sq,sq); g.fillStyle=col(cA,0.78); g.beginPath(); g.moveTo(-12,0); g.quadraticCurveTo(-13,-20,0,-21); g.quadraticCurveTo(13,-20,12,0); g.closePath(); g.fill(); g.shadowBlur=0; g.fillStyle='rgba(255,255,255,.5)'; g.beginPath(); E(g,-5,-14,3,2,-0.5); g.fill(); const bl=Math.sin(t*0.9+ph)>0.96?0.2:1; g.fillStyle='#1a1030'; g.beginPath(); E(g,-4,-9,1.6,2.2*bl); E(g,4,-9,1.6,2.2*bl); g.fill(); }
+ else if(k==='pool'){ g.fillStyle=col(cA,0.6); g.beginPath(); E(g,0,-1,22,4); g.fill(); g.shadowBlur=0; g.fillStyle='rgba(255,255,255,.35)'; g.beginPath(); E(g,-6,-2,8,1.2); g.fill(); g.shadowBlur=6; for(let i=0;i<3;i++){ const by=-4-Math.abs(Math.sin(t*2.4+ph+i*2))*8; g.fillStyle=col(cA,0.92); g.beginPath(); C(g,-12+i*12,by,2.7); g.fill(); } }
+ else if(k==='spire'){ g.fillStyle=col(cA,0.72); g.beginPath(); g.moveTo(-8,0); g.lineTo(-4,-34); g.lineTo(0,-52); g.lineTo(4,-34); g.lineTo(8,0); g.closePath(); g.moveTo(-14,0); g.lineTo(-11,-18); g.lineTo(-8,0); g.closePath(); g.moveTo(9,0); g.lineTo(13,-22); g.lineTo(16,0); g.closePath(); g.fill(); g.shadowBlur=0; g.fillStyle='rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(-2,-4); g.lineTo(-1,-44); g.lineTo(1,-30); g.closePath(); g.fill(); for(let i=0;i<3;i++){ const yy=-56-((t*8+i*7+ph*5)%20); g.fillStyle=col(cA,0.8); g.beginPath(); C(g,Math.sin(i*2+t)*4,yy,1.4); g.fill(); } }
+ else if(k==='arch'){ g.strokeStyle=col(cA,0.82); g.lineWidth=5; g.lineCap='round'; g.beginPath(); g.moveTo(-18,0); g.bezierCurveTo(-18,-36,18,-36,18,0); g.stroke(); g.shadowBlur=0; g.fillStyle=col(cA,0.9); for(let i=0;i<3;i++){ const yy=-25+((t*10+i*6+ph*3)%24); g.beginPath(); C(g,-8+i*8,yy,1.5); g.fill(); } }
+ else if(k==='flower'){ g.strokeStyle=col(cA,0.75); g.lineWidth=2; g.beginPath(); g.moveTo(0,0); g.quadraticCurveTo(4,-14,0,-26); g.stroke(); g.fillStyle=col(cA,0.6); g.beginPath(); E(g,-5,-8,5,1.8,0.5); E(g,5,-12,5,1.8,-0.5); g.fill(); g.fillStyle=col(cA,0.85); for(let i=0;i<5;i++){ const a=i/5*6.283+t*0.5+ph; g.beginPath(); E(g,Math.cos(a)*5,-30+Math.sin(a)*5,4.2,2.2,a); g.fill(); } g.shadowBlur=0; g.fillStyle='#ffffff'; g.beginPath(); C(g,0,-30,2.4); g.fill(); }
+ g.restore();
 }
 function openDex(tab,dsys){
  tab=tab||'planet';
@@ -1106,6 +1170,8 @@ function drawIcon(g,it,s){
  case 'e_fish': g.fillStyle='#ff9f5a'; for(const [x,y] of [[-6,-4],[3,-6],[7,3],[-2,4],[-8,5],[2,-1]]){ g.beginPath(); g.arc(x,y,4,0,7); g.fill(); } g.fillStyle='#3a2a1a'; for(const [x,y] of [[-6,-4],[3,-6],[7,3],[-2,4],[-8,5],[2,-1]]){ g.beginPath(); g.arc(x+1,y,1,0,7); g.fill(); } break;
  case 'e_bee': g.fillStyle='#f6f0dc'; g.beginPath(); g.ellipse(0,0,11,6,0.3,0,7); g.fill(); g.strokeStyle='#d8cfb0'; g.lineWidth=1; for(let i=-6;i<=6;i+=4){ g.beginPath(); g.moveTo(i,-5); g.lineTo(i+2,5); g.stroke(); } g.fillStyle='#3a2a1a'; g.beginPath(); g.arc(9,-1,1.5,0,7); g.fill(); break;
  case 'e_rabbit': vial(g,'#f0c8b8'); g.fillStyle='#fff'; g.beginPath(); E(g,-1,3,2,4,0.2); E(g,2,3,2,4,-0.2); g.fill(); break;
+ case 'si_sample': crystal(g,-5,9,4,15,'#5fd0e8','#b9f2ff',-0.3); crystal(g,3,9,4.5,19,'#a88aff','#e0d0ff',0.15); crystal(g,9,9,3,10,'#7fe8ff','#d8faff',0.5); break;
+ case 'si_life': g.shadowColor='#7fe8ff'; g.shadowBlur=8; g.fillStyle='rgba(127,232,255,.85)'; g.beginPath(); g.moveTo(-11,9); g.quadraticCurveTo(-12,-11,0,-12); g.quadraticCurveTo(12,-11,11,9); g.closePath(); g.fill(); g.shadowBlur=0; g.fillStyle='rgba(255,255,255,.5)'; g.beginPath(); E(g,-5,-5,3,2,-0.5); g.fill(); g.fillStyle='#1a1030'; g.beginPath(); E(g,-3.5,0,1.5,2.2); E(g,3.5,0,1.5,2.2); g.fill(); break;
  case 'e_wolf': vial(g,'#9a9aa8'); g.fillStyle='#5a5a66'; g.beginPath(); g.moveTo(-3,0); g.lineTo(0,7); g.lineTo(3,0); g.closePath(); g.fill(); break;
  }
  g.restore();
@@ -1158,6 +1224,14 @@ function drawMach(g,t,X,y,m,tm,on,thumb){
   if(m.emb&&m.left>0){ g.fillStyle='#5fbf6a'; g.fillRect(-14,-8,28,3); g.save(); g.translate(0,-9); g.scale(0.8,0.8); drawCritter(g,m.emb,0,0,1,TIME); g.restore(); }
   g.fillStyle=m.emb&&m.left>0?'#7dff9a':'#ffcf5a'; g.beginPath(); g.arc(16,-3,1.8,0,7); g.fill();
   break; }
+ case 'lab':{ g.fillStyle='#6d7586'; g.fillRect(-20,-14,40,4); g.fillRect(-18,-10,3,10); g.fillRect(15,-10,3,10);
+  g.fillStyle='#3a4250'; rr(g,-18,-34,16,14,2); g.fill(); g.fillStyle=(m.inq||0)>=2?'#7dff9a':'#5fa0d0'; g.fillRect(-16,-32,12,6); g.fillStyle='#9aa3b2'; g.fillRect(-11,-20,2,6);
+  const run=(m.inq||0)>=2&&on>0.05, lq=run?'rgba(127,232,255,.85)':'rgba(127,232,255,.35)';
+  g.strokeStyle='#cfe6ff'; g.lineWidth=1; g.fillStyle=lq; g.beginPath(); g.moveTo(4,-14); g.lineTo(10,-14); g.lineTo(13,-15); g.lineTo(9,-26); g.lineTo(9,-34); g.lineTo(5,-34); g.lineTo(5,-26); g.lineTo(1,-15); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); C(g,16,-20,4); g.fill(); g.stroke();
+  if(run&&!thumb){ g.fillStyle='rgba(220,250,255,.9)'; for(let i=0;i<3;i++){ const yy=(TIME*16+i*6)%18; g.beginPath(); C(g,7+Math.sin(i*2+TIME*3)*1.5,-16-yy,1.1); g.fill(); } }
+  if((m.out||0)>0){ g.shadowColor='#7fe8ff'; g.shadowBlur=8; g.fillStyle='#7fe8ff'; g.beginPath(); C(g,-6,-41,3.5); g.fill(); g.shadowBlur=0; }
+  break; }
  case 'dyson':{
   g.fillStyle='#5b6470'; g.fillRect(-18,-6,36,6); g.save(); g.translate(0,-6); g.rotate(-0.9); g.fillStyle='#9aa3b2'; g.fillRect(-2,-44,6,46); g.fillStyle='#ffcf5a'; g.fillRect(0,-44,2,46); const k=((TIME*0.6+(m.x||0)*0.01)%1); if(!thumb){ g.fillStyle='#2a4f9a'; g.fillRect(-4,-6-k*36,10,4); } g.restore();
   g.fillStyle='#d4a637'; g.fillRect(-10,-12,12,6); break; }
@@ -1175,13 +1249,14 @@ function drawCritter(g,t,X,y,sc,tt,dir){
   for(const [x,y,r,c] of [[-7,-7,4.6,'#5fd0e8'],[0,-8.5,5.6,'#7fe8ff'],[7,-9,4.6,'#a88aff']]){ g.fillStyle=c; g.beginPath(); for(let k=0;k<6;k++){ const a=k/6*6.283+0.5, px=x+Math.cos(a)*r, py=y+Math.sin(a)*r*0.8; k?g.lineTo(px,py):g.moveTo(px,py); } g.closePath(); g.fill(); g.fillStyle='rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(x-r*0.4,y-r*0.5); g.lineTo(x,y-r*0.7); g.lineTo(x+r*0.1,y-r*0.2); g.closePath(); g.fill(); }
   g.fillStyle='#d0f6ff'; for(const [a,b,c2,d2] of [[-6,-11,-4,-17],[0,-13,1,-20],[6,-12,8,-17]]){ g.beginPath(); g.moveTo(a-1.6,b); g.lineTo(c2,d2); g.lineTo(a+1.6,b); g.closePath(); g.fill(); }
   g.fillStyle='#ff5ad0'; g.beginPath(); C(g,10.5,-9.5,1.2); C(g,12,-8,0.9); g.fill(); }
- else if(t==='tbeast'){ const sw=Math.sin(tt*3)*1.5; g.lineCap='round'; g.strokeStyle='#5a3a1e'; g.lineWidth=2.6;
-  for(let i=0;i<4;i++){ const bx=-6+i*4, ph=Math.sin(tt*4+i*1.6)*2.5; g.beginPath(); g.moveTo(bx,-12); g.quadraticCurveTo(bx+(i<2?-4:4),-5,bx+(i<2?-6:6)+ph,0); g.stroke(); }
-  g.fillStyle='#6b4423'; rr(g,-6,-34,12,24,4); g.fill(); g.strokeStyle='#4a2e16'; g.lineWidth=0.8; g.beginPath(); g.moveTo(-3,-32); g.lineTo(-2,-14); g.moveTo(2,-30); g.lineTo(3,-13); g.stroke();
-  g.strokeStyle='#6b4423'; g.lineWidth=2.2; g.beginPath(); g.moveTo(5,-26); g.quadraticCurveTo(11,-30+sw,13,-36+sw); g.moveTo(-5,-24); g.quadraticCurveTo(-11,-27-sw,-12,-33-sw); g.stroke();
-  g.fillStyle='#3f8f4a'; g.beginPath(); C(g,13,-38+sw,4); C(g,-12,-35-sw,3.5); g.fill();
-  g.fillStyle='#2f7d3a'; g.beginPath(); C(g,-6,-38,8); C(g,6,-38,8); C(g,0,-45,9); g.fill(); g.fillStyle='#5bbf5f'; g.beginPath(); C(g,-2,-47,4); C(g,5,-42,3); g.fill();
-  g.fillStyle='#ffe66a'; g.beginPath(); C(g,1,-26,1.7); C(g,4.4,-26,1.7); g.fill(); g.fillStyle='#222'; g.beginPath(); C(g,1.6,-26,0.7); C(g,5,-26,0.7); g.fill(); }
+ else if(t==='tbeast'){ const sw=Math.sin(tt*2)*1.2;
+  g.fillStyle='#b07a2a'; for(let i=0;i<4;i++){ const ph=Math.sin(tt*4+i*1.7)*1.5; g.beginPath(); E(g,-9+i*6+ph,-2,2.6,3.2); g.fill(); }
+  for(const [x,w,h] of [[-7,6,26],[1,8,38],[9,5.5,22]]){ const top=-4-h+(x===1?sw:0);
+   g.fillStyle='#e0b04a'; g.beginPath(); g.moveTo(x-w*0.8,-3); g.quadraticCurveTo(x-w*1.15,top+h*0.5,x-w,top); g.lineTo(x+w,top); g.quadraticCurveTo(x+w*1.15,top+h*0.5,x+w*0.8,-3); g.closePath(); g.fill();
+   g.fillStyle='rgba(150,90,20,.25)'; g.beginPath(); g.moveTo(x+w*0.2,-3); g.lineTo(x+w*0.3,top); g.lineTo(x+w,top); g.quadraticCurveTo(x+w*1.15,top+h*0.5,x+w*0.8,-3); g.closePath(); g.fill();
+   g.fillStyle='#c8902e'; g.beginPath(); E(g,x,top,w,2.2); g.fill(); g.fillStyle='#5a3410'; g.beginPath(); E(g,x,top+0.4,w*0.7,1.3); g.fill();
+   g.fillStyle='#8a5a1a'; for(let k=0;k<12;k++){ const py=-7-k*4.4, px=x+Math.sin(k*2.3+x)*w*0.5; if(py<top+4) break; g.beginPath(); E(g,px,py,1.1+((k+x)&1)*0.5,1.4); g.fill(); } }
+  g.fillStyle='#fff8e0'; g.beginPath(); C(g,-0.5,-24+sw*0.5,2); C(g,4,-24+sw*0.5,2); g.fill(); g.fillStyle='#2a1a08'; g.beginPath(); C(g,0.2,-24+sw*0.5,0.9); C(g,4.7,-24+sw*0.5,0.9); g.fill(); }
  else if(t==='bee'){ g.fillStyle='rgba(255,255,255,.7)'; const f=Math.sin(tt*60)>0?1:0.6; g.beginPath(); E(g,-1,-3.5*f,2.6,1.6*f,-0.4); E(g,1.5,-3.5*f,2.6,1.6*f,0.4); g.fill(); g.fillStyle='#ffcf2a'; g.beginPath(); g.ellipse(0,0,3.6,2.4,0,0,7); g.fill(); g.fillStyle='#2a2216'; g.fillRect(-1.2,-2.3,1.2,4.6); g.fillRect(1.2,-2.2,1,4.4); }
  g.restore();
 }
@@ -1426,6 +1501,7 @@ function buildTex(id,s){
  if(!T.tex) T.tex=new Uint8ClampedArray(TW*TH*3);
  const tex=T.tex, sea=seaYof(id,s.W,s.T), frozen=s.T<0, pr=prog(id,s);
  const dens=new Float32Array(TW); for(const p of s.plants){ if(p.t==='weed') continue; const i=Math.floor(wrapX(p.x)/W*TW)%TW; dens[i]+=LIFE[p.t].bio*p.g; }
+ const dcl=new Array(TW).fill(null); if(s.decos) for(const dd of s.decos){ const i=Math.floor(wrapX(dd.x)/W*TW)%TW; dcl[i]=hx(DCOL[dd.c%DCOL.length]); dcl[(i+1)%TW]=dcl[i]; }
  const den2=new Float32Array(TW); for(let i=0;i<TW;i++){ let a=0; for(let k=-3;k<=3;k++) a+=dens[(i+k+TW)%TW]; den2[i]=a; }
  const top=mixA(hx(d.col.top),hx('#6a5a3a'),pr.pB*0.5), mid=hx(d.col.mid), ice=[226,240,250], ocean=[28,90,170], deep=[14,50,110], green=[60,140,60], green2=[40,105,45], white=[250,252,255];
  const vhaze=id==='venus'?clamp(Math.log10(Math.max(s.P,1))/1.96,0,1):0;
@@ -1441,6 +1517,7 @@ function buildTex(id,s){
    else{ c=mixA(top,mid,clamp(0.5+n,0,1)*0.6); if(den2[x]>0) c=mixA(c,(n>0?green:green2),clamp(den2[x]/14,0,0.92)*(1-al*0.5)); }
    if(id==='europa'&&!(h>sea&&!frozen)&&Math.abs(T.nc[y*TW*2+x])<0.05) c=mixA(c,[150,85,50],0.7);
    if(d.lava&&s.T>200&&!(h>sea)&&n>0.42) c=mixA(c,[255,110,30],0.85);
+   if(dcl[x]&&al<0.3&&n>0.05) c=mixA(c,dcl[x],0.8);
    if(capOn&&al>capLat+n*0.08) c=white;
    if(cloud>0){ const cn=T.nc[y*TW*2+((x+off)%(TW*2))]; if(cn>0.15) c=mixA(c,white,clamp((cn-0.15)*3,0,1)*cloud); }
    if(vhaze>0){ const cn=T.nc[y*TW*2+((x+off)%(TW*2))]; c=mixA(c,mixA([236,200,110],[250,232,170],cn*0.5+0.5),vhaze*0.97); }
@@ -1514,7 +1591,7 @@ function drawSysMap(sys,interactive){
   MAPPOS[id]=[x,y,r];
   if(id===pid&&mode!=='title'){ ctx.strokeStyle='#ff5a4a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,r+5,0,7); ctx.stroke(); }
   if(mapSel===id){ ctx.strokeStyle='#ffe14a'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(x,y,r+8+Math.sin(TIME*4)*2,0,7); ctx.stroke(); }
-  if(interactive){ const pr=Math.floor(prog(id,viewPS(id)).t*100); label(x,y+r+14,d.short+(!op?' 🔒':d.farm?' ⛏자원':S.pl[id]?` ${pr}%`:''),!op?'#8a96a8':d.farm?'#ffc08a':'#ffffff',12); }
+  if(interactive){ const pr=Math.floor(prog(id,viewPS(id)).t*100); label(x,y+r+14,d.short+(!op?' 🔒':d.farm?(S.pl[id]&&(S.pl[id].decos||[]).length>=DECO_GOAL?' ✨실리콘':' ⛏자원'):S.pl[id]?` ${pr}%`:''),!op?'#8a96a8':d.farm?'#ffc08a':'#ffffff',12); }
  });
  if(travel&&MAPPOS[travel.from]&&MAPPOS[travel.to]) drawRocket(MAPPOS[travel.from],MAPPOS[travel.to]);
 }
@@ -1601,6 +1678,7 @@ function arrive(id){
  P.x=BASEX+40; P.y=hAt(P.x); P.vx=P.vy=0; camX=P.x; camTop=P.y-VH*0.62;
  darts=[]; parts=[]; texts=[]; fall=null; comet=null; launches=[]; placing=null;
  mode='play'; $('mapui').style.display='none'; showHud();
+ ps.decos=ps.decos||[];
  const first=!ps.visited; ps.visited=true;
  banner(ps.named||PL[id].n, first?PL[id].hint:'다시 왔어!');
  if(first) setTimeout(()=>toast('초록 상자 <b>착륙 보급품</b>부터 열어 봐 (E)'),2600);
@@ -1616,7 +1694,14 @@ function nextTip(){
  const pw=power(pid,ps);
  if(!ps.machines.some(m=>MACH[m.t].sup)) return PL[pid].sun<0.2?'👉 <b>원자력 전지</b>를 지어 (B). 여긴 햇빛이 너무 약해':'👉 B를 눌러 <b>태양 전지판</b>부터 지어 봐';
  if(pid==='sun'){ if(!ps.machines.some(m=>m.t==='dyson')) return '👉 <b>다이슨 패널 발사대</b>를 지어 (B). 전자부품은 기지에서 만들 수 있어'; return pw.r<1?'⚡ 전기가 모자라! 태양 전지판을 더 지어':'👉 발사대를 더 지으면 다이슨 구가 빨리 완성돼'; }
- if(PL[pid].farm){ if(!ps.machines.some(m=>m.t==='drill')) return '⛏ 자원 행성! <b>자동 드릴</b>을 지으면 광석을 2개씩 캐 줘 (전자부품은 기지에서 만들어)'; return '⛏ 광석을 캐고 외계 생물을 사냥해서 재료를 모아. 모은 재료는 다른 행성을 바꿀 때 써!'; }
+ if(PL[pid].farm){
+  const lab=ps.machines.find(m=>m.t==='lab');
+  if(lab&&lab.out>0) return '🧪 실험실에 <b>실리콘 액체 생물</b>이 생겼어! 실험실 앞에서 E';
+  if(inv('si_life')>0&&ps.P<0.01) return '✨ 가방(I)에서 <b>실리콘 액체 생물</b>을 눌러 행성을 꾸며 봐';
+  if(inv('si_sample')>=2&&!lab) return '🧪 <b>실리콘 실험실</b>을 지어서(B) 샘플 2개로 실험해 봐';
+  if(lab&&inv('si_sample')>0) return '🧪 실험실 앞에서 E를 눌러 실리콘 샘플을 넣어';
+  if(PL[pid].natives.includes('sil')&&(ps.decos||[]).length<DECO_GOAL&&inv('si_sample')<2&&!(lab&&lab.inq>=2)) return '🧪 <b>실리콘 생물</b>을 사냥하면 실리콘 샘플이 나와. 실험하면 행성을 꾸밀 수 있어!';
+  if(!ps.machines.some(m=>m.t==='drill')) return '⛏ 자원 행성! <b>자동 드릴</b>을 지으면 광석을 2개씩 캐 줘 (전자부품은 기지에서 만들어)'; return '⛏ 광석을 캐고 외계 생물을 사냥해서 재료를 모아. 모은 재료는 다른 행성을 바꿀 때 써!'; }
  if(!ps.machines.some(m=>MACH[m.t].stat)) return '👉 히터·가스 추출기·물 펌프·산소 발생기로 행성을 바꾸자 (B)';
  if(pw.r<0.7) return '⚡ 전기가 모자라서 기계가 느려! 발전기를 더 지어';
  const c=countLife();
@@ -1633,13 +1718,15 @@ function nextTip(){
 function hud(){
  const pr=prog(pid,ps), pw=power(pid,ps);
  const farm=PL[pid].farm;
- const stage=farm?'⛏ 자원 행성':pid==='sun'?'태양 정거장':pr.t>=1?'푸른 행성!':pr.t>=0.7?'숲과 바다':pr.t>=0.4?'살아나는 중':pr.t>=0.1?'깨어나는 중':'죽은 행성';
+ const nd=(ps.decos||[]).length;
+ const stage=farm?(nd>=DECO_GOAL?'✨ 반짝이는 실리콘 행성':'⛏ 자원 행성'):pid==='sun'?'태양 정거장':pr.t>=1?'푸른 행성!':pr.t>=0.7?'숲과 바다':pr.t>=0.4?'살아나는 중':pr.t>=0.1?'깨어나는 중':'죽은 행성';
  $('pname').innerHTML=`${ps.named||PL[pid].n}<small>${stage}</small>`;
- $('blue').firstElementChild.style.width=(pr.t*100)+'%';
- $('bluet').textContent=farm?'자원 행성 — 생물이 못 살아서 바꿀 수 없어':(pid==='sun'?'다이슨 구 ':'푸른 정도 ')+Math.floor(pr.t*100)+'%';
+ $('blue').firstElementChild.style.width=(farm?Math.min(1,nd/DECO_GOAL):pr.t)*100+'%';
+ $('blue').firstElementChild.style.background=farm?'linear-gradient(90deg,#7a5cff,#7fe8ff,#ff7ad9)':'';
+ $('bluet').textContent=farm?(nd>=DECO_GOAL?'✨ 반짝이는 실리콘 행성 완성!':`✨ 실리콘 정원 ${nd}/${DECO_GOAL} — 실리콘 액체 생물로 꾸며 봐`):(pid==='sun'?'다이슨 구 ':'푸른 정도 ')+Math.floor(pr.t*100)+'%';
  const chip=(ic,nm,val,p,cl)=>`<div class="st">${ic} ${nm} <b>${val}</b>${p>=0.999?' <span class="ok">✓</span>':''}<div class="bar"><i style="width:${p*100}%;background:${cl}"></i></div></div>`;
  let h='';
- if(farm){ const nat=ps.animals.length; h+=chip('🌡','온도',Math.round(ps.T)+'°C',0,'#ff8a5a'); h+=chip('☁','공기',fmtP(ps.P),0,'#c9d8ee'); h+=chip('⛏','광석',ps.ores.length+'개',Math.min(0.99,ps.ores.length/110),'#ffd24a'); h+=chip('👾','외계 생물',nat+'마리',Math.min(0.99,nat/14),'#7fe8ff'); }
+ if(farm){ const nat=ps.animals.length; h+=chip('🌡','온도',Math.round(ps.T)+'°C',0,'#ff8a5a'); h+=chip('☁','공기',fmtP(ps.P),0,'#c9d8ee'); h+=chip('⛏','광석',ps.ores.length+'개',Math.min(0.99,ps.ores.length/110),'#ffd24a'); h+=chip('👾','외계 생물',nat+'마리',Math.min(0.99,nat/14),'#7fe8ff'); h+=chip('✨','장식',nd+'개',Math.min(1,nd/DECO_GOAL),'#b07aff'); }
  else if(pid==='sun') h+=chip('☀','다이슨 구',Math.floor(ps.D)+'%',pr.t,'#ffcf5a');
  else{
   h+=chip('🌡','온도',Math.round(ps.T)+'°C',pr.pT,'#ff8a5a');
@@ -1697,6 +1784,7 @@ function draw(){
  drawLander();
  const pw=power(pid,ps);
  for(const m of ps.machines){ const X=wd(m.x-camX); if(Math.abs(X)>VW/2+60) continue; drawMach(ctx,m.t,X,hAt(m.x),m,0,pw.r); if(m.t==='breed'&&m.wait&&m.left>0){ ctx.font='8px "Malgun Gothic",sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#ffe9a8'; ctx.fillText('기다리는 중',X,hAt(m.x)-30); } }
+ if(ps.decos) for(const d of ps.decos){ const X=wd(d.x-camX); if(Math.abs(X)<VW/2+40) drawDeco(ctx,d.k,X,hAt(d.x),d.c,TIME,d.ph); }
  for(const p of ps.plants) drawPlant(p);
  for(const a of ps.animals) drawAnimal(a);
  for(const d of ps.drops){ const X=wd(d.x-camX); if(Math.abs(X)>VW/2+20) continue; ctx.save(); ctx.translate(X,d.y+Math.sin(TIME*4+d.x)*1.2); drawIcon(ctx,d.it,0.42); ctx.restore(); }
