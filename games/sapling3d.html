@@ -1,0 +1,1500 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>새플링 3D</title>
+<style>
+:root{--pn:rgba(16,26,22,.84);--pn2:rgba(255,255,255,.07);--ln:rgba(255,255,255,.13);--tx:#eef5ea;--dim:#a8bba6;--ac:#9fdc6e;--ac2:#ffd56a;--bad:#ff8a78}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#bcd6ea;font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--tx);-webkit-user-select:none;user-select:none}
+#cv{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;touch-action:none;outline:none}
+button{font:inherit;color:inherit;background:var(--pn2);border:1px solid var(--ln);border-radius:10px;padding:6px 10px;cursor:pointer}
+button:hover{background:rgba(255,255,255,.15)}
+button:active{transform:translateY(1px)}
+button.on{background:var(--ac);color:#15240f;border-color:transparent;font-weight:700}
+.hide{display:none!important}
+.panel{background:var(--pn);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--ln);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.22)}
+/* 위쪽 줄 */
+#top{position:fixed;left:8px;right:8px;top:8px;height:46px;display:flex;align-items:center;gap:10px;padding:0 10px;z-index:6}
+#top .logo{font-weight:900;font-size:18px;letter-spacing:-.5px;white-space:nowrap}
+#top .logo b{color:var(--ac)}
+#clock{font-weight:700;white-space:nowrap;min-width:64px}
+#speeds{display:flex;gap:3px}
+#speeds button{padding:4px 0;width:40px;font-size:13px}
+#counts{color:var(--dim);font-size:13px;white-space:nowrap}
+#top .grow{flex:1}
+#evoBtn{font-size:13px;white-space:nowrap}
+#sideBtn,#menuBtn{width:38px;padding:5px 0}
+#menu{position:fixed;right:8px;top:60px;z-index:9;display:flex;flex-direction:column;gap:4px;padding:8px;min-width:200px}
+#menu button{text-align:left}
+/* 도구 */
+#tools{position:fixed;left:8px;top:62px;display:flex;flex-direction:column;gap:3px;padding:6px;z-index:5;max-height:calc(100vh - 214px);overflow-y:auto;width:128px}
+#tools button{display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:14px;text-align:left;white-space:nowrap;border-radius:9px}
+#tools .ic{width:20px;display:inline-flex;justify-content:center;font-size:15px}
+#tools .sep{height:1px;background:var(--ln);margin:3px 2px;flex:0 0 1px}
+.sw{width:15px;height:15px;border-radius:4px;border:1px solid rgba(0,0,0,.35);display:inline-block}
+#brushBox{font-size:12px;color:var(--dim);padding:4px 3px 0}
+#brushBox input{width:100%}
+/* 카메라 단추 */
+#camBtns{position:fixed;right:318px;top:62px;display:flex;flex-direction:column;gap:3px;padding:5px;z-index:5}
+#camBtns button{width:36px;height:34px;padding:0;font-size:16px}
+body.noside #camBtns{right:8px}
+/* 아래 카드 */
+#bottom{position:fixed;left:8px;right:318px;bottom:8px;height:146px;z-index:5;display:flex;flex-direction:column;padding:6px 8px 8px}
+body.noside #bottom{right:8px}
+#btabs{display:flex;gap:4px;align-items:center;margin-bottom:5px}
+#btabs button{padding:3px 12px;font-size:14px}
+#btabs .tip{margin-left:auto;color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cards{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;flex:1;padding-bottom:2px}
+.card{position:relative;flex:0 0 92px;background:var(--pn2);border:2px solid transparent;border-radius:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;padding:3px 3px 4px;font-size:12px}
+.card:hover{background:rgba(255,255,255,.13)}
+.card.on{border-color:var(--ac2);background:rgba(255,213,106,.15)}
+.card img{width:58px;height:58px;flex:0 0 58px;object-fit:contain;pointer-events:none}
+.card .nm{flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:86px;font-weight:700}
+.card .ct{flex:0 0 auto;color:var(--dim);font-size:11px}
+.card .ed{position:absolute;right:2px;top:2px;padding:1px 4px;font-size:11px;border-radius:7px;display:none;background:rgba(0,0,0,.45)}
+.card:hover .ed{display:block}
+.card.new{justify-content:center;font-size:13px;color:var(--ac);font-weight:700;text-align:center;border:2px dashed rgba(159,220,110,.5)}
+.card.new big{font-size:30px;line-height:1}
+.card.zero{opacity:.62}
+/* 오른쪽 창 */
+#side{position:fixed;right:8px;top:62px;bottom:8px;width:302px;z-index:5;display:flex;flex-direction:column;overflow:hidden}
+body.noside #side{display:none}
+#stabs{display:flex;gap:2px;padding:6px 6px 0;border-bottom:1px solid var(--ln)}
+#stabs button{flex:1;padding:5px 0;font-size:13px;border-radius:9px 9px 0 0;border-bottom:none}
+#sbody{flex:1;overflow-y:auto;padding:8px 10px;font-size:13px;line-height:1.5}
+#sbody h4{margin:8px 0 4px;font-size:13px;color:var(--ac2)}
+.row{display:flex;align-items:center;gap:7px;padding:3px 4px;border-radius:8px;cursor:pointer}
+.row:hover{background:var(--pn2)}
+.row.on{background:rgba(255,213,106,.16)}
+.row img{width:30px;height:30px;object-fit:contain;flex:0 0 30px}
+.row .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .n{color:var(--dim);font-variant-numeric:tabular-nums}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 10px}
+.bar{display:inline-block;vertical-align:middle;width:110px;height:9px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden;margin-left:4px}
+.bar i{display:block;height:100%;background:var(--ac);border-radius:5px}
+.bar.y i{background:var(--ac2)}
+.kv{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
+.kv span:first-child{color:var(--dim)}
+.btnrow{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}
+.btnrow button{font-size:13px;padding:5px 9px}
+.seg{display:flex;gap:4px;margin-bottom:6px}
+.seg button{padding:3px 12px;font-size:13px}
+.logi{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.logi b{color:var(--dim);font-weight:400;margin-right:5px}
+.logi.big{color:var(--ac2)}
+.muted{color:var(--dim)}
+#sbody canvas{width:100%;display:block;border-radius:8px;background:rgba(0,0,0,.18)}
+/* 알림 */
+#toasts{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
+.toast{background:rgba(16,26,22,.92);border:1px solid var(--ln);border-radius:22px;padding:7px 16px;font-size:14px;animation:tin .25s ease-out;max-width:80vw;text-align:center}
+.toast.big{border-color:var(--ac2);color:#fff3c4}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+#flash{position:fixed;inset:0;background:#fffbe8;opacity:0;pointer-events:none;z-index:25}
+#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:158px;background:rgba(16,26,22,.75);padding:5px 14px;border-radius:20px;font-size:13px;z-index:4;pointer-events:none;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}
+#tag{position:fixed;z-index:4;pointer-events:none;transform:translate(-50%,-100%);background:rgba(16,26,22,.85);border:1px solid var(--ac2);border-radius:10px;padding:2px 9px;font-size:12px;white-space:nowrap}
+/* 시작 화면 */
+#start{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(10,20,16,.15),rgba(10,20,16,.55))}
+#start .box{width:min(440px,92vw);padding:28px 28px 22px;text-align:center}
+#start h1{margin:0 0 2px;font-size:46px;font-weight:900;letter-spacing:-2px;line-height:1.05}
+#start h1 b{color:var(--ac);font-size:52px}
+#start p{margin:8px 0 18px;color:#d5e4d2;line-height:1.55}
+#start button{display:block;width:100%;margin:7px 0;padding:11px;font-size:16px;border-radius:12px}
+#start button.main{background:var(--ac);color:#15240f;font-weight:800;border:none}
+#start button.main:hover{filter:brightness(1.08)}
+#stWhere{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center;font-size:13px;color:#d5e4d2;margin:4px 0 2px}
+#start #stWhere button{display:inline-block;width:auto;margin:0;padding:5px 9px;font-size:13px;border-radius:9px}
+#start .small{font-size:12px;color:var(--dim);margin-top:12px}
+/* 편집기 */
+#editor{position:fixed;inset:0;z-index:12;pointer-events:none}
+#edPanel{pointer-events:auto;position:absolute;left:10px;top:10px;bottom:10px;width:360px;display:flex;flex-direction:column;overflow:hidden}
+#edHead{padding:12px 12px 8px;border-bottom:1px solid var(--ln)}
+#edHead .t{font-weight:900;font-size:17px;margin-bottom:7px}
+#edHead .t span{color:var(--ac)}
+#edNameRow{display:flex;gap:6px}
+#edName{flex:1;font:inherit;font-size:15px;padding:6px 10px;border-radius:9px;border:1px solid var(--ln);background:rgba(0,0,0,.25);color:#fff;-webkit-user-select:text;user-select:text}
+#edBody{flex:1;overflow-y:auto;padding:4px 12px 10px}
+#edBody h5{margin:12px 0 4px;color:var(--ac2);font-size:13px}
+.sl{display:grid;grid-template-columns:108px 1fr 46px;align-items:center;gap:6px;font-size:13px;padding:2px 0}
+.sl input{width:100%}
+.sl b{text-align:right;font-weight:400;color:var(--dim);font-size:12px}
+.sl input.hue{-webkit-appearance:none;appearance:none;height:10px;border-radius:5px;background:linear-gradient(90deg,#f44,#fa4,#ff4,#4f4,#4ff,#44f,#f4f,#f44)}
+.tg{display:flex;gap:5px;margin:3px 0}
+.tg button{flex:1;font-size:13px;padding:5px 4px}
+#edStats{padding:8px 12px;border-top:1px solid var(--ln);font-size:12px;line-height:1.6;max-height:30vh;overflow-y:auto}
+#edStats .bar{width:90px}
+#edFoot{display:flex;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--ln)}
+#edFoot button{flex:1;padding:10px;font-size:15px}
+#edFoot #edOk{background:var(--ac);color:#15240f;font-weight:800;border:none;flex:2}
+#edTip{position:absolute;right:12px;bottom:12px;padding:7px 14px;font-size:13px;pointer-events:none}
+/* 도움말 */
+#help{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}
+#help .panel{width:min(520px,92vw);padding:20px 24px;line-height:1.7;font-size:14px;max-height:88vh;overflow:auto}
+#help h3{margin:0 0 8px;color:var(--ac)}
+#help kbd{background:rgba(255,255,255,.14);border-radius:5px;padding:0 6px;font-family:inherit}
+#err{position:fixed;left:8px;bottom:8px;z-index:50;background:#5a1f1a;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;max-width:60vw}
+@media (max-width:820px){
+ #top{gap:6px;padding:0 6px}#top .logo{font-size:15px}#counts{display:none}#speeds button{width:32px}
+ #tools{width:auto}#tools .lb{display:none}
+ #edPanel{width:auto;right:10px;top:auto;height:58vh}
+ #hint{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="cv" tabindex="0"></canvas>
+
+<div id="top" class="panel hide">
+  <div class="logo">새플링 <b>3D</b></div>
+  <div id="clock">1일째</div>
+  <div id="speeds">
+    <button data-s="0" title="멈춤 (스페이스)">⏸</button><button data-s="1" class="on" title="보통">▶</button><button data-s="4" title="빠르게">▶▶</button><button data-s="16" title="더 빠르게">▶▶▶</button><button data-s="64" title="아주 빠르게">⏩</button>
+  </div>
+  <div id="counts"></div>
+  <div class="grow"></div>
+  <button id="evoBtn" title="새끼가 부모랑 조금씩 달라지는 정도">진화: 보통</button>
+  <button id="sideBtn" title="오른쪽 창 열기/닫기">📋</button>
+  <button id="menuBtn" title="메뉴">☰</button>
+</div>
+<div id="menu" class="panel hide">
+  <button id="mSave">💾 지금 저장하기</button>
+  <button id="mShadow">🌗 그림자: 켜짐</button>
+  <button id="mNat">🌋 저절로 큰 사건: 켜짐</button>
+  <button id="mHelp">❓ 조작법</button>
+  <button id="mHome">🏠 처음 화면으로</button>
+</div>
+<div id="tools" class="panel hide"></div>
+<div id="camBtns" class="panel hide">
+  <button id="cL" title="왼쪽으로 돌리기 (Q)">⟲</button><button id="cR" title="오른쪽으로 돌리기 (E)">⟳</button><button id="cI" title="가까이">＋</button><button id="cO" title="멀리">－</button><button id="cH" title="섬 전체 보기">⌂</button>
+</div>
+<div id="hint" class="hide"></div>
+<div id="tag" class="hide"></div>
+<div id="bottom" class="panel hide">
+  <div id="btabs"><button data-k="p" class="on">🌿 식물</button><button data-k="a">🐾 동물</button><span class="tip" id="btip"></span></div>
+  <div id="cards"></div>
+</div>
+<div id="side" class="panel hide">
+  <div id="stabs"><button data-t="sp" class="on">종</button><button data-t="graph">그래프</button><button data-t="tree">계통도</button><button data-t="sel">고른 것</button><button data-t="log">사건</button></div>
+  <div id="sbody"></div>
+</div>
+<div id="toasts"></div>
+<div id="flash"></div>
+
+<div id="start">
+  <div class="box panel">
+    <h1>새플링 <b>3D</b></h1>
+    <p>바닷가 얕은 물속의 작은 원생동물에서 시작해요.<br>지구에 없는 생물들이 어떻게 진화하는지 구경하고,<br>내가 만든 생물도 풀어 놓아요.</p>
+    <button id="stCont" class="main hide">이어 하기</button>
+    <button id="stLife" class="main">새 행성에서 시작 (원생동물부터)</button>
+    <div id="stWhere"><span>시작하는 곳</span><button data-w="rand" class="on">아무 데나</button><button data-w="coast">바닷가</button><button data-w="ocean">먼 바다</button><button data-w="land">땅 위 슬라임</button></div>
+    <div class="small">끌면 빙글 돌리기 · 휠로 확대 · 오른쪽 버튼으로 끌면 옮기기</div>
+  </div>
+</div>
+
+<div id="editor" class="hide">
+  <div id="edPanel" class="panel">
+    <div id="edHead"><div class="t" id="edTitle">새 동물 만들기</div>
+      <div id="edNameRow"><input id="edName" maxlength="12" placeholder="이름을 지어 줘"><button id="edRand" title="아무렇게나 만들기">🎲</button></div></div>
+    <div id="edBody"></div>
+    <div id="edStats"></div>
+    <div id="edFoot"><button id="edCancel">그만두기</button><button id="edOk">다 만들었어!</button></div>
+  </div>
+  <div id="edTip" class="panel">끌어서 빙글 돌려 보고, 휠로 확대해요</div>
+</div>
+
+<div id="help" class="hide"><div class="panel">
+  <h3>조작법</h3>
+  <b>보기</b> — 끌면 빙글 돌리기, 휠(또는 두 손가락)로 확대, <b>오른쪽 버튼</b>이나 <kbd>Shift</kbd>+끌기로 옮기기. 생물을 누르면 골라서 자세히 볼 수 있어요. 땅을 두 번 누르면 그곳으로 날아가요.<br>
+  <b>키보드</b> — <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 옮기기, <kbd>Q</kbd><kbd>E</kbd> 돌리기, <kbd>R</kbd><kbd>F</kbd> 확대, <kbd>스페이스</kbd> 멈춤.<br>
+  <b>심기·풀어놓기</b> — 아래에서 식물이나 동물을 고르고 땅을 눌러요. 식물은 문지르면 여러 개 심어요.<br>
+  <b>땅 도구</b> — 누르고 있으면 땅이 솟거나 파여요. 바닷물 높이보다 낮게 파면 물이 차요. 붓 크기는 도구 아래에서 바꿔요.<br>
+  <b>큰 사건</b> — ☄️ 운석, 🌋 화산은 땅을 누르면 일어나요. 💥 큰 운석은 멀리 바다에 떨어져 충격파와 해일이 와요. 산 뒤나 높은 곳, 깊은 바닷속 생물만 살아남는 대멸종이에요. 가끔 저절로도 일어나요(메뉴에서 끌 수 있어요).<br>
+  <b>다른 섬</b> — 바다 건너에 섬이 2개 더 있어요. 🏝️ 단추나 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>로 가 볼 수 있어요. 세 섬 생물은 같은 조상에서 시작해서 섬마다 조금씩 다르게 진화해요.<br>
+  <b>시작하는 곳</b> — 처음 화면에서 바닷가, 섬과 섬 사이 먼 바다(물에 떠다니는 말), 땅 위 끈적끈적 슬라임 중에 고를 수 있어요.<br>
+  <b>진화</b> — 새끼는 부모랑 아주 조금씩 달라요. 많이 달라지면 <b>새 종</b>이 생겨요. 계통도에서 누가 누구에게서 갈라졌는지 볼 수 있어요.<br>
+  <b>식물</b> — 처음엔 물속에서만 자라요. 물을 덜 좋아하게 진화하면 땅 위로 올라와요. 물기가 맞는 땅에서 잘 자라요. 키 큰 식물 그늘에서는 잘 못 자라요. 뜯어 먹혀도 뿌리가 남아서 다시 자라요.<br>
+  <b>동물</b> — 배가 고프면 먹이를 찾고, 배가 부르면 새끼를 낳아요. 물결막이 있으면 헤엄치고, 몸이 크고 촉수 다리가 3개 넘게 있어야 땅 위에서 잘 살아요. 공기주머니가 아주 크면 열기구처럼 하늘을 둥둥 날아요. 몸 기둥이 높으면 높은 빛잎도 먹어요.<br>
+  <div style="text-align:right;margin-top:10px"><button id="helpX">알았어!</button></div>
+</div></div>
+<div id="err" class="hide"></div>
+
+<script>
+'use strict';
+// ================= 작은 도구 =================
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, R=Math.random, TAU=Math.PI*2;
+function gauss(){let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v)}
+const pick=a=>a[(R()*a.length)|0];
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hsl(h,s,l){h=(((h%360)+360)%360)/30;const a=s*Math.min(l,1-l);const f=n=>{const k=(n+h)%12;return l-a*Math.max(-1,Math.min(k-3,9-k,1))};return[f(0),f(8),f(4)]}
+const css=c=>'rgb('+c.map(v=>Math.round(clamp(v,0,1)*255)).join(',')+')';
+function josa(w,a,b){const c=w.charCodeAt(w.length-1)-0xAC00;return w+((c>=0&&c<11172&&c%28)?a:b)}
+const V3={sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],mul:(a,k)=>[a[0]*k,a[1]*k,a[2]*k],
+ cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm:a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]}};
+
+// 펄린 노이즈
+function makeNoise(seed){const r=mulberry(seed),p=new Uint8Array(512),q=[];for(let i=0;i<256;i++)q[i]=i;
+ for(let i=255;i>0;i--){const j=(r()*(i+1))|0;const t=q[i];q[i]=q[j];q[j]=t}for(let i=0;i<512;i++)p[i]=q[i&255];
+ const gx=[1,-1,1,-1,1.41,-1.41,0,0],gz=[1,1,-1,-1,0,0,1.41,-1.41];const fade=t=>t*t*t*(t*(t*6-15)+10);
+ const gd=(h,dx,dy)=>{h&=7;return gx[h]*dx+gz[h]*dy};
+ return(x,y)=>{const X=Math.floor(x),Y=Math.floor(y),xf=x-X,yf=y-Y,xi=X&255,yi=Y&255;
+  const aa=p[p[xi]+yi],ab=p[p[xi]+yi+1],ba=p[p[xi+1]+yi],bb=p[p[xi+1]+yi+1],u=fade(xf),v=fade(yf);
+  return lerp(lerp(gd(aa,xf,yf),gd(ba,xf-1,yf),u),lerp(gd(ab,xf,yf-1),gd(bb,xf-1,yf-1),u),v)}}
+function fbm(n,x,y,o){let s=0,a=1,f=1,t=0;for(let i=0;i<o;i++){s+=n(x*f,y*f)*a;t+=a;a*=.5;f*=2.03}return s/t}
+
+// 4x4 행렬 (열 우선)
+const M4={
+ persp(f,a,n,fa){const t=1/Math.tan(f/2),r=new Float32Array(16);r[0]=t/a;r[5]=t;r[10]=(fa+n)/(n-fa);r[11]=-1;r[14]=2*fa*n/(n-fa);return r},
+ ortho(l,r,b,t,n,f){const o=new Float32Array(16);o[0]=2/(r-l);o[5]=2/(t-b);o[10]=-2/(f-n);o[12]=-(r+l)/(r-l);o[13]=-(t+b)/(t-b);o[14]=-(f+n)/(f-n);o[15]=1;return o},
+ look(e,c,u){let zx=e[0]-c[0],zy=e[1]-c[1],zz=e[2]-c[2];let l=Math.hypot(zx,zy,zz);zx/=l;zy/=l;zz/=l;
+  let xx=u[1]*zz-u[2]*zy,xy=u[2]*zx-u[0]*zz,xz=u[0]*zy-u[1]*zx;l=Math.hypot(xx,xy,xz);xx/=l;xy/=l;xz/=l;
+  const yx=zy*xz-zz*xy,yy=zz*xx-zx*xz,yz=zx*xy-zy*xx,o=new Float32Array(16);
+  o[0]=xx;o[1]=yx;o[2]=zx;o[4]=xy;o[5]=yy;o[6]=zy;o[8]=xz;o[9]=yz;o[10]=zz;
+  o[12]=-(xx*e[0]+xy*e[1]+xz*e[2]);o[13]=-(yx*e[0]+yy*e[1]+yz*e[2]);o[14]=-(zx*e[0]+zy*e[1]+zz*e[2]);o[15]=1;return o},
+ mul(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o},
+ inv(m){const o=new Float32Array(16);const a00=m[0],a01=m[1],a02=m[2],a03=m[3],a10=m[4],a11=m[5],a12=m[6],a13=m[7],a20=m[8],a21=m[9],a22=m[10],a23=m[11],a30=m[12],a31=m[13],a32=m[14],a33=m[15];
+  const b00=a00*a11-a01*a10,b01=a00*a12-a02*a10,b02=a00*a13-a03*a10,b03=a01*a12-a02*a11,b04=a01*a13-a03*a11,b05=a02*a13-a03*a12,b06=a20*a31-a21*a30,b07=a20*a32-a22*a30,b08=a20*a33-a23*a30,b09=a21*a32-a22*a31,b10=a21*a33-a23*a31,b11=a22*a33-a23*a32;
+  let d=b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06;if(!d)return o;d=1/d;
+  o[0]=(a11*b11-a12*b10+a13*b09)*d;o[1]=(a02*b10-a01*b11-a03*b09)*d;o[2]=(a31*b05-a32*b04+a33*b03)*d;o[3]=(a22*b04-a21*b05-a23*b03)*d;
+  o[4]=(a12*b08-a10*b11-a13*b07)*d;o[5]=(a00*b11-a02*b08+a03*b07)*d;o[6]=(a32*b02-a30*b05-a33*b01)*d;o[7]=(a20*b05-a22*b02+a23*b01)*d;
+  o[8]=(a10*b10-a11*b08+a13*b06)*d;o[9]=(a01*b08-a00*b10-a03*b06)*d;o[10]=(a30*b04-a31*b02+a33*b00)*d;o[11]=(a21*b02-a20*b04-a23*b00)*d;
+  o[12]=(a11*b07-a10*b09-a12*b06)*d;o[13]=(a00*b09-a01*b07+a02*b06)*d;o[14]=(a31*b01-a30*b03-a32*b00)*d;o[15]=(a20*b03-a21*b01+a22*b00)*d;return o}
+};
+
+// ================= WebGL 준비 =================
+const cv=$('#cv');
+const gl=cv.getContext('webgl2',{antialias:true,alpha:false,powerPreference:'high-performance'});
+if(!gl){document.body.innerHTML='<div style="padding:40px;font-size:22px;color:#123">이 브라우저에서는 3D 그림을 못 그려요.<br>크롬이나 엣지로 열어 주세요.</div>';throw new Error('WebGL2 없음')}
+
+function mkSh(t,src){const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error('셰이더 오류: '+gl.getShaderInfoLog(s));return s}
+function mkProg(vs,fs){const p=gl.createProgram();gl.attachShader(p,mkSh(gl.VERTEX_SHADER,vs));gl.attachShader(p,mkSh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error('프로그램 오류: '+gl.getProgramInfoLog(p));
+ const u={},n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const a=gl.getActiveUniform(p,i);u[a.name]=gl.getUniformLocation(p,a.name)}return{p,u}}
+const uM=(P,n,m)=>{const l=P.u[n];if(l)gl.uniformMatrix4fv(l,false,m)};
+const u1=(P,n,v)=>{const l=P.u[n];if(l)gl.uniform1f(l,v)};
+const u3=(P,n,v)=>{const l=P.u[n];if(l)gl.uniform3fv(l,v)};
+const u4=(P,n,a,b,c,d)=>{const l=P.u[n];if(l)gl.uniform4f(l,a,b,c,d)};
+const u4v=(P,n,a,b)=>{const l=P.u[n];if(l)gl.uniform2f(l,a,b)};
+
+// 빛·그림자·안개 (여러 셰이더가 같이 씀)
+const LIGHT=`
+uniform vec3 u_sun,u_eye,u_fog;uniform float u_fogD,u_useSh,u_shTex,u_dim;uniform highp sampler2DShadow u_sh;
+float shadowAt(vec4 ls,float nl){if(u_useSh<.5)return 1.;vec3 p=ls.xyz/ls.w*.5+.5;
+ if(p.x<.002||p.x>.998||p.y<.002||p.y>.998||p.z>.999)return 1.;
+ float b=.0003+.0011*(1.-nl),t=1.3/u_shTex;
+ float s=texture(u_sh,vec3(p.xy,p.z-b))*2.;
+ s+=texture(u_sh,vec3(p.xy+vec2(t,t),p.z-b));s+=texture(u_sh,vec3(p.xy+vec2(-t,t),p.z-b));
+ s+=texture(u_sh,vec3(p.xy+vec2(t,-t),p.z-b));s+=texture(u_sh,vec3(p.xy+vec2(-t,-t),p.z-b));return s/6.;}
+vec3 shade(vec3 col,vec3 n,vec3 wp,vec4 ls){float nl=dot(n,u_sun),d=max(nl,0.),sh=shadowAt(ls,d);
+ vec3 amb=mix(vec3(.42,.37,.31),vec3(.58,.68,.86),n.y*.5+.5)*.62;
+ vec3 c=min(col,vec3(1.))*(amb*(1.-.4*u_dim)+vec3(1.,.95,.84)*d*mix(.22,1.,sh)*.86*(1.-.75*u_dim))+max(col-1.,0.)*.9;
+ float f=1.-exp(-length(wp-u_eye)*u_fogD);return mix(c,u_fog,clamp(f,0.,1.));}
+`;
+const T_VS=`#version 300 es
+precision highp float;
+layout(location=0)in vec3 a_pos;layout(location=1)in vec3 a_nrm;layout(location=2)in vec3 a_col;
+uniform mat4 u_vp,u_lt;uniform vec2 u_off;out vec3 v_col,v_nrm,v_wp;out vec4 v_ls;
+void main(){vec3 p=a_pos+vec3(u_off.x,0.,u_off.y);v_col=a_col;v_nrm=a_nrm;v_wp=p;v_ls=u_lt*vec4(p,1.);gl_Position=u_vp*vec4(p,1.);}`;
+const T_FS=`#version 300 es
+precision highp float;
+${LIGHT}
+uniform vec4 u_brush,u_sel;uniform float u_time,u_water;
+in vec3 v_col,v_nrm,v_wp;in vec4 v_ls;out vec4 o;
+void main(){vec3 n=normalize(v_nrm);vec3 col=v_col;
+ if(u_water>.5){
+  if(v_wp.y<0.){float dd=clamp(-v_wp.y/7.,0.,1.);col=mix(col,vec3(.10,.27,.32),.22+dd*.62);}
+  float fo=1.-smoothstep(0.,.2,abs(v_wp.y+.02+sin(v_wp.x*.7+u_time*1.3)*.03+cos(v_wp.z*.6+u_time)*.03));
+  col=mix(col,vec3(.93,.96,.95),fo*.5);}
+ vec3 c=shade(col,n,v_wp,v_ls);
+ if(u_brush.w>0.){float d=length(v_wp.xz-u_brush.xy);float k=1.-smoothstep(0.,.1+u_brush.z*.025,abs(d-u_brush.z));
+  c=mix(c,vec3(1.,.98,.78),k*.9);if(d<u_brush.z)c+=vec3(.05,.05,.03);}
+ if(u_sel.w>0.){float d=length(v_wp.xz-u_sel.xy);float k=1.-smoothstep(0.,.09,abs(d-u_sel.z));c=mix(c,vec3(1.,.82,.2),k);}
+ o=vec4(c,1.);}`;
+const O_BODY=`
+layout(location=0)in vec3 a_pos;layout(location=1)in vec3 a_nrm;layout(location=2)in vec3 a_col;
+layout(location=3)in vec4 a_an;layout(location=4)in float a_aw;
+layout(location=5)in vec4 i_a;layout(location=6)in vec4 i_b;layout(location=7)in vec3 i_c;
+uniform mat4 u_vp,u_lt;uniform float u_mode,u_time;
+out vec3 v_col,v_nrm,v_wp;out vec4 v_ls;
+vec2 r2(vec2 v,float a){float c=cos(a),s=sin(a);return vec2(c*v.x-s*v.y,s*v.x+c*v.y);}
+void main(){vec3 p=a_pos,n=a_nrm;
+ if(u_mode<.5){
+  if(a_aw>.5&&a_aw<1.5){float g=sin(i_b.y+a_an.w)*.55*min(i_b.z,1.);vec3 q=p-a_an.xyz;q.xy=r2(q.xy,g);n.xy=r2(n.xy,g);p=a_an.xyz+q;}
+  else{
+   if(a_aw>1.5&&a_aw<2.5){float g=sin(i_b.y*.5+u_time*2.3+a_an.w)*.32;vec3 q=p-a_an.xyz;q.xz=r2(q.xz,g);n.xz=r2(n.xz,g);p=a_an.xyz+q;}
+   else if(a_aw>2.5){float g=-i_b.w*(.5+.22*sin(u_time*10.+i_a.x*3.));vec3 q=p-a_an.xyz;q.xy=r2(q.xy,g);n.xy=r2(n.xy,g);p=a_an.xyz+q;}
+   p.y+=abs(sin(i_b.y))*.035*min(i_b.z,1.);}
+ }else{
+  if(a_aw>.5){vec3 q=p-a_an.xyz;p=a_an.xyz+q*(1.-i_b.w*.75);}
+  float sw=p.y*.035;p.x+=sin(u_time*1.6+i_a.x*.9+i_a.z*.7)*sw;p.z+=cos(u_time*1.2+i_a.x*.6)*sw*.7;
+ }
+ p*=i_b.x;p.xz=r2(p.xz,i_a.w);n.xz=r2(n.xz,i_a.w);
+ vec3 wp=p+i_a.xyz;
+#ifdef SHADOW
+ gl_Position=u_lt*vec4(wp,1.);
+#else
+ v_col=a_col*i_c;v_nrm=n;v_wp=wp;v_ls=u_lt*vec4(wp,1.);gl_Position=u_vp*vec4(wp,1.);
+#endif
+}`;
+const O_VS=sh=>`#version 300 es
+${sh?'#define SHADOW':''}
+precision highp float;
+${O_BODY}`;
+const O_FS=`#version 300 es
+precision highp float;
+${LIGHT}
+in vec3 v_col,v_nrm,v_wp;in vec4 v_ls;out vec4 o;
+uniform float u_puff;
+void main(){vec3 n=normalize(v_nrm);if(dot(n,u_eye-v_wp)<0.)n=-n;float al=1.;
+ if(u_puff>.5){float e=abs(dot(n,normalize(u_eye-v_wp)));al=pow(e,1.5)*(v_col.r>1.?.95:.55);n=normalize(n+vec3(0.,.6,0.));}
+ o=vec4(shade(v_col,n,v_wp,v_ls),al);}`;
+const W_VS=`#version 300 es
+precision highp float;layout(location=0)in vec3 a_pos;uniform mat4 u_vp;uniform float u_time;uniform vec4 u_tsu;out vec3 v_wp;out float v_cr;
+void main(){vec3 p=a_pos;p.y=sin(p.x*.31+u_time*1.1)*.05+cos(p.z*.27+u_time*.9)*.05;
+ float dd=length(p.xz-u_tsu.xy),w=exp(-pow((dd-u_tsu.z)/7.,2.))*u_tsu.w+(dd<u_tsu.z?u_tsu.w*.25*exp(-(u_tsu.z-dd)/25.):0.);p.y+=w;v_cr=clamp(w/max(u_tsu.w,.01),0.,1.);
+ v_wp=p;gl_Position=u_vp*vec4(p,1.);}`;
+const W_FS=`#version 300 es
+precision highp float;uniform vec3 u_eye,u_sun,u_fog;uniform float u_fogD,u_time,u_dim;uniform sampler2D u_ht,u_ht1,u_ht2;uniform vec4 u_p1,u_p2;in vec3 v_wp;in float v_cr;out vec4 o;
+void main(){vec2 q=v_wp.xz;
+ float hm=-8.;if(q.x>0.&&q.y>0.&&q.x<128.&&q.y<128.)hm=texture(u_ht,(q+.5)/129.).r;
+ vec2 l1=q-u_p1.xy;if(u_p1.w>.5&&l1.x>0.&&l1.y>0.&&l1.x<u_p1.z&&l1.y<u_p1.z)hm=max(hm,texture(u_ht1,(l1+.5)/(u_p1.z+1.)).r);
+ vec2 l2=q-u_p2.xy;if(u_p2.w>.5&&l2.x>0.&&l2.y>0.&&l2.x<u_p2.z&&l2.y<u_p2.z)hm=max(hm,texture(u_ht2,(l2+.5)/(u_p2.z+1.)).r);
+ float dep=max(-hm,0.),sd=smoothstep(0.,4.,dep);
+ float k=1./(1.+length(v_wp-u_eye)*.02);
+ vec2 d1=vec2(.8,.6),d2=vec2(-.55,.83),d3=vec2(.2,-.98),d4=vec2(-.93,-.37);
+ vec2 g=d1*cos(dot(q,d1)*.55+u_time*1.3)*.06+d2*cos(dot(q,d2)*.93+u_time*1.7)*.04+d3*cos(dot(q,d3)*1.7+u_time*2.3)*.025+d4*cos(dot(q,d4)*2.9+u_time*2.9)*.016;
+ vec3 n=normalize(vec3(g.x*k,1.,g.y*k));
+ vec3 v=normalize(u_eye-v_wp);float fr=pow(1.-max(dot(n,v),0.),4.);vec3 h=normalize(v+u_sun);float sp=pow(max(dot(n,h),0.),120.)*1.1;
+ vec3 c=mix(mix(vec3(.25,.62,.62),vec3(.07,.31,.42),sd),vec3(.62,.78,.92),clamp(fr*1.1,0.,1.))+vec3(1.,.95,.8)*sp;float a=mix(mix(.2,.62,sd),.95,fr)+sp;
+ c=mix(c,vec3(.93,.97,1.),smoothstep(.45,1.,v_cr)*.85);a=max(a,v_cr*.9);c=mix(c,c*.5,u_dim*.6);float f=clamp(1.-exp(-length(v_wp-u_eye)*u_fogD),0.,1.);o=vec4(mix(c,u_fog,f),clamp(mix(a,1.,f),0.,1.));}`;
+const S_VS=`#version 300 es
+layout(location=0)in vec2 a_p;out vec2 v_p;void main(){v_p=a_p;gl_Position=vec4(a_p,.9999,1.);}`;
+const S_FS=`#version 300 es
+precision highp float;uniform mat4 u_ivp;uniform vec3 u_sun,u_fog;uniform float u_time,u_dim;in vec2 v_p;out vec4 o;
+float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1,1)),f.x),f.y);}
+void main(){vec4 a=u_ivp*vec4(v_p,-1.,1.),b=u_ivp*vec4(v_p,1.,1.);vec3 d=normalize(b.xyz/b.w-a.xyz/a.w);float y=d.y;
+ vec3 c=mix(u_fog,vec3(.30,.54,.90),smoothstep(0.,.55,y));
+ if(y>.02){vec2 uv=d.xz/(y+.1)*1.3+vec2(u_time*.012,u_time*.006);float n=vn(uv)*.5+vn(uv*2.1)*.25+vn(uv*4.3)*.125;
+  c=mix(c,vec3(1.,1.,1.),smoothstep(.5,.78,n)*smoothstep(.02,.3,y)*.8);}
+ float s=max(dot(d,u_sun),0.);c+=vec3(1.,.92,.72)*(pow(s,700.)*2.+pow(s,14.)*.16)*(1.-.85*u_dim);c=mix(c,vec3(.42,.35,.3),u_dim*.75);o=vec4(c,1.);}`;
+const DT_VS=`#version 300 es
+layout(location=0)in vec3 a_pos;uniform mat4 u_lt;uniform vec2 u_off;void main(){gl_Position=u_lt*vec4(a_pos+vec3(u_off.x,0.,u_off.y),1.);}`;
+const E_FS=`#version 300 es
+precision mediump float;void main(){}`;
+
+const PT=mkProg(T_VS,T_FS),PO=mkProg(O_VS(false),O_FS),PW=mkProg(W_VS,W_FS),PS=mkProg(S_VS,S_FS),PDT=mkProg(DT_VS,E_FS),PDO=mkProg(O_VS(true),E_FS);
+for(const P of[PT,PO]){gl.useProgram(P.p);if(P.u.u_sh)gl.uniform1i(P.u.u_sh,0)}
+gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);
+
+// 그림자 지도
+const SR=2048;
+const STEX=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,STEX);
+gl.texStorage2D(gl.TEXTURE_2D,1,gl.DEPTH_COMPONENT24,SR,SR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
+const HTEX=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texStorage2D(gl.TEXTURE_2D,1,gl.R16F,129,129);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
+gl.useProgram(PW.p);if(PW.u.u_ht)gl.uniform1i(PW.u.u_ht,1);if(PW.u.u_ht1)gl.uniform1i(PW.u.u_ht1,2);if(PW.u.u_ht2)gl.uniform1i(PW.u.u_ht2,3);
+const SFB=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,SFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,STEX,0);
+gl.drawBuffers([gl.NONE]);gl.readBuffer(gl.NONE);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+
+// 여러 개 한꺼번에 그리기용 (위치·크기·색)
+const INST=gl.createBuffer();let INS=new Float32Array(11*4096);
+function ensureInst(n){if(INS.length<n*11){const nI=new Float32Array(Math.ceil(n*1.5)*11);nI.set(INS);INS=nI}}
+
+// ================= 모양 만들기 =================
+class MB{
+ constructor(){this.p=[];this.n=[];this.c=[];this.an=[];this.aw=[];this.ix=[];this.nv=0;this.A=[0,0,0,0];this.w=0;this.bb=[1e9,1e9,1e9,-1e9,-1e9,-1e9]}
+ set(px,py,pz,ph,w){this.A=[px,py,pz,ph];this.w=w;return this}
+ v(x,y,z,nx,ny,nz,c){this.p.push(x,y,z);this.n.push(nx,ny,nz);this.c.push(c[0],c[1],c[2]);const A=this.A;this.an.push(A[0],A[1],A[2],A[3]);this.aw.push(this.w);
+  const b=this.bb;if(x<b[0])b[0]=x;if(y<b[1])b[1]=y;if(z<b[2])b[2]=z;if(x>b[3])b[3]=x;if(y>b[4])b[4]=y;if(z>b[5])b[5]=z;return this.nv++}
+ t(a,b,c){this.ix.push(a,b,c)}
+ ell(cx,cy,cz,rx,ry,rz,col,cf,seg=14,rg=9){const s=this.nv;
+  for(let j=0;j<=rg;j++){const th=j/rg*Math.PI,st=Math.sin(th),ct=Math.cos(th);
+   for(let i=0;i<=seg;i++){const ph=i/seg*TAU,x=Math.cos(ph)*st,z=Math.sin(ph)*st,y=ct,px=cx+x*rx,py=cy+y*ry,pz=cz+z*rz;
+    let nx=x/rx,ny=y/ry,nz=z/rz;const l=Math.hypot(nx,ny,nz)||1;this.v(px,py,pz,nx/l,ny/l,nz/l,cf?cf(px,py,pz,x,y,z):col)}}
+  for(let j=0;j<rg;j++)for(let i=0;i<seg;i++){const a=s+j*(seg+1)+i,b=a+seg+1;this.t(a,b,a+1);this.t(a+1,b,b+1)}}
+ tube(a,b,r0,r1,col,seg=7,cap=true){const d=V3.sub(b,a),L=Math.hypot(d[0],d[1],d[2])||1e-6,dn=V3.mul(d,1/L);
+  const u=V3.norm(V3.cross(dn,Math.abs(dn[1])<.9?[0,1,0]:[1,0,0])),w=V3.cross(dn,u),s=this.nv;
+  for(let k=0;k<2;k++){const o=k?b:a,r=k?r1:r0;for(let i=0;i<=seg;i++){const t=i/seg*TAU,c=Math.cos(t),sn=Math.sin(t);
+   const nx=u[0]*c+w[0]*sn,ny=u[1]*c+w[1]*sn,nz=u[2]*c+w[2]*sn;this.v(o[0]+nx*r,o[1]+ny*r,o[2]+nz*r,nx,ny,nz,col)}}
+  for(let i=0;i<seg;i++){const a0=s+i,b0=s+seg+1+i;this.t(a0,b0,a0+1);this.t(a0+1,b0,b0+1)}
+  if(cap&&r1>.001){const c=this.v(b[0]+dn[0]*r1*.4,b[1]+dn[1]*r1*.4,b[2]+dn[2]*r1*.4,dn[0],dn[1],dn[2],col);for(let i=0;i<seg;i++)this.t(s+seg+1+i,s+seg+2+i,c)}}
+ cone(a,b,r,col,seg=6){this.tube(a,b,r,r*.03,col,seg,false)}
+ frill(ax,az,w,y,c0,c1){const S=32,s0=this.nv;for(let i=0;i<=S;i++){const t=i/S*TAU,c=Math.cos(t),sn=Math.sin(t),wv=Math.sin(t*6)*w*.3;this.v(c*ax,y,sn*az,0,1,0,c0);this.v(c*(ax+w),y+wv,sn*(az+w),0,1,0,c1)}
+  for(let i=0;i<S;i++){const a=s0+i*2;this.t(a,a+1,a+2);this.t(a+1,a+3,a+2)}}
+ disc(c,n,r,col,col2){const u=V3.norm(V3.cross(n,Math.abs(n[1])<.9?[0,1,0]:[1,0,0])),w=V3.cross(n,u),S=10,s0=this.nv;this.v(c[0],c[1],c[2],n[0],n[1],n[2],col2);
+  for(let i=0;i<=S;i++){const t=i/S*TAU,rr=r*(i%2?.86:1),cs=Math.cos(t),sn=Math.sin(t),lf=r*.18;this.v(c[0]+(u[0]*cs+w[0]*sn)*rr+n[0]*lf,c[1]+(u[1]*cs+w[1]*sn)*rr+n[1]*lf,c[2]+(u[2]*cs+w[2]*sn)*rr+n[2]*lf,n[0],n[1],n[2],i%2?col:col2)}
+  for(let i=0;i<S;i++)this.t(s0,s0+1+i,s0+2+i)}
+ leaf(B,D,S,len,wid,col,curl){const Nn=V3.norm(V3.cross(S,D)),K=5,c2=[col[0]*1.2,col[1]*1.15,col[2]*1.1],L=[],Rr=[],C=[];
+  for(let k=0;k<=K;k++){const t=k/K,w=wid*Math.pow(Math.sin(Math.PI*t),.75),bd=curl*t*t*len;
+   const cx=B[0]+D[0]*len*t+Nn[0]*bd,cy=B[1]+D[1]*len*t+Nn[1]*bd,cz=B[2]+D[2]*len*t+Nn[2]*bd;
+   C.push(this.v(cx+Nn[0]*w*.12,cy+Nn[1]*w*.12,cz+Nn[2]*w*.12,Nn[0],Nn[1],Nn[2],c2));
+   L.push(this.v(cx+S[0]*w,cy+S[1]*w,cz+S[2]*w,Nn[0],Nn[1],Nn[2],col));
+   Rr.push(this.v(cx-S[0]*w,cy-S[1]*w,cz-S[2]*w,Nn[0],Nn[1],Nn[2],col))}
+  for(let k=0;k<K;k++){this.t(C[k],L[k],L[k+1]);this.t(C[k],L[k+1],C[k+1]);this.t(C[k],Rr[k+1],Rr[k]);this.t(C[k],C[k+1],Rr[k+1])}}
+}
+function uploadMesh(mb){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const bs=[];
+ const buf=(data,loc,size)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,0,0);bs.push(b)};
+ buf(mb.p,0,3);buf(mb.n,1,3);buf(mb.c,2,3);buf(mb.an,3,4);buf(mb.aw,4,1);
+ const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(mb.ix),gl.STATIC_DRAW);
+ gl.bindBuffer(gl.ARRAY_BUFFER,INST);
+ for(const[loc,sz,off]of[[5,4,0],[6,4,16],[7,3,32]]){gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,sz,gl.FLOAT,false,44,off);gl.vertexAttribDivisor(loc,1)}
+ gl.bindVertexArray(null);return{vao,bs,ib,n:mb.ix.length,bb:mb.bb.slice()}}
+function freeMesh(m){gl.deleteVertexArray(m.vao);for(const b of m.bs)gl.deleteBuffer(b);gl.deleteBuffer(m.ib)}
+function staticMesh(p,n,c,ix){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const bs=[];
+ [[p,0],[n,1],[c,2]].forEach(([d,loc])=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(d),gl.STATIC_DRAW);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);bs.push(b)});
+ const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(ix),gl.STATIC_DRAW);gl.bindVertexArray(null);return{vao,bs,ib,n:ix.length}}
+
+// ================= 유전자 표 =================
+// [키, 이름, 최소, 최대, 기본, 정수?, 묶음]
+const AG=[
+ ['size','몸 크기',.12,2,.8,0,'몸'],['bodyLen','몸 길쭉함',0,1,.4,0,'몸'],['bodyFat','통통함',.5,1.6,1,0,'몸'],['plan','몸 생김새',0,2,0,1,'몸'],['lobes','울룩불룩 혹·팔',0,6,3,1,'몸'],
+ ['legs','촉수 다리',0,8,4,1,'다리·헤엄·날기'],['legLen','다리 길이',.2,1.6,.7,0,'다리·헤엄·날기'],['fins','물결막 (헤엄)',0,1,.1,0,'다리·헤엄·날기'],['balloon','공기주머니 (날기)',0,1,0,0,'다리·헤엄·날기'],['slime','끈적 몸 (땅에서 기어가기)',0,1,0,0,'다리·헤엄·날기'],
+ ['neckLen','몸 기둥',0,1.5,.4,0,'머리'],['headSize','머리 구슬',.4,1.5,1,0,'머리'],['eyes','눈자루',0,6,3,1,'머리'],['eyeSize','눈 크기',.4,1.6,1,0,'머리'],['horns','수정 뿔',0,1,0,0,'머리'],['antennae','더듬이',0,4,0,1,'머리'],['antLen','더듬이 길이',.2,1.5,.6,0,'머리'],
+ ['tail','빛 꼬리',0,1.5,.5,0,'꼬리·가시'],['spikes','수정 가시',0,1,0,0,'꼬리·가시'],
+ ['diet','먹이',0,1,0,0,'먹이·새끼'],['litter','한 번에 낳는 새끼',1,4,2,1,'먹이·새끼'],
+ ['hue','몸 색깔',0,360,280,0,'색깔'],['hue2','빛 색깔',0,360,170,0,'색깔'],['pattern','무늬',0,2,0,1,'색깔'],
+ ['herd','무리 짓기',0,1,1,1,'행동'],['flee','도망가기',0,1,1,1,'행동'],
+];
+const PGN=[
+ ['height','키',.15,4.5,.5,0,'줄기'],['stemThick','줄기 굵기',.3,1.6,.8,0,'줄기'],['branches','산호 가지',0,4,0,1,'줄기'],['thorns','수정 가시',0,1,0,0,'줄기'],
+ ['leafCount','빛잎 개수',2,14,6,1,'빛잎'],['leafSize','빛잎 크기',.3,1.6,.8,0,'빛잎'],['leafShape','빛잎 모양',0,1,.3,0,'빛잎'],['hue','빛잎 색깔',0,360,300,0,'빛잎'],
+ ['flower','빛꽃',0,1,0,0,'빛꽃·씨앗'],['flowerHue','빛꽃 색깔',0,360,50,0,'빛꽃·씨앗'],['seedDist','씨앗 멀리 날리기',1,10,3,0,'빛꽃·씨앗'],
+ ['waterNeed','물 좋아함',0,1,.5,0,'사는 곳'],['float','물에 떠다니기',0,1,0,0,'사는 곳'],['growSpeed','자라는 빠르기',.3,2,1,0,'사는 곳'],
+];
+const HUEK={hue:1,hue2:1,flowerHue:1},SWITCH={herd:1,flee:1,pattern:1,plan:1};
+// 새 세상은 늘 바닷가 얕은 물속의 원시 말과 원시 미생물로만 시작 (아이가 정함: "원생동물로만 시작")
+const PRE_P=[
+ ['원시 말',{height:.3,stemThick:.4,branches:0,thorns:0,leafCount:6,leafSize:.7,leafShape:.1,hue:168,flower:0,flowerHue:60,seedDist:2.5,waterNeed:.95,growSpeed:1.5,float:0},260],
+];
+function makeFounders(where){const out=[],plans=[0,1,2,R()*3|0,R()*3|0];
+ for(let i=0;i<5;i++){const g={size:.17+R()*.08,bodyLen:R(),bodyFat:.7+R()*.7,plan:plans[i],lobes:R()*6|0,legs:0,legLen:.3+R()*.3,fins:.45+R()*.4,balloon:0,
+   neckLen:0,headSize:.5,eyes:0,eyeSize:.6,horns:0,antennae:R()*4|0,antLen:.3+R()*1.1,tail:R()*.9,spikes:R()<.3?R()*.5:0,diet:.02+R()*.12,litter:2,
+   hue:(i*72+R()*40)%360,hue2:R()*360,pattern:R()*3|0,herd:R()<.3?1:0,flee:1,slime:0};
+  if(where==='land'){g.slime=.75+R()*.2;g.fins=R()*.15;g.size=.2+R()*.1;g.tail=R()*.4;g.antennae=R()*3|0}// 땅 위 슬라임: 다리 없이 끈적하게 기어감
+  let nm;do nm='원시 '+pick(SY)+pick(SY);while(out.some(f=>f[0]===nm));out.push([nm,g,14])}
+ return out}
+// 편집기에서 "새로 만들기"를 누르면 처음 보이는 모습 (땅에서 사는 외계 생물)
+const EDIT_A={size:.8,bodyLen:.4,bodyFat:1,plan:0,lobes:3,legs:6,legLen:.7,fins:0,balloon:0,slime:0,neckLen:.6,headSize:1,eyes:3,eyeSize:1,horns:0,antennae:2,antLen:.8,tail:.6,spikes:.2,diet:0,litter:2,hue:285,hue2:170,pattern:2,herd:1,flee:1};
+const EDIT_P={height:1.4,stemThick:.9,branches:2,thorns:0,leafCount:8,leafSize:.9,leafShape:.5,hue:310,flower:.5,flowerHue:55,seedDist:3,waterNeed:.5,growSpeed:1,float:0};
+// 시작하는 곳에 따라 처음 식물: 먼 바다는 물에 떠다니는 말, 땅 위는 촉촉한 땅의 말
+const OCEAN_P={height:.25,stemThick:.4,branches:0,thorns:0,leafCount:5,leafSize:.7,leafShape:.15,hue:205,flower:0,flowerHue:60,seedDist:4,waterNeed:.95,growSpeed:1.5,float:.85};
+const LAND_P={height:.2,stemThick:.4,branches:0,thorns:0,leafCount:5,leafSize:.6,leafShape:.1,hue:95,flower:0,flowerHue:60,seedDist:2,waterNeed:.7,growSpeed:1.3,float:0};
+const defOf=k=>k==='a'?AG:PGN;
+const gpack=(g,defs)=>defs.map(d=>Math.round(g[d[0]]*1000)/1000);
+const gunpack=(a,defs)=>{const g={};defs.forEach((d,i)=>g[d[0]]=a[i]??d[4]);return g};
+function gdist(a,b,defs){let s=0;for(const d of defs){const k=d[0];let x;if(HUEK[k]){x=Math.abs(a[k]-b[k])%360;if(x>180)x=360-x;x=x/180*.5}else x=(a[k]-b[k])/(d[3]-d[2])*(SWITCH[k]?.3:1);s+=x*x}return Math.sqrt(s/defs.length)}
+function mutate(g,defs){const o={...g},k=W.evo*(defs===PGN?1.3:1)*(W.boost>0?1.8:1);if(!k)return o;
+ for(const d of defs){const key=d[0];
+  if(SWITCH[key]){if(R()<(key==='plan'?.006:.012)*k)o[key]=key==='pattern'||key==='plan'?(Math.round(o[key])+1+(R()*2|0))%3:1-Math.round(o[key]);continue}
+  if(R()<.3*k){const r=d[3]-d[2];const v=o[key]+gauss()*r*.07*k*(HUEK[key]?.5:1);o[key]=HUEK[key]?((v%360)+360)%360:clamp(v,d[2],d[3])}}
+ return o}
+function randGenes(kind){const g={};for(const d of defOf(kind)){let v=d[2]+R()*(d[3]-d[2]);if(d[5])v=Math.round(v);g[d[0]]=v}
+ if(kind==='p')g.float=R()<.15?.8:0;
+ if(kind==='a'){g.slime=0;g.diet=R()<.7?R()*.3:.7+R()*.3;g.size=.4+R()*.9;g.herd=R()<.6?1:0;g.flee=g.diet<.5?1:(R()<.3?1:0);if(R()<.85)g.legs=2+(R()*7|0);g.fins=R()<.7?R()*.2:R()}
+ else{g.height=R()<.6?.2+R()*1:1+R()*3;g.waterNeed=.2+R()*.6}return g}
+
+// 유전자로 능력 계산
+function deriveA(g){const s=g.size,L=Math.round(g.legs),E=Math.round(g.eyes),bl=g.balloon||0;
+ const mass=Math.max(.02,s*s*s*(.6+.5*g.bodyLen)*(.55+.45*g.bodyFat)*(1+.04*L+.1*g.fins+.1*bl)),mp=Math.pow(mass,.8);
+ const legH=L?g.legLen*s*.85:0,fat=Math.sqrt(.6+.4*g.bodyFat);
+ // 땅에서 살려면 몸이 꽤 크고(0.75↑), 다리가 4개 넘고, 다리가 길어야 함 → 땅에 올라올 땐 모습이 많이 바뀌어 있음
+ const landFit=clamp((s-.35)/.4,0,1)*clamp((L-1)/3,0,1)*clamp(legH/.3,0,1);
+ const sl=g.slime||0,crawl=!L&&sl>.4?(.18+sl*.35)*Math.pow(s,.25):0;
+ const walk=L?Math.pow(.4+legH*1.8,.75)*(L===1?.6:L===2?.88:1+.03*Math.min(L-3,4))/fat*1.05*(.3+.7*landFit)*(1+.25*bl):crawl;
+ const swim=g.fins>=.2?(.3+g.fins*1.4)*Math.pow(s,.25)/fat*(1+.2*bl):0;
+ // 공기주머니가 몸에 비해 충분히 크면 열기구처럼 하늘을 둥둥
+ const fly=bl>=.45+.2*Math.min(1,s),flySpd=fly?.45+bl*.6:0,speed=Math.max(walk,swim,flySpd,.1);
+ const att=s*(.35+g.horns*.9+(g.diet>.55?.35:0))*(.2+g.diet),def=s*(.35+g.spikes*1.3+g.horns*.3);
+ const NA=Math.round(g.antennae||0),cost0=.01*NA*s+.2*mp+.025*E*g.eyeSize*s+.04*s*(g.spikes+g.horns)+.015*L*s+.03*g.fins*s+.03*bl*s+(fly?.07*s+.03:0);
+ const life=(240+300*s)*(1-.08*(Math.round(g.litter)-1));
+ return{mass,legH,walk,swim,fly,flySpd,landFit,speed,att,def,cost0,costMove:.25*mp*speed/1.5*(fly?1:1-.5*bl),dry:(.15*mp+.04)*(1-landFit)*(1-sl*.85),crawl,Emax:55*mass+6,bite:(2.2*Math.pow(mass,.7)+.4)*(fly?.45:1),
+  sight:(E?4+3.2*g.eyeSize*Math.sqrt(E):2.5)+s*1.5+(fly?2:0)+NA*(g.antLen||.6)*.9,len:s*(.56+.6*g.bodyLen),
+  reach:legH+s*.25*g.bodyFat+g.neckLen*s*.8+s*.12,life,mature:life*.16,herbEff:1-g.diet*.88,meatEff:.12+g.diet*.88,wade:L?legH*.6+.05:.05}}
+const livesWord=d=>d.fly?'하늘을 둥둥':d.crawl?(d.swim>0?'물과 땅 (기어 다님)':'땅 위 (기어 다님)'):d.swim>0&&d.landFit>.5?'물과 땅 둘 다':d.landFit>.5?'땅 위':d.swim>0?(d.walk>0?'물속·물가':'물속'):'물가';
+function deriveP(g){const H=g.height,LC=Math.round(g.leafCount);
+ return{maxB:(.5+LC*g.leafSize*g.leafSize*.9)*(.5+H*.6)*1.2,grow:.0055*g.growSpeed/(.55+H*.28)/(1+g.thorns*.35),
+  life:(600+700*H)/(.55+.45*g.growSpeed),seedT:45/(.35+.65*g.growSpeed)*(1+H*.15),seeds:1+Math.round(g.flower*2),
+  regrow:.006*g.growSpeed,rad:.2+g.leafSize*.28+Math.min(H,3)*.15,h:H}}
+
+// ================= 생물 모양 =================
+function glow(c,k){return[c[0]*k,c[1]*k,c[2]*k]}
+function animalCols(g){const c1=hsl(g.hue,.55,.5),c2=hsl(g.hue2,.8,.6),belly=c1.map(v=>v*.55+.45*.92);return{c1,c2,belly}}
+// 동물: 지구 동물을 닮지 않게 — 둥근 몸과 혹, 몸 둘레 촉수 다리, 몸 기둥 위 머리 구슬, 눈자루, 물결막, 빛 꼬리, 수정 뿔·가시
+function buildAnimal(g){const m=new MB(),s=g.size,L=Math.round(g.legs),E=Math.round(g.eyes),NL=Math.round(g.lobes),pat=Math.round(g.pattern);
+ const{c1,c2,belly}=animalCols(g),lit=glow(c2,1.7),dark=c1.map(v=>v*.5),crys=glow(hsl(g.hue2,.35,.85),1.12);
+ const plan=Math.round(g.plan||0),legH=L?g.legLen*s*.85:0;let rx=s*(.26+.3*g.bodyLen),ry=s*.21*g.bodyFat,rz=s*.24*g.bodyFat;
+ if(plan===1){rx*=.8;rz*=.85}if(plan===2){const w=Math.max(rx,rz)*1.35;rx=w;rz=w;ry*=.5}
+ const slm=!L&&(g.slime||0)>.5;if(slm){rx*=1.15;rz*=1.15;ry*=.65}
+ const by=L?legH*.8+ry*.55:ry*1.05;
+ const cf=(x,y,z,ux,uy,uz)=>{let c=c1;if(uy<-.45)c=belly;
+  if(pat===1&&uy>-.4&&Math.abs(Math.sin(uy*7.5))<.3)c=c2;
+  if(pat===2&&uy>-.3&&Math.sin(ux*11+1.3)*Math.sin(uz*13+.4)*Math.sin(uy*9+2.1)>.3)c=lit;return c};
+ m.set(0,0,0,0,0);
+ m.ell(0,by,0,rx,ry,rz,c1,cf,14,10);
+ if(plan===0)for(let k=0;k<NL;k++){const a=k/NL*TAU+.4;m.ell(Math.cos(a)*rx*.78,by+ry*.22,Math.sin(a)*rz*.78,rx*.36,ry*.6,rx*.36,c1,cf,10,7)}
+ else if(plan===1){const na=4+NL;for(let k=0;k<na;k++){const a=k/na*TAU+.3,b=[Math.cos(a)*rx*.85,by+ry*.2,Math.sin(a)*rz*.85],t=[Math.cos(a)*rx*1.5,by+ry*1.6+s*.12,Math.sin(a)*rz*1.5];
+   m.tube(b,t,s*.05*g.bodyFat,s*.018,c1,6,false);m.ell(t[0],t[1],t[2],s*.04,s*.04,s*.04,lit,null,6,4)}}// 왕관 몸: 위로 뻗은 팔
+ else{m.ell(0,by+ry*.7,0,rx*.45,ry*1.15,rz*.45,belly,cf,12,8);// 원반 몸: 가운데 둥근 지붕 + 가장자리 빛 구슬
+  for(let k=0;k<12;k++){const a=k/12*TAU;m.ell(Math.cos(a)*rx*.98,by,Math.sin(a)*rz*.98,s*.032,s*.032,s*.032,lit,null,6,4)}
+  for(let k=0;k<NL;k++){const a=k/NL*TAU+.4;m.ell(Math.cos(a)*rx*.62,by+ry*.55,Math.sin(a)*rz*.62,rx*.12,ry*.7,rx*.12,c1,cf,8,6)}}
+ if(slm){for(let k=0;k<7;k++){const a=k/7*TAU+.2;m.ell(Math.cos(a)*rx*.95,ry*.35,Math.sin(a)*rz*.95,rx*.28,ry*.4,rx*.28,c1,cf,8,5)}// 헛발
+  for(let k=0;k<3;k++){const a=k*2.1+.5;m.ell(Math.cos(a)*rx*.35,by+ry*.85,Math.sin(a)*rz*.35,s*.05,s*.025,s*.05,glow([1,1,1],1.25),null,6,3)}}// 반짝
+ if(!L&&plan!==2){m.ell(rx*.05,by+ry*.5,0,rx*.36,ry*.5,rz*.36,hsl(g.hue+40,.45,.32),null,10,7);// 핵
+  if(g.fins>.3)for(let k=0;k<18;k++){const th=k/18*TAU,ph=(k%3-1)*.55,nx=Math.cos(th)*Math.cos(ph),ny=Math.sin(ph),nz=Math.sin(th)*Math.cos(ph),P=[nx*rx,by+ny*ry,nz*rz];
+   m.set(P[0],P[1],P[2],k*.9,2);m.cone(P,[P[0]+nx*s*.2,P[1]+ny*s*.2,P[2]+nz*s*.2],s*.014,belly,3)}}// 섬모
+ // 촉수 다리 (몸 둘레로 고르게)
+ const lr=s*.055*(.7+g.bodyFat*.3);
+ for(let k=0;k<L;k++){const a=(k+.5)/L*TAU,ca=Math.cos(a),sa=Math.sin(a),hip=[ca*rx*.6,by-ry*.45,sa*rz*.6],
+   P1=[hip[0]+ca*legH*.5,hip[1]+legH*.12,hip[2]+sa*legH*.5],P2=[hip[0]+ca*legH*.85,.03,hip[2]+sa*legH*.85];
+  m.set(hip[0],hip[1],hip[2],(k%2?Math.PI:0)+a*.5,1);let prev=hip,pr=lr;
+  for(let t=1;t<=4;t++){const u=t/4,w0=(1-u)*(1-u),w1=2*(1-u)*u,w2=u*u,q=[w0*hip[0]+w1*P1[0]+w2*P2[0],w0*hip[1]+w1*P1[1]+w2*P2[1],w0*hip[2]+w1*P1[2]+w2*P2[2]],r=lr*(1-.6*u);
+   m.tube(prev,q,pr,r,t<3?c1:dark,5,false);prev=q;pr=r}
+  m.ell(P2[0],P2[1]+lr*.25,P2[2],lr*.7,lr*.55,lr*.7,lit,null,6,4)}
+ // 물결막 (헤엄치는 막)
+ if(g.fins>.05){const w=g.fins*s*.32+s*.03,yy=by-ry*.05;m.set(0,yy,0,0,2);m.frill(rx*.95,rz*.95,w,yy,c1,glow(c2,1.2))}
+ // 몸 기둥 + 머리 구슬
+ const top=[rx*.25,by+ry*.85,0],nl=g.neckLen*s,head=L>0||nl>.06||s>.35;let hc,hr;m.set(top[0],top[1],top[2],0,3);
+ if(nl>.06){const ne=[top[0]+nl*.25,top[1]+nl*.85,0];m.tube(top,ne,s*.07*g.bodyFat+.01,s*.05+.008,c1,8,false);
+  m.ell((top[0]+ne[0])/2,(top[1]+ne[1])/2,0,s*.085,s*.03,s*.085,lit,null,10,4);hr=s*.14*g.headSize+.012;hc=[ne[0]+hr*.3,ne[1]+hr*.55,0]}
+ else if(head){hr=s*.14*g.headSize+.012;hc=[rx*.78,by+ry*.5,0]}
+ else{hr=ry*.75;hc=[rx*.55,by+ry*.2,0]}
+ if(head)m.ell(hc[0],hc[1],hc[2],hr*1.05,hr*.95,hr*.95,c1,cf,10,8);
+ // 입: 둥근 구멍과 고리, 고기 먹으면 수정 이빨 고리
+ const mp=head?[hc[0]+hr*.92,hc[1]-hr*.15,0]:[rx*.96,by,0],mr=head?hr:ry*.6;
+ m.ell(mp[0]-mr*.04,mp[1],mp[2],mr*.13,mr*.52,mr*.52,g.diet>.55?c2:belly,null,12,5);
+ m.ell(mp[0],mp[1],mp[2],mr*.16,mr*.4,mr*.4,[.12,.04,.08],null,10,6);
+ const nT=g.diet>.55?6:g.diet>.25?3:0;
+ for(let k=0;k<nT;k++){const an=k/nT*TAU;m.cone([mp[0]+mr*.03,mp[1]+Math.cos(an)*mr*.44,Math.sin(an)*mr*.44],[mp[0]+mr*.24,mp[1]+Math.cos(an)*mr*.16,Math.sin(an)*mr*.16],mr*.08,[.95,.95,1],4)}
+ // 눈자루 (빛나는 홍채 + 세로 동공)
+ const er=hr*.3*g.eyeSize*(E>3?.8:1);
+ for(let k=0;k<E;k++){const a=E===1?0:(-1+2*k/(E-1))*.9,base=[hc[0]+hr*.1,hc[1]+hr*.75,Math.sin(a)*hr*.55],dir=V3.norm([.35+.3*Math.cos(a),1,Math.sin(a)*1.1]),
+   tip=V3.add(base,V3.mul(dir,hr*(.5+g.eyeSize*.7))),fw=V3.norm([1,.15,Math.sin(a)*.6]),ic=V3.add(tip,V3.mul(fw,er*.62)),pc=V3.add(tip,V3.mul(fw,er*.92));
+  m.tube(base,tip,hr*.09,hr*.07,c1,5,false);m.ell(tip[0],tip[1],tip[2],er,er,er,[.96,.96,.92],null,7,5);
+  m.ell(ic[0],ic[1],ic[2],er*.5,er*.5,er*.5,lit,null,6,4);m.ell(pc[0],pc[1],pc[2],er*.12,er*.36,er*.12,[.03,.03,.05],null,5,4)}
+ // 수정 뿔
+ if(g.horns>.05){const n=g.horns>.6?3:2;for(let k=0;k<n;k++){const z=n===2?(k?1:-1)*hr*.35:(k-1)*hr*.45,b=[hc[0]+hr*.3,hc[1]+hr*.55,z],t=[b[0]+hr*(.6+g.horns*.9),b[1]+hr*(.5+g.horns*.6),z*1.3];m.cone(b,t,hr*.17*(.5+g.horns*.6),crys,4)}}
+ const NA=Math.round(g.antennae||0);
+ if(NA>0){const al=(g.antLen||.6)*s*.9+.03,b0=head?[hc[0]+hr*.45,hc[1]+hr*.6,0]:[rx*.85,by+ry*.45,0];
+  for(let k=0;k<NA;k++){const zz=NA===1?0:(-1+2*k/(NA-1))*(head?hr*.6:rz*.5),b=[b0[0],b0[1],zz],dz=NA===1?0:Math.sign(zz)*.35;m.set(b[0],b[1],b[2],k*1.7,2);let p0=b;
+   for(let j=1;j<=3;j++){const u=j/3,p1=[b[0]+al*(.55*u+.25*u*u),b[1]+al*(.75*u-.35*u*u),b[2]+al*dz*u];m.tube(p0,p1,s*.012*(1.2-u*.5)+.004,s*.01*(1.2-u*.6)+.003,c1,4,false);p0=p1}
+   m.ell(p0[0],p0[1],p0[2],s*.035+.008,s*.035+.008,s*.035+.008,lit,null,6,4)}}
+ // 빛 꼬리 (끝이 빛나는 실 꼬리)
+ if(g.tail>.05){const tb=[-rx*.92,by+ry*.1,0],nT2=g.tail>.8?3:g.tail>.35?2:1,Lt=g.tail*s*.9;
+  for(let j=0;j<nT2;j++){const zo=(j-(nT2-1)/2)*s*.07;m.set(tb[0],tb[1],zo,j*1.3,2);let p0=[tb[0],tb[1],zo],r0=s*.035;
+   for(let k=1;k<=4;k++){const p1=[tb[0]-Lt*k/4,tb[1]+Math.sin(k*1.1+j)*Lt*.1-k*Lt*.04,zo*(1+k*.4)];m.tube(p0,p1,r0,r0*.75,c1,5,false);p0=p1;r0*=.75}
+   m.ell(p0[0],p0[1],p0[2],s*.035,s*.035,s*.035,lit,null,6,4)}}
+ // 수정 가시
+ const nS=Math.round(g.spikes*8);m.set(0,0,0,0,0);
+ for(let k=0;k<nS;k++){const a=k/nS*TAU+.2;m.cone([Math.cos(a)*rx*.5,by+ry*.72,Math.sin(a)*rz*.5],[Math.cos(a)*rx*.8,by+ry+s*.25*g.spikes+s*.05,Math.sin(a)*rz*.8],s*.05,crys,4)}
+ const bl=g.balloon||0;
+ if(bl>.08){const rb=s*(.12+bl*.6),bc=[-rx*.15,by+ry*.9+rb*.85+(bl>.5?s*.3:0),0],c3=hsl(g.hue2,.6,.72),c4=hsl(g.hue,.45,.75);
+  m.ell(bc[0],bc[1],bc[2],rb,rb*1.12,rb,null,(x,y,z,ux,uy,uz)=>Math.sin(Math.atan2(uz,ux)*6)>0?c3:c4,16,12);
+  m.ell(bc[0],bc[1]-rb*1.06,bc[2],rb*.3,rb*.12,rb*.3,lit,null,8,4);
+  if(bl>.5)for(let k=0;k<4;k++){const a=k/4*TAU+.78;m.tube([bc[0]+Math.cos(a)*rb*.5,bc[1]-rb*.85,Math.sin(a)*rb*.5],[Math.cos(a)*rx*.35,by+ry*.8,Math.sin(a)*rz*.35],s*.008+.004,[.9,.9,.85],3,false)}}
+ return m}
+function stemAt(pts,t){const f=clamp(t,0,1)*(pts.length-1),i=Math.min(pts.length-2,f|0),u=f-i;return[lerp(pts[i][0],pts[i+1][0],u),lerp(pts[i][1],pts[i+1][1],u),lerp(pts[i][2],pts[i+1][2],u)]}
+// 식물: 지구 식물을 닮지 않게 — 빛 마디가 있는 구불 줄기, 산호 가지, 빛잎(구슬·부채판·수정), 빛꽃 왕관
+function buildPlant(g){const m=new MB(),H=g.height,LC=Math.round(g.leafCount),BR=Math.round(g.branches),shape=g.leafShape,rnd=mulberry((g.hue*97+H*1013+LC*7+shape*331+BR*17)|0);
+ const pc=hsl(g.hue,.6,.5),pc2=hsl(g.hue+18,.55,.4),stemC=hsl(g.hue+45,.35,H>1.6?.28:.36),nodeC=glow(hsl(g.flowerHue,.7,.6),1.4);
+ const sr=.022+.034*g.stemThick*(.6+Math.min(H,3.5)*.32);m.set(0,0,0,0,0);
+ const segs=H>1?4:2,pts=[[0,0,0]];let prev=pts[0],pr=sr;
+ for(let k=1;k<=segs;k++){const u=k/segs,q=[Math.sin(u*2.4+H)*H*.06,H*u,Math.cos(u*2+H)*H*.05*u],r=sr*(1-.55*u);m.tube(prev,q,pr,r,stemC,6,k===segs);
+  if(k<segs&&H>.6)m.ell(q[0],q[1],q[2],r*1.7,r*.9,r*1.7,nodeC,null,6,3);prev=q;pr=r;pts.push(q)}
+ m.ell(0,.01,0,sr*2.2,sr*.9,sr*2.2,stemC,null,8,4);
+ const tips=[{p:prev,d:[0,1,0]}];
+ for(let b=0;b<BR;b++){const t=.4+.45*(BR===1?.5:b/(BR-1)),a=b*2.4+.7,base=stemAt(pts,t),L=H*(.4-.1*b/Math.max(1,BR)),
+   d1=V3.norm([Math.cos(a),.35,Math.sin(a)]),mid=V3.add(base,V3.mul(d1,L*.5)),d2=V3.norm([Math.cos(a)*.5,1,Math.sin(a)*.5]),end=V3.add(mid,V3.mul(d2,L*.55));
+  m.tube(base,mid,sr*.55,sr*.4,stemC,5,false);m.tube(mid,end,sr*.4,sr*.22,stemC,5,true);tips.push({p:end,d:d2})}
+ const sz=.06+g.leafSize*.12*(.6+Math.min(H,3.5)*.25);
+ const pod=(B,D,k)=>{const col=k%2?pc:pc2;m.set(B[0],B[1],B[2],0,1);
+  if(shape<.35){const c=V3.add(B,V3.mul(D,sz*1.4));m.tube(B,c,sz*.15,sz*.12,stemC,3,false);m.ell(c[0],c[1],c[2],sz,sz*.92,sz,col,null,7,5);
+   m.ell(c[0]+D[0]*sz*.55,c[1]+D[1]*sz*.55,c[2]+D[2]*sz*.55,sz*.32,sz*.32,sz*.32,glow(col,1.5),null,4,3)}
+  else if(shape<.7){const c=V3.add(B,V3.mul(D,sz*1.6));m.tube(B,c,sz*.12,sz*.1,stemC,4,false);m.disc(c,V3.norm([D[0]*.45,1,D[2]*.45]),sz*1.6,col,glow(col,1.25))}
+  else{m.tube(B,V3.add(B,V3.mul(D,sz*3.2)),sz*.45,sz*.02,glow(hsl(g.hue,.45,.7),1.12),4,false)}};
+ if(H<.6){for(let k=0;k<LC;k++){const a=k*2.399+rnd()*.3,D=V3.norm([Math.cos(a),.35+.5*rnd(),Math.sin(a)]);pod([Math.cos(a)*sr,H*(.2+.6*k/LC),Math.sin(a)*sr],D,k)}}
+ else for(let k=0;k<LC;k++){const a=k*2.399+rnd()*.4;let B,D;
+  if(k%3!==2||tips.length>1){const tp=tips[k%tips.length];B=tp.p;D=V3.norm([Math.cos(a)+tp.d[0]*.5,.45+tp.d[1]*.6+rnd()*.3,Math.sin(a)+tp.d[2]*.5])}
+  else{B=stemAt(pts,.35+.55*rnd());D=V3.norm([Math.cos(a),.3+rnd()*.3,Math.sin(a)])}
+  pod(B,D,k);if(H>1.8&&shape<.7&&LC<=8)pod(B,V3.norm([Math.cos(a+1.1),D[1],Math.sin(a+1.1)]),k+1)}
+ if(g.flower>.08){const fc=glow(hsl(g.flowerHue,.85,.62),1.5),fs=.04+.12*g.flower*(.7+Math.min(H,3)*.12),n=5+Math.round(g.flower*3);
+  for(let t=0;t<Math.min(tips.length,3);t++){const c=tips[t].p;m.set(c[0],c[1],c[2],0,1);
+   for(let k=0;k<n;k++){const a=k/n*TAU,e=V3.add(c,[Math.cos(a)*fs*1.6,fs*1.4,Math.sin(a)*fs*1.6]);m.tube(c,e,fs*.08,fs*.05,hsl(g.flowerHue,.4,.45),3,false);m.ell(e[0],e[1],e[2],fs*.35,fs*.35,fs*.35,fc,null,5,3)}
+   m.cone(c,V3.add(c,[0,fs*2.2,0]),fs*.35,fc,5)}}
+ const nt=Math.round(g.thorns*9);m.set(0,0,0,0,0);
+ for(let k=0;k<nt;k++){const t=.12+.76*k/Math.max(1,nt-1),h=stemAt(pts,t),a=k*2.1,r=sr*(1-.45*t),o=r+.05+.07*g.thorns;
+  m.cone([h[0]+Math.cos(a)*r*.8,h[1],h[2]+Math.sin(a)*r*.8],[h[0]+Math.cos(a)*o,h[1]+.03,h[2]+Math.sin(a)*o],.014+.01*g.thorns,glow([.85,.9,1],1.05),4)}
+ return m}
+// 멀리서 작게 보일 때 쓰는 간단한 모양 (그래픽카드가 덜 힘들게)
+function buildPlantLOD(g){const m=new MB(),H=g.height,LC=Math.round(g.leafCount),pc=hsl(g.hue,.6,.5),stemC=hsl(g.hue+45,.35,H>1.6?.28:.36),sr=.022+.034*g.stemThick*(.6+Math.min(H,3.5)*.32);
+ m.set(0,0,0,0,0);m.tube([0,0,0],[0,H,0],sr,sr*.5,stemC,4,false);const cr=.08+g.leafSize*.11*Math.sqrt(LC)*(.6+Math.min(H,3.5)*.25)*(1+Math.round(g.branches)*.25);
+ m.set(0,H,0,0,1);if(H<.6)m.ell(0,H*.5,0,cr,cr*.5,cr,pc,null,6,4);else m.ell(0,H*.92,0,cr,cr*.75,cr,pc,null,6,4);
+ if(g.flower>.3)m.ell(0,H+cr*.4,0,cr*.35,cr*.35,cr*.35,glow(hsl(g.flowerHue,.85,.62),1.5),null,4,3);return m}
+function buildAnimalLOD(g){const m=new MB(),s=g.size,L=Math.round(g.legs),plan=Math.round(g.plan||0),{c1}=animalCols(g),legH=L?g.legLen*s*.85:0;
+ let rx=s*(.26+.3*g.bodyLen),ry=s*.21*g.bodyFat,rz=s*.24*g.bodyFat;if(plan===1){rx*=.8;rz*=.85}if(plan===2){const w=Math.max(rx,rz)*1.35;rx=w;rz=w;ry*=.5}
+ const by=L?legH*.8+ry*.55:ry*1.05,lr=s*.055*(.7+g.bodyFat*.3);m.set(0,0,0,0,0);m.ell(0,by,0,rx,ry,rz,c1,null,8,6);
+ for(let k=0;k<L;k++){const a=(k+.5)/L*TAU,hip=[Math.cos(a)*rx*.6,by-ry*.45,Math.sin(a)*rz*.6];m.set(hip[0],hip[1],hip[2],(k%2?Math.PI:0)+a*.5,1);m.tube(hip,[hip[0]+Math.cos(a)*legH*.85,.03,hip[2]+Math.sin(a)*legH*.85],lr,lr*.5,c1,4,false)}
+ const nl=g.neckLen*s;m.set(rx*.25,by+ry*.85,0,0,3);if(nl>.06){const ne=[rx*.25+nl*.25,by+ry*.85+nl*.85,0];m.tube([rx*.25,by+ry*.85,0],ne,s*.06+.01,s*.05,c1,4,false);m.ell(ne[0]+s*.05,ne[1]+s*.08,0,s*.15*g.headSize,s*.13*g.headSize,s*.13*g.headSize,c1,null,6,4)}
+ const bl=g.balloon||0;if(bl>.08){const rb=s*(.12+bl*.6);m.set(0,0,0,0,0);m.ell(-rx*.15,by+ry*.9+rb*.85+(bl>.5?s*.3:0),0,rb,rb*1.12,rb,hsl(g.hue2,.6,.72),null,8,6)}
+ return m}
+const LODM=new Map();
+function lodOf(sp){let m=LODM.get(sp.id);if(!m||m.ver!==sp.ver){if(m)freeMesh(m);m=uploadMesh(sp.kind==='a'?buildAnimalLOD(sp.g):buildPlantLOD(sp.g));m.ver=sp.ver;LODM.set(sp.id,m)}return m}
+const CORPSE=(()=>{const m=new MB();m.ell(0,.06,0,.34,.1,.27,[.36,.3,.38],null,10,6);
+ for(let k=0;k<3;k++){const a=k*2.1;m.cone([Math.cos(a)*.12,.08,Math.sin(a)*.1],[Math.cos(a)*.22,.26,Math.sin(a)*.18],.04,[.85,.85,.95],4)}return uploadMesh(m)})();
+
+// ================= 땅 =================
+const N=128,NV=N+1;
+const LV=new Float32Array(N*N),H=new Float32Array(NV*NV),CH=new Float32Array(N*N),G=new Uint8Array(N*N),WET=new Float32Array(N*N),M=new Float32Array(N*N),RAIN=new Float32Array(N*N),VAR=new Float32Array(N*N),CC=new Float32Array(N*N*3);
+let terrainDirty=true,moistDirty=false,colorDirty=false,moistT=0,editBox=null;
+function hMain(x,z){x=clamp(x,0,N-1e-4);z=clamp(z,0,N-1e-4);const ix=x|0,iz=z|0,fx=x-ix,fz=z-iz,i=iz*NV+ix;
+ return lerp(lerp(H[i],H[i+1],fx),lerp(H[i+NV],H[i+NV+1],fx),fz)}
+// 다른 섬: 따로 그리는 땅 조각 (처음 섬만 한 크기). 세상 끝은 WB0~WB1
+const PN=112,PNV=PN+1,WB0=-704,WB1=832;let PIECES=[];
+const inWorld=(x,z)=>x>WB0+2&&z>WB0+2&&x<WB1-2&&z<WB1-2;
+function pieceH(P,lx,lz){const ix=Math.min(lx|0,PN-1),iz=Math.min(lz|0,PN-1),fx=lx-ix,fz=lz-iz,i=iz*PNV+ix,A=P.H;
+ return lerp(lerp(A[i],A[i+1],fx),lerp(A[i+PNV],A[i+PNV+1],fx),fz)}
+function heightAt(x,z){let h=(x>-.5&&z>-.5&&x<N+.5&&z<N+.5)?hMain(x,z):-7.5;
+ for(let k=0;k<PIECES.length;k++){const P=PIECES[k],lx=x-P.ox,lz=z-P.oz;if(lx>0&&lz>0&&lx<PN&&lz<PN){const v=pieceH(P,lx,lz);if(v>h)h=v}}return h}
+const SOIL=[0,1,1];
+function soilAt(x,z){let best=-99,m=1,g=1;if(x>=0&&z>=0&&x<N&&z<N){best=hMain(x,z);const c=(z|0)*N+(x|0);m=M[c];g=G[c]}
+ for(const P of PIECES){const lx=x-P.ox,lz=z-P.oz;if(lx>0&&lz>0&&lx<PN&&lz<PN){const v=pieceH(P,lx,lz);if(v>best){best=v;const c=(lz|0)*PN+(lx|0);m=P.M[c];g=P.G[c]}}}
+ if(best<-98)best=-7.5;SOIL[0]=best;SOIL[1]=m;SOIL[2]=g;return SOIL}
+function calcCH(){for(let z=0;z<N;z++)for(let x=0;x<N;x++){const i=z*NV+x;CH[z*N+x]=(H[i]+H[i+1]+H[i+NV]+H[i+NV+1])*.25}}
+function slopeAt(x,z){const i=z*NV+x;return Math.abs(H[i]-H[i+NV+1])+Math.abs(H[i+1]-H[i+NV])}
+function genFields(seed){const n1=makeNoise(seed),n3=makeNoise(seed+202);
+ for(let c=0;c<N*N;c++){const x=c%N,z=(c/N)|0;RAIN[c]=clamp(fbm(n3,x*.03+9,z*.03+4,3)*1.1+.5,0,1);VAR[c]=fbm(n1,x*.25+40,z*.25,2)}}
+function genTerrain(seed,type){const n1=makeNoise(seed),n2=makeNoise(seed+101),n3=makeNoise(seed+202);
+ for(let z=0;z<NV;z++)for(let x=0;x<NV;x++){const dx=x/N*2-1,dz=z/N*2-1,r=Math.hypot(dx,dz);let h;
+  if(type==='flat'){h=1.3+fbm(n1,x*.04,z*.04,3)*.8;const e=clamp((r-.8)/.16,0,1);h=lerp(h,-6,e*e*(3-2*e))}
+  else{const base=fbm(n1,x*.016+3.1,z*.016+1.7,5),rid=1-Math.abs(fbm(n2,x*.022,z*.022,4)*1.6),rr=r+fbm(n3,x*.02,z*.02,3)*.35;
+   const e=.4+base*1.25+Math.pow(Math.max(0,rid),3)*.42-Math.pow(Math.max(0,rr),2.4)*1.05;
+   h=e>0?Math.pow(e,1.25)*17:e*10;if(r>.9)h=lerp(h,-7,clamp((r-.9)/.1,0,1))}
+  H[z*NV+x]=clamp(h,-8,26)}
+ calcCH();genFields(seed);
+ for(let c=0;c<N*N;c++){const x=c%N,z=(c/N)|0,h=CH[c];WET[c]=0;G[c]=h<1.1?1:(slopeAt(x,z)>2.3||h>13)?2:0}
+ calcMoist();calcColors();terrainDirty=true}
+function calcMoist(){const D=new Int16Array(N*N).fill(99),q=new Int32Array(N*N);let qh=0,qt=0;
+ for(let c=0;c<N*N;c++)if(CH[c]<0){D[c]=0;q[qt++]=c}
+ while(qh<qt){const c=q[qh++],d=D[c]+1;if(d>16)continue;const x=c%N;
+  if(x>0&&D[c-1]>d){D[c-1]=d;q[qt++]=c-1}if(x<N-1&&D[c+1]>d){D[c+1]=d;q[qt++]=c+1}
+  if(c>=N&&D[c-N]>d){D[c-N]=d;q[qt++]=c-N}if(c<N*N-N&&D[c+N]>d){D[c+N]=d;q[qt++]=c+N}}
+ for(let c=0;c<N*N;c++){const h=CH[c];let m=h<0?1:.9*Math.exp(-D[c]/6)+RAIN[c]*.45-.06-Math.max(0,h-6)*.02;
+  if(G[c]===1)m*=.75;else if(G[c]===2)m*=.7;m+=WET[c]*.7;M[c]=clamp(m,0,1)}}
+function calcColors(){for(let c=0;c<N*N;c++){const h=CH[c],m=M[c],g=G[c],v=1+VAR[c]*.14;let r,gg,b;
+ if(g===0){if(m<.45){const k=m/.45;r=lerp(.64,.47,k);gg=lerp(.52,.47,k);b=lerp(.34,.26,k)}else{const k=(m-.45)/.55;r=lerp(.47,.25,k);gg=lerp(.47,.37,k);b=lerp(.26,.15,k)}}
+ else if(g===1){r=lerp(.90,.74,m*.7);gg=lerp(.82,.66,m*.7);b=lerp(.60,.46,m*.7)}
+ else{r=.49;gg=.48;b=.47}
+ if(h>15){const k=clamp((h-15)/3,0,1)*(g===2?.9:.7);r=lerp(r,.95,k);gg=lerp(gg,.96,k);b=lerp(b,1,k)}
+ if(LV[c]>.02){const k=Math.min(1,LV[c]*1.5);r=lerp(r*v,2.4,k);gg=lerp(gg*v,.85,k);b=lerp(b*v,.15,k);CC[c*3]=r;CC[c*3+1]=gg;CC[c*3+2]=b;continue}
+ CC[c*3]=r*v;CC[c*3+1]=gg*v;CC[c*3+2]=b*v}}
+// 땅 그림 (GPU)
+const TP=new Float32Array(NV*NV*3),TNr=new Float32Array(NV*NV*3),TCo=new Float32Array(NV*NV*3);
+const TER=(()=>{const vao=gl.createVertexArray();gl.bindVertexArray(vao);const mk=(loc,arr)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,arr.byteLength,gl.DYNAMIC_DRAW);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);return b};
+ const pb=mk(0,TP),nb=mk(1,TNr),cb=mk(2,TCo),ix=new Uint16Array(N*N*6);let k=0;
+ for(let z=0;z<N;z++)for(let x=0;x<N;x++){const i=z*NV+x;ix[k++]=i;ix[k++]=i+NV;ix[k++]=i+1;ix[k++]=i+1;ix[k++]=i+NV;ix[k++]=i+NV+1}
+ const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,ix,gl.STATIC_DRAW);gl.bindVertexArray(null);return{vao,pb,nb,cb,n:ix.length}})();
+function updTerrainMesh(){for(let z=0;z<NV;z++)for(let x=0;x<NV;x++){const i=z*NV+x,o=i*3;TP[o]=x;TP[o+1]=H[i];TP[o+2]=z;
+  const nx=H[z*NV+Math.max(x-1,0)]-H[z*NV+Math.min(x+1,N)],nz=H[Math.max(z-1,0)*NV+x]-H[Math.min(z+1,N)*NV+x],l=Math.hypot(nx,2,nz);TNr[o]=nx/l;TNr[o+1]=2/l;TNr[o+2]=nz/l;
+  let r=0,g=0,b=0,c=0;for(let dz=-1;dz<=0;dz++)for(let dx=-1;dx<=0;dx++){const cx=x+dx,cz=z+dz;if(cx<0||cz<0||cx>=N||cz>=N)continue;const q=(cz*N+cx)*3;r+=CC[q];g+=CC[q+1];b+=CC[q+2];c++}
+  TCo[o]=r/c;TCo[o+1]=g/c;TCo[o+2]=b/c}
+ gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,NV,NV,gl.RED,gl.FLOAT,H);gl.activeTexture(gl.TEXTURE0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,TER.pb);gl.bufferSubData(gl.ARRAY_BUFFER,0,TP);gl.bindBuffer(gl.ARRAY_BUFFER,TER.nb);gl.bufferSubData(gl.ARRAY_BUFFER,0,TNr);gl.bindBuffer(gl.ARRAY_BUFFER,TER.cb);gl.bufferSubData(gl.ARRAY_BUFFER,0,TCo)}
+// 바다·바다 밑·하늘
+const WAT=(()=>{const S=160,A=-130,B=258,p=[],ix=[];for(let j=0;j<=S;j++)for(let i=0;i<=S;i++)p.push(A+(B-A)*i/S,0,A+(B-A)*j/S);
+ for(let j=0;j<S;j++)for(let i=0;i<S;i++){const a=j*(S+1)+i;ix.push(a,a+S+1,a+1,a+1,a+S+1,a+S+2)}return staticMesh(p,p.map((_,k)=>k%3===1?1:0),p.map(()=>.5),ix)})();
+const WAT2=(()=>{const S=96,A=-1600,B=1728,st=(B-A)/S,p=[],ix=[];for(let j=0;j<=S;j++)for(let i=0;i<=S;i++)p.push(A+st*i,0,A+st*j);
+ for(let j=0;j<S;j++)for(let i=0;i<S;i++){const x0=A+st*i,z0=A+st*j;if(x0>=-130&&x0+st<=258&&z0>=-130&&z0+st<=258)continue;const a=j*(S+1)+i;ix.push(a,a+S+1,a+1,a+1,a+S+1,a+S+2)}
+ return staticMesh(p,p.map((_,k)=>k%3===1?1:0),p.map(()=>.5),ix)})();
+const SEA=staticMesh([-1700,-7.5,-1700,1830,-7.5,-1700,-1700,-7.5,1830,1830,-7.5,1830],[0,1,0,0,1,0,0,1,0,0,1,0],[.48,.44,.34,.48,.44,.34,.48,.44,.34,.48,.44,.34],[0,2,1,1,2,3]);
+const SKY=(()=>{const vao=gl.createVertexArray();gl.bindVertexArray(vao);const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.bindVertexArray(null);return vao})();
+function platformMesh(r){const p=[0,0,0],n=[0,1,0],c=[.78,.76,.7],ix=[],S=56;
+ for(let i=0;i<=S;i++){const a=i/S*TAU;for(const[rr,y,col]of[[r*.97,0,i%2?[.74,.72,.66]:[.8,.78,.72]],[r,-.06,[.6,.58,.53]],[r,-.6,[.5,.48,.44]]]){p.push(Math.cos(a)*rr,y,Math.sin(a)*rr);n.push(Math.cos(a)*(y<0?1:0),y<0?0:1,Math.sin(a)*(y<0?1:0));c.push(...col)}}
+ for(let i=0;i<S;i++){const a=1+i*3,b=a+3;ix.push(0,a,b,a,a+1,b,a+1,b+1,b,a+1,a+2,b+1,a+2,b+2,b+1)}return staticMesh(p,n,c,ix)}
+
+// ---------- 다른 섬 땅 조각 ----------
+function pieceGL(P){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const n3=PNV*PNV*3;P.TP=new Float32Array(n3);P.TN=new Float32Array(n3);P.TC=new Float32Array(n3);
+ const mk=(loc,arr)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,arr.byteLength,gl.DYNAMIC_DRAW);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);return b};
+ P.pb=mk(0,P.TP);P.nb=mk(1,P.TN);P.cb=mk(2,P.TC);const ix=new Uint16Array(PN*PN*6);let k=0;
+ for(let z=0;z<PN;z++)for(let x=0;x<PN;x++){const i=z*PNV+x;ix[k++]=i;ix[k++]=i+PNV;ix[k++]=i+1;ix[k++]=i+1;ix[k++]=i+PNV;ix[k++]=i+PNV+1}
+ P.ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,P.ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,ix,gl.STATIC_DRAW);gl.bindVertexArray(null);P.vao=vao;P.ni=ix.length;
+ P.tex=gl.createTexture();gl.activeTexture(gl.TEXTURE2+P.slot);gl.bindTexture(gl.TEXTURE_2D,P.tex);gl.texStorage2D(gl.TEXTURE_2D,1,gl.R16F,PNV,PNV);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0)}
+function freePieces(){for(const P of PIECES){if(P.vao){gl.deleteVertexArray(P.vao);[P.pb,P.nb,P.cb,P.ib].forEach(b=>gl.deleteBuffer(b));gl.deleteTexture(P.tex)}}PIECES=[]}
+function pieceTerrain(P,seed){const n1=makeNoise(seed),n2=makeNoise(seed+101),n3=makeNoise(seed+202),c0=PN/2;
+ for(let z=0;z<PNV;z++)for(let x=0;x<PNV;x++){const r=Math.hypot(x-c0,z-c0)/(PN*.44)+fbm(n3,x*.02,z*.02,3)*.3,base=fbm(n1,x*.016+5,z*.016+2,5),rid=1-Math.abs(fbm(n2,x*.022,z*.022,4)*1.6);
+  const e=.42+base*1.15+Math.pow(Math.max(0,rid),3)*.45-Math.pow(Math.max(0,r),2.4)*1.05;let h=e>0?Math.pow(e,1.2)*16:e*10;const rr=Math.hypot(x-c0,z-c0)/c0;if(rr>.86)h=lerp(h,-7.5,clamp((rr-.86)/.14,0,1));P.H[z*PNV+x]=clamp(h,-7.5,24)}
+ for(let c=0;c<PN*PN;c++){const x=c%PN,z=(c/PN)|0;P.RAIN[c]=clamp(fbm(n3,x*.03+9,z*.03+4,3)*1.1+.5,0,1);P.VAR[c]=fbm(n1,x*.25+40,z*.25,2)}
+ pieceCH(P);for(let c=0;c<PN*PN;c++){const x=c%PN,z=(c/PN)|0,i=z*PNV+x,h=P.CH[c],sl=Math.abs(P.H[i]-P.H[i+PNV+1])+Math.abs(P.H[i+1]-P.H[i+PNV]);P.G[c]=h<1.1?1:(sl>2.3||h>13)?2:0}}
+function pieceCH(P){for(let z=0;z<PN;z++)for(let x=0;x<PN;x++){const i=z*PNV+x;P.CH[z*PN+x]=(P.H[i]+P.H[i+1]+P.H[i+PNV]+P.H[i+PNV+1])*.25}}
+function pieceRefresh(P){pieceCH(P);const n=PN,D=new Int16Array(n*n).fill(99),q=new Int32Array(n*n);let qh=0,qt=0;
+ for(let c=0;c<n*n;c++)if(P.CH[c]<0){D[c]=0;q[qt++]=c}
+ while(qh<qt){const c=q[qh++],d=D[c]+1;if(d>16)continue;const x=c%n;if(x>0&&D[c-1]>d){D[c-1]=d;q[qt++]=c-1}if(x<n-1&&D[c+1]>d){D[c+1]=d;q[qt++]=c+1}if(c>=n&&D[c-n]>d){D[c-n]=d;q[qt++]=c-n}if(c<n*n-n&&D[c+n]>d){D[c+n]=d;q[qt++]=c+n}}
+ for(let c=0;c<n*n;c++){const h=P.CH[c];let m=h<0?1:.9*Math.exp(-D[c]/6)+P.RAIN[c]*.45-.06-Math.max(0,h-6)*.02;if(P.G[c]===1)m*=.75;else if(P.G[c]===2)m*=.7;P.M[c]=clamp(m,0,1);
+  const g=P.G[c],v=1+P.VAR[c]*.14,mm=P.M[c];let r,gg,b;
+  if(g===0){if(mm<.45){const k=mm/.45;r=lerp(.64,.47,k);gg=lerp(.52,.47,k);b=lerp(.34,.26,k)}else{const k=(mm-.45)/.55;r=lerp(.47,.25,k);gg=lerp(.47,.37,k);b=lerp(.26,.15,k)}}
+  else if(g===1){r=lerp(.9,.74,mm*.7);gg=lerp(.82,.66,mm*.7);b=lerp(.6,.46,mm*.7)}else{r=.49;gg=.48;b=.47}
+  if(h>15){const k=clamp((h-15)/3,0,1)*(g===2?.9:.7);r=lerp(r,.95,k);gg=lerp(gg,.96,k);b=lerp(b,1,k)}P.CC[c*3]=r*v;P.CC[c*3+1]=gg*v;P.CC[c*3+2]=b*v}
+ const A=P.H;for(let z=0;z<PNV;z++)for(let x=0;x<PNV;x++){const i=z*PNV+x,o=i*3;P.TP[o]=x;P.TP[o+1]=A[i];P.TP[o+2]=z;
+  const nx=A[z*PNV+Math.max(x-1,0)]-A[z*PNV+Math.min(x+1,PN)],nz=A[Math.max(z-1,0)*PNV+x]-A[Math.min(z+1,PN)*PNV+x],l=Math.hypot(nx,2,nz);P.TN[o]=nx/l;P.TN[o+1]=2/l;P.TN[o+2]=nz/l;
+  let r=0,g=0,b=0,c=0;for(let dz=-1;dz<=0;dz++)for(let dx=-1;dx<=0;dx++){const cx=x+dx,cz=z+dz;if(cx<0||cz<0||cx>=PN||cz>=PN)continue;const qq=(cz*PN+cx)*3;r+=P.CC[qq];g+=P.CC[qq+1];b+=P.CC[qq+2];c++}P.TC[o]=r/c;P.TC[o+1]=g/c;P.TC[o+2]=b/c}
+ gl.bindBuffer(gl.ARRAY_BUFFER,P.pb);gl.bufferSubData(gl.ARRAY_BUFFER,0,P.TP);gl.bindBuffer(gl.ARRAY_BUFFER,P.nb);gl.bufferSubData(gl.ARRAY_BUFFER,0,P.TN);gl.bindBuffer(gl.ARRAY_BUFFER,P.cb);gl.bufferSubData(gl.ARRAY_BUFFER,0,P.TC);
+ gl.activeTexture(gl.TEXTURE2+P.slot);gl.bindTexture(gl.TEXTURE_2D,P.tex);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,PNV,PNV,gl.RED,gl.FLOAT,P.H);gl.activeTexture(gl.TEXTURE0);P.dirty=false}
+function newPiece(slot,seed){const P={slot,seed,H:new Float32Array(PNV*PNV),CH:new Float32Array(PN*PN),G:new Uint8Array(PN*PN),M:new Float32Array(PN*PN),RAIN:new Float32Array(PN*PN),VAR:new Float32Array(PN*PN),CC:new Float32Array(PN*PN*3),
+ ox:0,oz:0,vx:0,vz:0,ph:'come',push:0,name:'',near:0};pieceGL(P);return P}
+const dirName=(x,z)=>Math.abs(x)>Math.abs(z)?(x>0?'동쪽':'서쪽'):(z>0?'남쪽':'북쪽');
+
+// ================= 세상 =================
+const DT=.05,PSTEP=8,MAXA=450,MAXPW=1000,MAXPL=3400,SPLIT=.08,DAY=60,MAXSP=36;
+let W=null;
+const MESH=new Map();
+function newWorldState(seed){return{seed,t:0,tick:0,A:[],P:[],C:[],SP:[],hist:[],log:[],deaths:{},npw:0,npl:0,evo:1,dim:0,boost:0,winter:null,volc:[],conts:[],lava:0,natural:true,lastDay:0,lastBig:0,selA:-1,selP:-1,nid:1,speed:1,demo:false}}
+function meshOf(sp){let m=MESH.get(sp.id);if(!m){m=uploadMesh(sp.kind==='a'?buildAnimal(sp.g):buildPlant(sp.g));MESH.set(sp.id,m);sp.mg={...sp.g};sp.ver=(sp.ver||0)+1;THUMB.delete(sp.id)}return m}
+// 종의 모습은 지금 살아 있는 무리의 평균 유전자 → 무리가 진화하면 모습도 조금씩 바뀜
+function updateReps(){const sums=new Map();
+ const acc=(o,defs)=>{let r=sums.get(o.sp);if(!r){r={n:0,v:new Float64Array(defs.length),hx:new Float64Array(defs.length),hy:new Float64Array(defs.length)};sums.set(o.sp,r)}r.n++;
+  for(let i=0;i<defs.length;i++){const v=o.g[defs[i][0]];if(HUEK[defs[i][0]]){r.hx[i]+=Math.cos(v*Math.PI/180);r.hy[i]+=Math.sin(v*Math.PI/180)}else r.v[i]+=v}};
+ for(const a of W.A)if(!a.dead)acc(a,AG);for(const p of W.P)if(!p.dead)acc(p,PGN);
+ let rebuilt=0;
+ for(const[id,r]of sums){const sp=W.SP[id],defs=defOf(sp.kind);if(r.n<3)continue;
+  defs.forEach((d,i)=>{const k=d[0];if(HUEK[k])sp.g[k]=((Math.atan2(r.hy[i],r.hx[i])*180/Math.PI)+360)%360;else{let v=r.v[i]/r.n;if(SWITCH[k])v=Math.round(v);sp.g[k]=v}});
+  if(rebuilt<3&&MESH.has(id)&&sp.mg&&gdist(sp.g,sp.mg,defs)>.03){freeMesh(MESH.get(id));MESH.delete(id);rebuilt++}}}
+function clearMeshes(){for(const m of MESH.values())freeMesh(m);MESH.clear();for(const m of LODM.values())freeMesh(m);LODM.clear()}
+const SY=['뽀','꾸','루','미','타','콩','몽','삐','라','도','쿠','니','포','링','차','보','토','리','마','누','빠','초','롱','뭉','하','소','유','키','파','모','나','부','지','투','랑','솔','디','코'];
+function autoName(kind,g){let s='';const n=2+(R()<.35?1:0);for(let i=0;i<n;i++)s+=pick(SY);
+ if(kind==='p')s+=g.height>2.2?'나무':g.flower>.5?'꽃':g.thorns>.5?'가시':g.waterNeed>.82?'물풀':'풀';
+ else if(g.diet>.6&&R()<.5)s+='사냥꾼';
+ return W&&W.SP.some(x=>x.name===s)?autoName(kind,g):s}
+function spColor(sp){const g=sp.g;return sp.kind==='a'?hsl(g.hue,.55,.52):hsl(g.hue,.5,.42)}
+function addSpecies(kind,g,name,parent,mine){const sp={id:W.SP.length,kind,g:{...g},design:mine?{...g}:null,name:name||autoName(kind,g),parent:parent??-1,born:W.t,mine:!!mine,n:0,peak:0,ext:false,died:0};W.SP.push(sp);return sp}
+function liveSpCount(kind){let n=0;for(const s of W.SP)if(s.kind===kind&&!s.ext&&(s.n>0||s.mine))n++;return n}
+function childSp(sp,cg){if(gdist(cg,sp.g,defOf(sp.kind))<=SPLIT||liveSpCount(sp.kind)>=MAXSP)return sp;
+ const ns=addSpecies(sp.kind,cg,null,sp.id,false);ns.n=1;ns.quiet=true;return ns}
+let lastSpToast=0;
+function addLog(msg,big,spid){W.log.push({t:W.t,m:msg,b:big?1:0});if(W.log.length>200)W.log.splice(0,W.log.length-200);logVer++;if(W.demo)return;
+ if(big)toast(msg,1);else if(spid!==undefined){const now=performance.now();if(now-lastSpToast>7000){lastSpToast=now;toast(msg)}}}
+let logVer=0;
+
+// 칸 나누기 (가까운 생물 찾기용)
+const AGS=4,AGN=(WB1-WB0)/AGS,AHd=new Int32Array(AGN*AGN);let ANx=new Int32Array(1024);
+const agx=x=>clamp((x-WB0)/AGS|0,0,AGN-1);
+function buildAGrid(){AHd.fill(-1);const A=W.A;if(ANx.length<A.length)ANx=new Int32Array(A.length*2);
+ for(let i=0;i<A.length;i++){const a=A[i];if(a.dead)continue;const c=agx(a.z)*AGN+agx(a.x);ANx[i]=AHd[c];AHd[c]=i}}
+function eachA(x,z,r,fn){const A=W.A,x0=agx(x-r),x1=agx(x+r),z0=agx(z-r),z1=agx(z+r);
+ for(let gz=z0;gz<=z1;gz++)for(let gx=x0;gx<=x1;gx++){let i=AHd[gz*AGN+gx];while(i>=0){const a=A[i];i=ANx[i];if(!a.dead)fn(a)}}}
+const PGS=2,PGW=(WB1-WB0)/PGS,PHd=new Int32Array(PGW*PGW);let PNx=new Int32Array(4096);
+const pgx=x=>clamp((x-WB0)/PGS|0,0,PGW-1);
+function buildPGrid(){PHd.fill(-1);const P=W.P;if(PNx.length<P.length)PNx=new Int32Array(P.length*2);
+ for(let i=0;i<P.length;i++){const p=P[i];if(p.dead)continue;const c=pgx(p.z)*PGW+pgx(p.x);PNx[i]=PHd[c];PHd[c]=i}}
+function eachP(x,z,r,fn){const P=W.P,x0=pgx(x-r),x1=pgx(x+r),z0=pgx(z-r),z1=pgx(z+r);
+ for(let gz=z0;gz<=z1;gz++)for(let gx=x0;gx<=x1;gx++){let i=PHd[gz*PGW+gx];while(i>=0){const p=P[i];i=PNx[i];if(!p.dead&&fn(p)===false)return}}}
+function crowded(x,z,r){let hit=false;eachP(x,z,r,p=>{if((p.x-x)**2+(p.z-z)**2<r*r){hit=true;return false}});return hit}
+
+// ---------- 식물 ----------
+function fertAt(x,z,g){if(!inWorld(x,z))return 0;const S=soilAt(x,z),h=S[0],sm=S[1],gt=S[2],aq=g.waterNeed;
+ const fl=g.float||0;if(h<0){if(fl>.5)return clamp(.55+(fl-.5)*.6,0,1)*(h<-.3?1:.6);if(aq<.78||h<-2.2)return 0;return clamp((aq-.78)*5,0,1)*(1+h/2.2*.5)}
+ if(fl>.4)return 0;
+ let f=1-Math.abs(sm-aq)*1.5;
+ if(gt===1)f*=aq<.3?1:.6;else if(gt===2)f*=.25;else if(aq<.2)f*=.8;
+ if(aq>.75)f*=clamp((.9-aq)*6.7,0,1);// 물에서만 사는 식물은 땅 위에서 잘 못 자람
+ if(h>14)f*=.6;return clamp(f,0,1)}
+function tintFor(kind,g,sp){const a=kind==='a'?animalCols(g).c1:hsl(g.hue,.55,.36),b=kind==='a'?animalCols(sp.g).c1:hsl(sp.g.hue,.55,.36);return a.map((v,i)=>clamp(v/Math.max(b[i],.05),.5,2))}
+function addPlant(sp,g,x,z,gr){const d=deriveP(g);const p={sp:sp.id,g,d,x,z,y:heightAt(x,z),gr,eaten:0,age:0,seedT:d.seedT*(.5+R()),yaw:R()*TAU,dead:false,f:1,sh:1,wither:0,
+ hs:Math.pow(g.height/sp.g.height,.7),tint:tintFor('p',g,sp)};if(p.y<-.05)W.npw++;else W.npl++;W.P.push(p);return p}
+function plantFood(p,reach){const curH=p.d.h*(.12+.88*p.gr)+.05,frac=Math.min(.9,reach/curH);return p.d.maxB*p.gr*Math.max(0,frac-p.eaten)}
+function shadeAt(p){const r0=p.d.rad*(.15+.85*p.gr),myH=p.d.h*(.12+.88*p.gr);let crowd=0;
+ eachP(p.x,p.z,3,q=>{if(q===p)return;const rr=r0+q.d.rad*(.15+.85*q.gr),dx=q.x-p.x,dz=q.z-p.z,dd=dx*dx+dz*dz;if(dd>=rr*rr)return;
+  crowd+=(1-Math.sqrt(dd)/rr)*(q.d.h*(.12+.88*q.gr)>myH*1.1?.7:.25)});return clamp(1-crowd,.08,1)}
+function sow(p){const a=R()*TAU,dist=.4+Math.sqrt(R())*p.g.seedDist*((p.g.float||0)>.5?1.6:1),x=p.x+Math.cos(a)*dist,z=p.z+Math.sin(a)*dist;if(!inWorld(x,z))return;
+ if(heightAt(x,z)<-.05?W.npw>=MAXPW:W.npl>=MAXPL)return;const cg=mutate(p.g,PGN);if(fertAt(x,z,cg)<.06||crowded(x,z,.45))return;const sp=childSp(W.SP[p.sp],cg);addPlant(sp,cg,x,z,.03)}
+function plantUpdate(p,dt){p.age+=dt;const f=fertAt(p.x,p.z,p.g);p.f=f;
+ if(f<.04){p.wither+=dt;if(p.wither>25){p.dead=true;return}}else p.wither=Math.max(0,p.wither-dt*2);
+ if(p.age>p.d.life){p.dead=true;return}
+ const sun=1-.65*(W.dim||0);if(W.dim&&R()<dt*.0025*W.dim*(p.y>-.05?1:.3)*(1+p.d.h*.3)){p.dead=true;return}
+ const sh=shadeAt(p)*sun;p.sh=sh;if(sh*f<.12&&p.gr<.9&&!W.dim){p.weak=(p.weak||0)+dt;if(p.weak>40){p.dead=true;return}}else p.weak=0;
+ if(p.gr<1)p.gr=Math.min(1,p.gr+p.d.grow*f*sh*dt);
+ if(p.eaten>0)p.eaten=Math.max(0,p.eaten-p.d.regrow*dt*(.3+.7*f)*sun);
+ if(p.gr>.6&&p.eaten<.55){p.seedT-=dt*(.3+.7*f)*sh;if(p.seedT<=0){p.seedT=p.d.seedT*(.7+R()*.6);for(let k=0;k<p.d.seeds;k++)sow(p)}}}
+function stepPlants(){const ph=W.tick%PSTEP,P=W.P,dt=DT*PSTEP;
+ for(let i=ph;i<P.length;i+=PSTEP){const p=P[i];if(!p.dead)plantUpdate(p,dt)}
+ if(ph===PSTEP-1){W.P=P.filter(p=>!p.dead);W.npw=0;W.npl=0;for(const q of W.P){if(q.y<-.05)W.npw++;else W.npl++}buildPGrid()}}
+
+// ---------- 동물 ----------
+// 갈 수 있는 곳: 물속은 물결막으로 헤엄치거나 얕으면 걸어서, 땅 위는 다리가 있어야
+function canGo(x,z,d){if(!inWorld(x,z))return false;if(d.fly)return true;const h=heightAt(x,z);if(h<-.05)return d.swim>0||-h<=d.wade;return d.walk>0||h<.2}
+function spdOf(a,h){const d=a.d;if(d.fly)return d.flySpd;if(h<-.05)return d.swim>0?d.swim:(d.walk*.6||.1);return d.walk>0?d.walk:.08}
+function reachFor(a,p){if(p.y<-.05)return a.d.swim>0?99:a.d.reach*a.gr;return a.d.fly?99:a.d.reach*a.gr}
+function spawnA(sp,g,x,z,adult){const d=deriveA(g);x=clamp(x,WB0+3,WB1-3);z=clamp(z,WB0+3,WB1-3);
+ const a={id:W.nid++,sp:sp.id,g,d,x,z,y:heightAt(x,z),yaw:R()*TAU,dir:R()*TAU,E:d.Emax*(adult?.6:.3),age:adult?d.mature*1.05:0,gr:adult?1:.35,
+  state:0,tg:null,think:R()*.5,phase:R()*6,move:0,cool:adult?R()*20:10,kids:0,gen:0,dead:false,eating:0,rest:0,flee:0,chase:0,tired:0,stuck:0,tint:tintFor('a',g,sp)};
+ W.A.push(a);sp.ext=false;return a}
+function findPlant(a){const d=a.d,Rg=Math.min(d.sight,14),cx=pgx(a.x),cz=pgx(a.z),maxR=Math.ceil(Rg/PGS);let best=null,bs=0,bestRing=99;
+ for(let r=0;r<=maxR;r++){if(best&&r>bestRing+1)break;
+  for(let gz=cz-r;gz<=cz+r;gz++){if(gz<0||gz>=PGW)continue;const edge=gz===cz-r||gz===cz+r,st=(edge||r===0)?1:2*r;
+   for(let gx=cx-r;gx<=cx+r;gx+=st){if(gx<0||gx>=PGW)continue;let i=PHd[gz*PGW+gx];
+    while(i>=0){const p=W.P[i];i=PNx[i];if(p.dead)continue;if(p.y<-.05){if(!d.swim&&(d.fly||-p.y>d.wade))continue}else if(!d.walk&&!d.fly&&p.y>.2)continue;
+     const f=plantFood(p,reachFor(a,p));if(f<.15)continue;
+     const dist=Math.hypot(p.x-a.x,p.z-a.z);if(dist>Rg)continue;const s=f/(dist+1.5);if(s>bs){bs=s;best=p;bestRing=r}}}}}
+ return best?{p:best,s:bs}:null}
+function findCorpse(a){let best=null,bs=0;for(const c of W.C){if(c.dead||c.meat<.3||!canGo(c.x,c.z,a.d))continue;const dist=Math.hypot(c.x-a.x,c.z-a.z);if(dist>a.d.sight)continue;const s=c.meat/(dist+1.5);if(s>bs){bs=s;best=c}}return best?{c:best,s:bs}:null}
+function findPrey(a){let best=null,bs=0;const d=a.d;eachA(a.x,a.z,d.sight,t=>{if(t===a||t.sp===a.sp||!canGo(t.x,t.z,d)||(t.d.fly&&!d.fly))return;const dist=Math.hypot(t.x-a.x,t.z-a.z);if(dist>d.sight||t.d.mass*t.gr>d.mass*1.5)return;
+  const win=d.att/(d.att+t.d.def);if(win<.3)return;const s=t.d.mass*t.gr*win/(dist+2);if(s>bs){bs=s;best=t}});return best}
+function nearestPred(a){let best=null,bd=1e9;const r=a.d.sight*.85;eachA(a.x,a.z,r,t=>{if((a.d.fly&&!t.d.fly)||t.sp===a.sp||t.g.diet<.45||a.d.mass*a.gr>t.d.mass*1.5)return;
+  if(t.d.att/(t.d.att+a.d.def)<.3)return;const dist=Math.hypot(t.x-a.x,t.z-a.z);
+  if(!(t.state===3&&t.tg===a)&&!(t.E<t.d.Emax*.9&&dist<r*.45))return;if(dist<bd){bd=dist;best=t}});return bd<r?best:null}
+function think(a){const d=a.d,g=a.g;
+ if(g.flee>=.5){const pr=nearestPred(a);if(pr){a.state=5;a.tg=null;a.dir=Math.atan2(a.z-pr.z,a.x-pr.x)+gauss()*.35;a.flee=1.5;a.rest=0;return}}
+ if(a.state===5&&a.flee>0)return;
+ if(a.age>=d.mature&&a.cool<=0&&a.E>=d.Emax*.72&&W.A.length<MAXA&&(W.A.length<MAXA*.7||W.SP[a.sp].n<W.A.length*.3))birth(a);
+ const tg=a.tg;
+ if(tg&&!tg.dead){if((a.state===1||a.state===2)&&a.E<d.Emax*.98)return;if(a.state===4&&tg.meat>.1&&a.E<d.Emax*.98)return;if(a.state===3&&a.chase>0)return}
+ a.tg=null;
+ if(a.E<d.Emax*.9){let best=null,bs=0,st=0;
+  if(d.herbEff>.25){const f=findPlant(a);if(f){best=f.p;bs=f.s*d.herbEff;st=1}}
+  if(d.meatEff>.3){const c=findCorpse(a);if(c&&c.s*d.meatEff>bs){best=c.c;bs=c.s*d.meatEff;st=4}
+   if(d.meatEff>.5&&a.tired<=0&&a.E<d.Emax*.7&&(!best||a.E<d.Emax*.55)){const pr=findPrey(a);if(pr){best=pr;st=3}}}
+  if(best){a.tg=best;a.state=st;a.rest=0;a.explore=0;if(st===3)a.chase=7+R()*3;return}
+  a.state=0;a.rest=0;if(!a.explore)a.dir+=gauss()*1.2;a.explore=1;a.dir+=gauss()*.25;return}
+ a.state=0;a.explore=0;if(a.rest>0)return;if(R()<.18){a.rest=1+R()*3;return}
+ let dir=a.dir+gauss()*.7;
+ if(g.herd>=.5){let cx=0,cz=0,n=0,near=null,nd=1e9;eachA(a.x,a.z,d.sight*.8,t=>{if(t===a||t.sp!==a.sp)return;cx+=t.x;cz+=t.z;n++;const dd=(t.x-a.x)**2+(t.z-a.z)**2;if(dd<nd){nd=dd;near=t}});
+  if(n){cx/=n;cz/=n;if(near&&Math.sqrt(nd)<d.len*.9)dir=Math.atan2(a.z-near.z,a.x-near.x);else if(Math.hypot(cx-a.x,cz-a.z)>2+d.len*2)dir=Math.atan2(cz-a.z,cx-a.x)+gauss()*.4}}
+ a.dir=dir}
+function birth(a){const d=a.d,per=d.Emax*.32;let n=Math.min(Math.round(a.g.litter),Math.floor((a.E-d.Emax*.22)/per));if(n<1)return;const sp=W.SP[a.sp];
+ for(let k=0;k<n&&W.A.length<MAXA;k++){const cg=mutate(a.g,AG),csp=childSp(sp,cg);let x=a.x+gauss()*.6,z=a.z+gauss()*.6;if(!canGo(x,z,deriveA(cg))){x=a.x;z=a.z}
+  const c=spawnA(csp,cg,x,z,false);c.E=Math.min(c.d.Emax*.55,per*.95);c.gen=a.gen+1;c.landAnc=a.landAnc||(a.d.landFit>.5&&heightAt(a.x,a.z)>.3)}
+ a.E-=per*n;a.cool=18+12*n;a.kids+=n}
+function addCorpse(a){const meat=a.d.mass*a.gr*40+2;W.C.push({x:a.x,z:a.z,y:heightAt(a.x,a.z),yaw:a.yaw,s:Math.cbrt(a.d.mass)*a.gr*1.1+.12,meat,m0:meat,t:0,dead:false});if(W.C.length>300)W.C.shift()}
+function dieA(a,why){a.dead=true;a.why=why;W.deaths[why]=(W.deaths[why]||0)+1;addCorpse(a)}
+function moveA(a,dt){const d=a.d,h0=heightAt(a.x,a.z),sp=spdOf(a,h0);let spd=0;a.eating=0;if(a.rest>0)a.rest-=dt;if(a.tired>0)a.tired-=dt;
+ switch(a.state){
+  case 0:if(a.rest<=0)spd=sp*(a.explore?.65:.32);break;
+  case 5:a.flee-=dt;spd=sp*1.1;if(a.flee<=0)a.state=0;break;
+  case 1:case 2:{const p=a.tg;if(!p||p.dead){a.state=0;a.tg=null;break}const dx=p.x-a.x,dz=p.z-a.z,dist=Math.hypot(dx,dz);
+   if(dist<=.3+d.len*.45*a.gr+p.d.rad*.3){a.state=2;a.dir=Math.atan2(dz,dx);const take=Math.min(d.bite*dt*(1-p.g.thorns*.6)*a.gr,plantFood(p,reachFor(a,p)));
+    if(take<=1e-4){a.state=0;a.tg=null}else{p.eaten+=take/(p.d.maxB*Math.max(p.gr,.05));a.E+=take*d.herbEff;a.eating=1}
+    if(a.E>=d.Emax){a.E=d.Emax;a.state=0;a.tg=null}}
+   else{a.state=1;a.dir=Math.atan2(dz,dx);spd=sp*.6}break}
+  case 3:{const t=a.tg;a.chase-=dt;if(!t||t.dead||a.chase<=0){if(t&&!t.dead)a.tired=6;a.state=0;a.tg=null;break}
+   const dx=t.x-a.x,dz=t.z-a.z,dist=Math.hypot(dx,dz);a.dir=Math.atan2(dz,dx);
+   if(dist<=.35+(d.len+t.d.len*t.gr)*.45){if(R()<dt*1.8*d.att/(d.att+t.d.def)){dieA(t,'eaten');a.tg=W.C[W.C.length-1];a.state=4}spd=sp*.3}else spd=sp*1.25;break}
+  case 4:{const c=a.tg;if(!c||c.dead||c.meat<=.05){a.state=0;a.tg=null;break}const dx=c.x-a.x,dz=c.z-a.z,dist=Math.hypot(dx,dz);a.dir=Math.atan2(dz,dx);
+   if(dist<=.4+d.len*.45){const take=Math.min(d.bite*1.4*dt,c.meat);c.meat-=take;a.E+=take*d.meatEff;a.eating=1;if(a.E>=d.Emax){a.E=d.Emax;a.state=0;a.tg=null}}else spd=sp*.7;break}
+ }
+ const here=canGo(a.x,a.z,d);
+ if(!here){// 못 있는 곳이면: 물속이면 땅 쪽(오르막), 땅 위면 물 쪽(내리막)으로
+  const gx=heightAt(a.x+1,a.z)-heightAt(a.x-1,a.z),gz=heightAt(a.x,a.z+1)-heightAt(a.x,a.z-1);a.dir=Math.atan2(gz,gx)+(h0>=-.05?Math.PI:0);spd=Math.max(spd,sp*.5)}
+ if(spd>0){spd*=.55+.45*a.gr;const nx=a.x+Math.cos(a.dir)*spd*dt,nz=a.z+Math.sin(a.dir)*spd*dt;
+  if(!here||canGo(nx,nz,d)){a.x=clamp(nx,WB0+3,WB1-3);a.z=clamp(nz,WB0+3,WB1-3);a.stuck=0}
+  else{a.stuck+=dt;a.dir+=(R()<.5?1:-1)*(1+R()*1.5);if(a.stuck>2&&a.state!==0){a.state=0;a.tg=null;a.stuck=0}}}
+ const h=heightAt(a.x,a.z);
+ if(d.fly){let want=Math.max(h,0)+2.5+a.g.balloon*3;if(a.state===2&&a.tg&&!a.tg.dead)want=Math.max(h,0)+a.tg.d.h*(.12+.88*a.tg.gr)*.8;a.y=lerp(a.y,want+Math.sin(a.phase*.15+a.id)*.15,Math.min(1,dt*1.2))}
+ else{a.y=h<-.05&&d.swim>0?h*.55+Math.sin(a.phase*.25+a.id)*.04:h;if(h>.2)a.E-=d.dry*dt}
+ const tm=spd>0?clamp(spd/(sp*.5),0,1.4):0;a.move+=(tm-a.move)*Math.min(1,dt*8);
+ a.phase+=spd*dt*2.6/(d.legH*.8+.18);
+ const dy=Math.atan2(Math.sin(a.dir-a.yaw),Math.cos(a.dir-a.yaw));a.yaw+=clamp(dy,-6*dt,6*dt)}
+function stepAnimals(dt){buildAGrid();const A=W.A;
+ for(let i=0;i<A.length;i++){const a=A[i];if(a.dead)continue;a.age+=dt;a.cool-=dt;a.gr=a.age<a.d.mature?.35+.65*a.age/a.d.mature:1;
+  a.E-=(a.d.cost0+a.d.costMove*a.move)*dt*(.4+.6*a.gr);
+  if(a.E<=0||a.age>a.d.life){dieA(a,a.E<=0?'starve':'old');continue}
+  a.think-=dt;if(a.think<=0){a.think=.45+R()*.3;think(a)}
+  moveA(a,dt)}
+ if(A.some(a=>a.dead))W.A=A.filter(a=>!a.dead)}
+function stepCorpses(dt){let any=false;for(const c of W.C){c.t+=dt;c.meat-=dt*c.m0*.018;if(c.meat<=.05||c.t>70){c.dead=true;any=true}}if(any)W.C=W.C.filter(c=>!c.dead)}
+function tick(){W.t+=DT;W.tick++;stepAnimals(DT);stepPlants();stepCorpses(DT);if(W.tick%10===0)stepEvents(DT*10);if(W.tick%30===0){census();milestones()}if(W.tick%120===60)updateReps();if(W.tick%200===0)sampleHist()}
+function census(){for(const s of W.SP)s.n=0;for(const a of W.A)if(!a.dead)W.SP[a.sp].n++;for(const p of W.P)if(!p.dead)W.SP[p.sp].n++;
+ for(const s of W.SP){if(s.n>s.peak)s.peak=s.n;
+  if(s.quiet&&s.n>=4){s.quiet=false;const par=W.SP[s.parent];if(!W.demo)addLog(`새 종이 생겼어요! ${josa(s.name,'은','는')} ${par?par.name:'?'}에서 갈라졌어요`,0,s.id)}
+  if(s.n===0&&s.peak>0&&!s.ext){s.ext=true;s.died=W.t;if(!W.demo&&!s.quiet)addLog(`${josa(s.name,'이','가')} 사라졌어요 (멸종)`,s.mine?1:0);if(!s.mine){const m=MESH.get(s.id);if(m){freeMesh(m);MESH.delete(s.id)}const l=LODM.get(s.id);if(l){freeMesh(l);LODM.delete(s.id)}}}
+  if(s.n>0)s.ext=false}
+ if(!W.demo&&W.hadA&&W.A.length===0){addLog('동물이 모두 사라졌어요. 아래에서 골라 다시 풀어 놓을 수 있어요',1)}W.hadA=W.A.length>0}
+function sampleHist(){const s={};for(const sp of W.SP)if(sp.n>0)s[sp.id]=sp.n;W.hist.push([Math.round(W.t),W.P.length,W.A.length,s]);
+ if(W.hist.length>360)W.hist=W.hist.filter((_,i)=>i%2===0||i===W.hist.length-1)}
+
+// ---------- 새 세상 ----------
+function newGame(type,demo,where){clearMeshes();THUMB.clear();LV.fill(0);FX=[];PART=[];BIG=null;const seed=(R()*1e9)|0;W=newWorldState(seed);W.demo=!!demo;genTerrain(seed,'island');
+ where=where||'coast';W.where=where;makeIslandTerrain();
+ for(const[nm,g]of PRE_P)addSpecies('p',{...g},nm,-1,true);
+ const sp0=where==='ocean'?addSpecies('p',{...OCEAN_P},'원시 떠말',-1,true):where==='land'?addSpecies('p',{...LAND_P},'원시 땅말',-1,true):W.SP[0];
+ const FA=makeFounders(where);FA.forEach(f=>f.push(addSpecies('a',{...f[1]},f[0],-1,true)));W.selP=sp0.id;W.selA=FA[0][3].id;
+ const ctr=populate(FA,where,sp0);for(const P of PIECES)islandLife(P,FA,demo,where,sp0);if(where==='land')W.mile={landP:1};
+ buildPGrid();census();sampleHist();Object.assign(cam,{tx:ctr[0],tz:ctr[1],yaw:.9,pitch:.55,dist:demo?118:where==='ocean'?26:16});if(demo)Object.assign(cam,{tx:64,tz:64});cam.follow=null;sel=null;terrainDirty=true}
+// 식물 n그루를 test를 통과하는 곳에, 동물(조상 다섯 무리)은 그 식물 근처에
+function seedLife(psp,g,n,area,test,FA,per,atest,demo){const placed=[];
+ for(let t=0;t<n*200&&placed.length<n;t++){const[x,z]=area();if(!inWorld(x,z)||!test(x,z)||placed.some(q=>(q.x-x)**2+(q.z-z)**2<.25))continue;const q=addPlant(psp,{...g},x,z,.55+R()*.45);q.age=R()*q.d.life*.5;placed.push(q)}
+ buildPGrid();let first=placed.length?[placed[0].x,placed[0].z]:[64,64];if(demo||!placed.length)return first;
+ FA.forEach(([nm,fg,cnt,asp],i)=>{const d=deriveA(fg),ctr=[pick(placed),pick(placed)];if(i===0)first=[ctr[0].x,ctr[0].z];
+  for(let k=0;k<per;k++){const c=ctr[k%2];let x=c.x,z=c.z,ok=false;for(let t=0;t<40&&!ok;t++){x=c.x+gauss()*3;z=c.z+gauss()*3;ok=canGo(x,z,d)&&atest(x,z)}
+   if(ok){const a=spawnA(asp,{...fg},x,z,true);a.age=d.mature*(1+R()*2.2);a.E=d.Emax*(.75+R()*.2);a.cool=10+R()*50}}});
+ return first}
+function populate(FA,where,psp){
+ if(where==='ocean'){// 섬과 섬 사이 넓은 바다 한가운데
+  const P=PIECES[0],mx=lerp(64,P.ox+PN/2,.5),mz=lerp(64,P.oz+PN/2,.5);
+  return seedLife(psp,psp.g,280,()=>[mx+gauss()*15,mz+gauss()*15],(x,z)=>heightAt(x,z)<-2.5,FA,14,(x,z)=>heightAt(x,z)<-1)}
+ if(where==='land')return seedLife(psp,psp.g,300,()=>[2+R()*(N-4),2+R()*(N-4)],(x,z)=>heightAt(x,z)>.3&&fertAt(x,z,psp.g)>.45,FA,14,(x,z)=>heightAt(x,z)>.3);
+ return seedLife(psp,psp.g,260,()=>[2+R()*(N-4),2+R()*(N-4)],(x,z)=>{const h=heightAt(x,z);return h<-.15&&h>-1.8&&fertAt(x,z,psp.g)>.4},FA,14,(x,z)=>heightAt(x,z)<-.15)}
+// 처음 있는 일 알려 주기
+function milestones(){if(W.demo)return;const M=W.mile||(W.mile={}),day=Math.floor(W.t/DAY)+1,on=(k,msg)=>{M[k]=day;addLog(msg,1)};
+ if(!M.landP&&W.P.some(p=>!p.dead&&p.y>.25))on('landP','처음으로 식물이 땅 위에서 자라요!');
+ if(!M.eyes&&W.A.some(a=>!a.dead&&Math.round(a.g.eyes)>0))on('eyes','눈이 생긴 생물이 나타났어요!');
+ if(!M.legs&&W.A.some(a=>!a.dead&&Math.round(a.g.legs)>0))on('legs','촉수 다리가 생긴 생물이 나타났어요!');
+ if(!M.landA&&W.A.some(a=>!a.dead&&!a.d.fly&&a.d.landFit>.5&&heightAt(a.x,a.z)>.4))on('landA','처음으로 동물이 땅 위로 올라왔어요! 모습이 많이 바뀌었어요');
+ if(!M.hunter&&W.SP.some(s=>s.kind==='a'&&s.n>=4&&!s.quiet&&s.g.diet>.6))on('hunter','다른 동물을 사냥하는 동물이 생겼어요!');
+ if(!M.big&&W.A.some(a=>!a.dead&&a.g.size>1))on('big','몸집이 커다란 생물이 나타났어요!');
+ if(!M.tree&&W.P.some(p=>!p.dead&&p.y>0&&p.d.h*(.12+.88*p.gr)>2.5))on('tree','키가 아주 큰 식물이 자랐어요!');
+ if(!M.balloon&&W.A.some(a=>!a.dead&&a.g.balloon>.25))on('balloon','몸에 공기주머니가 생긴 생물이 나타났어요!');
+ if(!M.fly&&W.A.some(a=>!a.dead&&a.d.fly))on('fly','하늘을 둥둥 나는 열기구 생물이 생겼어요!');
+ if(!M.sea&&W.A.some(a=>!a.dead&&a.landAnc&&!a.d.fly&&a.d.swim>.4&&heightAt(a.x,a.z)<-2))on('sea','땅에 살던 생물이 다시 바다로 돌아갔어요!')}
+
+// ================= 큰 사건: 운석·화산 =================
+const PUFF=(()=>{const m=new MB();m.ell(0,0,0,1,1,1,[1,1,1],null,16,11);return uploadMesh(m)})();
+let FX=[],PART=[],shake=0,flashA=0;
+function addPart(x,y,z,vx,vy,vz,size,grow,life,col,grav){if(PART.length>700)PART.shift();PART.push({x,y,z,vx,vy,vz,s:size,g:grow,life,t:0,col,grav:grav||0})}
+const SMOKE=[.5,.47,.45];
+function stepFX(dt){// 실제 시간으로 움직이는 그림 (빨리 감기 중에도 보이게)
+ for(const q of PART){q.t+=dt;q.vy-=q.grav*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vx*=1-dt*.4;q.vz*=1-dt*.4;q.s+=q.g*dt}
+ PART=PART.filter(q=>q.t<q.life);
+ for(const f of FX){f.t+=dt;const u=Math.min(1,f.t/f.dur);f.x=lerp(f.sx,f.ex,u);f.y=lerp(f.sy,f.ey,u*u);f.z=lerp(f.sz,f.ez,u);
+  for(let k=0;k<2;k++)addPart(f.x+gauss()*f.r*.3,f.y+gauss()*f.r*.3,f.z+gauss()*f.r*.3,0,0,0,f.r*(.5+R()*.5),f.r*.7,1+R()*.8,k?SMOKE:[2.6,1.3,.4]);
+  if(u>=1){f.done=true;try{f.onHit()}catch(e){console.error(e)}}}
+ FX=FX.filter(f=>!f.done);stepBig(dt);
+ if(W&&W.volc&&mode!=='editor')for(const v of W.volc){if(v.ph>1)continue;const top=heightAt(v.x,v.z)+.4;v.emit+=dt*(v.ph?9:2.5);
+  while(v.emit>1){v.emit--;addPart(v.x+gauss()*.6,top,v.z+gauss()*.6,gauss()*.4,2.5+R()*2,gauss()*.4,.5+R()*.5,.7,4+R()*3,SMOKE);
+   if(v.ph===1&&R()<.4)addPart(v.x,top,v.z,gauss()*2.5,6+R()*6,gauss()*2.5,.18+R()*.15,0,2.5,[2.6,1.1,.3],9)}}
+ shake=Math.max(0,shake-dt*.8);flashA=Math.max(0,flashA-dt*.6);$('#flash').style.opacity=flashA}
+function fillFX(I,n,groups){const st=n;
+ for(const f of FX){const o=n++*11;I[o]=f.x;I[o+1]=f.y;I[o+2]=f.z;I[o+3]=0;I[o+4]=f.r;I[o+5]=I[o+6]=I[o+7]=0;I[o+8]=3;I[o+9]=1.9;I[o+10]=.7}
+ for(const q of PART){const o=n++*11,u=q.t/q.life;I[o]=q.x;I[o+1]=q.y;I[o+2]=q.z;I[o+3]=0;I[o+4]=q.s;I[o+5]=I[o+6]=I[o+7]=0;
+  const c=q.col===SMOKE?SMOKE:[lerp(q.col[0],SMOKE[0],u),lerp(q.col[1],SMOKE[1],u),lerp(q.col[2],SMOKE[2],u)];I[o+8]=c[0];I[o+9]=c[1];I[o+10]=c[2]}
+ if(n>st)groups.push({m:PUFF,mode:3,st,c:n-st});return n}
+// 작은 운석: 누른 곳에 구덩이
+function dropMeteor(x,z,r){const sx=x-28,sy=95,sz=z-20;FX.push({sx,sy,sz,ex:x,ey:Math.max(heightAt(x,z),0),ez:z,x:sx,y:sy,z:sz,r:.8+r*.12,t:0,dur:1.6,onHit:()=>meteorHit(x,z,r)})}
+function meteorHit(x,z,r){if(!W)return;const x0=Math.max(0,Math.floor(x-r*1.3)),x1=Math.min(N,Math.ceil(x+r*1.3)),z0=Math.max(0,Math.floor(z-r*1.3)),z1=Math.min(N,Math.ceil(z+r*1.3));
+ for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx-x,vz-z),i=vz*NV+vx;if(d<r)H[i]-=(1-(d/r)**2)*r*.55;else if(d<r*1.3)H[i]+=(1-(d-r)/(r*.3))*r*.16;H[i]=clamp(H[i],-8,28)}
+ eachCell(x,z,r*.85,c=>{G[c]=2});markEdit(x0,z0,x1,z1);
+ for(const a of W.A)if(!a.dead&&(a.x-x)**2+(a.z-z)**2<(r*1.3)**2)dieA(a,'meteor');for(const q of W.P)if(!q.dead&&(q.x-x)**2+(q.z-z)**2<r*r*1.2)q.dead=true;W.A=W.A.filter(a=>!a.dead);
+ const y=Math.max(heightAt(x,z),0)+.3;for(let k=0;k<40;k++)addPart(x,y,z,gauss()*r*.7,3+R()*r*1.1,gauss()*r*.7,.3+R()*r*.06,r*.2,1.5+R()*2,R()<.5?[2.4,1.1,.3]:SMOKE,6);
+ for(let k=0;k<14;k++)addPart(x+gauss()*r*.4,y,z+gauss()*r*.4,gauss()*.5,1+R(),gauss()*.5,r*.25,r*.25,5+R()*3,SMOKE);
+ shake=Math.max(shake,.5+r*.06);flashA=Math.max(flashA,.3)}
+// 아주 큰 운석: 멀리 바다에 떨어져 대멸종 (먼지 겨울 → 일부만 살아남음 → 살아남은 종이 빠르게 진화)
+let bigArm=0;
+function bigMeteor(natural){if(!W||W.winter||BIG||FX.some(f=>f.big))return;let th=R()*TAU,bs=-1;for(let t=0;t<24;t++){const a=R()*TAU;let md=9;for(const P of PIECES){const pa=Math.atan2(P.oz+PN/2-64,P.ox+PN/2-64);md=Math.min(md,Math.abs(Math.atan2(Math.sin(a-pa),Math.cos(a-pa))))}if(md>bs){bs=md;th=a}}const D=260,dir=[Math.cos(th),Math.sin(th)],ix=64+dir[0]*D,iz=64+dir[1]*D,pp=[-dir[1],dir[0]];
+ cam.follow=null;flyTo=null;Object.assign(cam,{tx:64,tz:64,dist:75,pitch:.18,yaw:th+Math.PI});
+ const sx=ix-dir[0]*140+pp[0]*90,sz=iz-dir[1]*140+pp[1]*90;
+ FX.push({big:1,sx,sy:240,sz,ex:ix,ey:0,ez:iz,x:sx,y:240,z:sz,r:6,t:0,dur:4,onHit:()=>bigImpact(ix,iz)});
+ addLog(natural?'하늘에서 엄청나게 큰 운석이 다가와요!':'엄청나게 큰 운석이 다가와요! 저 멀리 바다를 봐!',1)}
+let BIG=null;
+function bigImpact(ix,iz){if(!W)return;flashA=1;shake=2.4;
+ for(let k=0;k<80;k++)addPart(ix+gauss()*15,2+R()*10,iz+gauss()*15,gauss()*6,10+R()*28,gauss()*6,8+R()*10,7+R()*9,10+R()*8,R()<.35?[2.2,1,.35]:[.42,.36,.33],1.5);
+ for(let k=0;k<70;k++)addPart(ix+gauss()*8,3,iz+gauss()*8,gauss()*16,25+R()*45,gauss()*16,2+R()*4,0,5+R()*4,R()<.5?[.36,.28,.22]:[.5,.42,.34],12);// 부서진 땅 조각
+ for(let k=0;k<40;k++)addPart(ix+gauss()*10,1,iz+gauss()*10,gauss()*10,15+R()*25,gauss()*10,3+R()*4,2,3+R()*2,[.9,.95,1],10);// 물보라
+ const before=W.SP.filter(sp=>sp.n>0&&!sp.quiet).length;
+ BIG={ix,iz,t:0,hitA:new Set(),tsuA:new Set(),rain:[5,6,7,8,9,10.5,12,13.5].map(t=>t+R())};
+ W.winter={t:0,dur:DAY*5,before};W.lastBig=W.t;
+ addLog('엄청나게 큰 운석이 바다에 떨어졌어요! 충격파와 해일이 와요. 산 뒤나 높은 곳, 깊은 바닷속이면 살 수 있어요!',1)}
+// 운석 쪽을 바라봤을 때 산에 가려졌거나, 충격파보다 높은 곳이면 안전
+function sheltered(x,z,y,ix,iz){if(y>7)return true;const dx=ix-x,dz=iz-z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;
+ for(let d=2;d<70;d+=1.5){const px=x+ux*d,pz=z+uz*d;if(px<0||pz<0||px>N||pz>N)break;if(heightAt(px,pz)>y+2.5)return true}return false}
+function stepBig(dt){if(!BIG||!W)return;const B=BIG;B.t+=dt;const R1=B.t*70,R2=B.t*28,dist=(x,z)=>Math.hypot(x-B.ix,z-B.iz);let dead=false;
+ // 충격파: 먼지 벽이 지나가며 드러난 곳의 생물을 쓰러뜨림
+ for(const a of W.A){if(a.dead||B.hitA.has(a.id)||dist(a.x,a.z)>R1)continue;B.hitA.add(a.id);const h=heightAt(a.x,a.z);
+  if(h<-1.2&&!a.d.fly)continue;if(!sheltered(a.x,a.z,a.y,B.ix,B.iz)&&R()<.7){dieA(a,'impact');dead=true}}
+ for(const q of W.P){if(q.dead||q.shk||dist(q.x,q.z)>R1)continue;q.shk=1;if(q.y>-.05&&!sheltered(q.x,q.z,q.y,B.ix,B.iz)&&R()<.4)q.dead=true}
+ const a0=Math.atan2(64-B.iz,64-B.ix);
+ for(let k=0;k<6;k++){const an=a0+gauss()*.28,x=B.ix+Math.cos(an)*R1,z=B.iz+Math.sin(an)*R1;if(x<-15||z<-15||x>N+15||z>N+15)continue;
+  addPart(x,Math.max(heightAt(x,z),0)+1+R()*2,z,Math.cos(an)*8,1+R(),Math.sin(an)*8,2+R()*2,2.5,2+R(),[.58,.5,.42])}
+ // 해일: 낮은 바닷가를 덮침
+ for(const a of W.A){if(a.dead||a.d.fly||B.tsuA.has(a.id))continue;const dd=dist(a.x,a.z);if(dd>R2)continue;B.tsuA.add(a.id);const h=heightAt(a.x,a.z);
+  if(h>-1.5&&h<2.8&&R()<.7){dieA(a,'tsunami');dead=true}}
+ for(const q of W.P){if(q.dead||q.tsu||dist(q.x,q.z)>R2)continue;q.tsu=1;if(q.y>-.05&&q.y<1.8&&R()<.5)q.dead=true}
+ for(let k=0;k<5;k++){const an=a0+gauss()*.35,x=B.ix+Math.cos(an)*R2,z=B.iz+Math.sin(an)*R2;if(x<0||z<0||x>N||z>N)continue;const h=heightAt(x,z);
+  if(h>-.8&&h<3)addPart(x,Math.max(h,0)+.5,z,Math.cos(an)*5,2+R()*2,Math.sin(an)*5,.8+R(),1.2,1.5,[.92,.96,1],4)}
+ // 날아온 땅 조각이 섬에 떨어짐
+ while(B.rain.length&&B.t>B.rain[0]){B.rain.shift();dropMeteor(12+R()*(N-24),12+R()*(N-24),2.5+R()*1.5)}
+ if(dead)W.A=W.A.filter(a=>!a.dead);
+ if(B.t>2&&B.t<2.1)toast('충격파가 와요!',1);if(B.t>6&&B.t<6.1)toast('해일이 밀려와요!',1);
+ if(R2>Math.max(Math.hypot(B.ix-64,B.iz-64)+110,...PIECES.map(P=>Math.hypot(B.ix-P.ox-PN/2,B.iz-P.oz-PN/2)+80))&&!B.rain.length){BIG=null;W.P=W.P.filter(q=>!q.dead);buildPGrid();census();addLog('충격파와 해일이 지나갔어요. 먼지가 하늘을 가려 햇빛이 약해져요… 대멸종이 시작됐어요',1)}}
+// 화산: 솟아오름 → 분화(용암) → 잠잠
+function makeVolcano(x,z,natural){if(!W)return;W.volc=W.volc||[];if(W.volc.length>=4){toast('화산이 너무 많아요. 조금 기다려 줘');return}
+ W.volc.push({x,z,r:7+R()*3,peak:Math.max(heightAt(x,z),0)+8+R()*5,t:0,ph:0,emit:0});addLog(natural?'땅이 흔들려요… 새 화산이 솟아올라요!':'화산이 솟아올라요!',1);shake=Math.max(shake,1)}
+function stepVolc(dt){if(!W.volc||!W.volc.length)return;
+ for(const v of W.volc){v.t+=dt;
+  if(v.ph===0){const k=Math.min(1,dt/6),x0=Math.max(0,Math.floor(v.x-v.r)),x1=Math.min(N,Math.ceil(v.x+v.r)),z0=Math.max(0,Math.floor(v.z-v.r)),z1=Math.min(N,Math.ceil(v.z+v.r));
+   for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx-v.x,vz-v.z);if(d>v.r)continue;let pf=v.peak*Math.pow(1-d/v.r,1.3)-7*Math.pow(d/v.r,2);
+    if(d<v.r*.18)pf-=(1-d/(v.r*.18))*2.2;const i=vz*NV+vx;if(pf>H[i])H[i]=lerp(H[i],pf,k)}
+   markEdit(x0,z0,x1,z1);eachCell(v.x,v.z,v.r*.7,c=>{G[c]=2});
+   if(v.t>25){v.ph=1;v.t=0;addLog('화산이 터졌어요! 용암이 흘러요',1);shake=Math.max(shake,1.4)}}
+  else if(v.ph===1){const cx=clamp(v.x|0,1,N-2),cz=clamp(v.z|0,1,N-2);for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){const c=(cz+dz)*N+cx+dx;LV[c]=Math.min(1.6,LV[c]+dt*.8)}W.lava=1;if(v.t>60){v.ph=2;v.t=0}}
+  else if(v.t>40)v.done=true}
+ W.volc=W.volc.filter(v=>!v.done)}
+function stepLava(dt){if(!W.lava)return;let any=0;
+ for(let c=0;c<N*N;c++){if(LV[c]<=.02)continue;any=1;const x=c%N,z=(c/N)|0,sf=CH[c]+LV[c]*.6;let best=-1,bs=sf;
+  for(const nb of[x>0?c-1:-1,x<N-1?c+1:-1,z>0?c-N:-1,z<N-1?c+N:-1]){if(nb<0)continue;const s2=CH[nb]+LV[nb]*.6;if(s2<bs){bs=s2;best=nb}}
+  if(best>=0){const mv=Math.min(LV[c]*.45,(sf-bs)*.5)*Math.min(1,dt*1.5);LV[c]-=mv;LV[best]+=mv}
+  LV[c]-=dt*(CH[c]<0?.25:.025);
+  if(LV[c]>.25){const i=z*NV+x;if(CH[c]<0){H[i]+=.12*dt;H[i+1]+=.12*dt;H[i+NV]+=.12*dt;H[i+NV+1]+=.12*dt;terrainDirty=true;moistDirty=true}G[c]=2}
+  if(LV[c]<=.02)LV[c]=0}
+ if(any){colorDirty=true;// 용암 위 생물
+  for(const q of W.P)if(!q.dead&&LV[(q.z|0)*N+(q.x|0)]>.25)q.dead=true;
+  for(const a of W.A)if(!a.dead&&!a.d.fly&&LV[(a.z|0)*N+(a.x|0)]>.25)dieA(a,'lava');W.A=W.A.filter(a=>!a.dead)}
+ else{W.lava=0;colorDirty=true}}
+// 다른 섬 2개: 바다 건너 제자리에 있음 (아이가 정함: "대륙이동은 없애줘").
+// 세 섬 생물은 같은 조상(원생동물 다섯 무리)에서 시작하고, 섬마다 원시 말 모양만 조금 달라서 조금씩 다르게 진화함
+function makeIslandTerrain(){freePieces();const th1=R()*TAU;
+ [[th1,230],[th1+Math.PI+gauss()*.5,270]].forEach(([th,dist],k)=>{const P=newPiece(k,(R()*1e9)|0);pieceTerrain(P,P.seed);const cx=64+Math.cos(th)*dist,cz=64+Math.sin(th)*dist;
+  P.ox=cx-PN/2;P.oz=cz-PN/2;P.name=dirName(cx-64,cz-64)+' 섬';PIECES.push(P);pieceRefresh(P)});W.conts=PIECES}
+function onPiece(P,x,z){const lx=x-P.ox,lz=z-P.oz;if(lx<=0||lz<=0||lx>=PN||lz>=PN)return false;const v=pieceH(P,lx,lz);return v>-.4&&v>=((x>-.5&&z>-.5&&x<N+.5&&z<N+.5)?hMain(x,z):-7.5)}
+function islandLife(P,FA,demo,where,psp){if(where==='ocean')return;// 먼 바다에서 시작하면 섬들은 처음엔 비어 있음
+ const g={...psp.g,hue:(psp.g.hue+(R()<.5?-1:1)*(25+R()*35)+360)%360,leafShape:R()<.5?.45+R()*.2:.75+R()*.2,height:psp.g.height+R()*.25,leafCount:Math.round(4+R()*5),branches:R()<.5?1:0};
+ const sp=addSpecies('p',g,P.name.replace(' 섬','')+' '+psp.name,psp.id,false),inP=(x,z)=>onPiece(P,x,z);
+ if(where==='land')seedLife(sp,g,150,()=>[P.ox+2+R()*(PN-4),P.oz+2+R()*(PN-4)],(x,z)=>inP(x,z)&&heightAt(x,z)>.3&&fertAt(x,z,g)>.45,FA,7,(x,z)=>heightAt(x,z)>.3,demo);
+ else seedLife(sp,g,130,()=>[P.ox+2+R()*(PN-4),P.oz+2+R()*(PN-4)],(x,z)=>{const h=heightAt(x,z);return inP(x,z)&&h<-.15&&h>-1.8&&fertAt(x,z,g)>.4},FA,7,(x,z)=>heightAt(x,z)<-.15,demo)}
+function contView(){if(!PIECES.length){toast('다른 섬이 없어요');return}contView.k=((contView.k===undefined?-1:contView.k)+1)%(PIECES.length+1);const P=PIECES[contView.k];
+ cam.follow=null;if(!P){flyTo=[64,64];toast('처음 섬으로 돌아와요');return}flyTo=[P.ox+PN/2,P.oz+PN/2];cam.dist=Math.max(cam.dist,130);cam.pitch=.6;toast(`${P.name}으로 가요! (WASD로 둘러봐)`)}
+function stepEvents(dt){
+ const dayN=Math.floor(W.t/DAY);if(dayN!==W.lastDay){W.lastDay=dayN;if(W.natural!==false&&!W.demo&&dayN>0){
+  if(dayN>3&&R()<1/45)dropMeteor(10+R()*(N-20),10+R()*(N-20),3+R()*4);
+  if(dayN>15&&R()<1/70){for(let t=0;t<50;t++){const x=15+R()*(N-30),z=15+R()*(N-30);if(heightAt(x,z)>-2){makeVolcano(x,z,true);break}}}
+  if(dayN>90&&!W.winter&&(!W.lastBig||W.t-W.lastBig>DAY*40)&&R()<1/150)bigMeteor(true)}}
+ stepVolc(dt);stepLava(dt);
+ if(W.winter){const w=W.winter;w.t+=dt;const u=w.t/w.dur;W.dim=u<.45?Math.min(1,u*8):Math.max(0,1-(u-.45)/.55);
+  if(w.t>=w.dur){W.dim=0;W.winter=null;census();const alive=W.SP.filter(sp=>sp.n>0&&!sp.quiet),an=alive.filter(sp=>sp.kind==='a').sort((a,b)=>b.n-a.n).slice(0,5).map(sp=>sp.name);
+   addLog(`하늘이 다시 맑아졌어요. ${w.before}종 중 ${alive.length}종이 살아남았어요!`,1);if(an.length)addLog('살아남은 동물: '+an.join(', '),0);
+   W.boost=DAY*12;setTimeout(()=>toast('살아남은 생물들이 빠르게 퍼지고 진화해요!',1),3000)}}
+ if(W.boost>0)W.boost-=dt}
+
+// ================= 카메라·고르기 =================
+const cam={tx:64,tz:64,tyS:0,yaw:.9,pitch:.62,dist:105,follow:null};
+const scam={tx:0,ty:.5,tz:0,yaw:.9,pitch:.3,dist:4,auto:1};
+let VPm=null,IVP=null,EYE=[0,0,0],sel=null;
+function computeCam(studio){const c=studio?scam:cam,aspect=cv.width/cv.height;let ty;
+ if(studio)ty=c.ty;else{c.tyS=lerp(c.tyS,Math.max(0,heightAt(c.tx,c.tz)),.08);ty=c.tyS}
+ const cp=Math.cos(c.pitch),e=[c.tx+c.dist*cp*Math.cos(c.yaw),ty+c.dist*Math.sin(c.pitch),c.tz+c.dist*cp*Math.sin(c.yaw)];
+ if(!studio){const gh=Math.max(heightAt(e[0],e[2]),0)+1.2;if(e[1]<gh)e[1]=gh;if(shake>0){const k=shake*Math.min(1,c.dist*.02)*.6;e[0]+=gauss()*k;e[1]+=gauss()*k;e[2]+=gauss()*k}}
+ EYE=e;const V=M4.look(e,[c.tx,ty,c.tz],[0,1,0]),P=M4.persp(.85,aspect,studio?.05:.3,studio?200:1600);VPm=M4.mul(P,V);IVP=M4.inv(VPm)}
+function toScreen(x,y,z){const m=VPm,cx=m[0]*x+m[4]*y+m[8]*z+m[12],cy=m[1]*x+m[5]*y+m[9]*z+m[13],cw=m[3]*x+m[7]*y+m[11]*z+m[15];if(cw<=.01)return null;
+ return[(cx/cw*.5+.5)*innerWidth,(1-(cy/cw*.5+.5))*innerHeight,cw]}
+function rayAt(sx,sy){const nx=sx/innerWidth*2-1,ny=1-sy/innerHeight*2,m=IVP;
+ const un=z=>{const x=m[0]*nx+m[4]*ny+m[8]*z+m[12],y=m[1]*nx+m[5]*ny+m[9]*z+m[13],zz=m[2]*nx+m[6]*ny+m[10]*z+m[14],w=m[3]*nx+m[7]*ny+m[11]*z+m[15];return[x/w,y/w,zz/w]};
+ const a=un(-1),b=un(1);return{o:a,d:V3.norm(V3.sub(b,a))}}
+function pickGround(sx,sy){if(!IVP)return null;const{o,d}=rayAt(sx,sy);let t=0,prev=0;
+ for(let i=0;i<3000;i++){const x=o[0]+d[0]*t,y=o[1]+d[1]*t,z=o[2]+d[2]*t;
+  if(inWorld(x,z)){const h=heightAt(x,z);
+   if(y<=h){let a=prev,b=t;for(let k=0;k<16;k++){const mm=(a+b)/2;if(o[1]+d[1]*mm<=heightAt(o[0]+d[0]*mm,o[2]+d[2]*mm))b=mm;else a=mm}return[o[0]+d[0]*b,o[1]+d[1]*b,o[2]+d[2]*b]}
+   prev=t;t+=clamp((y-h)*.4,.15,2)}else{prev=t;t+=1.5}
+  if(t>1500||y<-40)break}
+ return null}
+function pickThing(sx,sy){let best=null,bd=1e9;
+ for(const a of W.A){if(a.dead)continue;const sc=toScreen(a.x,a.y+a.d.legH*a.gr*.8+.2,a.z);if(!sc)continue;const rr=Math.max(16,a.d.len*a.gr*innerHeight*1.1/sc[2]),dd=Math.hypot(sc[0]-sx,sc[1]-sy);if(dd<rr&&dd<bd){bd=dd;best=a}}
+ if(best)return best;
+ for(const p of W.P){if(p.dead)continue;const hh=p.d.h*(.12+.88*p.gr)*.6,sc=toScreen(p.x,p.y+hh,p.z);if(!sc)continue;const rr=Math.max(10,(p.d.rad+hh)*innerHeight*.8/sc[2]),dd=Math.hypot(sc[0]-sx,sc[1]-sy);if(dd<rr&&dd<bd){bd=dd;best=p}}
+ return best}
+
+// ================= 도구 =================
+const TOOLS=[
+ ['look','👆','보기','끌면 빙글 돌려요 · 휠로 확대 · 오른쪽 버튼으로 끌면 옮겨요 · 생물을 누르면 골라요'],
+ ['plant','🌱','심기','땅을 누르거나 문지르면 아래에서 고른 식물을 심어요'],
+ ['animal','🐾','풀어놓기','땅을 누르면 아래에서 고른 동물을 풀어 놓아요'],
+ '-',
+ ['raise','⛰️','올리기','누르고 있으면 땅이 솟아요'],
+ ['lower','⛏️','파기','누르고 있으면 땅이 파여요. 바닷물보다 낮게 파면 호수가 돼요'],
+ ['flat','➖','평평하게','처음 누른 곳 높이로 평평하게 만들어요'],
+ ['soil','sw:#7a5b3a','흙','흙으로 칠해요. 식물이 잘 자라요'],
+ ['sand','sw:#e3d29a','모래','모래로 칠해요. 메마른 땅 식물이 좋아해요'],
+ ['rock','sw:#7d7b78','바위','바위로 칠해요. 식물이 거의 못 자라요'],
+ ['wet','💧','물기','땅을 촉촉하게 만들어요'],
+ ['dry','☀️','메마르게','땅을 메마르게 만들어요'],
+ '-',
+ ['erase','✖️','없애기','문지른 곳의 생물을 없애요'],
+ '-',
+ ['meteor','☄️','운석','누른 곳에 운석이 떨어져요 (붓 크기 = 운석 크기)'],
+ ['volcano','🌋','화산','누른 곳에 화산이 솟아올라 터져요'],
+ ['act:big','💥','큰 운석','멀리 바다에 엄청 큰 운석이 떨어져 대멸종이 일어나요. 일부 종만 살아남아요'],
+ ['act:cont','🏝️','다른 섬','바다 건너 다른 섬으로 날아가 봐요 (WASD로 둘러보기)'],
+];
+let tool='look',toolHeld=false,cursor=null,flatH=0,toolT=0,lastToast={};
+const mouse={x:0,y:0,in:false};
+function brushR(){return+$('#brush').value}
+function bigAct(k,b){if(!W||mode!=='world')return;
+ if(k==='act:cont'){contView();return}
+ if(W.winter||FX.some(f=>f.big)){toast('지금은 먼지 겨울이에요. 하늘이 맑아진 다음에 해 봐');return}
+ if(BIG)return;
+ if(performance.now()-bigArm<3000){bigArm=0;b.querySelector('.lb').textContent='큰 운석';bigMeteor(false)}
+ else{bigArm=performance.now();b.querySelector('.lb').textContent='한 번 더!';toast('정말 떨어뜨릴까? 대멸종이 일어나요. 한 번 더 누르면 떨어져요');setTimeout(()=>{b.querySelector('.lb').textContent='큰 운석'},3000)}}
+function setTool(t){tool=t;for(const b of document.querySelectorAll('#tools button'))b.classList.toggle('on',b.dataset.t===t);const d=TOOLS.find(x=>x[0]===t);$('#hint').textContent=d?d[3]:'';updBTip()}
+function toastOnce(k,msg){const now=performance.now();if(lastToast[k]&&now-lastToast[k]<2500)return;lastToast[k]=now;toast(msg)}
+function markEdit(x0,z0,x1,z1){terrainDirty=true;moistDirty=true;colorDirty=true;if(!editBox)editBox=[x0,z0,x1,z1];else{editBox[0]=Math.min(editBox[0],x0);editBox[1]=Math.min(editBox[1],z0);editBox[2]=Math.max(editBox[2],x1);editBox[3]=Math.max(editBox[3],z1)}}
+function editH(x,z,r,dt){const x0=Math.max(0,Math.floor(x-r)),x1=Math.min(N,Math.ceil(x+r)),z0=Math.max(0,Math.floor(z-r)),z1=Math.min(N,Math.ceil(z+r)),s=tool==='raise'?1:tool==='lower'?-1:0;
+ for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx-x,vz-z);if(d>r)continue;const w=.5+.5*Math.cos(Math.PI*d/r),i=vz*NV+vx;
+  if(s)H[i]=clamp(H[i]+s*7*dt*w,-8,28);else H[i]=lerp(H[i],flatH,Math.min(1,8*dt*w))}
+ markEdit(x0,z0,x1,z1)}
+function eachCell(x,z,r,fn){for(let cz=Math.max(0,Math.floor(z-r));cz<Math.min(N,Math.ceil(z+r));cz++)for(let cx=Math.max(0,Math.floor(x-r));cx<Math.min(N,Math.ceil(x+r));cx++){const d=Math.hypot(cx+.5-x,cz+.5-z);if(d<=r)fn(cz*N+cx,d)}}
+function paintG(x,z,r,t){eachCell(x,z,r,c=>{G[c]=t});markEdit(x-r,z-r,x+r,z+r)}
+function paintW(x,z,r,dt,s){eachCell(x,z,r,(c,d)=>{WET[c]=clamp(WET[c]+s*1.6*dt*(1-d/(r+.5)),-1,1)});moistDirty=true;colorDirty=true}
+function scatterP(x,z,r){const sp=W.SP[W.selP];if(!sp||sp.kind!=='p'){toastOnce('selp','아래에서 심을 식물을 먼저 골라 줘');return}
+ for(let k=0;k<10;k++){const a=R()*TAU,d=Math.sqrt(R())*Math.max(.3,r*.9),px=x+Math.cos(a)*d,pz=z+Math.sin(a)*d;
+  if(fertAt(px,pz,sp.design||sp.g)<.05)continue;if(crowded(px,pz,.4))continue;addPlant(sp,{...(sp.design||sp.g)},px,pz,.15);sp.ext=false;sp.n++;buildPGridSoon=true;return}
+ if(fertAt(x,z,sp.g)<.05)toastOnce('bad',`여기는 ${josa(sp.name,'이','가')} 살기 힘든 곳이에요`)}
+let buildPGridSoon=false;
+function placeA(x,z,r){const sp=W.SP[W.selA];if(!sp||sp.kind!=='a'){toastOnce('sela','아래에서 풀어 놓을 동물을 먼저 골라 줘');return}
+ const px=x+gauss()*Math.min(r*.3,1.5),pz=z+gauss()*Math.min(r*.3,1.5),d=deriveA(sp.design||sp.g);
+ if(!canGo(px,pz,d)){toastOnce('water',heightAt(px,pz)<-.05?`${josa(sp.name,'은','는')} 깊은 물에 못 들어가요 (물결막이 없어요)`:`${josa(sp.name,'은','는')} 물속에서만 살아요 (다리가 없어요)`);return}
+ if(W.A.length>=MAXA){toastOnce('maxa','동물이 너무 많아서 더 못 풀어 놓아요');return}
+ spawnA(sp,{...(sp.design||sp.g)},px,pz,true);sp.n++}
+function eraseAt(x,z,r){const r2=r*r;for(const a of W.A)if((a.x-x)**2+(a.z-z)**2<r2)a.dead=true;for(const p of W.P)if((p.x-x)**2+(p.z-z)**2<r2)p.dead=true;for(const c of W.C)if((c.x-x)**2+(c.z-z)**2<r2)c.dead=true;
+ W.A=W.A.filter(a=>!a.dead);W.C=W.C.filter(c=>!c.dead);if(sel&&sel.dead)sel=null}
+function applyTool(dt){if(!toolHeld||mode!=='world')return;cursor=pickGround(mouse.x,mouse.y);if(!cursor)return;const x=cursor[0],z=cursor[2],r=brushR();
+ if(['raise','lower','flat','soil','sand','rock','wet','dry'].includes(tool)&&(x<0||z<0||x>N||z>N)){toastOnce('far','다른 섬의 땅은 못 바꿔요 (생물은 심고 풀어 놓을 수 있어요)');return}
+ switch(tool){
+  case'raise':case'lower':case'flat':editH(x,z,r,dt);break;
+  case'soil':paintG(x,z,r,0);break;case'sand':paintG(x,z,r,1);break;case'rock':paintG(x,z,r,2);break;
+  case'wet':paintW(x,z,r,dt,1);break;case'dry':paintW(x,z,r,dt,-1);break;
+  case'plant':toolT-=dt;if(toolT<=0){toolT=Math.max(.025,.22/(1+r*.6));scatterP(x,z,r)}break;
+  case'animal':toolT-=dt;if(toolT<=0){toolT=.4;placeA(x,z,r)}break;
+  case'erase':eraseAt(x,z,r);break;
+  case'meteor':if(toolT<=0){toolT=99;dropMeteor(x,z,clamp(r*.9+2,3,11))}break;
+  case'volcano':if(toolT<=0){toolT=99;makeVolcano(x,z,false)}break}}
+function afterEdits(dt){moistT-=dt;
+ if(moistDirty&&(moistT<=0||!toolHeld)){calcMoist();moistDirty=false;colorDirty=true;moistT=.25}
+ if(terrainDirty||colorDirty){calcCH();if(colorDirty)calcColors();updTerrainMesh();
+  if(editBox&&W){const[x0,z0,x1,z1]=editBox;for(const p of W.P)if(p.x>=x0-1&&p.x<=x1+1&&p.z>=z0-1&&p.z<=z1+1)p.y=heightAt(p.x,p.z);for(const c of W.C)c.y=heightAt(c.x,c.z)}
+  editBox=null;terrainDirty=false;colorDirty=false}
+ if(buildPGridSoon){buildPGrid();buildPGridSoon=false}}
+
+// ================= 그리기 =================
+let shadowsOn=true,FOG=[.74,.84,.93];const SUN=V3.norm([.5,.78,.38]);
+function lightMat(cx,cy,cz,R){const e=[cx+SUN[0]*160,cy+SUN[1]*160,cz+SUN[2]*160];return M4.mul(M4.ortho(-R,R,-R,R,1,340),M4.look(e,[cx,cy,cz],[0,1,0]))}
+// 보이면 화면에서의 크기(픽셀), 안 보이면 0
+function seen(x,y,z,r){const m=VPm,cx=m[0]*x+m[4]*y+m[8]*z+m[12],cy=m[1]*x+m[5]*y+m[9]*z+m[13],cw=m[3]*x+m[7]*y+m[11]*z+m[15],k=r*2.5+.5;
+ if(!(cw>-k&&cx>-cw-k&&cx<cw+k&&cy>-cw-k&&cy<cw+k))return 0;const px=r*innerHeight*1.1/Math.max(cw,.1);return px<.7?0:px}
+function fillWorld(){let n=0;const groups=[];ensureInst(W.A.length+W.P.length+W.C.length+4);const I=INS,bk=new Map();
+ for(const a of W.A){if(a.dead)continue;const px=seen(a.x,a.y+a.d.legH*a.gr,a.z,a.d.len*a.gr+a.g.balloon*a.g.size+.3);if(!px)continue;const key=a.sp*2+(px<22?1:0);let l=bk.get(key);if(!l)bk.set(key,l=[]);l.push(a)}
+ for(const[key,l]of bk){const sp=W.SP[key>>1],m=key&1?lodOf(sp):meshOf(sp),st=n;for(const a of l){if(a.tv!==sp.ver){a.tint=tintFor('a',a.g,sp);a.tv=sp.ver}const o=n++*11;I[o]=a.x;I[o+1]=a.y;I[o+2]=a.z;I[o+3]=a.yaw;I[o+4]=a.g.size/sp.g.size*a.gr*(1+Math.max(0,.45-a.g.size)*1.6);I[o+5]=a.phase;I[o+6]=Math.min(1,a.move);I[o+7]=a.eating;I[o+8]=a.tint[0];I[o+9]=a.tint[1];I[o+10]=a.tint[2]}groups.push({m,mode:0,st,c:n-st})}
+ bk.clear();for(const p of W.P){if(p.dead)continue;const px=seen(p.x,p.y+p.d.h*.5,p.z,p.d.h*(.12+.88*p.gr)*.6+p.d.rad);if(!px)continue;const key=p.sp*2+(px<26?1:0);let l=bk.get(key);if(!l)bk.set(key,l=[]);l.push(p)}
+ for(const[key,l]of bk){const sp=W.SP[key>>1],m=key&1?lodOf(sp):meshOf(sp),st=n;for(const p of l){if(p.tv!==sp.ver){p.tint=tintFor('p',p.g,sp);p.hs=Math.pow(p.g.height/sp.g.height,.7);p.tv=sp.ver}const o=n++*11,wt=clamp(p.wither/20,0,1);I[o]=p.x;I[o+1]=(p.g.float||0)>.5&&p.y<-.3?.02:p.y;I[o+2]=p.z;I[o+3]=p.yaw;I[o+4]=(.12+.88*p.gr)*p.hs;I[o+5]=0;I[o+6]=0;I[o+7]=p.eaten;
+  I[o+8]=lerp(p.tint[0],1.5,wt);I[o+9]=lerp(p.tint[1],.8,wt);I[o+10]=lerp(p.tint[2],.45,wt)}groups.push({m,mode:1,st,c:n-st})}
+ const st=n;for(const c of W.C){if(c.dead)continue;const o=n++*11;I[o]=c.x;I[o+1]=c.y;I[o+2]=c.z;I[o+3]=c.yaw;I[o+4]=c.s*Math.max(.4,Math.sqrt(Math.max(0,c.meat)/c.m0));I[o+5]=0;I[o+6]=0;I[o+7]=0;I[o+8]=I[o+9]=I[o+10]=1}
+ if(n>st)groups.push({m:CORPSE,mode:0,st,c:n-st});
+ ensureInst(n+FX.length+PART.length+2);n=fillFX(INS,n,groups);const I2=INS;
+ gl.bindBuffer(gl.ARRAY_BUFFER,INST);gl.bufferData(gl.ARRAY_BUFFER,I2.subarray(0,Math.max(1,n)*11),gl.DYNAMIC_DRAW);return groups}
+function drawGroups(P,groups,puff){for(const g of groups){if(!g.c||(g.mode===3)!==!!puff)continue;gl.bindVertexArray(g.m.vao);gl.bindBuffer(gl.ARRAY_BUFFER,INST);const b=g.st*44;
+ gl.vertexAttribPointer(5,4,gl.FLOAT,false,44,b);gl.vertexAttribPointer(6,4,gl.FLOAT,false,44,b+16);gl.vertexAttribPointer(7,3,gl.FLOAT,false,44,b+32);
+ u1(P,'u_mode',g.mode===1?1:0);gl.drawElementsInstanced(gl.TRIANGLES,g.m.n,gl.UNSIGNED_SHORT,0,g.c)}}
+function setLight(P,fogD,LT){uM(P,'u_vp',VPm);uM(P,'u_lt',LT);u3(P,'u_sun',SUN);u3(P,'u_eye',EYE);u3(P,'u_fog',FOG);u1(P,'u_fogD',fogD);u1(P,'u_useSh',shadowsOn?1:0);u1(P,'u_shTex',SR);u1(P,'u_dim',W&&W.dim||0)}
+let PLAT=null,PLATR=0;
+function render(time){const dpr=Math.min(devicePixelRatio||1,1.5),w=Math.round(innerWidth*dpr),h=Math.round(innerHeight*dpr);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+ const studio=mode==='editor'&&ED;computeCam(studio);
+ let groups,LT;
+ if(studio){const bb=ED.mesh.bb,rr=Math.max(bb[3]-bb[0],bb[4]-bb[1],bb[5]-bb[2]);
+  INS.fill(0,0,11);INS[4]=1;INS[5]=time*5;INS[6]=ED.kind==='a'?1:0;INS[8]=INS[9]=INS[10]=1;gl.bindBuffer(gl.ARRAY_BUFFER,INST);gl.bufferData(gl.ARRAY_BUFFER,INS.subarray(0,11),gl.DYNAMIC_DRAW);
+  groups=[{m:ED.mesh,mode:ED.kind==='a'?0:1,st:0,c:1}];LT=lightMat(0,0,0,rr*1.3+1);
+  const pr=Math.max(.6,rr*1.1);if(!PLAT||Math.abs(pr-PLATR)>.05){if(PLAT){gl.deleteVertexArray(PLAT.vao);PLAT.bs.forEach(b=>gl.deleteBuffer(b));gl.deleteBuffer(PLAT.ib)}PLAT=platformMesh(pr);PLATR=pr}}
+ else{groups=fillWorld();LT=lightMat(cam.tx,0,cam.tz,98)}
+ const fogD=studio?.004:.0016,dm=studio?0:(W&&W.dim||0);FOG=[lerp(.74,.45,dm*.85),lerp(.84,.4,dm*.85),lerp(.93,.36,dm*.85)];
+ if(shadowsOn){gl.bindFramebuffer(gl.FRAMEBUFFER,SFB);gl.viewport(0,0,SR,SR);gl.clear(gl.DEPTH_BUFFER_BIT);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1.6,3);
+  gl.useProgram(PDT.p);uM(PDT,'u_lt',LT);
+  if(studio){u4v(PDT,'u_off',0,0);gl.bindVertexArray(PLAT.vao);gl.drawElements(gl.TRIANGLES,PLAT.n,gl.UNSIGNED_SHORT,0)}else{u4v(PDT,'u_off',0,0);gl.bindVertexArray(TER.vao);gl.drawElements(gl.TRIANGLES,TER.n,gl.UNSIGNED_SHORT,0);
+   for(const P of PIECES){u4v(PDT,'u_off',P.ox,P.oz);gl.bindVertexArray(P.vao);gl.drawElements(gl.TRIANGLES,P.ni,gl.UNSIGNED_SHORT,0)}}
+  gl.useProgram(PDO.p);uM(PDO,'u_lt',LT);u1(PDO,'u_time',time);drawGroups(PDO,groups);
+  gl.disable(gl.POLYGON_OFFSET_FILL);gl.bindFramebuffer(gl.FRAMEBUFFER,null)}
+ gl.viewport(0,0,cv.width,cv.height);gl.clearColor(FOG[0],FOG[1],FOG[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.disable(gl.DEPTH_TEST);gl.depthMask(false);gl.useProgram(PS.p);uM(PS,'u_ivp',IVP);u3(PS,'u_sun',SUN);u3(PS,'u_fog',FOG);u1(PS,'u_time',time);u1(PS,'u_dim',W&&W.dim||0);gl.bindVertexArray(SKY);gl.drawArrays(gl.TRIANGLES,0,3);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);
+ gl.useProgram(PT.p);setLight(PT,fogD,LT);u1(PT,'u_time',time);
+ u4v(PT,'u_off',0,0);
+ if(studio){u1(PT,'u_water',0);u4(PT,'u_brush',0,0,0,0);u4(PT,'u_sel',0,0,0,0);gl.bindVertexArray(PLAT.vao);gl.drawElements(gl.TRIANGLES,PLAT.n,gl.UNSIGNED_SHORT,0)}
+ else{u1(PT,'u_water',1);const br=(tool!=='look'&&mouse.in&&cursor&&mode==='world')?brushR():0;u4(PT,'u_brush',cursor?cursor[0]:0,cursor?cursor[2]:0,tool==='animal'?.6:tool==='volcano'?8:tool==='meteor'?clamp(br*.9+2,3,11):br,br?1:0);
+  if(sel&&!sel.dead)u4(PT,'u_sel',sel.x,sel.z,sel.d.len!==undefined&&sel.d.mass!==undefined?sel.d.len*.7*sel.gr+.3:sel.d.rad*(.15+.85*sel.gr)+.2,1);else u4(PT,'u_sel',0,0,0,0);
+  gl.bindVertexArray(TER.vao);gl.drawElements(gl.TRIANGLES,TER.n,gl.UNSIGNED_SHORT,0);
+  for(const P of PIECES){if(P.dirty)pieceRefresh(P);u4v(PT,'u_off',P.ox,P.oz);gl.bindVertexArray(P.vao);gl.drawElements(gl.TRIANGLES,P.ni,gl.UNSIGNED_SHORT,0)}
+  u4v(PT,'u_off',0,0);gl.bindVertexArray(SEA.vao);gl.drawElements(gl.TRIANGLES,SEA.n,gl.UNSIGNED_SHORT,0)}
+ gl.useProgram(PO.p);setLight(PO,fogD,LT);u1(PO,'u_time',time);u1(PO,'u_puff',0);drawGroups(PO,groups);
+ if(!studio){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.useProgram(PW.p);uM(PW,'u_vp',VPm);u3(PW,'u_eye',EYE);u3(PW,'u_sun',SUN);u3(PW,'u_fog',FOG);u1(PW,'u_fogD',fogD);u1(PW,'u_time',time);u1(PW,'u_dim',W&&W.dim||0);if(BIG)u4(PW,'u_tsu',BIG.ix,BIG.iz,BIG.t*28,Math.max(0,3.4-BIG.t*.04));else u4(PW,'u_tsu',0,0,-999,0);
+  const p1=PIECES[0],p2=PIECES[1];u4(PW,'u_p1',p1?p1.ox:0,p1?p1.oz:0,PN,p1?1:0);u4(PW,'u_p2',p2?p2.ox:0,p2?p2.oz:0,PN,p2?1:0);
+  gl.bindVertexArray(WAT.vao);gl.drawElements(gl.TRIANGLES,WAT.n,gl.UNSIGNED_SHORT,0);gl.bindVertexArray(WAT2.vao);gl.drawElements(gl.TRIANGLES,WAT2.n,gl.UNSIGNED_SHORT,0);gl.depthMask(true);gl.disable(gl.BLEND)}
+ if(groups.some(g=>g.mode===3)){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.useProgram(PO.p);u1(PO,'u_puff',1);drawGroups(PO,groups,true);u1(PO,'u_puff',0);gl.depthMask(true);gl.disable(gl.BLEND)}
+ gl.bindVertexArray(null)}
+
+// 작은 그림 (카드·목록용)
+const TH=128,thFB=gl.createFramebuffer(),thCv=document.createElement('canvas');thCv.width=thCv.height=TH;const thCtx=thCv.getContext('2d'),thPix=new Uint8Array(TH*TH*4);
+(()=>{gl.bindFramebuffer(gl.FRAMEBUFFER,thFB);const rb=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,rb);gl.renderbufferStorage(gl.RENDERBUFFER,gl.RGBA8,TH,TH);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.RENDERBUFFER,rb);
+ const db=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,db);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,TH,TH);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,db);gl.bindFramebuffer(gl.FRAMEBUFFER,null)})();
+const THUMB=new Map();
+function thumbOf(sp){let t=THUMB.get(sp.id);if(!t){t=renderThumb(meshOf(sp),sp.kind==='a'?0:1);THUMB.set(sp.id,t)}return t}
+function renderThumb(m,mode){const bb=m.bb,c=[(bb[0]+bb[3])/2,(bb[1]+bb[4])/2,(bb[2]+bb[5])/2],sz=Math.max(bb[3]-bb[0],bb[4]-bb[1],bb[5]-bb[2]),d=sz*.5/Math.tan(.3)*1.15,a=mode?.5:.75;
+ const e=[c[0]+d*Math.cos(a)*.93,c[1]+d*.3,c[2]+d*Math.sin(a)*.93],VP=M4.mul(M4.persp(.6,1,.01,100),M4.look(e,c,[0,1,0]));
+ gl.bindFramebuffer(gl.FRAMEBUFFER,thFB);gl.viewport(0,0,TH,TH);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.useProgram(PO.p);uM(PO,'u_vp',VP);uM(PO,'u_lt',VP);u3(PO,'u_sun',SUN);u3(PO,'u_eye',e);u3(PO,'u_fog',FOG);u1(PO,'u_fogD',0);u1(PO,'u_useSh',0);u1(PO,'u_time',1.3);
+ const one=new Float32Array([0,0,0,0,1,1.2,mode?0:.6,0,1,1,1]);gl.bindBuffer(gl.ARRAY_BUFFER,INST);gl.bufferData(gl.ARRAY_BUFFER,one,gl.DYNAMIC_DRAW);
+ drawGroups(PO,[{m,mode,st:0,c:1}]);gl.readPixels(0,0,TH,TH,gl.RGBA,gl.UNSIGNED_BYTE,thPix);gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.bindVertexArray(null);
+ const img=thCtx.createImageData(TH,TH);for(let y=0;y<TH;y++)img.data.set(thPix.subarray((TH-1-y)*TH*4,(TH-y)*TH*4),y*TH*4);thCtx.putImageData(img,0,0);return thCv.toDataURL('image/png')}
+
+// ================= 화면 (UI) =================
+let mode='title',ED=null;
+function toast(msg,big){const el=document.createElement('div');el.className='toast'+(big?' big':'');el.textContent=msg;$('#toasts').appendChild(el);setTimeout(()=>el.remove(),big?4200:2800);while($('#toasts').children.length>4)$('#toasts').firstChild.remove()}
+function showWorldUI(on){for(const id of['top','tools','camBtns','bottom','side','hint'])$('#'+id).classList.toggle('hide',!on)}
+// 도구 단추
+(()=>{const el=$('#tools');for(const t of TOOLS){if(t==='-'){const s=document.createElement('div');s.className='sep';el.appendChild(s);continue}
+ const b=document.createElement('button');b.dataset.t=t[0];b.title=t[3];const ic=t[1].startsWith('sw:')?`<span class="sw" style="background:${t[1].slice(3)}"></span>`:t[1];
+ b.innerHTML=`<span class="ic">${ic}</span><span class="lb">${t[2]}</span>`;b.onclick=()=>t[0].startsWith('act:')?bigAct(t[0],b):setTool(t[0]);el.appendChild(b)}
+ const bx=document.createElement('div');bx.id='brushBox';bx.innerHTML='붓 크기<input type="range" id="brush" min="1" max="14" step="1" value="4">';el.appendChild(bx)})();
+// 속도
+for(const b of document.querySelectorAll('#speeds button'))b.onclick=()=>setSpeed(+b.dataset.s);
+function setSpeed(s){if(!W)return;W.speed=s;for(const b of document.querySelectorAll('#speeds button'))b.classList.toggle('on',+b.dataset.s===s)}
+let lastSpeed=1;function togglePause(){if(!W)return;if(W.speed){lastSpeed=W.speed;setSpeed(0)}else setSpeed(lastSpeed||1)}
+const EVO=[[1,'진화: 보통'],[2.2,'진화: 빠르게'],[0,'진화: 꺼짐']];
+$('#evoBtn').onclick=()=>{const i=EVO.findIndex(e=>e[0]===W.evo);const nx=EVO[(i+1)%EVO.length];W.evo=nx[0];$('#evoBtn').textContent=nx[1];toast(nx[0]===0?'이제 새끼가 부모랑 똑같아요':nx[0]>1?'새끼가 부모랑 더 많이 달라져요':'새끼가 부모랑 조금씩 달라져요')};
+function updEvoBtn(){const e=EVO.find(e=>e[0]===W.evo)||EVO[0];$('#evoBtn').textContent=e[1]}
+$('#sideBtn').onclick=()=>{document.body.classList.toggle('noside');renderSide(true)};
+$('#menuBtn').onclick=e=>{e.stopPropagation();$('#menu').classList.toggle('hide')};
+addEventListener('pointerdown',e=>{if(!e.target.closest('#menu')&&!e.target.closest('#menuBtn'))$('#menu').classList.add('hide')});
+$('#mSave').onclick=()=>{toast(saveGame()?'저장했어요!':'저장하지 못했어요');$('#menu').classList.add('hide')};
+$('#mShadow').onclick=()=>{shadowsOn=!shadowsOn;$('#mShadow').textContent='🌗 그림자: '+(shadowsOn?'켜짐':'꺼짐');try{localStorage.setItem('sapling3d.shadow',shadowsOn?'1':'0')}catch(e){}};
+$('#mNat').onclick=()=>{if(!W)return;W.natural=W.natural===false;$('#mNat').textContent='🌋 저절로 큰 사건: '+(W.natural?'켜짐':'꺼짐');toast(W.natural?'가끔 운석·화산이 저절로 찾아와요':'이제 큰 사건은 버튼으로만 일어나요')};
+$('#mHelp').onclick=()=>{$('#help').classList.remove('hide');$('#menu').classList.add('hide')};$('#helpX').onclick=()=>$('#help').classList.add('hide');
+$('#mHome').onclick=()=>{saveGame();$('#menu').classList.add('hide');goTitle()};
+// 카메라 단추
+$('#cL').onclick=()=>cam.yaw-=.4;$('#cR').onclick=()=>cam.yaw+=.4;$('#cI').onclick=()=>cam.dist=clamp(cam.dist/1.3,5,260);$('#cO').onclick=()=>cam.dist=clamp(cam.dist*1.3,5,260);
+$('#cH').onclick=()=>{cam.follow=null;Object.assign(cam,{tx:64,tz:64,dist:105,pitch:.62})};
+
+// 아래 카드
+let bKind='p',cardSig='';
+for(const b of document.querySelectorAll('#btabs button'))b.onclick=()=>{bKind=b.dataset.k;for(const x of document.querySelectorAll('#btabs button'))x.classList.toggle('on',x===b);cardSig='';renderCards();
+ if(bKind==='p'&&tool==='animal')setTool('plant');if(bKind==='a'&&tool==='plant')setTool('animal')};
+function cardList(){return W.SP.filter(s=>s.kind===bKind&&(s.mine||(s.n>0&&!s.quiet))).sort((a,b)=>(b.mine-a.mine)||(a.mine?a.id-b.id:b.n-a.n))}
+function renderCards(){if(!W)return;const list=cardList(),selId=bKind==='a'?W.selA:W.selP,sig=bKind+selId+'|'+list.map(s=>s.id+':'+s.n).join(',');if(sig===cardSig)return;
+ const ids=list.map(s=>s.id+'v'+(s.ver||0)).join(','),el=$('#cards');
+ if(el.dataset.ids!==ids||el.dataset.k!==bKind){el.dataset.ids=ids;el.dataset.k=bKind;
+  el.innerHTML=list.map(s=>`<div class="card" data-id="${s.id}"><img src="${thumbOf(s)}"><div class="nm">${s.mine?'★ ':''}${s.name}</div><div class="ct"></div><button class="ed" title="이걸 바탕으로 새로 만들기">✏️</button></div>`).join('')+`<div class="card new"><big>＋</big>새로 만들기</div>`}
+ for(const c of el.querySelectorAll('.card[data-id]')){const s=W.SP[+c.dataset.id];c.querySelector('.ct').textContent=s.n+(bKind==='a'?'마리':'그루');c.classList.toggle('on',s.id===selId);c.classList.toggle('zero',s.n===0)}
+ cardSig=sig;updBTip()}
+$('#cards').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;
+ if(c.classList.contains('new')){openEditor(bKind);return}const s=W.SP[+c.dataset.id];
+ if(e.target.closest('.ed')){openEditor(bKind,s.g,s.name+' 2');return}
+ if(bKind==='a'){W.selA=s.id;setTool('animal')}else{W.selP=s.id;setTool('plant')}cardSig='';renderCards()});
+function updBTip(){if(!W)return;const s=W.SP[bKind==='a'?W.selA:W.selP];$('#btip').textContent=s?`고른 것: ${s.name} — ${bKind==='a'?'🐾 풀어놓기 도구로 땅을 눌러 봐':'🌱 심기 도구로 땅을 문질러 봐'}`:''}
+
+// 오른쪽 창
+let sideTab='sp',treeKind='a',selSp=-1,sideDown=false;
+for(const b of document.querySelectorAll('#stabs button'))b.onclick=()=>{sideTab=b.dataset.t;for(const x of document.querySelectorAll('#stabs button'))x.classList.toggle('on',x===b);$('#sbody').innerHTML='';renderSide(true)};
+$('#sbody').addEventListener('pointerdown',()=>sideDown=true);addEventListener('pointerup',()=>sideDown=false);
+const dietWord=v=>v<.15?'풀만 먹어요':v<.45?'주로 풀':v<.6?'풀도 고기도':v<.85?'주로 고기':'고기만 먹어요';
+const placeWord=v=>v>.82?'물속·물가':v>.6?'촉촉한 땅':v>.32?'보통 땅':'메마른 땅';
+function htmlSpecies(){const row=s=>`<div class="row${s.id===selSp?' on':''}" data-sp="${s.id}"><img src="${thumbOf(s)}"><span class="nm">${s.mine?'★ ':''}${s.name}</span><span class="n">${s.n}</span></div>`;
+ const live=k=>W.SP.filter(s=>s.kind===k&&s.n>0&&!s.quiet).sort((a,b)=>b.n-a.n),gone=W.SP.filter(s=>s.ext&&!s.quiet);
+ let h='';const s=W.SP[selSp];
+ if(s){const par=W.SP[s.parent];h+=`<h4>${s.name}</h4><div class="kv"><span>지금</span><span>${s.n}${s.kind==='a'?'마리':'그루'}</span></div><div class="kv"><span>가장 많았을 때</span><span>${s.peak}</span></div>
+  <div class="kv"><span>처음 생긴 날</span><span>${Math.floor(s.born/DAY)+1}일째</span></div><div class="kv"><span>조상</span><span>${par?par.name:(s.mine?'내가 만듦':'-')}</span></div>${s.ext?`<div class="kv"><span>사라진 날</span><span>${Math.floor(s.died/DAY)+1}일째</span></div>`:''}
+  <div class="kv"><span>${s.kind==='a'?'먹이':'좋아하는 곳'}</span><span>${s.kind==='a'?dietWord(s.g.diet):placeWord(s.g.waterNeed)}</span></div>${s.kind==='a'?`<div class="kv"><span>사는 곳</span><span>${livesWord(deriveA(s.g))}</span></div>`:''}
+  <div class="btnrow"><button data-act="use" data-sp="${s.id}">${s.kind==='a'?'🐾 풀어놓기로 고르기':'🌱 심기로 고르기'}</button><button data-act="copy" data-sp="${s.id}">✏️ 편집기로 복사</button></div>`}
+ h+=`<h4>동물 (${live('a').length}종)</h4>`+(live('a').map(row).join('')||'<div class="muted">아직 없어요</div>');
+ h+=`<h4>식물 (${live('p').length}종)</h4>`+(live('p').map(row).join('')||'<div class="muted">아직 없어요</div>');
+ if(gone.length)h+=`<h4>사라진 종 (${gone.length})</h4>`+gone.slice(-30).reverse().map(s=>`<div class="row" data-sp="${s.id}"><span class="dot" style="background:#777"></span><span class="nm muted">${s.name}</span><span class="n">${Math.floor(s.died/DAY)+1}일째</span></div>`).join('');
+ return h}
+function htmlSel(){if(!sel)return'<div class="muted">땅 위의 생물을 누르면 여기서 자세히 볼 수 있어요.</div>';const sp=W.SP[sel.sp];
+ if(sel.dead)return`<h4>${sp.name}</h4><div class="muted">${sel.why==='eaten'?'다른 동물에게 잡아먹혔어요.':sel.why==='old'?'나이가 많아서 죽었어요.':sel.why==='starve'?'배가 고파서 죽었어요.':sel.why==='meteor'?'운석에 맞았어요.':sel.why==='impact'?'큰 운석 때문에 죽었어요.':sel.why==='lava'?'용암에 닿았어요.':sel.why==='tsunami'?'해일에 휩쓸렸어요.':'이제 없어요.'}</div>`;
+ const isA=sel.d.mass!==undefined;let h=`<div style="display:flex;gap:8px;align-items:center"><img src="${thumbOf(sp)}" style="width:64px;height:64px"><div><b style="font-size:15px">${sp.name}</b><br><span class="muted">${isA?(sel.gen+'대째 · 자식 '+sel.kids+'마리'):'식물'}</span></div></div>`;
+ if(isA){const st=['돌아다니는 중','풀 찾아가는 중','먹는 중','사냥하는 중','고기 먹는 중','도망가는 중'][sel.state]||'';
+  h+=`<div class="kv"><span>하는 일</span><span>${sel.rest>0&&sel.state===0?'쉬는 중':st}</span></div><div class="kv"><span>배부름</span><span><i class="bar"><i style="width:${clamp(sel.E/sel.d.Emax*100,0,100)}%"></i></i></span></div>
+  <div class="kv"><span>나이</span><span>${(sel.age/DAY).toFixed(1)}일 / ${(sel.d.life/DAY).toFixed(0)}일</span></div><div class="kv"><span>다 컸나</span><span>${sel.gr>=1?'어른':'아기 ('+Math.round(sel.gr*100)+'%)'}</span></div>
+  <div class="kv"><span>사는 곳</span><span>${livesWord(sel.d)}</span></div><div class="kv"><span>빠르기</span><span><i class="bar y"><i style="width:${clamp(sel.d.speed/3.5*100,4,100)}%"></i></i></span></div><div class="kv"><span>보는 거리</span><span>${sel.d.sight.toFixed(1)}m</span></div>
+  <div class="kv"><span>입이 닿는 높이</span><span>${sel.d.reach.toFixed(1)}m</span></div><div class="kv"><span>먹이</span><span>${dietWord(sel.g.diet)}</span></div>
+  <div class="btnrow"><button data-act="follow">${cam.follow===sel?'⏹ 그만 따라가기':'🎥 따라 보기'}</button><button data-act="copyind">✏️ 편집기로 복사</button></div>`}
+ else{h+=`<div class="kv"><span>자란 정도</span><span><i class="bar"><i style="width:${sel.gr*100}%"></i></i></span></div><div class="kv"><span>뜯어 먹힌 정도</span><span><i class="bar y"><i style="width:${sel.eaten/.9*100}%"></i></i></span></div>
+  <div class="kv"><span>살기 좋은 정도</span><span><i class="bar"><i style="width:${sel.f*100}%"></i></i></span></div><div class="kv"><span>햇빛</span><span><i class="bar"><i style="width:${sel.sh*100}%"></i></i></span></div>
+  <div class="kv"><span>키</span><span>${(sel.d.h*(.12+.88*sel.gr)).toFixed(1)}m</span></div><div class="kv"><span>나이</span><span>${(sel.age/DAY).toFixed(1)}일 / ${(sel.d.life/DAY).toFixed(0)}일</span></div>
+  <div class="kv"><span>좋아하는 곳</span><span>${placeWord(sel.g.waterNeed)}</span></div><div class="btnrow"><button data-act="copyind">✏️ 편집기로 복사</button></div>`}
+ return h}
+function htmlLog(){if(!W.log.length)return'<div class="muted">아직 아무 일도 없었어요.</div>';return W.log.slice().reverse().map(l=>`<div class="logi${l.b?' big':''}"><b>${Math.floor(l.t/DAY)+1}일</b>${l.m}</div>`).join('')}
+$('#sbody').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b){const act=b.dataset.act;
+  if(act==='use'){const s=W.SP[+b.dataset.sp];if(s.kind==='a'){W.selA=s.id;bKind='a';setTool('animal')}else{W.selP=s.id;bKind='p';setTool('plant')}for(const x of document.querySelectorAll('#btabs button'))x.classList.toggle('on',x.dataset.k===bKind);cardSig='';renderCards()}
+  else if(act==='copy'){const s=W.SP[+b.dataset.sp];openEditor(s.kind,s.g,s.name+' 2')}
+  else if(act==='copyind'&&sel){const s=W.SP[sel.sp];openEditor(s.kind,sel.g,s.name+' 2')}
+  else if(act==='follow'&&sel){cam.follow=cam.follow===sel?null:sel;if(cam.follow)cam.dist=Math.min(cam.dist,18)}
+  renderSide(true);return}
+ const r=e.target.closest('[data-sp]');if(r){selSp=+r.dataset.sp;renderSide(true)}
+ const tk=e.target.closest('[data-tk]');if(tk){treeKind=tk.dataset.tk;renderSide(true)}});
+let sideHTML='';
+function renderSide(force){if(!W||document.body.classList.contains('noside')||$('#side').classList.contains('hide'))return;if(sideDown&&!force)return;const el=$('#sbody');
+ if(sideTab==='graph'){if(!el.querySelector('#gcv')){el.innerHTML='<canvas id="gcv" width="560" height="400"></canvas><div id="gleg" style="margin-top:6px"></div>';sideHTML=''}drawGraph();return}
+ if(sideTab==='tree'){if(!el.querySelector('#tcv')){el.innerHTML='<div class="seg"><button data-tk="a">동물</button><button data-tk="p">식물</button></div><canvas id="tcv" width="560" height="300"></canvas>';sideHTML=''}
+  for(const b of el.querySelectorAll('[data-tk]'))b.classList.toggle('on',b.dataset.tk===treeKind);drawTree();return}
+ const h=sideTab==='sp'?htmlSpecies():sideTab==='sel'?htmlSel():htmlLog();if(h!==sideHTML||force){el.innerHTML=h;sideHTML=h}}
+function drawGraph(){const c=$('#gcv');if(!c)return;const x=c.getContext('2d'),w=c.width,h=c.height,hs=W.hist;x.clearRect(0,0,w,h);
+ if(hs.length<2){x.fillStyle='#a8bba6';x.font='22px sans-serif';x.fillText('조금 기다리면 그래프가 생겨요',20,40);return}
+ const t0=hs[0][0],t1=Math.max(hs[hs.length-1][0],t0+1),X=t=>30+(t-t0)/(t1-t0)*(w-40);
+ const lines=[{nm:'식물 전체',col:'#7fcf5a',dash:[8,6],v:e=>e[1]},{nm:'동물 전체',col:'#ffffff',dash:[8,6],v:e=>e[2]}];
+ const tot={};for(const e of hs)for(const k in e[3])tot[k]=(tot[k]||0)+e[3][k];
+ const top=Object.keys(tot).map(Number).filter(id=>W.SP[id]&&!W.SP[id].quiet).sort((a,b)=>tot[b]-tot[a]);
+ for(const id of top.filter(id=>W.SP[id].kind==='a').slice(0,5))lines.push({nm:W.SP[id].name,col:css(spColor(W.SP[id])),v:e=>e[3][id]||0});
+ for(const id of top.filter(id=>W.SP[id].kind==='p').slice(0,3))lines.push({nm:W.SP[id].name,col:css(spColor(W.SP[id])),v:e=>e[3][id]||0,thin:1});
+ const panels=[[lines.filter(l=>l.nm==='식물 전체'||l.thin),10,h/2-14,'식물'],[lines.filter(l=>!(l.nm==='식물 전체'||l.thin)),h/2+8,h-22,'동물']];
+ for(const[ls,y0,y1,title]of panels){let mx=1;for(const l of ls)for(const e of hs)mx=Math.max(mx,l.v(e));const Y=v=>y1-v/mx*(y1-y0);
+  x.strokeStyle='rgba(255,255,255,.12)';x.lineWidth=1;x.setLineDash([]);x.beginPath();x.moveTo(30,y1);x.lineTo(w-10,y1);x.stroke();
+  x.fillStyle='#a8bba6';x.font='18px sans-serif';x.fillText(title+' (최대 '+mx+')',34,y0+14);
+  for(const l of ls){x.strokeStyle=l.col;x.lineWidth=l.dash?2:3;x.setLineDash(l.dash||[]);x.beginPath();hs.forEach((e,i)=>{const px=X(e[0]),py=Y(l.v(e));i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}}
+ x.setLineDash([]);x.fillStyle='#a8bba6';x.font='16px sans-serif';x.fillText((Math.floor(t0/DAY)+1)+'일',30,h-4);x.fillText((Math.floor(t1/DAY)+1)+'일',w-70,h-4);
+ $('#gleg').innerHTML=lines.map(l=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px"><span class="dot" style="background:${l.col}"></span>${l.nm}</span>`).join('')}
+function drawTree(){const c=$('#tcv');if(!c)return;const list=W.SP.filter(s=>s.kind===treeKind&&!s.quiet&&(s.peak>0||s.n>0||s.mine));
+ const kids={},ids=new Set(list.map(s=>s.id));for(const s of list){const p=ids.has(s.parent)?s.parent:-1;(kids[p]||(kids[p]=[])).push(s)}
+ const rows=[],dfs=s=>{rows.push(s);for(const k of(kids[s.id]||[]).sort((a,b)=>a.born-b.born))dfs(k)};for(const s of(kids[-1]||[]))dfs(s);
+ const rh=26,hh=Math.max(120,rows.length*rh+40);if(c.height!==hh)c.height=hh;const x=c.getContext('2d'),w=c.width;x.clearRect(0,0,w,hh);
+ if(!rows.length){x.fillStyle='#a8bba6';x.font='22px sans-serif';x.fillText('아직 없어요',20,40);return}
+ const T=Math.max(W.t,DAY),X=t=>16+t/T*(w-210),row={};rows.forEach((s,i)=>row[s.id]=24+i*rh);
+ x.lineCap='round';
+ for(const s of rows){const y=row[s.id],x0=X(s.born),x1=X(s.ext?s.died:W.t),col=s.ext?'#666':css(spColor(s));
+  if(row[s.parent]!==undefined){x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=2;x.beginPath();x.moveTo(x0,row[s.parent]);x.lineTo(x0,y);x.stroke()}
+  x.strokeStyle=col;x.lineWidth=s.ext?3:6;x.beginPath();x.moveTo(x0,y);x.lineTo(Math.max(x1,x0+2),y);x.stroke();
+  x.fillStyle=s.ext?'#888':'#eef5ea';x.font=(s.ext?'':'bold ')+'17px sans-serif';x.fillText((s.mine?'★':'')+s.name+(s.ext?'':' '+s.n),Math.max(x1,x0)+8,y+6)}
+ x.fillStyle='#a8bba6';x.font='15px sans-serif';x.fillText('1일 → '+(Math.floor(W.t/DAY)+1)+'일',16,hh-6)}
+
+// ================= 편집기 =================
+function openEditor(kind,g,name){mode='editor';ED={kind,g:{...(g||Object.fromEntries(defOf(kind).map(d=>[d[0],d[4]])))},mesh:null};
+ if(!g&&kind==='p')ED.g={...EDIT_P};if(!g&&kind==='a')ED.g={...EDIT_A};
+ for(const d of defOf(kind))if(d[5])ED.g[d[0]]=Math.round(ED.g[d[0]]);
+ $('#edTitle').innerHTML=kind==='a'?'새 <span>동물</span> 만들기':'새 <span>식물</span> 만들기';$('#edName').value=name||'';
+ buildSliders();rebuildPreview();scam.yaw=.9;scam.pitch=.3;scam.auto=1;
+ showWorldUI(false);$('#tag').classList.add('hide');$('#editor').classList.remove('hide')}
+function closeEditor(){if(ED&&ED.mesh)freeMesh(ED.mesh);ED=null;mode='world';$('#editor').classList.add('hide');showWorldUI(true)}
+function buildSliders(){const defs=defOf(ED.kind);let h='',grp='';
+ for(const d of defs){const[k,nm,mn,mx,,isInt,gr]=d;if(gr!==grp){h+=`<h5>${gr}</h5>`;grp=gr}
+  if(k==='herd'||k==='flee'){const on=ED.g[k]>=.5;h+=`<div class="tg" data-k="${k}"><button data-v="1" class="${on?'on':''}">${k==='herd'?'무리 지어 다녀요':'무서우면 도망가요'}</button><button data-v="0" class="${on?'':'on'}">${k==='herd'?'혼자 다녀요':'도망 안 가요'}</button></div>`;continue}
+  if(k==='plan'){h+=`<div class="tg" data-k="plan">${['둥근 몸','왕관 몸','원반 몸'].map((t,i)=>`<button data-v="${i}" class="${Math.round(ED.g.plan)===i?'on':''}">${t}</button>`).join('')}</div>`;continue}
+  if(k==='pattern'){h+=`<div class="tg" data-k="pattern">${['무늬 없음','고리 무늬','빛 점'].map((t,i)=>`<button data-v="${i}" class="${Math.round(ED.g.pattern)===i?'on':''}">${t}</button>`).join('')}</div>`;continue}
+  h+=`<label class="sl"><span>${nm}</span><input type="range" data-k="${k}" min="${mn}" max="${mx}" step="${isInt?1:(mx-mn)/100}" value="${ED.g[k]}" class="${HUEK[k]?'hue':''}"><b id="sv_${k}"></b></label>`}
+ $('#edBody').innerHTML=h;updSliderVals()}
+function valText(k,v){if(HUEK[k])return`<span class="dot" style="background:${css(hsl(v,.6,.5))}"></span>`;if(k==='diet')return v<.15?'풀':v<.45?'주로 풀':v<.6?'둘 다':v<.85?'주로 고기':'고기';
+ if(k==='waterNeed')return placeWord(v).replace(' 땅','');if(k==='leafShape')return v<.35?'구슬':v<.7?'부채판':'수정';if(k==='float')return v>.5?'둥둥':'안 떠요';if(k==='slime')return v>.5?'끈적':'보통';const d=defOf(ED.kind).find(x=>x[0]===k);return d[5]?String(Math.round(v)):(+v).toFixed(2)}
+function updSliderVals(){for(const d of defOf(ED.kind)){const el=$('#sv_'+d[0]);if(el)el.innerHTML=valText(d[0],ED.g[d[0]])}$('#edStats').innerHTML=ED.kind==='a'?statsA(ED.g):statsP(ED.g)}
+$('#edBody').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;ED.g[k]=+e.target.value;updSliderVals();needPreview=true});
+$('#edBody').addEventListener('click',e=>{const b=e.target.closest('.tg button');if(!b)return;const k=b.parentNode.dataset.k;ED.g[k]=+b.dataset.v;for(const x of b.parentNode.children)x.classList.toggle('on',x===b);needPreview=true;updSliderVals()});
+let needPreview=false;
+function rebuildPreview(){if(ED.mesh)freeMesh(ED.mesh);ED.mesh=uploadMesh(ED.kind==='a'?buildAnimal(ED.g):buildPlant(ED.g));const bb=ED.mesh.bb,sz=Math.max(bb[3]-bb[0],bb[4]-bb[1],bb[5]-bb[2]);
+ scam.ty=(bb[1]+bb[4])/2;const want=sz*2+.3;if(!ED.zoomed)scam.dist=want;needPreview=false}
+const bars=(v,mx,y)=>`<i class="bar${y?' y':''}"><i style="width:${clamp(v/mx*100,4,100)}%"></i></i>`;
+function statsA(g){const d=deriveA(g);return`<div class="kv"><span>사는 곳</span><span>${livesWord(d)}</span></div><div class="kv"><span>땅에서 빠르기</span><span>${d.walk?bars(d.walk,3.5):'못 걸어요'}</span></div><div class="kv"><span>물에서 빠르기</span><span>${d.swim?bars(d.swim,2.5):'못 헤엄쳐요'}</span></div><div class="kv"><span>땅에 맞는 몸</span><span>${bars(d.landFit,1)}</span></div><div class="kv"><span>하늘 날기</span><span>${d.fly?'둥둥 날아요!':'못 날아요'}</span></div><div class="kv"><span>보는 거리</span><span>${bars(d.sight,16)}</span></div>
+ <div class="kv"><span>배고파지는 빠르기</span><span>${bars(d.cost0/Math.max(d.Emax,1)*60,1.2,1)}</span></div><div class="kv"><span>사냥 힘</span><span>${bars(d.att,2)}</span></div><div class="kv"><span>튼튼함</span><span>${bars(d.def,2.6)}</span></div>
+ <div class="kv"><span>입이 닿는 높이</span><span>${d.reach.toFixed(1)}m</span></div><div class="kv"><span>먹이</span><span>${dietWord(g.diet)}</span></div>
+ <div class="kv"><span>어른 되는 데 · 수명</span><span>${(d.mature/DAY).toFixed(1)}일 · ${(d.life/DAY).toFixed(0)}일</span></div>`}
+function statsP(g){const d=deriveP(g);return`<div class="kv"><span>다 자라는 데</span><span>약 ${Math.max(.5,1/d.grow/DAY).toFixed(1)}일</span></div><div class="kv"><span>먹을 수 있는 양</span><span>${bars(d.maxB,40)}</span></div>
+ <div class="kv"><span>씨앗</span><span>${d.seeds}개씩 · ${(d.seedT/DAY*10|0)/10}일마다</span></div><div class="kv"><span>좋아하는 곳</span><span>${placeWord(g.waterNeed)}</span></div>
+ <div class="kv"><span>뜯어 먹히는 정도</span><span>${bars(1-g.thorns*.6,1,1)}</span></div><div class="kv"><span>수명</span><span>${(d.life/DAY).toFixed(0)}일</span></div>`}
+$('#edRand').onclick=()=>{ED.g=randGenes(ED.kind);$('#edName').value=autoName(ED.kind,ED.g);buildSliders();needPreview=true};
+$('#edCancel').onclick=()=>closeEditor();
+$('#edOk').onclick=()=>{const kind=ED.kind;let nm=$('#edName').value.trim();if(!nm)nm=autoName(kind,ED.g);if(W.SP.some(s=>s.name===nm))nm+=' '+(W.SP.length+1);
+ const sp=addSpecies(kind,{...ED.g},nm,-1,true);closeEditor();addLog(`${josa(nm,'을','를')} 만들었어요!`,0);
+ bKind=kind;for(const x of document.querySelectorAll('#btabs button'))x.classList.toggle('on',x.dataset.k===kind);
+ if(kind==='a'){W.selA=sp.id;setTool('animal')}else{W.selP=sp.id;setTool('plant')}cardSig='';renderCards();
+ toast(kind==='a'?`${nm} 완성! 이제 땅을 눌러서 풀어 놓아 봐`:`${nm} 완성! 이제 땅을 문질러서 심어 봐`,1)};
+$('#edName').addEventListener('keydown',e=>e.stopPropagation());
+
+// ================= 마우스·손가락 =================
+const ptr=new Map();let drag=null,lastTap=0;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.focus();cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});mouse.x=e.clientX;mouse.y=e.clientY;mouse.in=true;
+ if(mode==='title')return;
+ if(ptr.size===2){toolHeld=false;const[a,b]=[...ptr.values()];drag={type:'two',d:Math.hypot(a.x-b.x,a.y-b.y),mx:(a.x+b.x)/2,my:(a.y+b.y)/2};return}
+ if(ptr.size>2)return;
+ let type;if(mode==='editor')type='rot';else if(e.button===2)type='rot';else if(e.button===1||e.shiftKey)type='pan';else type=tool==='look'?'look':'tool';
+ drag={type,x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,t:performance.now(),moved:0};
+ if(type==='tool'){toolHeld=true;toolT=0;cursor=pickGround(mouse.x,mouse.y);if(cursor)flatH=heightAt(cursor[0],cursor[2])}
+ if(mode==='editor'){scam.auto=0}});
+cv.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(p){p.x=e.clientX;p.y=e.clientY}mouse.x=e.clientX;mouse.y=e.clientY;mouse.in=true;
+ if(mode==='world'&&!toolHeld&&tool!=='look')cursor=pickGround(mouse.x,mouse.y);
+ if(!drag)return;const c=mode==='editor'?scam:cam;
+ if(drag.type==='two'&&ptr.size===2){const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+  if(drag.d>10)c.dist=clamp(c.dist*drag.d/Math.max(d,10),mode==='editor'?.6:5,260);
+  if(mode==='world')panBy(mx-drag.mx,my-drag.my);else{c.yaw+=(mx-drag.mx)*.006}
+  drag.d=d;drag.mx=mx;drag.my=my;return}
+ const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+ if(drag.type==='rot'||drag.type==='look'){c.yaw+=dx*.006;c.pitch=clamp(c.pitch+dy*.005,mode==='editor'?-.2:.1,1.5)}
+ else if(drag.type==='pan')panBy(dx,dy)});
+function panBy(dx,dy){const k=cam.dist*.0016,fx=-Math.cos(cam.yaw),fz=-Math.sin(cam.yaw),rx=Math.sin(cam.yaw),rz=-Math.cos(cam.yaw);
+ cam.tx=clamp(cam.tx-rx*dx*k+fx*dy*k,WB0,WB1);cam.tz=clamp(cam.tz-rz*dx*k+fz*dy*k,WB0,WB1);cam.follow=null}
+function endPtr(e){ptr.delete(e.pointerId);if(!drag)return;
+ if(drag.type==='look'&&drag.moved<8&&performance.now()-drag.t<450&&mode==='world'){const now=performance.now();
+  if(now-lastTap<330){const g=pickGround(e.clientX,e.clientY);if(g){flyTo=[g[0],g[2]];cam.follow=null}}
+  else{const t=pickThing(e.clientX,e.clientY);sel=t;if(t){if(document.body.classList.contains('noside')===false){sideTab='sel';for(const x of document.querySelectorAll('#stabs button'))x.classList.toggle('on',x.dataset.t==='sel');renderSide(true)}}else if(cam.follow)cam.follow=null}
+  lastTap=now}
+ if(ptr.size===0){drag=null;toolHeld=false}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('pointerleave',()=>{mouse.in=false});
+cv.addEventListener('wheel',e=>{e.preventDefault();if(mode==='title')return;const c=mode==='editor'?scam:cam;c.dist=clamp(c.dist*Math.exp(e.deltaY*.0012),mode==='editor'?.6:5,260);if(mode==='editor')ED.zoomed=1},{passive:false});
+let flyTo=null;const keys={};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range')return;keys[e.code]=1;
+ if(e.code==='Space'&&mode==='world'){togglePause();e.preventDefault()}
+ if(e.code==='Escape'){if(mode==='editor')closeEditor();else if(cam.follow)cam.follow=null;else sel=null}});
+addEventListener('keyup',e=>keys[e.code]=0);addEventListener('blur',()=>{for(const k in keys)keys[k]=0});
+function camKeys(dt){const c=mode==='editor'?scam:cam;if(mode==='title')return;
+ if(mode==='world'){const k=cam.dist*.9*dt,fx=-Math.cos(cam.yaw),fz=-Math.sin(cam.yaw),rx=Math.sin(cam.yaw),rz=-Math.cos(cam.yaw);let mx=0,mz=0;
+  if(keys.KeyW||keys.ArrowUp){mx+=fx;mz+=fz}if(keys.KeyS||keys.ArrowDown){mx-=fx;mz-=fz}if(keys.KeyD||keys.ArrowRight){mx+=rx;mz+=rz}if(keys.KeyA||keys.ArrowLeft){mx-=rx;mz-=rz}
+  if(mx||mz){cam.tx=clamp(cam.tx+mx*k,WB0,WB1);cam.tz=clamp(cam.tz+mz*k,WB0,WB1);cam.follow=null;flyTo=null}}
+ if(keys.KeyQ)c.yaw-=dt*1.6;if(keys.KeyE)c.yaw+=dt*1.6;if(keys.KeyR)c.dist=clamp(c.dist*Math.exp(-dt*1.5),mode==='editor'?.6:5,260);if(keys.KeyF)c.dist=clamp(c.dist*Math.exp(dt*1.5),mode==='editor'?.6:5,260)}
+
+// ================= 저장 =================
+const SKEY='sapling3d.save';
+function saveGame(){if(!W||W.demo)return false;try{const r2=v=>Math.round(v*100)/100;
+ const o={v:7,where:W.where,ev:{dim:W.dim,boost:W.boost,winter:W.winter,volc:W.volc,natural:W.natural,lastDay:W.lastDay,lastBig:W.lastBig,pieces:PIECES.map(P=>({seed:P.seed,ox:P.ox,oz:P.oz,vx:P.vx,vz:P.vz,ph:P.ph,push:P.push,name:P.name,near:P.near,H:Array.from(P.H,v=>Math.round(v*100)),G:Array.from(P.G).join('')}))},mile:W.mile||{},seed:W.seed,t:W.t,tick:W.tick,evo:W.evo,selA:W.selA,selP:W.selP,nid:W.nid,
+  H:Array.from(H,v=>Math.round(v*100)),G:Array.from(G).join(''),WET:Array.from(WET,v=>Math.round(v*100)),
+  SP:W.SP.map(s=>[s.kind,gpack(s.g,defOf(s.kind)),s.name,s.parent,Math.round(s.born),s.mine?1:0,s.peak,s.ext?1:0,Math.round(s.died||0),s.quiet?1:0,s.design?gpack(s.design,defOf(s.kind)):0]),
+  A:W.A.filter(a=>!a.dead).map(a=>[a.sp,gpack(a.g,AG),r2(a.x),r2(a.z),r2(a.E),Math.round(a.age),a.kids,a.gen,Math.round(a.cool),a.landAnc?1:0]),
+  P:W.P.filter(p=>!p.dead).map(p=>[p.sp,gpack(p.g,PGN),r2(p.x),r2(p.z),Math.round(p.gr*1000)/1000,r2(p.eaten),Math.round(p.age),Math.round(p.seedT),r2(p.yaw)]),
+  C:W.C.filter(c=>!c.dead).map(c=>[r2(c.x),r2(c.z),r2(c.yaw),r2(c.s),r2(c.meat),r2(c.m0),Math.round(c.t)]),
+  hist:W.hist,log:W.log.slice(-80),cam:[r2(cam.tx),r2(cam.tz),r2(cam.yaw),r2(cam.pitch),r2(cam.dist)]};
+ localStorage.setItem(SKEY,JSON.stringify(o));return true}catch(e){console.warn(e);return false}}
+function hasSave(){try{return!!localStorage.getItem(SKEY)}catch(e){return false}}
+function loadGame(){let o=null;try{o=JSON.parse(localStorage.getItem(SKEY)||'null')}catch(e){}if(!o||o.v!==7)return false;
+ clearMeshes();THUMB.clear();W=newWorldState(o.seed);Object.assign(W,{where:o.where||'coast',t:o.t,tick:o.tick,evo:o.evo,selA:o.selA,selP:o.selP,nid:o.nid||1,mile:o.mile||{}});
+ for(let i=0;i<H.length;i++)H[i]=(o.H[i]||0)/100;for(let c=0;c<N*N;c++){G[c]=+o.G[c]||0;WET[c]=(o.WET[c]||0)/100}
+ genFields(o.seed);calcCH();calcMoist();calcColors();terrainDirty=true;
+ for(const s of o.SP)W.SP.push({id:W.SP.length,kind:s[0],g:gunpack(s[1],defOf(s[0])),name:s[2],parent:s[3],born:s[4],mine:!!s[5],n:0,peak:s[6],ext:!!s[7],died:s[8],quiet:!!s[9],design:s[10]?gunpack(s[10],defOf(s[0])):null});
+ if(o.ev){freePieces();(o.ev.pieces||[]).forEach((q,k)=>{const P=newPiece(k,q.seed);pieceTerrain(P,q.seed);Object.assign(P,{ox:q.ox,oz:q.oz,vx:q.vx,vz:q.vz,ph:q.ph,push:q.push,name:q.name,near:q.near});
+   for(let i=0;i<P.H.length;i++)P.H[i]=(q.H[i]||0)/100;for(let c=0;c<PN*PN;c++)P.G[c]=+q.G[c]||0;PIECES.push(P);pieceRefresh(P)});W.conts=PIECES}
+ for(const a of o.A){const sp=W.SP[a[0]];if(!sp)continue;const x=spawnA(sp,gunpack(a[1],AG),a[2],a[3],true);Object.assign(x,{E:a[4],age:a[5],kids:a[6],gen:a[7],cool:a[8],landAnc:!!a[9]});x.gr=x.age<x.d.mature?.35+.65*x.age/x.d.mature:1}
+ for(const p of o.P){const sp=W.SP[p[0]];if(!sp)continue;const x=addPlant(sp,gunpack(p[1],PGN),p[2],p[3],p[4]);Object.assign(x,{eaten:p[5],age:p[6],seedT:p[7],yaw:p[8]})}
+ for(const c of o.C)W.C.push({x:c[0],z:c[1],y:heightAt(c[0],c[1]),yaw:c[2],s:c[3],meat:c[4],m0:c[5],t:c[6],dead:false});
+ if(o.ev){Object.assign(W,{dim:o.ev.dim||0,boost:o.ev.boost||0,winter:o.ev.winter||null,volc:o.ev.volc||[],natural:o.ev.natural!==false,lastDay:o.ev.lastDay||0,lastBig:o.ev.lastBig||0})}
+ LV.fill(0);FX=[];PART=[];BIG=null;
+ W.hist=o.hist||[];W.log=o.log||[];if(o.cam)[cam.tx,cam.tz,cam.yaw,cam.pitch,cam.dist]=o.cam;cam.follow=null;sel=null;
+ buildPGrid();census();return true}
+addEventListener('beforeunload',()=>{if(mode!=='title')saveGame()});
+
+// ================= 시작·끝 =================
+function goTitle(){mode='title';newGame('proto',true,'coast');showWorldUI(false);$('#tag').classList.add('hide');$('#editor').classList.add('hide');$('#start').classList.remove('hide');$('#stCont').classList.toggle('hide',!hasSave());cam.dist=118;cam.pitch=.5}
+function begin(type){if(type==='cont'){if(!loadGame()){toast('저장된 게임이 없어요');return}}else newGame(type,false,startWhere==='rand'?pick(['coast','ocean','land']):startWhere);
+ mode='world';$('#start').classList.add('hide');showWorldUI(true);setSpeed(1);updEvoBtn();$('#mNat').textContent='🌋 저절로 큰 사건: '+(W.natural!==false?'켜짐':'꺼짐');bKind='p';for(const x of document.querySelectorAll('#btabs button'))x.classList.toggle('on',x.dataset.k==='p');
+ cardSig='';$('#cards').dataset.ids='';THUMB.clear();renderCards();setTool('look');$('#sbody').innerHTML='';sideHTML='';renderSide(true);
+ if(type==='proto'){toast(W.where==='ocean'?'섬과 섬 사이 넓은 바다에서 시작해요. 물에 떠다니는 원시 떠말과 원시 미생물이 살아요':W.where==='land'?'땅 위에서 시작해요. 촉촉한 땅에 끈적끈적 슬라임 생물과 원시 땅말이 살아요':'바닷가 얕은 물속에서 시작해요. 원시 미생물과 원시 말이 살아요',1);setTimeout(()=>toast('▶▶▶ 로 시간을 빠르게 해서 진화를 구경해 봐!',1),3500);
+  addLog(W.where==='ocean'?`넓은 바다 한가운데서 생명이 시작했어요. 바다 건너에 ${PIECES.map(P=>P.name).join('과 ')}도 있어요`:`바다 건너에 ${PIECES.map(P=>P.name).join('과 ')}도 있어요. 세 섬 모두 같은 조상에서 시작해요`,0);setTimeout(()=>toast(W.where==='ocean'?'바다 건너 섬 3개는 아직 비어 있어요. 생물이 언제 섬에 닿을까? 🏝️ 단추나 WASD로 가 봐!':'바다 건너에 섬이 2개 더 있어요. 같은 조상이 섬마다 조금씩 다르게 진화해요. 🏝️ 단추나 WASD로 가 봐!',1),7500)}
+ if(type!=='cont')saveGame()}
+let startWhere='rand';for(const b of document.querySelectorAll('#stWhere button'))b.onclick=()=>{startWhere=b.dataset.w;for(const x of document.querySelectorAll('#stWhere button'))x.classList.toggle('on',x===b)};
+$('#stCont').onclick=()=>begin('cont');$('#stLife').onclick=()=>begin('proto');
+if(innerWidth<900)document.body.classList.add('noside');
+try{if(localStorage.getItem('sapling3d.shadow')==='0'){shadowsOn=false;$('#mShadow').textContent='🌗 그림자: 꺼짐'}}catch(e){}
+
+// ================= 매 장면 =================
+let last=performance.now(),acc=0,uiT=0,sideT=0,saveT=0,errShown=false;
+function simRun(dtR){if(!W.speed)return;acc+=dtR*20*W.speed;const t0=performance.now();let n=0;
+ while(acc>=1){tick();acc--;n++;if((n&7)===0&&performance.now()-t0>10)break}if(acc>W.speed*6)acc=0}
+function frame(now){const dtR=Math.min(.1,(now-last)/1000);last=now;const time=now/1000;
+ camKeys(dtR);
+ if(mode==='world'){applyTool(dtR);simRun(dtR)}else if(mode==='title'){cam.yaw+=dtR*.04;simRun(dtR)}else if(mode==='editor'){if(needPreview)rebuildPreview();if(scam.auto)scam.yaw+=dtR*.35}
+ stepFX(dtR);afterEdits(dtR);
+ if(cam.follow){const a=cam.follow;if(a.dead){toast(`따라가던 ${josa(W.SP[a.sp].name,'이','가')} 죽었어요`);cam.follow=null}else{cam.tx=lerp(cam.tx,a.x,.12);cam.tz=lerp(cam.tz,a.z,.12)}}
+ if(flyTo){cam.tx=lerp(cam.tx,flyTo[0],.1);cam.tz=lerp(cam.tz,flyTo[1],.1);if(Math.hypot(cam.tx-flyTo[0],cam.tz-flyTo[1])<.2)flyTo=null}
+ render(time);
+ if(mode==='world'){const tg=$('#tag');if(sel&&!sel.dead){const isA=sel.d.mass!==undefined,top=isA?sel.d.legH*sel.gr+sel.d.len*.5*sel.gr+.5:sel.d.h*(.12+.88*sel.gr)+.4,s=toScreen(sel.x,sel.y+top,sel.z);
+   if(s){tg.classList.remove('hide');tg.style.left=s[0]+'px';tg.style.top=s[1]+'px';tg.textContent=W.SP[sel.sp].name+(cam.follow===sel?' 🎥':'')}else tg.classList.add('hide')}else tg.classList.add('hide')}
+ uiT-=dtR;sideT-=dtR;saveT+=dtR;
+ if(mode==='world'&&uiT<=0){uiT=.25;$('#clock').textContent=(Math.floor(W.t/DAY)+1)+'일째';$('#counts').textContent=`🌿 ${W.P.length}  🐾 ${W.A.length}`;renderCards()}
+ if(mode==='world'&&sideT<=0){sideT=sideTab==='sel'?.3:sideTab==='tree'?2:1;renderSide(false)}
+ if(mode==='world'&&saveT>60){saveT=0;saveGame()}}
+function loop(now){requestAnimationFrame(loop);try{frame(now)}catch(e){console.error(e);if(!errShown){errShown=true;const el=$('#err');el.textContent='앗! 문제가 생겼어요: '+e.message;el.classList.remove('hide');setTimeout(()=>{el.classList.add('hide');errShown=false},6000)}}}
+goTitle();requestAnimationFrame(loop);
+window.dbg={stepFX,get PIECES(){return PIECES},contView,get BIG(){return BIG},bigMeteor,dropMeteor,makeVolcano,get W(){return W},tick,stepPlants,stepAnimals,findPlant,plantFood,think,census,newGame,begin,render:t=>frame(t||performance.now()),openEditor,closeEditor,saveGame,loadGame,cam,scam,get mode(){return mode},setTool,thumbOf,deriveA,deriveP,fertAt,heightAt,get sel(){return sel},set sel(v){sel=v}};
+</script>
+<script src="../track.js" defer></script>
+</body>
+</html>
