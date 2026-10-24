@@ -160,6 +160,7 @@ body.noside #side{display:none}
 <div id="menu" class="panel hide">
   <button id="mSave">💾 지금 저장하기</button>
   <button id="mShadow">🌗 그림자: 켜짐</button>
+  <div id="mQ" class="muted" style="font-size:12px;padding:2px 6px"></div>
   <button id="mNat">🌋 저절로 큰 사건: 켜짐</button>
   <button id="mHelp">❓ 조작법</button>
   <button id="mHome">🏠 처음 화면으로</button>
@@ -210,7 +211,7 @@ body.noside #side{display:none}
   <b>심기·풀어놓기</b> — 아래에서 식물이나 동물을 고르고 땅을 눌러요. 식물은 문지르면 여러 개 심어요.<br>
   <b>땅 도구</b> — 누르고 있으면 땅이 솟거나 파여요. 바닷물 높이보다 낮게 파면 물이 차요. 붓 크기는 도구 아래에서 바꿔요.<br>
   <b>큰 사건</b> — ☄️ 운석, 🌋 화산은 땅을 누르면 일어나요. 💥 큰 운석은 멀리 바다에 떨어져 충격파와 해일이 와요. 산 뒤나 높은 곳, 깊은 바닷속 생물만 살아남는 대멸종이에요. 가끔 저절로도 일어나요(메뉴에서 끌 수 있어요).<br>
-  <b>다른 섬</b> — 바다 건너에 섬이 2개 더 있어요. 🏝️ 단추나 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>로 가 볼 수 있어요. 세 섬 생물은 같은 조상에서 시작해서 섬마다 조금씩 다르게 진화해요.<br>
+  <b>큰 섬</b> — 섬이 아주 커요. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>나 오른쪽 버튼 끌기로 날아다니며 둘러봐요. 생물은 처음 생긴 곳에서부터 섬 전체로 천천히 퍼져요.<br>
   <b>시작하는 곳</b> — 처음 화면에서 바닷가, 섬과 섬 사이 먼 바다(물에 떠다니는 말), 땅 위 끈적끈적 슬라임 중에 고를 수 있어요.<br>
   <b>진화</b> — 새끼는 부모랑 아주 조금씩 달라요. 많이 달라지면 <b>새 종</b>이 생겨요. 계통도에서 누가 누구에게서 갈라졌는지 볼 수 있어요.<br>
   <b>식물</b> — 처음엔 물속에서만 자라요. 물을 덜 좋아하게 진화하면 땅 위로 올라와요. 물기가 맞는 땅에서 잘 자라요. 키 큰 식물 그늘에서는 잘 못 자라요. 뜯어 먹혀도 뿌리가 남아서 다시 자라요.<br>
@@ -223,6 +224,8 @@ body.noside #side{display:none}
 'use strict';
 // ================= 작은 도구 =================
 const $=s=>document.querySelector(s);
+// 큰 섬 하나 (아이가 정함: "하나의 체감상 5km 크기의 큰 섬"): 높이 격자 N×N칸, 한 칸 = CELL, 세상 한 변 WS
+const N=256,NV=N+1,CELL=2,WS=N*CELL;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, R=Math.random, TAU=Math.PI*2;
 function gauss(){let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v)}
 const pick=a=>a[(R()*a.length)|0];
@@ -303,7 +306,7 @@ uniform vec4 u_brush,u_sel;uniform float u_time,u_water;
 in vec3 v_col,v_nrm,v_wp;in vec4 v_ls;out vec4 o;
 void main(){vec3 n=normalize(v_nrm);vec3 col=v_col;
  if(u_water>.5){
-  if(v_wp.y<0.){float dd=clamp(-v_wp.y/7.,0.,1.);col=mix(col,vec3(.10,.27,.32),.22+dd*.62);}
+  if(v_wp.y<0.){float dd=clamp(-v_wp.y/12.,0.,1.);col=mix(col,vec3(.10,.27,.32),.22+dd*.62);}
   float fo=1.-smoothstep(0.,.2,abs(v_wp.y+.02+sin(v_wp.x*.7+u_time*1.3)*.03+cos(v_wp.z*.6+u_time)*.03));
   col=mix(col,vec3(.93,.96,.95),fo*.5);}
  vec3 c=shade(col,n,v_wp,v_ls);
@@ -352,12 +355,12 @@ void main(){vec3 n=normalize(v_nrm);if(dot(n,u_eye-v_wp)<0.)n=-n;float al=1.;
 const W_VS=`#version 300 es
 precision highp float;layout(location=0)in vec3 a_pos;uniform mat4 u_vp;uniform float u_time;uniform vec4 u_tsu;out vec3 v_wp;out float v_cr;
 void main(){vec3 p=a_pos;p.y=sin(p.x*.31+u_time*1.1)*.05+cos(p.z*.27+u_time*.9)*.05;
- float dd=length(p.xz-u_tsu.xy),w=exp(-pow((dd-u_tsu.z)/7.,2.))*u_tsu.w+(dd<u_tsu.z?u_tsu.w*.25*exp(-(u_tsu.z-dd)/25.):0.);p.y+=w;v_cr=clamp(w/max(u_tsu.w,.01),0.,1.);
+ float dd=length(p.xz-u_tsu.xy),w=exp(-pow((dd-u_tsu.z)/12.,2.))*u_tsu.w+(dd<u_tsu.z?u_tsu.w*.25*exp(-(u_tsu.z-dd)/40.):0.);p.y+=w;v_cr=clamp(w/max(u_tsu.w,.01),0.,1.);
  v_wp=p;gl_Position=u_vp*vec4(p,1.);}`;
 const W_FS=`#version 300 es
 precision highp float;uniform vec3 u_eye,u_sun,u_fog;uniform float u_fogD,u_time,u_dim;uniform sampler2D u_ht,u_ht1,u_ht2;uniform vec4 u_p1,u_p2;in vec3 v_wp;in float v_cr;out vec4 o;
 void main(){vec2 q=v_wp.xz;
- float hm=-8.;if(q.x>0.&&q.y>0.&&q.x<128.&&q.y<128.)hm=texture(u_ht,(q+.5)/129.).r;
+ float hm=-12.;if(q.x>0.&&q.y>0.&&q.x<${WS}.&&q.y<${WS}.)hm=texture(u_ht,(q/${CELL}.+.5)/${NV}.).r;
  vec2 l1=q-u_p1.xy;if(u_p1.w>.5&&l1.x>0.&&l1.y>0.&&l1.x<u_p1.z&&l1.y<u_p1.z)hm=max(hm,texture(u_ht1,(l1+.5)/(u_p1.z+1.)).r);
  vec2 l2=q-u_p2.xy;if(u_p2.w>.5&&l2.x>0.&&l2.y>0.&&l2.x<u_p2.z&&l2.y<u_p2.z)hm=max(hm,texture(u_ht2,(l2+.5)/(u_p2.z+1.)).r);
  float dep=max(-hm,0.),sd=smoothstep(0.,4.,dep);
@@ -395,7 +398,7 @@ gl.texStorage2D(gl.TEXTURE_2D,1,gl.DEPTH_COMPONENT24,SR,SR);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
-const HTEX=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texStorage2D(gl.TEXTURE_2D,1,gl.R16F,129,129);
+const HTEX=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texStorage2D(gl.TEXTURE_2D,1,gl.R16F,NV,NV);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
 gl.useProgram(PW.p);if(PW.u.u_ht)gl.uniform1i(PW.u.u_ht,1);if(PW.u.u_ht1)gl.uniform1i(PW.u.u_ht1,2);if(PW.u.u_ht2)gl.uniform1i(PW.u.u_ht2,3);
 const SFB=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,SFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,STEX,0);
@@ -403,6 +406,7 @@ gl.drawBuffers([gl.NONE]);gl.readBuffer(gl.NONE);gl.bindFramebuffer(gl.FRAMEBUFF
 
 // 여러 개 한꺼번에 그리기용 (위치·크기·색)
 const INST=gl.createBuffer();let INS=new Float32Array(11*4096);
+const INSTP=gl.createBuffer();let INSP=new Float32Array(11*4096);const PC={ok:false,key:null,groups:[],sgroups:[],f:0};
 function ensureInst(n){if(INS.length<n*11){const nI=new Float32Array(Math.ceil(n*1.5)*11);nI.set(INS);INS=nI}}
 
 // ================= 모양 만들기 =================
@@ -444,7 +448,7 @@ function uploadMesh(mb){const vao=gl.createVertexArray();gl.bindVertexArray(vao)
  gl.bindBuffer(gl.ARRAY_BUFFER,INST);
  for(const[loc,sz,off]of[[5,4,0],[6,4,16],[7,3,32]]){gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,sz,gl.FLOAT,false,44,off);gl.vertexAttribDivisor(loc,1)}
  gl.bindVertexArray(null);return{vao,bs,ib,n:mb.ix.length,bb:mb.bb.slice()}}
-function freeMesh(m){gl.deleteVertexArray(m.vao);for(const b of m.bs)gl.deleteBuffer(b);gl.deleteBuffer(m.ib)}
+function freeMesh(m){PC.ok=false;gl.deleteVertexArray(m.vao);for(const b of m.bs)gl.deleteBuffer(b);gl.deleteBuffer(m.ib)}
 function staticMesh(p,n,c,ix){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const bs=[];
  [[p,0],[n,1],[c,2]].forEach(([d,loc])=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(d),gl.STATIC_DRAW);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);bs.push(b)});
  const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(ix),gl.STATIC_DRAW);gl.bindVertexArray(null);return{vao,bs,ib,n:ix.length}}
@@ -513,13 +517,13 @@ function deriveA(g){const s=g.size,L=Math.round(g.legs),E=Math.round(g.eyes),bl=
  const NA=Math.round(g.antennae||0),cost0=.01*NA*s+.2*mp+.025*E*g.eyeSize*s+.04*s*(g.spikes+g.horns)+.015*L*s+.03*g.fins*s+.03*bl*s+(fly?.07*s+.03:0);
  const life=(240+300*s)*(1-.08*(Math.round(g.litter)-1));
  return{mass,legH,walk,swim,fly,flySpd,landFit,speed,att,def,cost0,costMove:.25*mp*speed/1.5*(fly?1:1-.5*bl),dry:(.15*mp+.04)*(1-landFit)*(1-sl*.85),crawl,Emax:55*mass+6,bite:(2.2*Math.pow(mass,.7)+.4)*(fly?.45:1),
-  sight:(E?4+3.2*g.eyeSize*Math.sqrt(E):2.5)+s*1.5+(fly?2:0)+NA*(g.antLen||.6)*.9,len:s*(.56+.6*g.bodyLen),
+  sight:(E?4+3.2*g.eyeSize*Math.sqrt(E):4)+s*1.5+(fly?2:0)+NA*(g.antLen||.6)*.9,len:s*(.56+.6*g.bodyLen),
   reach:legH+s*.25*g.bodyFat+g.neckLen*s*.8+s*.12,life,mature:life*.16,herbEff:1-g.diet*.88,meatEff:.12+g.diet*.88,wade:L?legH*.6+.05:.05}}
 const livesWord=d=>d.fly?'하늘을 둥둥':d.crawl?(d.swim>0?'물과 땅 (기어 다님)':'땅 위 (기어 다님)'):d.swim>0&&d.landFit>.5?'물과 땅 둘 다':d.landFit>.5?'땅 위':d.swim>0?(d.walk>0?'물속·물가':'물속'):'물가';
 function deriveP(g){const H=g.height,LC=Math.round(g.leafCount);
- return{maxB:(.5+LC*g.leafSize*g.leafSize*.9)*(.5+H*.6)*1.2,grow:.0055*g.growSpeed/(.55+H*.28)/(1+g.thorns*.35),
+ return{maxB:(.5+LC*g.leafSize*g.leafSize*.9)*(.5+H*.6)*1.9,grow:.0055*g.growSpeed/(.55+H*.28)/(1+g.thorns*.35),
   life:(600+700*H)/(.55+.45*g.growSpeed),seedT:45/(.35+.65*g.growSpeed)*(1+H*.15),seeds:1+Math.round(g.flower*2),
-  regrow:.006*g.growSpeed,rad:.2+g.leafSize*.28+Math.min(H,3)*.15,h:H}}
+  regrow:.0075*g.growSpeed,rad:.2+g.leafSize*.28+Math.min(H,3)*.15,h:H}}
 
 // ================= 생물 모양 =================
 function glow(c,k){return[c[0]*k,c[1]*k,c[2]*k]}
@@ -647,22 +651,21 @@ const CORPSE=(()=>{const m=new MB();m.ell(0,.06,0,.34,.1,.27,[.36,.3,.38],null,1
  for(let k=0;k<3;k++){const a=k*2.1;m.cone([Math.cos(a)*.12,.08,Math.sin(a)*.1],[Math.cos(a)*.22,.26,Math.sin(a)*.18],.04,[.85,.85,.95],4)}return uploadMesh(m)})();
 
 // ================= 땅 =================
-const N=128,NV=N+1;
 const LV=new Float32Array(N*N),H=new Float32Array(NV*NV),CH=new Float32Array(N*N),G=new Uint8Array(N*N),WET=new Float32Array(N*N),M=new Float32Array(N*N),RAIN=new Float32Array(N*N),VAR=new Float32Array(N*N),CC=new Float32Array(N*N*3);
 let terrainDirty=true,moistDirty=false,colorDirty=false,moistT=0,editBox=null;
-function hMain(x,z){x=clamp(x,0,N-1e-4);z=clamp(z,0,N-1e-4);const ix=x|0,iz=z|0,fx=x-ix,fz=z-iz,i=iz*NV+ix;
+function hMain(x,z){x=clamp(x/CELL,0,N-1e-4);z=clamp(z/CELL,0,N-1e-4);const ix=x|0,iz=z|0,fx=x-ix,fz=z-iz,i=iz*NV+ix;
  return lerp(lerp(H[i],H[i+1],fx),lerp(H[i+NV],H[i+NV+1],fx),fz)}
 // 다른 섬: 따로 그리는 땅 조각 (처음 섬만 한 크기). 세상 끝은 WB0~WB1
-const PN=112,PNV=PN+1,WB0=-704,WB1=832;let PIECES=[];
+const PN=112,PNV=PN+1,WB0=-256,WB1=WS+256;let PIECES=[];
 const inWorld=(x,z)=>x>WB0+2&&z>WB0+2&&x<WB1-2&&z<WB1-2;
 function pieceH(P,lx,lz){const ix=Math.min(lx|0,PN-1),iz=Math.min(lz|0,PN-1),fx=lx-ix,fz=lz-iz,i=iz*PNV+ix,A=P.H;
  return lerp(lerp(A[i],A[i+1],fx),lerp(A[i+PNV],A[i+PNV+1],fx),fz)}
-function heightAt(x,z){let h=(x>-.5&&z>-.5&&x<N+.5&&z<N+.5)?hMain(x,z):-7.5;
+function heightAt(x,z){let h=(x>-.5&&z>-.5&&x<WS+.5&&z<WS+.5)?hMain(x,z):-12.5;
  for(let k=0;k<PIECES.length;k++){const P=PIECES[k],lx=x-P.ox,lz=z-P.oz;if(lx>0&&lz>0&&lx<PN&&lz<PN){const v=pieceH(P,lx,lz);if(v>h)h=v}}return h}
 const SOIL=[0,1,1];
-function soilAt(x,z){let best=-99,m=1,g=1;if(x>=0&&z>=0&&x<N&&z<N){best=hMain(x,z);const c=(z|0)*N+(x|0);m=M[c];g=G[c]}
+function soilAt(x,z){let best=-99,m=1,g=1;if(x>=0&&z>=0&&x<WS&&z<WS){best=hMain(x,z);const c=((z/CELL)|0)*N+((x/CELL)|0);m=M[c];g=G[c]}
  for(const P of PIECES){const lx=x-P.ox,lz=z-P.oz;if(lx>0&&lz>0&&lx<PN&&lz<PN){const v=pieceH(P,lx,lz);if(v>best){best=v;const c=(lz|0)*PN+(lx|0);m=P.M[c];g=P.G[c]}}}
- if(best<-98)best=-7.5;SOIL[0]=best;SOIL[1]=m;SOIL[2]=g;return SOIL}
+ if(best<-98)best=-12.5;SOIL[0]=best;SOIL[1]=m;SOIL[2]=g;return SOIL}
 function calcCH(){for(let z=0;z<N;z++)for(let x=0;x<N;x++){const i=z*NV+x;CH[z*N+x]=(H[i]+H[i+1]+H[i+NV]+H[i+NV+1])*.25}}
 function slopeAt(x,z){const i=z*NV+x;return Math.abs(H[i]-H[i+NV+1])+Math.abs(H[i+1]-H[i+NV])}
 function genFields(seed){const n1=makeNoise(seed),n3=makeNoise(seed+202);
@@ -672,44 +675,46 @@ function genTerrain(seed,type){const n1=makeNoise(seed),n2=makeNoise(seed+101),n
   if(type==='flat'){h=1.3+fbm(n1,x*.04,z*.04,3)*.8;const e=clamp((r-.8)/.16,0,1);h=lerp(h,-6,e*e*(3-2*e))}
   else{const base=fbm(n1,x*.016+3.1,z*.016+1.7,5),rid=1-Math.abs(fbm(n2,x*.022,z*.022,4)*1.6),rr=r+fbm(n3,x*.02,z*.02,3)*.35;
    const e=.4+base*1.25+Math.pow(Math.max(0,rid),3)*.42-Math.pow(Math.max(0,rr),2.4)*1.05;
-   h=e>0?Math.pow(e,1.25)*17:e*10;if(r>.9)h=lerp(h,-7,clamp((r-.9)/.1,0,1))}
-  H[z*NV+x]=clamp(h,-8,26)}
+   h=e>0?Math.pow(e,1.25)*34:e*16;if(r>.9)h=lerp(h,-12,clamp((r-.9)/.1,0,1))}
+  H[z*NV+x]=clamp(h,-14,52)}
  calcCH();genFields(seed);
- for(let c=0;c<N*N;c++){const x=c%N,z=(c/N)|0,h=CH[c];WET[c]=0;G[c]=h<1.1?1:(slopeAt(x,z)>2.3||h>13)?2:0}
+ for(let c=0;c<N*N;c++){const x=c%N,z=(c/N)|0,h=CH[c];WET[c]=0;G[c]=h<1.6?1:(slopeAt(x,z)>4.6||h>26)?2:0}
  calcMoist();calcColors();terrainDirty=true}
 function calcMoist(){const D=new Int16Array(N*N).fill(99),q=new Int32Array(N*N);let qh=0,qt=0;
  for(let c=0;c<N*N;c++)if(CH[c]<0){D[c]=0;q[qt++]=c}
  while(qh<qt){const c=q[qh++],d=D[c]+1;if(d>16)continue;const x=c%N;
   if(x>0&&D[c-1]>d){D[c-1]=d;q[qt++]=c-1}if(x<N-1&&D[c+1]>d){D[c+1]=d;q[qt++]=c+1}
   if(c>=N&&D[c-N]>d){D[c-N]=d;q[qt++]=c-N}if(c<N*N-N&&D[c+N]>d){D[c+N]=d;q[qt++]=c+N}}
- for(let c=0;c<N*N;c++){const h=CH[c];let m=h<0?1:.9*Math.exp(-D[c]/6)+RAIN[c]*.45-.06-Math.max(0,h-6)*.02;
+ for(let c=0;c<N*N;c++){const h=CH[c];let m=h<0?1:.9*Math.exp(-D[c]/6)+RAIN[c]*.45-.06-Math.max(0,h-12)*.01;
   if(G[c]===1)m*=.75;else if(G[c]===2)m*=.7;m+=WET[c]*.7;M[c]=clamp(m,0,1)}}
 function calcColors(){for(let c=0;c<N*N;c++){const h=CH[c],m=M[c],g=G[c],v=1+VAR[c]*.14;let r,gg,b;
  if(g===0){if(m<.45){const k=m/.45;r=lerp(.64,.47,k);gg=lerp(.52,.47,k);b=lerp(.34,.26,k)}else{const k=(m-.45)/.55;r=lerp(.47,.25,k);gg=lerp(.47,.37,k);b=lerp(.26,.15,k)}}
  else if(g===1){r=lerp(.90,.74,m*.7);gg=lerp(.82,.66,m*.7);b=lerp(.60,.46,m*.7)}
  else{r=.49;gg=.48;b=.47}
- if(h>15){const k=clamp((h-15)/3,0,1)*(g===2?.9:.7);r=lerp(r,.95,k);gg=lerp(gg,.96,k);b=lerp(b,1,k)}
+ if(h>30){const k=clamp((h-30)/6,0,1)*(g===2?.9:.7);r=lerp(r,.95,k);gg=lerp(gg,.96,k);b=lerp(b,1,k)}
  if(LV[c]>.02){const k=Math.min(1,LV[c]*1.5);r=lerp(r*v,2.4,k);gg=lerp(gg*v,.85,k);b=lerp(b*v,.15,k);CC[c*3]=r;CC[c*3+1]=gg;CC[c*3+2]=b;continue}
  CC[c*3]=r*v;CC[c*3+1]=gg*v;CC[c*3+2]=b*v}}
 // 땅 그림 (GPU)
 const TP=new Float32Array(NV*NV*3),TNr=new Float32Array(NV*NV*3),TCo=new Float32Array(NV*NV*3);
 const TER=(()=>{const vao=gl.createVertexArray();gl.bindVertexArray(vao);const mk=(loc,arr)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,arr.byteLength,gl.DYNAMIC_DRAW);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);return b};
- const pb=mk(0,TP),nb=mk(1,TNr),cb=mk(2,TCo),ix=new Uint16Array(N*N*6);let k=0;
+ const pb=mk(0,TP),nb=mk(1,TNr),cb=mk(2,TCo),ix=new Uint32Array(N*N*6);let k=0;
  for(let z=0;z<N;z++)for(let x=0;x<N;x++){const i=z*NV+x;ix[k++]=i;ix[k++]=i+NV;ix[k++]=i+1;ix[k++]=i+1;ix[k++]=i+NV;ix[k++]=i+NV+1}
  const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,ix,gl.STATIC_DRAW);gl.bindVertexArray(null);return{vao,pb,nb,cb,n:ix.length}})();
-function updTerrainMesh(){for(let z=0;z<NV;z++)for(let x=0;x<NV;x++){const i=z*NV+x,o=i*3;TP[o]=x;TP[o+1]=H[i];TP[o+2]=z;
-  const nx=H[z*NV+Math.max(x-1,0)]-H[z*NV+Math.min(x+1,N)],nz=H[Math.max(z-1,0)*NV+x]-H[Math.min(z+1,N)*NV+x],l=Math.hypot(nx,2,nz);TNr[o]=nx/l;TNr[o+1]=2/l;TNr[o+2]=nz/l;
+function updTerrainMesh(z0=0,z1=N){z0=clamp(z0|0,0,N);z1=clamp(Math.ceil(z1),0,N);
+ for(let z=z0;z<=z1;z++)for(let x=0;x<NV;x++){const i=z*NV+x,o=i*3;TP[o]=x*CELL;TP[o+1]=H[i];TP[o+2]=z*CELL;
+  const nx=H[z*NV+Math.max(x-1,0)]-H[z*NV+Math.min(x+1,N)],nz=H[Math.max(z-1,0)*NV+x]-H[Math.min(z+1,N)*NV+x],l=Math.hypot(nx,2*CELL,nz);TNr[o]=nx/l;TNr[o+1]=2*CELL/l;TNr[o+2]=nz/l;
   let r=0,g=0,b=0,c=0;for(let dz=-1;dz<=0;dz++)for(let dx=-1;dx<=0;dx++){const cx=x+dx,cz=z+dz;if(cx<0||cz<0||cx>=N||cz>=N)continue;const q=(cz*N+cx)*3;r+=CC[q];g+=CC[q+1];b+=CC[q+2];c++}
   TCo[o]=r/c;TCo[o+1]=g/c;TCo[o+2]=b/c}
- gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,NV,NV,gl.RED,gl.FLOAT,H);gl.activeTexture(gl.TEXTURE0);
- gl.bindBuffer(gl.ARRAY_BUFFER,TER.pb);gl.bufferSubData(gl.ARRAY_BUFFER,0,TP);gl.bindBuffer(gl.ARRAY_BUFFER,TER.nb);gl.bufferSubData(gl.ARRAY_BUFFER,0,TNr);gl.bindBuffer(gl.ARRAY_BUFFER,TER.cb);gl.bufferSubData(gl.ARRAY_BUFFER,0,TCo)}
+ const a=z0*NV,e=(z1+1)*NV;
+ gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texSubImage2D(gl.TEXTURE_2D,0,0,z0,NV,z1-z0+1,gl.RED,gl.FLOAT,H.subarray(a,e));gl.activeTexture(gl.TEXTURE0);
+ for(const[b,arr]of[[TER.pb,TP],[TER.nb,TNr],[TER.cb,TCo]]){gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferSubData(gl.ARRAY_BUFFER,a*12,arr.subarray(a*3,e*3))}}
 // 바다·바다 밑·하늘
-const WAT=(()=>{const S=160,A=-130,B=258,p=[],ix=[];for(let j=0;j<=S;j++)for(let i=0;i<=S;i++)p.push(A+(B-A)*i/S,0,A+(B-A)*j/S);
+const WAT=(()=>{const S=120,A=-80,B=WS+80,p=[],ix=[];for(let j=0;j<=S;j++)for(let i=0;i<=S;i++)p.push(A+(B-A)*i/S,0,A+(B-A)*j/S);
  for(let j=0;j<S;j++)for(let i=0;i<S;i++){const a=j*(S+1)+i;ix.push(a,a+S+1,a+1,a+1,a+S+1,a+S+2)}return staticMesh(p,p.map((_,k)=>k%3===1?1:0),p.map(()=>.5),ix)})();
-const WAT2=(()=>{const S=96,A=-1600,B=1728,st=(B-A)/S,p=[],ix=[];for(let j=0;j<=S;j++)for(let i=0;i<=S;i++)p.push(A+st*i,0,A+st*j);
- for(let j=0;j<S;j++)for(let i=0;i<S;i++){const x0=A+st*i,z0=A+st*j;if(x0>=-130&&x0+st<=258&&z0>=-130&&z0+st<=258)continue;const a=j*(S+1)+i;ix.push(a,a+S+1,a+1,a+1,a+S+1,a+S+2)}
+const WAT2=(()=>{const S=96,A=-1600,B=WS+1600,st=(B-A)/S,p=[],ix=[];for(let j=0;j<=S;j++)for(let i=0;i<=S;i++)p.push(A+st*i,0,A+st*j);
+ for(let j=0;j<S;j++)for(let i=0;i<S;i++){const x0=A+st*i,z0=A+st*j;if(x0>=-80&&x0+st<=WS+80&&z0>=-80&&z0+st<=WS+80)continue;const a=j*(S+1)+i;ix.push(a,a+S+1,a+1,a+1,a+S+1,a+S+2)}
  return staticMesh(p,p.map((_,k)=>k%3===1?1:0),p.map(()=>.5),ix)})();
-const SEA=staticMesh([-1700,-7.5,-1700,1830,-7.5,-1700,-1700,-7.5,1830,1830,-7.5,1830],[0,1,0,0,1,0,0,1,0,0,1,0],[.48,.44,.34,.48,.44,.34,.48,.44,.34,.48,.44,.34],[0,2,1,1,2,3]);
+const SEA=staticMesh([-1800,-12.5,-1800,WS+1800,-12.5,-1800,-1800,-12.5,WS+1800,WS+1800,-12.5,WS+1800],[0,1,0,0,1,0,0,1,0,0,1,0],[.48,.44,.34,.48,.44,.34,.48,.44,.34,.48,.44,.34],[0,2,1,1,2,3]);
 const SKY=(()=>{const vao=gl.createVertexArray();gl.bindVertexArray(vao);const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.bindVertexArray(null);return vao})();
 function platformMesh(r){const p=[0,0,0],n=[0,1,0],c=[.78,.76,.7],ix=[],S=56;
  for(let i=0;i<=S;i++){const a=i/S*TAU;for(const[rr,y,col]of[[r*.97,0,i%2?[.74,.72,.66]:[.8,.78,.72]],[r,-.06,[.6,.58,.53]],[r,-.6,[.5,.48,.44]]]){p.push(Math.cos(a)*rr,y,Math.sin(a)*rr);n.push(Math.cos(a)*(y<0?1:0),y<0?0:1,Math.sin(a)*(y<0?1:0));c.push(...col)}}
@@ -748,11 +753,11 @@ function newPiece(slot,seed){const P={slot,seed,H:new Float32Array(PNV*PNV),CH:n
 const dirName=(x,z)=>Math.abs(x)>Math.abs(z)?(x>0?'동쪽':'서쪽'):(z>0?'남쪽':'북쪽');
 
 // ================= 세상 =================
-const DT=.05,PSTEP=8,MAXA=450,MAXPW=1000,MAXPL=3400,SPLIT=.08,DAY=60,MAXSP=36;
+const DT=.05,PSTEP=16,MAXA=450,MAXPW=1700,MAXPL=3400,SPLIT=.08,DAY=60,MAXSP=36;
 let W=null;
 const MESH=new Map();
 function newWorldState(seed){return{seed,t:0,tick:0,A:[],P:[],C:[],SP:[],hist:[],log:[],deaths:{},npw:0,npl:0,evo:1,dim:0,boost:0,winter:null,volc:[],conts:[],lava:0,natural:true,lastDay:0,lastBig:0,selA:-1,selP:-1,nid:1,speed:1,demo:false}}
-function meshOf(sp){let m=MESH.get(sp.id);if(!m){m=uploadMesh(sp.kind==='a'?buildAnimal(sp.g):buildPlant(sp.g));MESH.set(sp.id,m);sp.mg={...sp.g};sp.ver=(sp.ver||0)+1;THUMB.delete(sp.id)}return m}
+function meshOf(sp){let m=MESH.get(sp.id);if(!m){m=uploadMesh(sp.kind==='a'?buildAnimal(sp.g):buildPlant(sp.g));MESH.set(sp.id,m);sp.mg={...sp.g};sp.ver=(sp.ver||0)+1;sp.thumbOld=1}return m}
 // 종의 모습은 지금 살아 있는 무리의 평균 유전자 → 무리가 진화하면 모습도 조금씩 바뀜
 function updateReps(){const sums=new Map();
  const acc=(o,defs)=>{let r=sums.get(o.sp);if(!r){r={n:0,v:new Float64Array(defs.length),hx:new Float64Array(defs.length),hy:new Float64Array(defs.length)};sums.set(o.sp,r)}r.n++;
@@ -761,7 +766,7 @@ function updateReps(){const sums=new Map();
  let rebuilt=0;
  for(const[id,r]of sums){const sp=W.SP[id],defs=defOf(sp.kind);if(r.n<3)continue;
   defs.forEach((d,i)=>{const k=d[0];if(HUEK[k])sp.g[k]=((Math.atan2(r.hy[i],r.hx[i])*180/Math.PI)+360)%360;else{let v=r.v[i]/r.n;if(SWITCH[k])v=Math.round(v);sp.g[k]=v}});
-  if(rebuilt<3&&MESH.has(id)&&sp.mg&&gdist(sp.g,sp.mg,defs)>.03){freeMesh(MESH.get(id));MESH.delete(id);rebuilt++}}}
+  if(rebuilt<1&&MESH.has(id)&&sp.mg&&gdist(sp.g,sp.mg,defs)>.03){freeMesh(MESH.get(id));MESH.delete(id);rebuilt++}}}
 function clearMeshes(){for(const m of MESH.values())freeMesh(m);MESH.clear();for(const m of LODM.values())freeMesh(m);LODM.clear()}
 const SY=['뽀','꾸','루','미','타','콩','몽','삐','라','도','쿠','니','포','링','차','보','토','리','마','누','빠','초','롱','뭉','하','소','유','키','파','모','나','부','지','투','랑','솔','디','코'];
 function autoName(kind,g){let s='';const n=2+(R()<.35?1:0);for(let i=0;i<n;i++)s+=pick(SY);
@@ -800,7 +805,7 @@ function fertAt(x,z,g){if(!inWorld(x,z))return 0;const S=soilAt(x,z),h=S[0],sm=S
  let f=1-Math.abs(sm-aq)*1.5;
  if(gt===1)f*=aq<.3?1:.6;else if(gt===2)f*=.25;else if(aq<.2)f*=.8;
  if(aq>.75)f*=clamp((.9-aq)*6.7,0,1);// 물에서만 사는 식물은 땅 위에서 잘 못 자람
- if(h>14)f*=.6;return clamp(f,0,1)}
+ if(h>28)f*=.6;return clamp(f,0,1)}
 function tintFor(kind,g,sp){const a=kind==='a'?animalCols(g).c1:hsl(g.hue,.55,.36),b=kind==='a'?animalCols(sp.g).c1:hsl(sp.g.hue,.55,.36);return a.map((v,i)=>clamp(v/Math.max(b[i],.05),.5,2))}
 function addPlant(sp,g,x,z,gr){const d=deriveP(g);const p={sp:sp.id,g,d,x,z,y:heightAt(x,z),gr,eaten:0,age:0,seedT:d.seedT*(.5+R()),yaw:R()*TAU,dead:false,f:1,sh:1,wither:0,
  hs:Math.pow(g.height/sp.g.height,.7),tint:tintFor('p',g,sp)};if(p.y<-.05)W.npw++;else W.npl++;W.P.push(p);return p}
@@ -814,7 +819,7 @@ function plantUpdate(p,dt){p.age+=dt;const f=fertAt(p.x,p.z,p.g);p.f=f;
  if(f<.04){p.wither+=dt;if(p.wither>25){p.dead=true;return}}else p.wither=Math.max(0,p.wither-dt*2);
  if(p.age>p.d.life){p.dead=true;return}
  const sun=1-.65*(W.dim||0);if(W.dim&&R()<dt*.0025*W.dim*(p.y>-.05?1:.3)*(1+p.d.h*.3)){p.dead=true;return}
- const sh=shadeAt(p)*sun;p.sh=sh;if(sh*f<.12&&p.gr<.9&&!W.dim){p.weak=(p.weak||0)+dt;if(p.weak>40){p.dead=true;return}}else p.weak=0;
+ if(!((p.k=(p.k||0)+1)&1)||p.sh0===undefined)p.sh0=shadeAt(p);const sh=p.sh0*sun;p.sh=sh;if(sh*f<.12&&p.gr<.9&&!W.dim){p.weak=(p.weak||0)+dt;if(p.weak>40){p.dead=true;return}}else p.weak=0;
  if(p.gr<1)p.gr=Math.min(1,p.gr+p.d.grow*f*sh*dt);
  if(p.eaten>0)p.eaten=Math.max(0,p.eaten-p.d.regrow*dt*(.3+.7*f)*sun);
  if(p.gr>.6&&p.eaten<.55){p.seedT-=dt*(.3+.7*f)*sh;if(p.seedT<=0){p.seedT=p.d.seedT*(.7+R()*.6);for(let k=0;k<p.d.seeds;k++)sow(p)}}}
@@ -904,7 +909,7 @@ function stepAnimals(dt){buildAGrid();const A=W.A;
   moveA(a,dt)}
  if(A.some(a=>a.dead))W.A=A.filter(a=>!a.dead)}
 function stepCorpses(dt){let any=false;for(const c of W.C){c.t+=dt;c.meat-=dt*c.m0*.018;if(c.meat<=.05||c.t>70){c.dead=true;any=true}}if(any)W.C=W.C.filter(c=>!c.dead)}
-function tick(){W.t+=DT;W.tick++;stepAnimals(DT);stepPlants();stepCorpses(DT);if(W.tick%10===0)stepEvents(DT*10);if(W.tick%30===0){census();milestones()}if(W.tick%120===60)updateReps();if(W.tick%200===0)sampleHist()}
+function tick(){W.t+=DT;W.tick++;stepAnimals(DT);stepPlants();stepCorpses(DT);if(W.tick%10===0)stepEvents(DT*10);if(W.tick%30===0){census();milestones()}if(W.tick%240===60)updateReps();if(W.tick%200===0)sampleHist()}
 function census(){for(const s of W.SP)s.n=0;for(const a of W.A)if(!a.dead)W.SP[a.sp].n++;for(const p of W.P)if(!p.dead)W.SP[p.sp].n++;
  for(const s of W.SP){if(s.n>s.peak)s.peak=s.n;
   if(s.quiet&&s.n>=4){s.quiet=false;const par=W.SP[s.parent];if(!W.demo)addLog(`새 종이 생겼어요! ${josa(s.name,'은','는')} ${par?par.name:'?'}에서 갈라졌어요`,0,s.id)}
@@ -921,21 +926,25 @@ function newGame(type,demo,where){clearMeshes();THUMB.clear();LV.fill(0);FX=[];P
  const sp0=where==='ocean'?addSpecies('p',{...OCEAN_P},'원시 떠말',-1,true):where==='land'?addSpecies('p',{...LAND_P},'원시 땅말',-1,true):W.SP[0];
  const FA=makeFounders(where);FA.forEach(f=>f.push(addSpecies('a',{...f[1]},f[0],-1,true)));W.selP=sp0.id;W.selA=FA[0][3].id;
  const ctr=populate(FA,where,sp0);for(const P of PIECES)islandLife(P,FA,demo,where,sp0);if(where==='land')W.mile={landP:1};
- buildPGrid();census();sampleHist();Object.assign(cam,{tx:ctr[0],tz:ctr[1],yaw:.9,pitch:.55,dist:demo?118:where==='ocean'?26:16});if(demo)Object.assign(cam,{tx:64,tz:64});cam.follow=null;sel=null;terrainDirty=true}
+ buildPGrid();census();sampleHist();Object.assign(cam,{tx:ctr[0],tz:ctr[1],yaw:.9,pitch:.55,dist:demo?560:where==='ocean'?26:16});if(demo)Object.assign(cam,{tx:WS/2,tz:WS/2});cam.follow=null;sel=null;terrainDirty=true}
 // 식물 n그루를 test를 통과하는 곳에, 동물(조상 다섯 무리)은 그 식물 근처에
-function seedLife(psp,g,n,area,test,FA,per,atest,demo){const placed=[];
+function seedLife(psp,g,n,area,test,FA,per,atest,demo,groups=3){const placed=[];
  for(let t=0;t<n*200&&placed.length<n;t++){const[x,z]=area();if(!inWorld(x,z)||!test(x,z)||placed.some(q=>(q.x-x)**2+(q.z-z)**2<.25))continue;const q=addPlant(psp,{...g},x,z,.55+R()*.45);q.age=R()*q.d.life*.5;placed.push(q)}
- buildPGrid();let first=placed.length?[placed[0].x,placed[0].z]:[64,64];if(demo||!placed.length)return first;
- FA.forEach(([nm,fg,cnt,asp],i)=>{const d=deriveA(fg),ctr=[pick(placed),pick(placed)];if(i===0)first=[ctr[0].x,ctr[0].z];
-  for(let k=0;k<per;k++){const c=ctr[k%2];let x=c.x,z=c.z,ok=false;for(let t=0;t<40&&!ok;t++){x=c.x+gauss()*3;z=c.z+gauss()*3;ok=canGo(x,z,d)&&atest(x,z)}
+ buildPGrid();let first=placed.length?[placed[0].x,placed[0].z]:[WS/2,WS/2];if(demo||!placed.length)return first;
+ FA.forEach(([nm,fg,cnt,asp],i)=>{const d=deriveA(fg),ctr=Array.from({length:groups},()=>pick(placed));if(i===0)first=[ctr[0].x,ctr[0].z];
+  for(let k=0;k<per;k++){const c=ctr[k%groups];let x=c.x,z=c.z,ok=false;for(let t=0;t<40&&!ok;t++){x=c.x+gauss()*3;z=c.z+gauss()*3;ok=canGo(x,z,d)&&atest(x,z)}
    if(ok){const a=spawnA(asp,{...fg},x,z,true);a.age=d.mature*(1+R()*2.2);a.E=d.Emax*(.75+R()*.2);a.cool=10+R()*50}}});
  return first}
-function populate(FA,where,psp){
- if(where==='ocean'){// 섬과 섬 사이 넓은 바다 한가운데
-  const P=PIECES[0],mx=lerp(64,P.ox+PN/2,.5),mz=lerp(64,P.oz+PN/2,.5);
-  return seedLife(psp,psp.g,280,()=>[mx+gauss()*15,mz+gauss()*15],(x,z)=>heightAt(x,z)<-2.5,FA,14,(x,z)=>heightAt(x,z)<-1)}
- if(where==='land')return seedLife(psp,psp.g,300,()=>[2+R()*(N-4),2+R()*(N-4)],(x,z)=>heightAt(x,z)>.3&&fertAt(x,z,psp.g)>.45,FA,14,(x,z)=>heightAt(x,z)>.3);
- return seedLife(psp,psp.g,260,()=>[2+R()*(N-4),2+R()*(N-4)],(x,z)=>{const h=heightAt(x,z);return h<-.15&&h>-1.8&&fertAt(x,z,psp.g)>.4},FA,14,(x,z)=>heightAt(x,z)<-.15)}
+function populate(FA,where,psp){const A=()=>[4+R()*(WS-8),4+R()*(WS-8)];
+ if(where==='ocean'){// 섬 앞 넓은 바다 한가운데
+  const a=R()*TAU;let d=0;while(d<WS*.8&&heightAt(WS/2+Math.cos(a)*d,WS/2+Math.sin(a)*d)>-6)d+=4;d+=45;const mx=WS/2+Math.cos(a)*d,mz=WS/2+Math.sin(a)*d;
+  return seedLife(psp,psp.g,450,()=>[mx+gauss()*24,mz+gauss()*24],(x,z)=>heightAt(x,z)<-2.5,FA,18,(x,z)=>heightAt(x,z)<-1)}
+ const ok=where==='land'?(x,z)=>heightAt(x,z)>.3&&fertAt(x,z,psp.g)>.45:(x,z)=>{const h=heightAt(x,z);return h<-.15&&h>-1.8&&fertAt(x,z,psp.g)>.4};
+ // 얕은 바다: 큰 섬 둘레 바닷가 전체(테두리)에서 한꺼번에 시작 (아이가 정함)
+ if(where!=='land')return seedLife(psp,psp.g,900,A,ok,FA,24,(x,z)=>heightAt(x,z)<-.15,false,8);
+ // 땅 위 슬라임: 큰 섬의 한 곳에서 시작해서 섬 전체로 천천히 퍼져 나감
+ let c0=[WS/2,WS/2];for(let t=0;t<4000;t++){const q=A();if(ok(q[0],q[1])){c0=q;break}}
+ return seedLife(psp,psp.g,450,()=>[c0[0]+gauss()*35,c0[1]+gauss()*35],ok,FA,18,(x,z)=>heightAt(x,z)>.3)}
 // 처음 있는 일 알려 주기
 function milestones(){if(W.demo)return;const M=W.mile||(W.mile={}),day=Math.floor(W.t/DAY)+1,on=(k,msg)=>{M[k]=day;addLog(msg,1)};
  if(!M.landP&&W.P.some(p=>!p.dead&&p.y>.25))on('landP','처음으로 식물이 땅 위에서 자라요!');
@@ -972,92 +981,87 @@ function fillFX(I,n,groups){const st=n;
  if(n>st)groups.push({m:PUFF,mode:3,st,c:n-st});return n}
 // 작은 운석: 누른 곳에 구덩이
 function dropMeteor(x,z,r){const sx=x-28,sy=95,sz=z-20;FX.push({sx,sy,sz,ex:x,ey:Math.max(heightAt(x,z),0),ez:z,x:sx,y:sy,z:sz,r:.8+r*.12,t:0,dur:1.6,onHit:()=>meteorHit(x,z,r)})}
-function meteorHit(x,z,r){if(!W)return;const x0=Math.max(0,Math.floor(x-r*1.3)),x1=Math.min(N,Math.ceil(x+r*1.3)),z0=Math.max(0,Math.floor(z-r*1.3)),z1=Math.min(N,Math.ceil(z+r*1.3));
- for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx-x,vz-z),i=vz*NV+vx;if(d<r)H[i]-=(1-(d/r)**2)*r*.55;else if(d<r*1.3)H[i]+=(1-(d-r)/(r*.3))*r*.16;H[i]=clamp(H[i],-8,28)}
- eachCell(x,z,r*.85,c=>{G[c]=2});markEdit(x0,z0,x1,z1);
+function meteorHit(x,z,r){if(!W)return;const[x0,z0,x1,z1]=vBox(x,z,r*1.3);
+ for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx*CELL-x,vz*CELL-z),i=vz*NV+vx;if(d<r)H[i]-=(1-(d/r)**2)*r*.55;else if(d<r*1.3)H[i]+=(1-(d-r)/(r*.3))*r*.16;H[i]=clamp(H[i],-14,56)}
+ eachCell(x,z,r*.85,c=>{G[c]=2});markEdit(x-r*1.3,z-r*1.3,x+r*1.3,z+r*1.3);
  for(const a of W.A)if(!a.dead&&(a.x-x)**2+(a.z-z)**2<(r*1.3)**2)dieA(a,'meteor');for(const q of W.P)if(!q.dead&&(q.x-x)**2+(q.z-z)**2<r*r*1.2)q.dead=true;W.A=W.A.filter(a=>!a.dead);
  const y=Math.max(heightAt(x,z),0)+.3;for(let k=0;k<40;k++)addPart(x,y,z,gauss()*r*.7,3+R()*r*1.1,gauss()*r*.7,.3+R()*r*.06,r*.2,1.5+R()*2,R()<.5?[2.4,1.1,.3]:SMOKE,6);
  for(let k=0;k<14;k++)addPart(x+gauss()*r*.4,y,z+gauss()*r*.4,gauss()*.5,1+R(),gauss()*.5,r*.25,r*.25,5+R()*3,SMOKE);
  shake=Math.max(shake,.5+r*.06);flashA=Math.max(flashA,.3)}
 // 아주 큰 운석: 멀리 바다에 떨어져 대멸종 (먼지 겨울 → 일부만 살아남음 → 살아남은 종이 빠르게 진화)
 let bigArm=0;
-function bigMeteor(natural){if(!W||W.winter||BIG||FX.some(f=>f.big))return;let th=R()*TAU,bs=-1;for(let t=0;t<24;t++){const a=R()*TAU;let md=9;for(const P of PIECES){const pa=Math.atan2(P.oz+PN/2-64,P.ox+PN/2-64);md=Math.min(md,Math.abs(Math.atan2(Math.sin(a-pa),Math.cos(a-pa))))}if(md>bs){bs=md;th=a}}const D=260,dir=[Math.cos(th),Math.sin(th)],ix=64+dir[0]*D,iz=64+dir[1]*D,pp=[-dir[1],dir[0]];
- cam.follow=null;flyTo=null;Object.assign(cam,{tx:64,tz:64,dist:75,pitch:.18,yaw:th+Math.PI});
- const sx=ix-dir[0]*140+pp[0]*90,sz=iz-dir[1]*140+pp[1]*90;
- FX.push({big:1,sx,sy:240,sz,ex:ix,ey:0,ez:iz,x:sx,y:240,z:sz,r:6,t:0,dur:4,onHit:()=>bigImpact(ix,iz)});
+function bigMeteor(natural){if(!W||W.winter||BIG||FX.some(f=>f.big))return;let th=R()*TAU,bs=-1;for(let t=0;t<24;t++){const a=R()*TAU;let md=9;for(const P of PIECES){const pa=Math.atan2(P.oz+PN/2-WS/2,P.ox+PN/2-WS/2);md=Math.min(md,Math.abs(Math.atan2(Math.sin(a-pa),Math.cos(a-pa))))}if(md>bs){bs=md;th=a}}const D=WS/2+320,dir=[Math.cos(th),Math.sin(th)],ix=WS/2+dir[0]*D,iz=WS/2+dir[1]*D,pp=[-dir[1],dir[0]];
+ cam.follow=null;flyTo=null;Object.assign(cam,{tx:WS/2,tz:WS/2,dist:300,pitch:.2,yaw:th+Math.PI});
+ const sx=ix-dir[0]*280+pp[0]*180,sz=iz-dir[1]*280+pp[1]*180;
+ FX.push({big:1,sx,sy:450,sz,ex:ix,ey:0,ez:iz,x:sx,y:450,z:sz,r:12,t:0,dur:5,onHit:()=>bigImpact(ix,iz)});
  addLog(natural?'하늘에서 엄청나게 큰 운석이 다가와요!':'엄청나게 큰 운석이 다가와요! 저 멀리 바다를 봐!',1)}
 let BIG=null;
 function bigImpact(ix,iz){if(!W)return;flashA=1;shake=2.4;
- for(let k=0;k<80;k++)addPart(ix+gauss()*15,2+R()*10,iz+gauss()*15,gauss()*6,10+R()*28,gauss()*6,8+R()*10,7+R()*9,10+R()*8,R()<.35?[2.2,1,.35]:[.42,.36,.33],1.5);
- for(let k=0;k<70;k++)addPart(ix+gauss()*8,3,iz+gauss()*8,gauss()*16,25+R()*45,gauss()*16,2+R()*4,0,5+R()*4,R()<.5?[.36,.28,.22]:[.5,.42,.34],12);// 부서진 땅 조각
- for(let k=0;k<40;k++)addPart(ix+gauss()*10,1,iz+gauss()*10,gauss()*10,15+R()*25,gauss()*10,3+R()*4,2,3+R()*2,[.9,.95,1],10);// 물보라
+ for(let k=0;k<80;k++)addPart(ix+gauss()*30,4+R()*20,iz+gauss()*30,gauss()*12,20+R()*55,gauss()*12,16+R()*20,14+R()*18,10+R()*8,R()<.35?[2.2,1,.35]:[.42,.36,.33],1.5);
+ for(let k=0;k<70;k++)addPart(ix+gauss()*16,6,iz+gauss()*16,gauss()*32,50+R()*90,gauss()*32,4+R()*8,0,5+R()*4,R()<.5?[.36,.28,.22]:[.5,.42,.34],12);// 부서진 땅 조각
+ for(let k=0;k<40;k++)addPart(ix+gauss()*20,2,iz+gauss()*20,gauss()*20,30+R()*50,gauss()*20,6+R()*8,4,3+R()*2,[.9,.95,1],20);// 물보라
  const before=W.SP.filter(sp=>sp.n>0&&!sp.quiet).length;
  BIG={ix,iz,t:0,hitA:new Set(),tsuA:new Set(),rain:[5,6,7,8,9,10.5,12,13.5].map(t=>t+R())};
  W.winter={t:0,dur:DAY*5,before};W.lastBig=W.t;
  addLog('엄청나게 큰 운석이 바다에 떨어졌어요! 충격파와 해일이 와요. 산 뒤나 높은 곳, 깊은 바닷속이면 살 수 있어요!',1)}
 // 운석 쪽을 바라봤을 때 산에 가려졌거나, 충격파보다 높은 곳이면 안전
-function sheltered(x,z,y,ix,iz){if(y>7)return true;const dx=ix-x,dz=iz-z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;
- for(let d=2;d<70;d+=1.5){const px=x+ux*d,pz=z+uz*d;if(px<0||pz<0||px>N||pz>N)break;if(heightAt(px,pz)>y+2.5)return true}return false}
-function stepBig(dt){if(!BIG||!W)return;const B=BIG;B.t+=dt;const R1=B.t*70,R2=B.t*28,dist=(x,z)=>Math.hypot(x-B.ix,z-B.iz);let dead=false;
+function sheltered(x,z,y,ix,iz){if(y>14)return true;const dx=ix-x,dz=iz-z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;
+ for(let d=3;d<140;d+=3){const px=x+ux*d,pz=z+uz*d;if(px<0||pz<0||px>WS||pz>WS)break;if(heightAt(px,pz)>y+4)return true}return false}
+function stepBig(dt){if(!BIG||!W)return;const B=BIG;B.t+=dt;const R1=B.t*110,R2=B.t*40,dist=(x,z)=>Math.hypot(x-B.ix,z-B.iz);let dead=false;
  // 충격파: 먼지 벽이 지나가며 드러난 곳의 생물을 쓰러뜨림
  for(const a of W.A){if(a.dead||B.hitA.has(a.id)||dist(a.x,a.z)>R1)continue;B.hitA.add(a.id);const h=heightAt(a.x,a.z);
   if(h<-1.2&&!a.d.fly)continue;if(!sheltered(a.x,a.z,a.y,B.ix,B.iz)&&R()<.7){dieA(a,'impact');dead=true}}
  for(const q of W.P){if(q.dead||q.shk||dist(q.x,q.z)>R1)continue;q.shk=1;if(q.y>-.05&&!sheltered(q.x,q.z,q.y,B.ix,B.iz)&&R()<.4)q.dead=true}
- const a0=Math.atan2(64-B.iz,64-B.ix);
- for(let k=0;k<6;k++){const an=a0+gauss()*.28,x=B.ix+Math.cos(an)*R1,z=B.iz+Math.sin(an)*R1;if(x<-15||z<-15||x>N+15||z>N+15)continue;
-  addPart(x,Math.max(heightAt(x,z),0)+1+R()*2,z,Math.cos(an)*8,1+R(),Math.sin(an)*8,2+R()*2,2.5,2+R(),[.58,.5,.42])}
+ const a0=Math.atan2(WS/2-B.iz,WS/2-B.ix);
+ for(let k=0;k<6;k++){const an=a0+gauss()*.28,x=B.ix+Math.cos(an)*R1,z=B.iz+Math.sin(an)*R1;if(x<-30||z<-30||x>WS+30||z>WS+30)continue;
+  addPart(x,Math.max(heightAt(x,z),0)+2+R()*4,z,Math.cos(an)*14,2+R()*2,Math.sin(an)*14,4+R()*4,5,2+R(),[.58,.5,.42])}
  // 해일: 낮은 바닷가를 덮침
  for(const a of W.A){if(a.dead||a.d.fly||B.tsuA.has(a.id))continue;const dd=dist(a.x,a.z);if(dd>R2)continue;B.tsuA.add(a.id);const h=heightAt(a.x,a.z);
-  if(h>-1.5&&h<2.8&&R()<.7){dieA(a,'tsunami');dead=true}}
- for(const q of W.P){if(q.dead||q.tsu||dist(q.x,q.z)>R2)continue;q.tsu=1;if(q.y>-.05&&q.y<1.8&&R()<.5)q.dead=true}
- for(let k=0;k<5;k++){const an=a0+gauss()*.35,x=B.ix+Math.cos(an)*R2,z=B.iz+Math.sin(an)*R2;if(x<0||z<0||x>N||z>N)continue;const h=heightAt(x,z);
-  if(h>-.8&&h<3)addPart(x,Math.max(h,0)+.5,z,Math.cos(an)*5,2+R()*2,Math.sin(an)*5,.8+R(),1.2,1.5,[.92,.96,1],4)}
+  if(h>-2&&h<5&&R()<.7){dieA(a,'tsunami');dead=true}}
+ for(const q of W.P){if(q.dead||q.tsu||dist(q.x,q.z)>R2)continue;q.tsu=1;if(q.y>-.05&&q.y<3.5&&R()<.5)q.dead=true}
+ for(let k=0;k<5;k++){const an=a0+gauss()*.35,x=B.ix+Math.cos(an)*R2,z=B.iz+Math.sin(an)*R2;if(x<0||z<0||x>WS||z>WS)continue;const h=heightAt(x,z);
+  if(h>-1&&h<5)addPart(x,Math.max(h,0)+.8,z,Math.cos(an)*8,3+R()*3,Math.sin(an)*8,1.5+R()*2,2,1.5,[.92,.96,1],6)}
  // 날아온 땅 조각이 섬에 떨어짐
- while(B.rain.length&&B.t>B.rain[0]){B.rain.shift();dropMeteor(12+R()*(N-24),12+R()*(N-24),2.5+R()*1.5)}
+ while(B.rain.length&&B.t>B.rain[0]){B.rain.shift();dropMeteor(30+R()*(WS-60),30+R()*(WS-60),4+R()*4)}
  if(dead)W.A=W.A.filter(a=>!a.dead);
- if(B.t>2&&B.t<2.1)toast('충격파가 와요!',1);if(B.t>6&&B.t<6.1)toast('해일이 밀려와요!',1);
- if(R2>Math.max(Math.hypot(B.ix-64,B.iz-64)+110,...PIECES.map(P=>Math.hypot(B.ix-P.ox-PN/2,B.iz-P.oz-PN/2)+80))&&!B.rain.length){BIG=null;W.P=W.P.filter(q=>!q.dead);buildPGrid();census();addLog('충격파와 해일이 지나갔어요. 먼지가 하늘을 가려 햇빛이 약해져요… 대멸종이 시작됐어요',1)}}
+ if(B.t>2.6&&B.t<2.7)toast('충격파가 와요!',1);if(B.t>7.5&&B.t<7.6)toast('해일이 밀려와요!',1);
+ if(R2>Math.max(Math.hypot(B.ix-WS/2,B.iz-WS/2)+WS*.75,...PIECES.map(P=>Math.hypot(B.ix-P.ox-PN/2,B.iz-P.oz-PN/2)+80))&&!B.rain.length){BIG=null;W.P=W.P.filter(q=>!q.dead);buildPGrid();census();addLog('충격파와 해일이 지나갔어요. 먼지가 하늘을 가려 햇빛이 약해져요… 대멸종이 시작됐어요',1)}}
 // 화산: 솟아오름 → 분화(용암) → 잠잠
 function makeVolcano(x,z,natural){if(!W)return;W.volc=W.volc||[];if(W.volc.length>=4){toast('화산이 너무 많아요. 조금 기다려 줘');return}
- W.volc.push({x,z,r:7+R()*3,peak:Math.max(heightAt(x,z),0)+8+R()*5,t:0,ph:0,emit:0});addLog(natural?'땅이 흔들려요… 새 화산이 솟아올라요!':'화산이 솟아올라요!',1);shake=Math.max(shake,1)}
+ W.volc.push({x,z,r:16+R()*8,peak:Math.max(heightAt(x,z),0)+16+R()*12,t:0,ph:0,emit:0});addLog(natural?'땅이 흔들려요… 새 화산이 솟아올라요!':'화산이 솟아올라요!',1);shake=Math.max(shake,1)}
 function stepVolc(dt){if(!W.volc||!W.volc.length)return;
  for(const v of W.volc){v.t+=dt;
-  if(v.ph===0){const k=Math.min(1,dt/6),x0=Math.max(0,Math.floor(v.x-v.r)),x1=Math.min(N,Math.ceil(v.x+v.r)),z0=Math.max(0,Math.floor(v.z-v.r)),z1=Math.min(N,Math.ceil(v.z+v.r));
-   for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx-v.x,vz-v.z);if(d>v.r)continue;let pf=v.peak*Math.pow(1-d/v.r,1.3)-7*Math.pow(d/v.r,2);
-    if(d<v.r*.18)pf-=(1-d/(v.r*.18))*2.2;const i=vz*NV+vx;if(pf>H[i])H[i]=lerp(H[i],pf,k)}
-   markEdit(x0,z0,x1,z1);eachCell(v.x,v.z,v.r*.7,c=>{G[c]=2});
+  if(v.ph===0){const k=Math.min(1,dt/6),[x0,z0,x1,z1]=vBox(v.x,v.z,v.r);
+   for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx*CELL-v.x,vz*CELL-v.z);if(d>v.r)continue;let pf=v.peak*Math.pow(1-d/v.r,1.3)-12*Math.pow(d/v.r,2);
+    if(d<v.r*.18)pf-=(1-d/(v.r*.18))*4;const i=vz*NV+vx;if(pf>H[i])H[i]=lerp(H[i],pf,k)}
+   markEdit(v.x-v.r,v.z-v.r,v.x+v.r,v.z+v.r);eachCell(v.x,v.z,v.r*.7,c=>{G[c]=2});
    if(v.t>25){v.ph=1;v.t=0;addLog('화산이 터졌어요! 용암이 흘러요',1);shake=Math.max(shake,1.4)}}
-  else if(v.ph===1){const cx=clamp(v.x|0,1,N-2),cz=clamp(v.z|0,1,N-2);for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){const c=(cz+dz)*N+cx+dx;LV[c]=Math.min(1.6,LV[c]+dt*.8)}W.lava=1;if(v.t>60){v.ph=2;v.t=0}}
+  else if(v.ph===1){const cx=clamp((v.x/CELL)|0,1,N-2),cz=clamp((v.z/CELL)|0,1,N-2);for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){const c=(cz+dz)*N+cx+dx;LV[c]=Math.min(1.6,LV[c]+dt*.8)}W.lava=1;if(v.t>60){v.ph=2;v.t=0}}
   else if(v.t>40)v.done=true}
  W.volc=W.volc.filter(v=>!v.done)}
-function stepLava(dt){if(!W.lava)return;let any=0;
- for(let c=0;c<N*N;c++){if(LV[c]<=.02)continue;any=1;const x=c%N,z=(c/N)|0,sf=CH[c]+LV[c]*.6;let best=-1,bs=sf;
+function stepLava(dt){if(!W.lava)return;let any=0,lz0=N,lz1=0;
+ for(let c=0;c<N*N;c++){if(LV[c]<=.02)continue;any=1;const x=c%N,z=(c/N)|0;if(z<lz0)lz0=z;if(z>lz1)lz1=z;const sf=CH[c]+LV[c]*.6;let best=-1,bs=sf;
   for(const nb of[x>0?c-1:-1,x<N-1?c+1:-1,z>0?c-N:-1,z<N-1?c+N:-1]){if(nb<0)continue;const s2=CH[nb]+LV[nb]*.6;if(s2<bs){bs=s2;best=nb}}
   if(best>=0){const mv=Math.min(LV[c]*.45,(sf-bs)*.5)*Math.min(1,dt*1.5);LV[c]-=mv;LV[best]+=mv}
   LV[c]-=dt*(CH[c]<0?.25:.025);
   if(LV[c]>.25){const i=z*NV+x;if(CH[c]<0){H[i]+=.12*dt;H[i+1]+=.12*dt;H[i+NV]+=.12*dt;H[i+NV+1]+=.12*dt;terrainDirty=true;moistDirty=true}G[c]=2}
   if(LV[c]<=.02)LV[c]=0}
- if(any){colorDirty=true;// 용암 위 생물
-  for(const q of W.P)if(!q.dead&&LV[(q.z|0)*N+(q.x|0)]>.25)q.dead=true;
-  for(const a of W.A)if(!a.dead&&!a.d.fly&&LV[(a.z|0)*N+(a.x|0)]>.25)dieA(a,'lava');W.A=W.A.filter(a=>!a.dead)}
- else{W.lava=0;colorDirty=true}}
-// 다른 섬 2개: 바다 건너 제자리에 있음 (아이가 정함: "대륙이동은 없애줘").
-// 세 섬 생물은 같은 조상(원생동물 다섯 무리)에서 시작하고, 섬마다 원시 말 모양만 조금 달라서 조금씩 다르게 진화함
-function makeIslandTerrain(){freePieces();const th1=R()*TAU;
- [[th1,230],[th1+Math.PI+gauss()*.5,270]].forEach(([th,dist],k)=>{const P=newPiece(k,(R()*1e9)|0);pieceTerrain(P,P.seed);const cx=64+Math.cos(th)*dist,cz=64+Math.sin(th)*dist;
-  P.ox=cx-PN/2;P.oz=cz-PN/2;P.name=dirName(cx-64,cz-64)+' 섬';PIECES.push(P);pieceRefresh(P)});W.conts=PIECES}
-function onPiece(P,x,z){const lx=x-P.ox,lz=z-P.oz;if(lx<=0||lz<=0||lx>=PN||lz>=PN)return false;const v=pieceH(P,lx,lz);return v>-.4&&v>=((x>-.5&&z>-.5&&x<N+.5&&z<N+.5)?hMain(x,z):-7.5)}
+ const lv=(x,z)=>x>=0&&z>=0&&x<WS&&z<WS?LV[((z/CELL)|0)*N+((x/CELL)|0)]:0;
+ if(any){colorDirty=true;markBox(0,lz0*CELL-2,WS,lz1*CELL+2);// 용암 위 생물
+  for(const q of W.P)if(!q.dead&&lv(q.x,q.z)>.25)q.dead=true;
+  for(const a of W.A)if(!a.dead&&!a.d.fly&&lv(a.x,a.z)>.25)dieA(a,'lava');W.A=W.A.filter(a=>!a.dead)}
+ else{W.lava=0;colorDirty=true;markBox(0,0,WS,WS)}}
+function makeIslandTerrain(){freePieces();W.conts=PIECES}// 지금은 큰 섬 하나뿐 (아이가 정함). 다른 섬 땅 조각 기능은 남겨 둠
+function onPiece(P,x,z){const lx=x-P.ox,lz=z-P.oz;if(lx<=0||lz<=0||lx>=PN||lz>=PN)return false;const v=pieceH(P,lx,lz);return v>-.4&&v>=((x>-.5&&z>-.5&&x<WS+.5&&z<WS+.5)?hMain(x,z):-12.5)}
 function islandLife(P,FA,demo,where,psp){if(where==='ocean')return;// 먼 바다에서 시작하면 섬들은 처음엔 비어 있음
  const g={...psp.g,hue:(psp.g.hue+(R()<.5?-1:1)*(25+R()*35)+360)%360,leafShape:R()<.5?.45+R()*.2:.75+R()*.2,height:psp.g.height+R()*.25,leafCount:Math.round(4+R()*5),branches:R()<.5?1:0};
  const sp=addSpecies('p',g,P.name.replace(' 섬','')+' '+psp.name,psp.id,false),inP=(x,z)=>onPiece(P,x,z);
  if(where==='land')seedLife(sp,g,150,()=>[P.ox+2+R()*(PN-4),P.oz+2+R()*(PN-4)],(x,z)=>inP(x,z)&&heightAt(x,z)>.3&&fertAt(x,z,g)>.45,FA,7,(x,z)=>heightAt(x,z)>.3,demo);
  else seedLife(sp,g,130,()=>[P.ox+2+R()*(PN-4),P.oz+2+R()*(PN-4)],(x,z)=>{const h=heightAt(x,z);return inP(x,z)&&h<-.15&&h>-1.8&&fertAt(x,z,g)>.4},FA,7,(x,z)=>heightAt(x,z)<-.15,demo)}
-function contView(){if(!PIECES.length){toast('다른 섬이 없어요');return}contView.k=((contView.k===undefined?-1:contView.k)+1)%(PIECES.length+1);const P=PIECES[contView.k];
- cam.follow=null;if(!P){flyTo=[64,64];toast('처음 섬으로 돌아와요');return}flyTo=[P.ox+PN/2,P.oz+PN/2];cam.dist=Math.max(cam.dist,130);cam.pitch=.6;toast(`${P.name}으로 가요! (WASD로 둘러봐)`)}
 function stepEvents(dt){
  const dayN=Math.floor(W.t/DAY);if(dayN!==W.lastDay){W.lastDay=dayN;if(W.natural!==false&&!W.demo&&dayN>0){
-  if(dayN>3&&R()<1/45)dropMeteor(10+R()*(N-20),10+R()*(N-20),3+R()*4);
-  if(dayN>15&&R()<1/70){for(let t=0;t<50;t++){const x=15+R()*(N-30),z=15+R()*(N-30);if(heightAt(x,z)>-2){makeVolcano(x,z,true);break}}}
+  if(dayN>3&&R()<1/45)dropMeteor(20+R()*(WS-40),20+R()*(WS-40),4+R()*8);
+  if(dayN>15&&R()<1/70){for(let t=0;t<50;t++){const x=30+R()*(WS-60),z=30+R()*(WS-60);if(heightAt(x,z)>-2){makeVolcano(x,z,true);break}}}
   if(dayN>90&&!W.winter&&(!W.lastBig||W.t-W.lastBig>DAY*40)&&R()<1/150)bigMeteor(true)}}
  stepVolc(dt);stepLava(dt);
  if(W.winter){const w=W.winter;w.t+=dt;const u=w.t/w.dur;W.dim=u<.45?Math.min(1,u*8):Math.max(0,1-(u-.45)/.55);
@@ -1067,14 +1071,14 @@ function stepEvents(dt){
  if(W.boost>0)W.boost-=dt}
 
 // ================= 카메라·고르기 =================
-const cam={tx:64,tz:64,tyS:0,yaw:.9,pitch:.62,dist:105,follow:null};
+const cam={tx:WS/2,tz:WS/2,tyS:0,yaw:.9,pitch:.62,dist:460,follow:null};
 const scam={tx:0,ty:.5,tz:0,yaw:.9,pitch:.3,dist:4,auto:1};
 let VPm=null,IVP=null,EYE=[0,0,0],sel=null;
 function computeCam(studio){const c=studio?scam:cam,aspect=cv.width/cv.height;let ty;
  if(studio)ty=c.ty;else{c.tyS=lerp(c.tyS,Math.max(0,heightAt(c.tx,c.tz)),.08);ty=c.tyS}
  const cp=Math.cos(c.pitch),e=[c.tx+c.dist*cp*Math.cos(c.yaw),ty+c.dist*Math.sin(c.pitch),c.tz+c.dist*cp*Math.sin(c.yaw)];
  if(!studio){const gh=Math.max(heightAt(e[0],e[2]),0)+1.2;if(e[1]<gh)e[1]=gh;if(shake>0){const k=shake*Math.min(1,c.dist*.02)*.6;e[0]+=gauss()*k;e[1]+=gauss()*k;e[2]+=gauss()*k}}
- EYE=e;const V=M4.look(e,[c.tx,ty,c.tz],[0,1,0]),P=M4.persp(.85,aspect,studio?.05:.3,studio?200:1600);VPm=M4.mul(P,V);IVP=M4.inv(VPm)}
+ EYE=e;const V=M4.look(e,[c.tx,ty,c.tz],[0,1,0]),P=M4.persp(.85,aspect,studio?.05:.3,studio?200:3200);VPm=M4.mul(P,V);IVP=M4.inv(VPm)}
 function toScreen(x,y,z){const m=VPm,cx=m[0]*x+m[4]*y+m[8]*z+m[12],cy=m[1]*x+m[5]*y+m[9]*z+m[13],cw=m[3]*x+m[7]*y+m[11]*z+m[15];if(cw<=.01)return null;
  return[(cx/cw*.5+.5)*innerWidth,(1-(cy/cw*.5+.5))*innerHeight,cw]}
 function rayAt(sx,sy){const nx=sx/innerWidth*2-1,ny=1-sy/innerHeight*2,m=IVP;
@@ -1084,8 +1088,8 @@ function pickGround(sx,sy){if(!IVP)return null;const{o,d}=rayAt(sx,sy);let t=0,p
  for(let i=0;i<3000;i++){const x=o[0]+d[0]*t,y=o[1]+d[1]*t,z=o[2]+d[2]*t;
   if(inWorld(x,z)){const h=heightAt(x,z);
    if(y<=h){let a=prev,b=t;for(let k=0;k<16;k++){const mm=(a+b)/2;if(o[1]+d[1]*mm<=heightAt(o[0]+d[0]*mm,o[2]+d[2]*mm))b=mm;else a=mm}return[o[0]+d[0]*b,o[1]+d[1]*b,o[2]+d[2]*b]}
-   prev=t;t+=clamp((y-h)*.4,.15,2)}else{prev=t;t+=1.5}
-  if(t>1500||y<-40)break}
+   prev=t;t+=clamp((y-h)*.4,.15,3)}else{prev=t;t+=2}
+  if(t>3000||y<-40)break}
  return null}
 function pickThing(sx,sy){let best=null,bd=1e9;
  for(const a of W.A){if(a.dead)continue;const sc=toScreen(a.x,a.y+a.d.legH*a.gr*.8+.2,a.z);if(!sc)continue;const rr=Math.max(16,a.d.len*a.gr*innerHeight*1.1/sc[2]),dd=Math.hypot(sc[0]-sx,sc[1]-sy);if(dd<rr&&dd<bd){bd=dd;best=a}}
@@ -1113,27 +1117,27 @@ const TOOLS=[
  ['meteor','☄️','운석','누른 곳에 운석이 떨어져요 (붓 크기 = 운석 크기)'],
  ['volcano','🌋','화산','누른 곳에 화산이 솟아올라 터져요'],
  ['act:big','💥','큰 운석','멀리 바다에 엄청 큰 운석이 떨어져 대멸종이 일어나요. 일부 종만 살아남아요'],
- ['act:cont','🏝️','다른 섬','바다 건너 다른 섬으로 날아가 봐요 (WASD로 둘러보기)'],
 ];
 let tool='look',toolHeld=false,cursor=null,flatH=0,toolT=0,lastToast={};
 const mouse={x:0,y:0,in:false};
 function brushR(){return+$('#brush').value}
 function bigAct(k,b){if(!W||mode!=='world')return;
- if(k==='act:cont'){contView();return}
  if(W.winter||FX.some(f=>f.big)){toast('지금은 먼지 겨울이에요. 하늘이 맑아진 다음에 해 봐');return}
  if(BIG)return;
  if(performance.now()-bigArm<3000){bigArm=0;b.querySelector('.lb').textContent='큰 운석';bigMeteor(false)}
  else{bigArm=performance.now();b.querySelector('.lb').textContent='한 번 더!';toast('정말 떨어뜨릴까? 대멸종이 일어나요. 한 번 더 누르면 떨어져요');setTimeout(()=>{b.querySelector('.lb').textContent='큰 운석'},3000)}}
 function setTool(t){tool=t;for(const b of document.querySelectorAll('#tools button'))b.classList.toggle('on',b.dataset.t===t);const d=TOOLS.find(x=>x[0]===t);$('#hint').textContent=d?d[3]:'';updBTip()}
 function toastOnce(k,msg){const now=performance.now();if(lastToast[k]&&now-lastToast[k]<2500)return;lastToast[k]=now;toast(msg)}
+function markBox(x0,z0,x1,z1){if(!editBox)editBox=[x0,z0,x1,z1];else{editBox[0]=Math.min(editBox[0],x0);editBox[1]=Math.min(editBox[1],z0);editBox[2]=Math.max(editBox[2],x1);editBox[3]=Math.max(editBox[3],z1)}}
 function markEdit(x0,z0,x1,z1){terrainDirty=true;moistDirty=true;colorDirty=true;if(!editBox)editBox=[x0,z0,x1,z1];else{editBox[0]=Math.min(editBox[0],x0);editBox[1]=Math.min(editBox[1],z0);editBox[2]=Math.max(editBox[2],x1);editBox[3]=Math.max(editBox[3],z1)}}
-function editH(x,z,r,dt){const x0=Math.max(0,Math.floor(x-r)),x1=Math.min(N,Math.ceil(x+r)),z0=Math.max(0,Math.floor(z-r)),z1=Math.min(N,Math.ceil(z+r)),s=tool==='raise'?1:tool==='lower'?-1:0;
- for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx-x,vz-z);if(d>r)continue;const w=.5+.5*Math.cos(Math.PI*d/r),i=vz*NV+vx;
-  if(s)H[i]=clamp(H[i]+s*7*dt*w,-8,28);else H[i]=lerp(H[i],flatH,Math.min(1,8*dt*w))}
- markEdit(x0,z0,x1,z1)}
-function eachCell(x,z,r,fn){for(let cz=Math.max(0,Math.floor(z-r));cz<Math.min(N,Math.ceil(z+r));cz++)for(let cx=Math.max(0,Math.floor(x-r));cx<Math.min(N,Math.ceil(x+r));cx++){const d=Math.hypot(cx+.5-x,cz+.5-z);if(d<=r)fn(cz*N+cx,d)}}
+function vBox(x,z,r){return[Math.max(0,Math.floor((x-r)/CELL)),Math.max(0,Math.floor((z-r)/CELL)),Math.min(N,Math.ceil((x+r)/CELL)),Math.min(N,Math.ceil((z+r)/CELL))]}
+function editH(x,z,r,dt){const[x0,z0,x1,z1]=vBox(x,z,r),s=tool==='raise'?1:tool==='lower'?-1:0;
+ for(let vz=z0;vz<=z1;vz++)for(let vx=x0;vx<=x1;vx++){const d=Math.hypot(vx*CELL-x,vz*CELL-z);if(d>r)continue;const w=.5+.5*Math.cos(Math.PI*d/r),i=vz*NV+vx;
+  if(s)H[i]=clamp(H[i]+s*9*dt*w,-14,56);else H[i]=lerp(H[i],flatH,Math.min(1,8*dt*w))}
+ markEdit(x-r,z-r,x+r,z+r)}
+function eachCell(x,z,r,fn){const[x0,z0,x1,z1]=vBox(x,z,r);for(let cz=z0;cz<Math.min(N,z1);cz++)for(let cx=x0;cx<Math.min(N,x1);cx++){const d=Math.hypot((cx+.5)*CELL-x,(cz+.5)*CELL-z);if(d<=r)fn(cz*N+cx,d)}}
 function paintG(x,z,r,t){eachCell(x,z,r,c=>{G[c]=t});markEdit(x-r,z-r,x+r,z+r)}
-function paintW(x,z,r,dt,s){eachCell(x,z,r,(c,d)=>{WET[c]=clamp(WET[c]+s*1.6*dt*(1-d/(r+.5)),-1,1)});moistDirty=true;colorDirty=true}
+function paintW(x,z,r,dt,s){eachCell(x,z,r,(c,d)=>{WET[c]=clamp(WET[c]+s*1.6*dt*(1-d/(r+.5)),-1,1)});moistDirty=true;colorDirty=true;markBox(x-r,z-r,x+r,z+r)}
 function scatterP(x,z,r){const sp=W.SP[W.selP];if(!sp||sp.kind!=='p'){toastOnce('selp','아래에서 심을 식물을 먼저 골라 줘');return}
  for(let k=0;k<10;k++){const a=R()*TAU,d=Math.sqrt(R())*Math.max(.3,r*.9),px=x+Math.cos(a)*d,pz=z+Math.sin(a)*d;
   if(fertAt(px,pz,sp.design||sp.g)<.05)continue;if(crowded(px,pz,.4))continue;addPlant(sp,{...(sp.design||sp.g)},px,pz,.15);sp.ext=false;sp.n++;buildPGridSoon=true;return}
@@ -1147,7 +1151,7 @@ function placeA(x,z,r){const sp=W.SP[W.selA];if(!sp||sp.kind!=='a'){toastOnce('s
 function eraseAt(x,z,r){const r2=r*r;for(const a of W.A)if((a.x-x)**2+(a.z-z)**2<r2)a.dead=true;for(const p of W.P)if((p.x-x)**2+(p.z-z)**2<r2)p.dead=true;for(const c of W.C)if((c.x-x)**2+(c.z-z)**2<r2)c.dead=true;
  W.A=W.A.filter(a=>!a.dead);W.C=W.C.filter(c=>!c.dead);if(sel&&sel.dead)sel=null}
 function applyTool(dt){if(!toolHeld||mode!=='world')return;cursor=pickGround(mouse.x,mouse.y);if(!cursor)return;const x=cursor[0],z=cursor[2],r=brushR();
- if(['raise','lower','flat','soil','sand','rock','wet','dry'].includes(tool)&&(x<0||z<0||x>N||z>N)){toastOnce('far','다른 섬의 땅은 못 바꿔요 (생물은 심고 풀어 놓을 수 있어요)');return}
+ if(['raise','lower','flat','soil','sand','rock','wet','dry'].includes(tool)&&(x<0||z<0||x>WS||z>WS)){toastOnce('far','섬 밖 먼 바다는 땅을 못 바꿔요');return}
  switch(tool){
   case'raise':case'lower':case'flat':editH(x,z,r,dt);break;
   case'soil':paintG(x,z,r,0);break;case'sand':paintG(x,z,r,1);break;case'rock':paintG(x,z,r,2);break;
@@ -1155,11 +1159,11 @@ function applyTool(dt){if(!toolHeld||mode!=='world')return;cursor=pickGround(mou
   case'plant':toolT-=dt;if(toolT<=0){toolT=Math.max(.025,.22/(1+r*.6));scatterP(x,z,r)}break;
   case'animal':toolT-=dt;if(toolT<=0){toolT=.4;placeA(x,z,r)}break;
   case'erase':eraseAt(x,z,r);break;
-  case'meteor':if(toolT<=0){toolT=99;dropMeteor(x,z,clamp(r*.9+2,3,11))}break;
+  case'meteor':if(toolT<=0){toolT=99;dropMeteor(x,z,clamp(r*.9+2,3,30))}break;
   case'volcano':if(toolT<=0){toolT=99;makeVolcano(x,z,false)}break}}
 function afterEdits(dt){moistT-=dt;
  if(moistDirty&&(moistT<=0||!toolHeld)){calcMoist();moistDirty=false;colorDirty=true;moistT=.25}
- if(terrainDirty||colorDirty){calcCH();if(colorDirty)calcColors();updTerrainMesh();
+ if(terrainDirty||colorDirty){calcCH();if(colorDirty)calcColors();if(editBox)updTerrainMesh(editBox[1]/CELL-18,editBox[3]/CELL+18);else updTerrainMesh();
   if(editBox&&W){const[x0,z0,x1,z1]=editBox;for(const p of W.P)if(p.x>=x0-1&&p.x<=x1+1&&p.z>=z0-1&&p.z<=z1+1)p.y=heightAt(p.x,p.z);for(const c of W.C)c.y=heightAt(c.x,c.z)}
   editBox=null;terrainDirty=false;colorDirty=false}
  if(buildPGridSoon){buildPGrid();buildPGridSoon=false}}
@@ -1170,48 +1174,69 @@ function lightMat(cx,cy,cz,R){const e=[cx+SUN[0]*160,cy+SUN[1]*160,cz+SUN[2]*160
 // 보이면 화면에서의 크기(픽셀), 안 보이면 0
 function seen(x,y,z,r){const m=VPm,cx=m[0]*x+m[4]*y+m[8]*z+m[12],cy=m[1]*x+m[5]*y+m[9]*z+m[13],cw=m[3]*x+m[7]*y+m[11]*z+m[15],k=r*2.5+.5;
  if(!(cw>-k&&cx>-cw-k&&cx<cw+k&&cy>-cw-k&&cy<cw+k))return 0;const px=r*innerHeight*1.1/Math.max(cw,.1);return px<.7?0:px}
-function fillWorld(){let n=0;const groups=[];ensureInst(W.A.length+W.P.length+W.C.length+4);const I=INS,bk=new Map();
- for(const a of W.A){if(a.dead)continue;const px=seen(a.x,a.y+a.d.legH*a.gr,a.z,a.d.len*a.gr+a.g.balloon*a.g.size+.3);if(!px)continue;const key=a.sp*2+(px<22?1:0);let l=bk.get(key);if(!l)bk.set(key,l=[]);l.push(a)}
+// 식물 그림 데이터 (따로 담아 두고 가끔만 새로 만듦)
+function fillPlants(lk,R2,ctx,ctz){let n=0;const need=W.P.length*2+4;if(INSP.length<need*11)INSP=new Float32Array(Math.ceil(need*1.5)*11);const I=INSP,bk=new Map();PC.groups=[];PC.sgroups=[];
+ for(const p of W.P){if(p.dead)continue;const px=seen(p.x,p.y+p.d.h*.5,p.z,p.d.h*(.12+.88*p.gr)*.6+p.d.rad);if(!px||px<2.2)continue;const key=p.sp*2+(px<40*lk?1:0);let l=bk.get(key);if(!l)bk.set(key,l=[]);l.push(p)}
+ for(const[key,l]of bk){const sp=W.SP[key>>1],m=key&1?lodOf(sp):meshOf(sp),st=n;for(const p of l){if(p.tv!==sp.ver){p.tint=tintFor('p',p.g,sp);p.hs=Math.pow(p.g.height/sp.g.height,.7);p.tv=sp.ver}
+  const o=n++*11,wt=clamp(p.wither/20,0,1);I[o]=p.x;I[o+1]=(p.g.float||0)>.5&&p.y<-.3?.02:p.y;I[o+2]=p.z;I[o+3]=p.yaw;I[o+4]=(.12+.88*p.gr)*p.hs;I[o+5]=0;I[o+6]=0;I[o+7]=p.eaten;
+  I[o+8]=lerp(p.tint[0],1.5,wt);I[o+9]=lerp(p.tint[1],.8,wt);I[o+10]=lerp(p.tint[2],.45,wt)}PC.groups.push({m,mode:1,st,c:n-st,buf:INSTP})}
+ if(shadowsOn&&QL[QI].sh){bk.clear();for(const q of W.P){if(q.dead||q.d.h*q.gr<.25||(q.x-ctx)**2+(q.z-ctz)**2>R2)continue;let l=bk.get(q.sp);if(!l)bk.set(q.sp,l=[]);l.push(q)}
+  for(const[id,l]of bk){const sp=W.SP[id],m=lodOf(sp),st=n;for(const q of l){const o=n++*11;I[o]=q.x;I[o+1]=(q.g.float||0)>.5&&q.y<-.3?.02:q.y;I[o+2]=q.z;I[o+3]=q.yaw;I[o+4]=(.12+.88*q.gr)*(q.hs||1);I[o+5]=I[o+6]=0;I[o+7]=q.eaten;I[o+8]=I[o+9]=I[o+10]=1}
+   PC.sgroups.push({m,mode:1,st,c:n-st,buf:INSTP})}}
+ gl.bindBuffer(gl.ARRAY_BUFFER,INSTP);gl.bufferData(gl.ARRAY_BUFFER,I.subarray(0,Math.max(1,n)*11),gl.DYNAMIC_DRAW);return n}
+// 자동 화질: 그리는 시간이 길면 단계(QL)를 올려 화면 해상도·자세함·그림자를 줄이고, 여유가 생기면 되돌림
+const QL=[{dpr:1.5,lod:1,sh:1},{dpr:1.25,lod:1.4,sh:1},{dpr:1,lod:1.8,sh:1},{dpr:1,lod:2.4,sh:0},{dpr:.8,lod:3.2,sh:0}];let QI=0,qAvg=16,qT=0,qLast=0;
+function autoQuality(dtR){qAvg=lerp(qAvg,dtR*1000,.05);qT+=dtR;if(qT<2)return;qT=0;const now=performance.now();
+ if(qAvg>24&&QI<QL.length-1){QI++;qLast=now}else if(qAvg<17.5&&QI>0&&now-qLast>8000){QI--;qLast=now}}
+function fillWorld(){let n=0;const groups=[],sgroups=[];ensureInst((W.A.length+W.P.length)*2+W.C.length+4);const I=INS,bk=new Map(),lk=QL[QI].lod,R2=95*95,ctx=cam.tx,ctz=cam.tz;
+ for(const a of W.A){if(a.dead)continue;const px=seen(a.x,a.y+a.d.legH*a.gr,a.z,a.d.len*a.gr+a.g.balloon*a.g.size+.3);if(!px)continue;if(px<1.5)continue;const key=a.sp*2+(px<30*lk?1:0);let l=bk.get(key);if(!l)bk.set(key,l=[]);l.push(a)}
  for(const[key,l]of bk){const sp=W.SP[key>>1],m=key&1?lodOf(sp):meshOf(sp),st=n;for(const a of l){if(a.tv!==sp.ver){a.tint=tintFor('a',a.g,sp);a.tv=sp.ver}const o=n++*11;I[o]=a.x;I[o+1]=a.y;I[o+2]=a.z;I[o+3]=a.yaw;I[o+4]=a.g.size/sp.g.size*a.gr*(1+Math.max(0,.45-a.g.size)*1.6);I[o+5]=a.phase;I[o+6]=Math.min(1,a.move);I[o+7]=a.eating;I[o+8]=a.tint[0];I[o+9]=a.tint[1];I[o+10]=a.tint[2]}groups.push({m,mode:0,st,c:n-st})}
- bk.clear();for(const p of W.P){if(p.dead)continue;const px=seen(p.x,p.y+p.d.h*.5,p.z,p.d.h*(.12+.88*p.gr)*.6+p.d.rad);if(!px)continue;const key=p.sp*2+(px<26?1:0);let l=bk.get(key);if(!l)bk.set(key,l=[]);l.push(p)}
- for(const[key,l]of bk){const sp=W.SP[key>>1],m=key&1?lodOf(sp):meshOf(sp),st=n;for(const p of l){if(p.tv!==sp.ver){p.tint=tintFor('p',p.g,sp);p.hs=Math.pow(p.g.height/sp.g.height,.7);p.tv=sp.ver}const o=n++*11,wt=clamp(p.wither/20,0,1);I[o]=p.x;I[o+1]=(p.g.float||0)>.5&&p.y<-.3?.02:p.y;I[o+2]=p.z;I[o+3]=p.yaw;I[o+4]=(.12+.88*p.gr)*p.hs;I[o+5]=0;I[o+6]=0;I[o+7]=p.eaten;
-  I[o+8]=lerp(p.tint[0],1.5,wt);I[o+9]=lerp(p.tint[1],.8,wt);I[o+10]=lerp(p.tint[2],.45,wt)}groups.push({m,mode:1,st,c:n-st})}
+ const ck=[cam.tx,cam.tz,cam.dist,cam.yaw,cam.pitch,QI,shadowsOn],pk=PC.key;PC.f++;
+ const still=PC.ok&&pk&&PC.f%10&&Math.abs(ck[0]-pk[0])+Math.abs(ck[1]-pk[1])<ck[2]*.02&&Math.abs(ck[2]/pk[2]-1)<.03&&Math.abs(ck[3]-pk[3])<.02&&Math.abs(ck[4]-pk[4])<.02&&ck[5]===pk[5]&&ck[6]===pk[6];
+ if(!still){const sv=n;n=fillPlants(lk,R2,ctx,ctz);PC.key=ck;PC.ok=true;n=sv}
+ groups.push(...PC.groups);
  const st=n;for(const c of W.C){if(c.dead)continue;const o=n++*11;I[o]=c.x;I[o+1]=c.y;I[o+2]=c.z;I[o+3]=c.yaw;I[o+4]=c.s*Math.max(.4,Math.sqrt(Math.max(0,c.meat)/c.m0));I[o+5]=0;I[o+6]=0;I[o+7]=0;I[o+8]=I[o+9]=I[o+10]=1}
  if(n>st)groups.push({m:CORPSE,mode:0,st,c:n-st});
+ // 그림자: 카메라 둘레 생물만, 간단한 모양으로
+ if(shadowsOn&&QL[QI].sh){bk.clear();for(const a of W.A){if(a.dead||(a.x-ctx)**2+(a.z-ctz)**2>R2)continue;let l=bk.get(a.sp);if(!l)bk.set(a.sp,l=[]);l.push(a)}
+  for(const[id,l]of bk){const sp=W.SP[id],m=lodOf(sp),st2=n,isA=sp.kind==='a';for(const o0 of l){const o=n++*11;I[o]=o0.x;I[o+2]=o0.z;I[o+5]=I[o+6]=I[o+7]=0;I[o+8]=I[o+9]=I[o+10]=1;
+    if(isA){I[o+1]=o0.y;I[o+3]=o0.yaw;I[o+4]=o0.g.size/sp.g.size*o0.gr}else{I[o+1]=(o0.g.float||0)>.5&&o0.y<-.3?.02:o0.y;I[o+3]=o0.yaw;I[o+4]=(.12+.88*o0.gr)*(o0.hs||1)}}
+   sgroups.push({m,mode:isA?0:1,st:st2,c:n-st2})}}
+ groups.sg=sgroups.concat(PC.sgroups);
  ensureInst(n+FX.length+PART.length+2);n=fillFX(INS,n,groups);const I2=INS;
  gl.bindBuffer(gl.ARRAY_BUFFER,INST);gl.bufferData(gl.ARRAY_BUFFER,I2.subarray(0,Math.max(1,n)*11),gl.DYNAMIC_DRAW);return groups}
-function drawGroups(P,groups,puff){for(const g of groups){if(!g.c||(g.mode===3)!==!!puff)continue;gl.bindVertexArray(g.m.vao);gl.bindBuffer(gl.ARRAY_BUFFER,INST);const b=g.st*44;
+function drawGroups(P,groups,puff){for(const g of groups){if(!g.c||(g.mode===3)!==!!puff)continue;gl.bindVertexArray(g.m.vao);gl.bindBuffer(gl.ARRAY_BUFFER,g.buf||INST);const b=g.st*44;
  gl.vertexAttribPointer(5,4,gl.FLOAT,false,44,b);gl.vertexAttribPointer(6,4,gl.FLOAT,false,44,b+16);gl.vertexAttribPointer(7,3,gl.FLOAT,false,44,b+32);
  u1(P,'u_mode',g.mode===1?1:0);gl.drawElementsInstanced(gl.TRIANGLES,g.m.n,gl.UNSIGNED_SHORT,0,g.c)}}
-function setLight(P,fogD,LT){uM(P,'u_vp',VPm);uM(P,'u_lt',LT);u3(P,'u_sun',SUN);u3(P,'u_eye',EYE);u3(P,'u_fog',FOG);u1(P,'u_fogD',fogD);u1(P,'u_useSh',shadowsOn?1:0);u1(P,'u_shTex',SR);u1(P,'u_dim',W&&W.dim||0)}
+function setLight(P,fogD,LT){uM(P,'u_vp',VPm);uM(P,'u_lt',LT);u3(P,'u_sun',SUN);u3(P,'u_eye',EYE);u3(P,'u_fog',FOG);u1(P,'u_fogD',fogD);u1(P,'u_useSh',shadowsOn&&(mode==='editor'||QL[QI].sh)?1:0);u1(P,'u_shTex',SR);u1(P,'u_dim',W&&W.dim||0)}
 let PLAT=null,PLATR=0;
-function render(time){const dpr=Math.min(devicePixelRatio||1,1.5),w=Math.round(innerWidth*dpr),h=Math.round(innerHeight*dpr);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+function render(time){const dpr=Math.min(devicePixelRatio||1,mode==='editor'?1.5:QL[QI].dpr),w=Math.round(innerWidth*dpr),h=Math.round(innerHeight*dpr);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
  const studio=mode==='editor'&&ED;computeCam(studio);
  let groups,LT;
  if(studio){const bb=ED.mesh.bb,rr=Math.max(bb[3]-bb[0],bb[4]-bb[1],bb[5]-bb[2]);
   INS.fill(0,0,11);INS[4]=1;INS[5]=time*5;INS[6]=ED.kind==='a'?1:0;INS[8]=INS[9]=INS[10]=1;gl.bindBuffer(gl.ARRAY_BUFFER,INST);gl.bufferData(gl.ARRAY_BUFFER,INS.subarray(0,11),gl.DYNAMIC_DRAW);
   groups=[{m:ED.mesh,mode:ED.kind==='a'?0:1,st:0,c:1}];LT=lightMat(0,0,0,rr*1.3+1);
   const pr=Math.max(.6,rr*1.1);if(!PLAT||Math.abs(pr-PLATR)>.05){if(PLAT){gl.deleteVertexArray(PLAT.vao);PLAT.bs.forEach(b=>gl.deleteBuffer(b));gl.deleteBuffer(PLAT.ib)}PLAT=platformMesh(pr);PLATR=pr}}
- else{groups=fillWorld();LT=lightMat(cam.tx,0,cam.tz,98)}
- const fogD=studio?.004:.0016,dm=studio?0:(W&&W.dim||0);FOG=[lerp(.74,.45,dm*.85),lerp(.84,.4,dm*.85),lerp(.93,.36,dm*.85)];
- if(shadowsOn){gl.bindFramebuffer(gl.FRAMEBUFFER,SFB);gl.viewport(0,0,SR,SR);gl.clear(gl.DEPTH_BUFFER_BIT);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1.6,3);
+ else{groups=fillWorld();LT=lightMat(cam.tx,0,cam.tz,110)}
+ const fogD=studio?.004:.0009,dm=studio?0:(W&&W.dim||0);FOG=[lerp(.74,.45,dm*.85),lerp(.84,.4,dm*.85),lerp(.93,.36,dm*.85)];
+ const shOn=shadowsOn&&(studio||QL[QI].sh);
+ if(shOn){gl.bindFramebuffer(gl.FRAMEBUFFER,SFB);gl.viewport(0,0,SR,SR);gl.clear(gl.DEPTH_BUFFER_BIT);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1.6,3);
   gl.useProgram(PDT.p);uM(PDT,'u_lt',LT);
-  if(studio){u4v(PDT,'u_off',0,0);gl.bindVertexArray(PLAT.vao);gl.drawElements(gl.TRIANGLES,PLAT.n,gl.UNSIGNED_SHORT,0)}else{u4v(PDT,'u_off',0,0);gl.bindVertexArray(TER.vao);gl.drawElements(gl.TRIANGLES,TER.n,gl.UNSIGNED_SHORT,0);
-   for(const P of PIECES){u4v(PDT,'u_off',P.ox,P.oz);gl.bindVertexArray(P.vao);gl.drawElements(gl.TRIANGLES,P.ni,gl.UNSIGNED_SHORT,0)}}
-  gl.useProgram(PDO.p);uM(PDO,'u_lt',LT);u1(PDO,'u_time',time);drawGroups(PDO,groups);
+  if(studio){u4v(PDT,'u_off',0,0);gl.bindVertexArray(PLAT.vao);gl.drawElements(gl.TRIANGLES,PLAT.n,gl.UNSIGNED_SHORT,0)}// 땅은 그림자를 드리우지 않음 (가볍게)
+  gl.useProgram(PDO.p);uM(PDO,'u_lt',LT);u1(PDO,'u_time',time);drawGroups(PDO,groups.sg||groups);
   gl.disable(gl.POLYGON_OFFSET_FILL);gl.bindFramebuffer(gl.FRAMEBUFFER,null)}
  gl.viewport(0,0,cv.width,cv.height);gl.clearColor(FOG[0],FOG[1],FOG[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  gl.disable(gl.DEPTH_TEST);gl.depthMask(false);gl.useProgram(PS.p);uM(PS,'u_ivp',IVP);u3(PS,'u_sun',SUN);u3(PS,'u_fog',FOG);u1(PS,'u_time',time);u1(PS,'u_dim',W&&W.dim||0);gl.bindVertexArray(SKY);gl.drawArrays(gl.TRIANGLES,0,3);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);
  gl.useProgram(PT.p);setLight(PT,fogD,LT);u1(PT,'u_time',time);
  u4v(PT,'u_off',0,0);
  if(studio){u1(PT,'u_water',0);u4(PT,'u_brush',0,0,0,0);u4(PT,'u_sel',0,0,0,0);gl.bindVertexArray(PLAT.vao);gl.drawElements(gl.TRIANGLES,PLAT.n,gl.UNSIGNED_SHORT,0)}
- else{u1(PT,'u_water',1);const br=(tool!=='look'&&mouse.in&&cursor&&mode==='world')?brushR():0;u4(PT,'u_brush',cursor?cursor[0]:0,cursor?cursor[2]:0,tool==='animal'?.6:tool==='volcano'?8:tool==='meteor'?clamp(br*.9+2,3,11):br,br?1:0);
+ else{u1(PT,'u_water',1);const br=(tool!=='look'&&mouse.in&&cursor&&mode==='world')?brushR():0;u4(PT,'u_brush',cursor?cursor[0]:0,cursor?cursor[2]:0,tool==='animal'?.6:tool==='volcano'?8:tool==='meteor'?clamp(br*.9+2,3,30):br,br?1:0);
   if(sel&&!sel.dead)u4(PT,'u_sel',sel.x,sel.z,sel.d.len!==undefined&&sel.d.mass!==undefined?sel.d.len*.7*sel.gr+.3:sel.d.rad*(.15+.85*sel.gr)+.2,1);else u4(PT,'u_sel',0,0,0,0);
-  gl.bindVertexArray(TER.vao);gl.drawElements(gl.TRIANGLES,TER.n,gl.UNSIGNED_SHORT,0);
+  gl.bindVertexArray(TER.vao);gl.drawElements(gl.TRIANGLES,TER.n,gl.UNSIGNED_INT,0);
   for(const P of PIECES){if(P.dirty)pieceRefresh(P);u4v(PT,'u_off',P.ox,P.oz);gl.bindVertexArray(P.vao);gl.drawElements(gl.TRIANGLES,P.ni,gl.UNSIGNED_SHORT,0)}
   u4v(PT,'u_off',0,0);gl.bindVertexArray(SEA.vao);gl.drawElements(gl.TRIANGLES,SEA.n,gl.UNSIGNED_SHORT,0)}
  gl.useProgram(PO.p);setLight(PO,fogD,LT);u1(PO,'u_time',time);u1(PO,'u_puff',0);drawGroups(PO,groups);
- if(!studio){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.useProgram(PW.p);uM(PW,'u_vp',VPm);u3(PW,'u_eye',EYE);u3(PW,'u_sun',SUN);u3(PW,'u_fog',FOG);u1(PW,'u_fogD',fogD);u1(PW,'u_time',time);u1(PW,'u_dim',W&&W.dim||0);if(BIG)u4(PW,'u_tsu',BIG.ix,BIG.iz,BIG.t*28,Math.max(0,3.4-BIG.t*.04));else u4(PW,'u_tsu',0,0,-999,0);
+ if(!studio){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.useProgram(PW.p);uM(PW,'u_vp',VPm);u3(PW,'u_eye',EYE);u3(PW,'u_sun',SUN);u3(PW,'u_fog',FOG);u1(PW,'u_fogD',fogD);u1(PW,'u_time',time);u1(PW,'u_dim',W&&W.dim||0);if(BIG)u4(PW,'u_tsu',BIG.ix,BIG.iz,BIG.t*40,Math.max(0,5-BIG.t*.04));else u4(PW,'u_tsu',0,0,-999,0);
   const p1=PIECES[0],p2=PIECES[1];u4(PW,'u_p1',p1?p1.ox:0,p1?p1.oz:0,PN,p1?1:0);u4(PW,'u_p2',p2?p2.ox:0,p2?p2.oz:0,PN,p2?1:0);
   gl.bindVertexArray(WAT.vao);gl.drawElements(gl.TRIANGLES,WAT.n,gl.UNSIGNED_SHORT,0);gl.bindVertexArray(WAT2.vao);gl.drawElements(gl.TRIANGLES,WAT2.n,gl.UNSIGNED_SHORT,0);gl.depthMask(true);gl.disable(gl.BLEND)}
  if(groups.some(g=>g.mode===3)){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.useProgram(PO.p);u1(PO,'u_puff',1);drawGroups(PO,groups,true);u1(PO,'u_puff',0);gl.depthMask(true);gl.disable(gl.BLEND)}
@@ -1222,7 +1247,7 @@ const TH=128,thFB=gl.createFramebuffer(),thCv=document.createElement('canvas');t
 (()=>{gl.bindFramebuffer(gl.FRAMEBUFFER,thFB);const rb=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,rb);gl.renderbufferStorage(gl.RENDERBUFFER,gl.RGBA8,TH,TH);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.RENDERBUFFER,rb);
  const db=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,db);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,TH,TH);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,db);gl.bindFramebuffer(gl.FRAMEBUFFER,null)})();
 const THUMB=new Map();
-function thumbOf(sp){let t=THUMB.get(sp.id);if(!t){t=renderThumb(meshOf(sp),sp.kind==='a'?0:1);THUMB.set(sp.id,t)}return t}
+function thumbOf(sp){let t=THUMB.get(sp.id);const now=performance.now();if(!t||(sp.thumbOld&&now-t.at>8000)){t={url:renderThumb(meshOf(sp),sp.kind==='a'?0:1),at:now};sp.thumbOld=0;THUMB.set(sp.id,t)}return t.url}
 function renderThumb(m,mode){const bb=m.bb,c=[(bb[0]+bb[3])/2,(bb[1]+bb[4])/2,(bb[2]+bb[5])/2],sz=Math.max(bb[3]-bb[0],bb[4]-bb[1],bb[5]-bb[2]),d=sz*.5/Math.tan(.3)*1.15,a=mode?.5:.75;
  const e=[c[0]+d*Math.cos(a)*.93,c[1]+d*.3,c[2]+d*Math.sin(a)*.93],VP=M4.mul(M4.persp(.6,1,.01,100),M4.look(e,c,[0,1,0]));
  gl.bindFramebuffer(gl.FRAMEBUFFER,thFB);gl.viewport(0,0,TH,TH);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -1239,7 +1264,7 @@ function showWorldUI(on){for(const id of['top','tools','camBtns','bottom','side'
 (()=>{const el=$('#tools');for(const t of TOOLS){if(t==='-'){const s=document.createElement('div');s.className='sep';el.appendChild(s);continue}
  const b=document.createElement('button');b.dataset.t=t[0];b.title=t[3];const ic=t[1].startsWith('sw:')?`<span class="sw" style="background:${t[1].slice(3)}"></span>`:t[1];
  b.innerHTML=`<span class="ic">${ic}</span><span class="lb">${t[2]}</span>`;b.onclick=()=>t[0].startsWith('act:')?bigAct(t[0],b):setTool(t[0]);el.appendChild(b)}
- const bx=document.createElement('div');bx.id='brushBox';bx.innerHTML='붓 크기<input type="range" id="brush" min="1" max="14" step="1" value="4">';el.appendChild(bx)})();
+ const bx=document.createElement('div');bx.id='brushBox';bx.innerHTML='붓 크기<input type="range" id="brush" min="1" max="40" step="1" value="6">';el.appendChild(bx)})();
 // 속도
 for(const b of document.querySelectorAll('#speeds button'))b.onclick=()=>setSpeed(+b.dataset.s);
 function setSpeed(s){if(!W)return;W.speed=s;for(const b of document.querySelectorAll('#speeds button'))b.classList.toggle('on',+b.dataset.s===s)}
@@ -1248,7 +1273,7 @@ const EVO=[[1,'진화: 보통'],[2.2,'진화: 빠르게'],[0,'진화: 꺼짐']];
 $('#evoBtn').onclick=()=>{const i=EVO.findIndex(e=>e[0]===W.evo);const nx=EVO[(i+1)%EVO.length];W.evo=nx[0];$('#evoBtn').textContent=nx[1];toast(nx[0]===0?'이제 새끼가 부모랑 똑같아요':nx[0]>1?'새끼가 부모랑 더 많이 달라져요':'새끼가 부모랑 조금씩 달라져요')};
 function updEvoBtn(){const e=EVO.find(e=>e[0]===W.evo)||EVO[0];$('#evoBtn').textContent=e[1]}
 $('#sideBtn').onclick=()=>{document.body.classList.toggle('noside');renderSide(true)};
-$('#menuBtn').onclick=e=>{e.stopPropagation();$('#menu').classList.toggle('hide')};
+$('#menuBtn').onclick=e=>{e.stopPropagation();$('#menu').classList.toggle('hide');$('#mQ').textContent='⚡ 자동 화질: '+['최고','좋음','보통','가볍게','아주 가볍게'][QI]+' (컴퓨터가 버거우면 저절로 낮아져요)'};
 addEventListener('pointerdown',e=>{if(!e.target.closest('#menu')&&!e.target.closest('#menuBtn'))$('#menu').classList.add('hide')});
 $('#mSave').onclick=()=>{toast(saveGame()?'저장했어요!':'저장하지 못했어요');$('#menu').classList.add('hide')};
 $('#mShadow').onclick=()=>{shadowsOn=!shadowsOn;$('#mShadow').textContent='🌗 그림자: '+(shadowsOn?'켜짐':'꺼짐');try{localStorage.setItem('sapling3d.shadow',shadowsOn?'1':'0')}catch(e){}};
@@ -1256,8 +1281,8 @@ $('#mNat').onclick=()=>{if(!W)return;W.natural=W.natural===false;$('#mNat').text
 $('#mHelp').onclick=()=>{$('#help').classList.remove('hide');$('#menu').classList.add('hide')};$('#helpX').onclick=()=>$('#help').classList.add('hide');
 $('#mHome').onclick=()=>{saveGame();$('#menu').classList.add('hide');goTitle()};
 // 카메라 단추
-$('#cL').onclick=()=>cam.yaw-=.4;$('#cR').onclick=()=>cam.yaw+=.4;$('#cI').onclick=()=>cam.dist=clamp(cam.dist/1.3,5,260);$('#cO').onclick=()=>cam.dist=clamp(cam.dist*1.3,5,260);
-$('#cH').onclick=()=>{cam.follow=null;Object.assign(cam,{tx:64,tz:64,dist:105,pitch:.62})};
+$('#cL').onclick=()=>cam.yaw-=.4;$('#cR').onclick=()=>cam.yaw+=.4;$('#cI').onclick=()=>cam.dist=clamp(cam.dist/1.3,5,800);$('#cO').onclick=()=>cam.dist=clamp(cam.dist*1.3,5,800);
+$('#cH').onclick=()=>{cam.follow=null;Object.assign(cam,{tx:WS/2,tz:WS/2,dist:460,pitch:.62})};
 
 // 아래 카드
 let bKind='p',cardSig='';
@@ -1405,7 +1430,7 @@ cv.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(p){p.x=e.c
  if(mode==='world'&&!toolHeld&&tool!=='look')cursor=pickGround(mouse.x,mouse.y);
  if(!drag)return;const c=mode==='editor'?scam:cam;
  if(drag.type==='two'&&ptr.size===2){const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-  if(drag.d>10)c.dist=clamp(c.dist*drag.d/Math.max(d,10),mode==='editor'?.6:5,260);
+  if(drag.d>10)c.dist=clamp(c.dist*drag.d/Math.max(d,10),mode==='editor'?.6:5,800);
   if(mode==='world')panBy(mx-drag.mx,my-drag.my);else{c.yaw+=(mx-drag.mx)*.006}
   drag.d=d;drag.mx=mx;drag.my=my;return}
  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
@@ -1421,7 +1446,7 @@ function endPtr(e){ptr.delete(e.pointerId);if(!drag)return;
  if(ptr.size===0){drag=null;toolHeld=false}}
 cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('pointerleave',()=>{mouse.in=false});
-cv.addEventListener('wheel',e=>{e.preventDefault();if(mode==='title')return;const c=mode==='editor'?scam:cam;c.dist=clamp(c.dist*Math.exp(e.deltaY*.0012),mode==='editor'?.6:5,260);if(mode==='editor')ED.zoomed=1},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();if(mode==='title')return;const c=mode==='editor'?scam:cam;c.dist=clamp(c.dist*Math.exp(e.deltaY*.0012),mode==='editor'?.6:5,800);if(mode==='editor')ED.zoomed=1},{passive:false});
 let flyTo=null;const keys={};
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range')return;keys[e.code]=1;
  if(e.code==='Space'&&mode==='world'){togglePause();e.preventDefault()}
@@ -1431,13 +1456,15 @@ function camKeys(dt){const c=mode==='editor'?scam:cam;if(mode==='title')return;
  if(mode==='world'){const k=cam.dist*.9*dt,fx=-Math.cos(cam.yaw),fz=-Math.sin(cam.yaw),rx=Math.sin(cam.yaw),rz=-Math.cos(cam.yaw);let mx=0,mz=0;
   if(keys.KeyW||keys.ArrowUp){mx+=fx;mz+=fz}if(keys.KeyS||keys.ArrowDown){mx-=fx;mz-=fz}if(keys.KeyD||keys.ArrowRight){mx+=rx;mz+=rz}if(keys.KeyA||keys.ArrowLeft){mx-=rx;mz-=rz}
   if(mx||mz){cam.tx=clamp(cam.tx+mx*k,WB0,WB1);cam.tz=clamp(cam.tz+mz*k,WB0,WB1);cam.follow=null;flyTo=null}}
- if(keys.KeyQ)c.yaw-=dt*1.6;if(keys.KeyE)c.yaw+=dt*1.6;if(keys.KeyR)c.dist=clamp(c.dist*Math.exp(-dt*1.5),mode==='editor'?.6:5,260);if(keys.KeyF)c.dist=clamp(c.dist*Math.exp(dt*1.5),mode==='editor'?.6:5,260)}
+ if(keys.KeyQ)c.yaw-=dt*1.6;if(keys.KeyE)c.yaw+=dt*1.6;if(keys.KeyR)c.dist=clamp(c.dist*Math.exp(-dt*1.5),mode==='editor'?.6:5,800);if(keys.KeyF)c.dist=clamp(c.dist*Math.exp(dt*1.5),mode==='editor'?.6:5,800)}
 
 // ================= 저장 =================
 const SKEY='sapling3d.save';
+const b64e=arr=>{const u=new Uint8Array(arr.buffer,arr.byteOffset,arr.byteLength);let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)};
+const b64d=(str,T)=>{const b=atob(str),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new T(u.buffer)};
 function saveGame(){if(!W||W.demo)return false;try{const r2=v=>Math.round(v*100)/100;
- const o={v:7,where:W.where,ev:{dim:W.dim,boost:W.boost,winter:W.winter,volc:W.volc,natural:W.natural,lastDay:W.lastDay,lastBig:W.lastBig,pieces:PIECES.map(P=>({seed:P.seed,ox:P.ox,oz:P.oz,vx:P.vx,vz:P.vz,ph:P.ph,push:P.push,name:P.name,near:P.near,H:Array.from(P.H,v=>Math.round(v*100)),G:Array.from(P.G).join('')}))},mile:W.mile||{},seed:W.seed,t:W.t,tick:W.tick,evo:W.evo,selA:W.selA,selP:W.selP,nid:W.nid,
-  H:Array.from(H,v=>Math.round(v*100)),G:Array.from(G).join(''),WET:Array.from(WET,v=>Math.round(v*100)),
+ const o={v:8,where:W.where,ev:{dim:W.dim,boost:W.boost,winter:W.winter,volc:W.volc,natural:W.natural,lastDay:W.lastDay,lastBig:W.lastBig,pieces:PIECES.map(P=>({seed:P.seed,ox:P.ox,oz:P.oz,vx:P.vx,vz:P.vz,ph:P.ph,push:P.push,name:P.name,near:P.near,H:Array.from(P.H,v=>Math.round(v*100)),G:Array.from(P.G).join('')}))},mile:W.mile||{},seed:W.seed,t:W.t,tick:W.tick,evo:W.evo,selA:W.selA,selP:W.selP,nid:W.nid,
+  H:b64e(Int16Array.from(H,v=>Math.round(v*100))),G:b64e(G),WET:b64e(Int8Array.from(WET,v=>Math.round(v*100))),
   SP:W.SP.map(s=>[s.kind,gpack(s.g,defOf(s.kind)),s.name,s.parent,Math.round(s.born),s.mine?1:0,s.peak,s.ext?1:0,Math.round(s.died||0),s.quiet?1:0,s.design?gpack(s.design,defOf(s.kind)):0]),
   A:W.A.filter(a=>!a.dead).map(a=>[a.sp,gpack(a.g,AG),r2(a.x),r2(a.z),r2(a.E),Math.round(a.age),a.kids,a.gen,Math.round(a.cool),a.landAnc?1:0]),
   P:W.P.filter(p=>!p.dead).map(p=>[p.sp,gpack(p.g,PGN),r2(p.x),r2(p.z),Math.round(p.gr*1000)/1000,r2(p.eaten),Math.round(p.age),Math.round(p.seedT),r2(p.yaw)]),
@@ -1445,9 +1472,9 @@ function saveGame(){if(!W||W.demo)return false;try{const r2=v=>Math.round(v*100)
   hist:W.hist,log:W.log.slice(-80),cam:[r2(cam.tx),r2(cam.tz),r2(cam.yaw),r2(cam.pitch),r2(cam.dist)]};
  localStorage.setItem(SKEY,JSON.stringify(o));return true}catch(e){console.warn(e);return false}}
 function hasSave(){try{return!!localStorage.getItem(SKEY)}catch(e){return false}}
-function loadGame(){let o=null;try{o=JSON.parse(localStorage.getItem(SKEY)||'null')}catch(e){}if(!o||o.v!==7)return false;
+function loadGame(){let o=null;try{o=JSON.parse(localStorage.getItem(SKEY)||'null')}catch(e){}if(!o||o.v!==8)return false;
  clearMeshes();THUMB.clear();W=newWorldState(o.seed);Object.assign(W,{where:o.where||'coast',t:o.t,tick:o.tick,evo:o.evo,selA:o.selA,selP:o.selP,nid:o.nid||1,mile:o.mile||{}});
- for(let i=0;i<H.length;i++)H[i]=(o.H[i]||0)/100;for(let c=0;c<N*N;c++){G[c]=+o.G[c]||0;WET[c]=(o.WET[c]||0)/100}
+ const h16=b64d(o.H,Int16Array),g8=b64d(o.G,Uint8Array),w8=b64d(o.WET,Int8Array);for(let i=0;i<H.length;i++)H[i]=h16[i]/100;for(let c=0;c<N*N;c++){G[c]=g8[c];WET[c]=w8[c]/100}
  genFields(o.seed);calcCH();calcMoist();calcColors();terrainDirty=true;
  for(const s of o.SP)W.SP.push({id:W.SP.length,kind:s[0],g:gunpack(s[1],defOf(s[0])),name:s[2],parent:s[3],born:s[4],mine:!!s[5],n:0,peak:s[6],ext:!!s[7],died:s[8],quiet:!!s[9],design:s[10]?gunpack(s[10],defOf(s[0])):null});
  if(o.ev){freePieces();(o.ev.pieces||[]).forEach((q,k)=>{const P=newPiece(k,q.seed);pieceTerrain(P,q.seed);Object.assign(P,{ox:q.ox,oz:q.oz,vx:q.vx,vz:q.vz,ph:q.ph,push:q.push,name:q.name,near:q.near});
@@ -1462,12 +1489,12 @@ function loadGame(){let o=null;try{o=JSON.parse(localStorage.getItem(SKEY)||'nul
 addEventListener('beforeunload',()=>{if(mode!=='title')saveGame()});
 
 // ================= 시작·끝 =================
-function goTitle(){mode='title';newGame('proto',true,'coast');showWorldUI(false);$('#tag').classList.add('hide');$('#editor').classList.add('hide');$('#start').classList.remove('hide');$('#stCont').classList.toggle('hide',!hasSave());cam.dist=118;cam.pitch=.5}
+function goTitle(){mode='title';newGame('proto',true,'coast');showWorldUI(false);$('#tag').classList.add('hide');$('#editor').classList.add('hide');$('#start').classList.remove('hide');$('#stCont').classList.toggle('hide',!hasSave());cam.dist=560;cam.pitch=.45}
 function begin(type){if(type==='cont'){if(!loadGame()){toast('저장된 게임이 없어요');return}}else newGame(type,false,startWhere==='rand'?pick(['coast','ocean','land']):startWhere);
  mode='world';$('#start').classList.add('hide');showWorldUI(true);setSpeed(1);updEvoBtn();$('#mNat').textContent='🌋 저절로 큰 사건: '+(W.natural!==false?'켜짐':'꺼짐');bKind='p';for(const x of document.querySelectorAll('#btabs button'))x.classList.toggle('on',x.dataset.k==='p');
  cardSig='';$('#cards').dataset.ids='';THUMB.clear();renderCards();setTool('look');$('#sbody').innerHTML='';sideHTML='';renderSide(true);
- if(type==='proto'){toast(W.where==='ocean'?'섬과 섬 사이 넓은 바다에서 시작해요. 물에 떠다니는 원시 떠말과 원시 미생물이 살아요':W.where==='land'?'땅 위에서 시작해요. 촉촉한 땅에 끈적끈적 슬라임 생물과 원시 땅말이 살아요':'바닷가 얕은 물속에서 시작해요. 원시 미생물과 원시 말이 살아요',1);setTimeout(()=>toast('▶▶▶ 로 시간을 빠르게 해서 진화를 구경해 봐!',1),3500);
-  addLog(W.where==='ocean'?`넓은 바다 한가운데서 생명이 시작했어요. 바다 건너에 ${PIECES.map(P=>P.name).join('과 ')}도 있어요`:`바다 건너에 ${PIECES.map(P=>P.name).join('과 ')}도 있어요. 세 섬 모두 같은 조상에서 시작해요`,0);setTimeout(()=>toast(W.where==='ocean'?'바다 건너 섬 3개는 아직 비어 있어요. 생물이 언제 섬에 닿을까? 🏝️ 단추나 WASD로 가 봐!':'바다 건너에 섬이 2개 더 있어요. 같은 조상이 섬마다 조금씩 다르게 진화해요. 🏝️ 단추나 WASD로 가 봐!',1),7500)}
+ if(type==='proto'){toast(W.where==='ocean'?'섬 앞 넓은 바다에서 시작해요. 물에 떠다니는 원시 떠말과 원시 미생물이 살아요':W.where==='land'?'땅 위에서 시작해요. 촉촉한 땅에 끈적끈적 슬라임 생물과 원시 땅말이 살아요':'바닷가 얕은 물속에서 시작해요. 원시 미생물과 원시 말이 살아요',1);setTimeout(()=>toast('▶▶▶ 로 시간을 빠르게 해서 진화를 구경해 봐!',1),3500);
+  addLog(W.where==='ocean'?'큰 섬 앞 넓은 바다에서 생명이 시작했어요':W.where==='land'?'큰 섬의 촉촉한 땅에서 생명이 시작했어요':'큰 섬 바닷가 얕은 물에서 생명이 시작했어요',0);setTimeout(()=>toast(W.where==='ocean'?'큰 섬은 아직 비어 있어요. 생물이 언제 섬에 닿을까? WASD로 날아가 봐!':'아주 큰 섬이에요. 생물이 섬 전체로 천천히 퍼져요. WASD로 날아다니며 둘러봐!',1),7500)}
  if(type!=='cont')saveGame()}
 let startWhere='rand';for(const b of document.querySelectorAll('#stWhere button'))b.onclick=()=>{startWhere=b.dataset.w;for(const x of document.querySelectorAll('#stWhere button'))x.classList.toggle('on',x===b)};
 $('#stCont').onclick=()=>begin('cont');$('#stLife').onclick=()=>begin('proto');
@@ -1477,9 +1504,9 @@ try{if(localStorage.getItem('sapling3d.shadow')==='0'){shadowsOn=false;$('#mShad
 // ================= 매 장면 =================
 let last=performance.now(),acc=0,uiT=0,sideT=0,saveT=0,errShown=false;
 function simRun(dtR){if(!W.speed)return;acc+=dtR*20*W.speed;const t0=performance.now();let n=0;
- while(acc>=1){tick();acc--;n++;if((n&7)===0&&performance.now()-t0>10)break}if(acc>W.speed*6)acc=0}
+ while(acc>=1){tick();acc--;n++;if((n&3)===0&&performance.now()-t0>(QI>1?6:8))break}if(acc>W.speed*6)acc=0}
 function frame(now){const dtR=Math.min(.1,(now-last)/1000);last=now;const time=now/1000;
- camKeys(dtR);
+ camKeys(dtR);if(mode!=='title')autoQuality(dtR);
  if(mode==='world'){applyTool(dtR);simRun(dtR)}else if(mode==='title'){cam.yaw+=dtR*.04;simRun(dtR)}else if(mode==='editor'){if(needPreview)rebuildPreview();if(scam.auto)scam.yaw+=dtR*.35}
  stepFX(dtR);afterEdits(dtR);
  if(cam.follow){const a=cam.follow;if(a.dead){toast(`따라가던 ${josa(W.SP[a.sp].name,'이','가')} 죽었어요`);cam.follow=null}else{cam.tx=lerp(cam.tx,a.x,.12);cam.tz=lerp(cam.tz,a.z,.12)}}
@@ -1493,7 +1520,7 @@ function frame(now){const dtR=Math.min(.1,(now-last)/1000);last=now;const time=n
  if(mode==='world'&&saveT>60){saveT=0;saveGame()}}
 function loop(now){requestAnimationFrame(loop);try{frame(now)}catch(e){console.error(e);if(!errShown){errShown=true;const el=$('#err');el.textContent='앗! 문제가 생겼어요: '+e.message;el.classList.remove('hide');setTimeout(()=>{el.classList.add('hide');errShown=false},6000)}}}
 goTitle();requestAnimationFrame(loop);
-window.dbg={stepFX,get PIECES(){return PIECES},contView,get BIG(){return BIG},bigMeteor,dropMeteor,makeVolcano,get W(){return W},tick,stepPlants,stepAnimals,findPlant,plantFood,think,census,newGame,begin,render:t=>frame(t||performance.now()),openEditor,closeEditor,saveGame,loadGame,cam,scam,get mode(){return mode},setTool,thumbOf,deriveA,deriveP,fertAt,heightAt,get sel(){return sel},set sel(v){sel=v}};
+window.dbg={get QI(){return QI},set QI(v){QI=v},stepFX,get PIECES(){return PIECES},get BIG(){return BIG},bigMeteor,dropMeteor,makeVolcano,get W(){return W},tick,stepPlants,stepAnimals,findPlant,plantFood,think,census,newGame,begin,render:t=>frame(t||performance.now()),openEditor,closeEditor,saveGame,loadGame,cam,scam,get mode(){return mode},setTool,thumbOf,deriveA,deriveP,fertAt,heightAt,get sel(){return sel},set sel(v){sel=v}};
 </script>
 <script src="../track.js" defer></script>
 </body>
