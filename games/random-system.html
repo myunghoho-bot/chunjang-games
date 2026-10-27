@@ -306,7 +306,8 @@ function tempInfo(p, aa, e, L, y, P) {
   else {
     // 갓 생긴 암석 행성: 다 자라기 전까지 마그마 바다, 그 뒤 빨리 식음
     if (p.comp === 'rock') parts.push(['갓 생긴 행성의 열', 1200 * Math.exp(-Math.max(0, y - 0.5 * p.tForm) / 8e6) * Math.sqrt(Math.min(1, p.m / 0.5))]);
-    let ti = 0; for (const im of p.impacts) if (im[1] <= P) ti = Math.max(ti, 2300 * Math.exp(-(P - im[1]) / 2.5));
+    // 충돌 열: 1만 년이면 다 식음 (아이가 정함)
+    let ti = 0; for (const im of p.impacts) if (im[0] <= y) { const d = (y - im[0]) / 1e4; if (d < 1) ti = Math.max(ti, 2300 * (1 - sm(d))); }
     parts.push(['충돌 열', ti]);
   }
   let T4 = Tb ** 4, top = null;
