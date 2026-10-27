@@ -112,8 +112,8 @@ button.pri { background: #3b3420; border-color: #8a7438; color: #f4dc98; }
       <label>처음 행성 수
         <select id="optN"></select>
       </label>
-      <label>행성계 번호
-        <input id="optSeed" placeholder="비우면 무작위">
+      <label>행성계 번호 또는 별 이름
+        <input id="optSeed" placeholder="비우면 무작위 (예: 푸트롬스키의 별)">
       </label>
       <div class="btns"><button id="bMake" class="pri">만들기</button><button id="bCancel">닫기</button></div>
     </div>
@@ -1321,9 +1321,13 @@ for (const [id, k] of [['tOrbit', 'orbit'], ['tTrail', 'trail'], ['tName', 'name
 $('bFit').onclick = () => { Z = 1; panX = 0; panY = 0; snapView = true; };
 $('bNew').onclick = () => { const p = $('newPop'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; };
 $('bCancel').onclick = () => { $('newPop').style.display = 'none'; };
+// 이름(한국어 등)을 넣으면 그 글자로 번호를 정함 → 같은 이름은 늘 같은 행성계
+function textSeed(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return 1 + (h >>> 0) % 999999999; }
 $('bMake').onclick = () => {
-  const sv = $('optSeed').value.trim(), seed = /^\d+$/.test(sv) ? (+sv % 1000000000) : (1 + Math.floor(Math.random() * 999999));
+  const sv = $('optSeed').value.trim(), isNum = /^\d+$/.test(sv);
+  const seed = isNum ? (+sv % 1000000000) : sv ? textSeed(sv) : (1 + Math.floor(Math.random() * 999999));
   newSystem(seed, { star: $('optStar').value, n: $('optN').value });
+  if (sv && !isNum) { SYS.star.custom = sv.slice(0, 24); saveNames(); headText(); LKEY = ''; LOGN = -1; }
   $('newPop').style.display = 'none'; $('optSeed').value = '';
 };
 { const o = $('optN'); o.innerHTML = '<option value="rand">무작위 (1~12개)</option>' + Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}개</option>`).join(''); }
