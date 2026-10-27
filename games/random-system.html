@@ -299,15 +299,26 @@ function segMin(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1) {
 function baseTemp(p, aa, e, L) {
   return 278.6 * Math.pow(L, 0.25) * Math.pow(1 - p.alb, 0.25) / Math.sqrt(Math.max(aa, 1e-4)) * Math.pow(Math.max(1e-3, 1 - e * e), -0.125) * p.gh;
 }
-function fullTemp(p, aa, e, L, y, P) {
-  const T = baseTemp(p, aa, e, L); let T4 = T * T * T * T;
-  if (p.comp === 'gas' || p.comp === 'ice') { const ti = Math.min(1600, (p.comp === 'gas' ? 115 : 55) * Math.pow(Math.max(y, 1e5) / 4.5e9, -0.3)); T4 += ti ** 4; }
+// 온도와 '왜 뜨거운지': 별빛 + 온실 효과에 가스 거인 속의 열 / 갓 생긴 행성의 열 / 충돌 열이 더해짐
+function tempInfo(p, aa, e, L, y, P) {
+  const Tb = baseTemp(p, aa, e, L), parts = [];
+  if (p.comp === 'gas' || p.comp === 'ice') parts.push(['행성 속의 열', Math.min(1600, (p.comp === 'gas' ? 115 : 55) * Math.pow(Math.max(y, 1e5) / 4.5e9, -0.3))]);
   else {
-    if (p.comp === 'rock') { const tm = 1500 * Math.exp(-y / 3e7) * Math.sqrt(Math.min(1, p.m / 0.5)); T4 += tm ** 4; } // 갓 생긴 암석 행성의 열 (마그마 바다)
-    for (const im of p.impacts) if (im[1] <= P) { const ti = 2300 * Math.exp(-(P - im[1]) / 4); T4 += ti ** 4; } // 충돌 열
+    // 갓 생긴 암석 행성: 다 자라기 전까지 마그마 바다, 그 뒤 빨리 식음
+    if (p.comp === 'rock') parts.push(['갓 생긴 행성의 열', 1200 * Math.exp(-Math.max(0, y - 0.5 * p.tForm) / 8e6) * Math.sqrt(Math.min(1, p.m / 0.5))]);
+    let ti = 0; for (const im of p.impacts) if (im[1] <= P) ti = Math.max(ti, 2300 * Math.exp(-(P - im[1]) / 2.5));
+    parts.push(['충돌 열', ti]);
   }
-  return Math.pow(T4, 0.25);
+  let T4 = Tb ** 4, top = null;
+  for (const q of parts) { T4 += q[1] ** 4; if (!top || q[1] > top[1]) top = q; }
+  const T = Math.pow(T4, 0.25);
+  let why = '';
+  if (top && T - Tb > 25) why = top[0];
+  else if (p.gh > 2) why = '두꺼운 대기';
+  return { T, why, Tstar: Tb / p.gh };
 }
+// 생명 가능 지대: 지구 같은 행성(구름 반사 0.3, 보통 대기)이 -10°C ~ 60°C가 되는 거리
+function hzRange(L) { const k = 278.6 * Math.pow(0.7, 0.25) * 1.12, s = Math.sqrt(L); return [Math.pow(k / 333, 2) * s, Math.pow(k / 263, 2) * s]; }
 
 // ===== 행성계 만들기 =====
 function makeSystem(seed, opt) {
@@ -388,7 +399,7 @@ function chaosF(S, y, st) {
   if ((st.ph === 'wd' || st.ph === 'pn') && y < S.wdStart + 3e8) return 0.9;
   return 0.3;
 }
-let DIFF0 = 0.09, DIFF_S = 4.5, DIFF_MAX = 22;
+let DIFF0 = 0.15, DIFF_S = 5, DIFF_MAX = 24;
 
 // ===== 시뮬레이션 (처음부터 끝까지 한 번에) =====
 function simulate(S) {
@@ -396,11 +407,11 @@ function simulate(S) {
   const fr = new Float32Array(F * N * 6);
   S.fr = fr;
   for (const p of pl) {
-    p.s = { a: p.a0, h: p.e0 * Math.sin(p.w0), k: p.e0 * Math.cos(p.w0), M: p.M0, mode: 'orb', kick: null, x: 0, y: 0, px: 0, py: 0, md: 0, g: 0, lastBy: -1, blend: null };
+    p.s = { a: p.a0, h: p.e0 * Math.sin(p.w0), k: p.e0 * Math.cos(p.w0), M: p.M0, L: p.M0 + p.w0, nh: 0, nk: 0, mode: 'orb', kick: null, x: 0, y: 0, px: 0, py: 0, md: 0, g: 0, lastBy: -1, blend: null };
     p.m = p.m0; p.deathF = F + 5; p.escF = -1; p.plF = -1; p.fate = null; p.moons = []; p.moonN = 0; p.rings = [];
     p.impacts = []; p.wlog = []; p.wstate = null; p.wlastF = -999; p.mlog = [[0, p.m0]];
   }
-  const cool = {};
+  const cool = {}, KICK_N = 90, PULL_N = 36, TAU_N = 1.5;
   let A = null, AL = [], lastB = -99, dirty = true;
   const kill = (p, f) => { p.deathF = f; for (const m of p.moons) if (m.dies > f) m.dies = f; dirty = true; };
   const addMoon = (p, f, o) => {
@@ -409,9 +420,9 @@ function simulate(S) {
     p.moons.push(m); return m;
   };
   const pull = (list, f, cx, cy) => {
-    for (let k = 1; k <= 18; k++) {
+    for (let k = 1; k <= PULL_N; k++) {
       const fk = f - k; if (fk < 0) break;
-      const w = Math.pow(1 - k / 19, 2);
+      const w = Math.pow(1 - k / (PULL_N + 1), 2);
       for (const p of list) { const o = (fk * N + p.id) * 6; fr[o] = lerp(fr[o], cx, w); fr[o + 1] = lerp(fr[o + 1], cy, w); }
     }
   };
@@ -447,6 +458,7 @@ function simulate(S) {
     if (y < S.diskEnd) for (const p of orb) if (p.comp === 'rock' || p.comp === 'icy') { const d = Math.exp(-dt * 1.2); p.s.h *= d; p.s.k *= d; }
     // 3) 너무 가까운 행성끼리는 서로 흔들어 궤도가 찌그러짐
     const chaos = chaosF(S, y, st);
+    for (const p of orb) { p.s.cs = 0; const q = Math.sqrt(2 * dt / TAU_N); p.s.nh += -p.s.nh / TAU_N * dt + gauss() * q; p.s.nk += -p.s.nk / TAU_N * dt + gauss() * q; }
     if (chaos > 0 && orb.length > 1) {
       const so = orb.slice().sort((p, q) => p.s.a - q.s.a);
       for (let i = 0; i + 1 < so.length; i++) {
@@ -454,18 +466,19 @@ function simulate(S) {
         if (p.s.g < 0.5 || q.s.g < 0.5) continue;
         const am = (p.s.a + q.s.a) / 2, mt = p.s.md + q.s.md, rh = Math.cbrt(mt / (3 * Ms)) * am, D = (q.s.a - p.s.a) / rh;
         if (D > DIFF_MAX) continue;
-        const sg = Math.min(0.05, DIFF0 * Math.exp(-(D - 5) / DIFF_S)) * chaos * Math.sqrt(dt);
-        for (const [x, o] of [[p, q], [q, p]]) { const w = Math.sqrt(o.s.md / mt); x.s.h += gauss() * sg * w; x.s.k += gauss() * sg * w; }
+        const sg = Math.min(0.05, DIFF0 * Math.exp(-(D - 5) / DIFF_S)) * chaos;
+        for (const [x, o] of [[p, q], [q, p]]) x.s.cs += sg * Math.sqrt(o.s.md / mt);
       }
+      for (const p of orb) if (p.s.cs > 0) { const c = p.s.cs / Math.sqrt(2 * TAU_N) * dt; p.s.h += c * p.s.nh; p.s.k += c * p.s.nk; }
     }
     // 4) 가까이 지나가며 받은 충격을 조금씩 나눠서 적용
     for (const p of orb) {
       const kk = p.s.kick;
       if (kk) {
         const th = Math.atan2(p.s.y, p.s.x);
-        p.s.h += kk.dh / 20; p.s.k += kk.dk / 20; p.s.a = Math.max(p.s.a + kk.da / 20, 1e-3);
+        p.s.h += kk.dh / KICK_N; p.s.k += kk.dk / KICK_N; p.s.a = Math.max(p.s.a + kk.da / KICK_N, 1e-3);
         let e = Math.hypot(p.s.h, p.s.k); if (e > 0.97) { const c = 0.97 / e; p.s.h *= c; p.s.k *= c; e = 0.97; }
-        p.s.M = meanFromAngle(th, e, Math.atan2(p.s.h, p.s.k));
+        const w = Math.atan2(p.s.h, p.s.k); p.s.M = meanFromAngle(th, e, w); p.s.L = p.s.M + w;
         if (--kk.n <= 0) p.s.kick = null;
         dirty = true;
       } else {
@@ -475,7 +488,8 @@ function simulate(S) {
     // 5) 공전
     for (const p of orb) {
       const aa = p.s.a * fM, e = Math.hypot(p.s.h, p.s.k), w = Math.atan2(p.s.h, p.s.k);
-      p.s.M = (p.s.M + omega(aa) * dt) % TAU;
+      p.s.L = (p.s.L + omega(aa) * dt) % TAU;
+      p.s.M = ((p.s.L - w) % TAU + TAU) % TAU;
       const xy = kepXY(aa, e, w, p.s.M); p.s.x = xy[0]; p.s.y = xy[1];
     }
     for (const p of live) {
@@ -515,9 +529,9 @@ function simulate(S) {
         big.m = w1 + w2 * (big.comp === 'rock' && sml.comp === 'rock' ? 0.94 : 1); big.mlog.push([f, big.m]);
         big.impacts.push([y, P]);
         const e = Math.hypot(big.s.h, big.s.k), w = Math.atan2(big.s.h, big.s.k);
-        big.s.M = meanFromAngle(Math.atan2(cy, cx), e, w);
+        big.s.M = meanFromAngle(Math.atan2(cy, cx), e, w); big.s.L = big.s.M + w;
         const xy = kepXY(big.s.a * fM, e, w, big.s.M); big.s.x = xy[0]; big.s.y = xy[1];
-        big.s.blend = { x: cx, y: cy, n: 14 }; big.s.kick = null;
+        big.s.blend = { x: cx, y: cy, n: 24 }; big.s.kick = null;
         for (const m of sml.moons) if (m.dies > f && m.born <= f) {
           m.dies = f;
           if (big.moons.filter(q2 => q2.dies > f).length < moonCap(big)) addMoon(big, f, { km: m.km, from: m.from, src: m.src, dist: m.dist * U(1, 2.5), retro: m.retro, col: m.col });
@@ -539,7 +553,7 @@ function simulate(S) {
           x.s.lastBy = o.id;
           const eN = Math.hypot(x.s.h + dh, x.s.k + dk), aN = x.s.a + da;
           if (eN >= 0.93 || aN * fM * (1 + eN) > S.aMax0 * fM * 7) startEsc(x, f, o.id, fM);
-          else x.s.kick = x.s.kick ? { dh: x.s.kick.dh + dh, dk: x.s.kick.dk + dk, da: x.s.kick.da + da, n: 20 } : { dh, dk, da, n: 20 };
+          else { const o2 = x.s.kick, r = o2 ? o2.n / KICK_N : 0; x.s.kick = o2 ? { dh: o2.dh * r + dh, dk: o2.dk * r + dk, da: o2.da * r + da, n: KICK_N } : { dh, dk, da, n: KICK_N }; }
         }
       }
     }
@@ -588,7 +602,7 @@ function simulate(S) {
       if (f < p.deathF) {
         let x = p.s.x, yy = p.s.y;
         const bl = p.s.blend;
-        if (bl) { const w = bl.n / 14; x = lerp(x, bl.x, w); yy = lerp(yy, bl.y, w); if (--bl.n <= 0) p.s.blend = null; }
+        if (bl) { const w = sm(bl.n / 24); x = lerp(x, bl.x, w); yy = lerp(yy, bl.y, w); if (--bl.n <= 0) p.s.blend = null; }
         fr[o] = x; fr[o + 1] = yy; fr[o + 2] = p.s.a * fM; fr[o + 3] = p.s.h; fr[o + 4] = p.s.k; fr[o + 5] = p.m * p.s.g;
       } else if (f > 0) {
         const o0 = o - N * 6; fr[o] = fr[o0]; fr[o + 1] = fr[o0 + 1]; fr[o + 2] = fr[o0 + 2]; fr[o + 3] = fr[o0 + 3]; fr[o + 4] = fr[o0 + 4]; fr[o + 5] = 0;
@@ -925,8 +939,8 @@ function visK(p, f, s) {
   const sf = p.escF >= 0 ? p.escF : p.plF;
   if (sf >= 0 && f >= sf) k = lerp(ka, kr, clamp((f - sf) / 40, 0, 1));
   if (p.pulls) for (const q of p.pulls) {
-    if (f < q.f - 18 || f > q.f + 14) continue;
-    const kp = vr(q.r) / q.r, w = f <= q.f ? Math.pow((f - (q.f - 18)) / 18, 2) : 1 - (f - q.f) / 14;
+    if (f < q.f - 36 || f > q.f + 24) continue;
+    const kp = vr(q.r) / q.r, w = f <= q.f ? Math.pow((f - (q.f - 36)) / 36, 2) : sm(1 - (f - q.f) / 24);
     k = lerp(k, kp, clamp(w, 0, 1));
   }
   return k;
@@ -943,10 +957,10 @@ function aliveRings(p, f) { return p.rings.filter(r => r.born <= f); }
 // 지금 이 순간 행성 상태
 function pNow(p, f, t, y, st) {
   const s = pState(p, f, t), e = Math.hypot(s.h, s.k), g = growth(p, y), mf = logAt(p.mlog, f);
-  const T = fullTemp(p, s.a, e, st.L, y, PP), ws = p.water > 0 ? (p.wlog.length ? logAt(p.wlog, f) : null) : null;
+  const ti = tempInfo(p, s.a, e, st.L, y, PP), T = ti.T, ws = p.water > 0 ? (p.wlog.length ? logAt(p.wlog, f) : null) : null;
   const lk = lookOf(p, mf, T, ws);
   const Re = radiusOf(p.comp, mf) * (0.3 + 0.7 * Math.sqrt(g));
-  return { s, e, g, m: mf, T, ws, lk, Re };
+  return { s, e, g, m: mf, T, why: ti.why, Tstar: ti.Tstar, ws, lk, Re };
 }
 
 function draw(now) {
@@ -964,7 +978,7 @@ function draw(now) {
   const cx = CX(), cy = CY();
   // 생명 가능 지대
   if (TG.hz) {
-    const r1 = vr(0.95 * Math.sqrt(st.L)), r2 = vr(1.67 * Math.sqrt(st.L));
+    const hz = hzRange(st.L), r1 = vr(hz[0]), r2 = vr(hz[1]);
     ctx.fillStyle = 'rgba(80,200,120,0.09)'; ctx.beginPath(); ctx.arc(cx, cy, r2, 0, TAU); ctx.arc(cx, cy, r1, 0, TAU, true); ctx.fill();
     ctx.fillStyle = 'rgba(120,220,150,0.6)'; ctx.font = '11px "Malgun Gothic"'; ctx.textAlign = 'center'; ctx.fillText('생명 가능 지대', cx, cy - r2 - 4);
   }
@@ -1213,7 +1227,7 @@ function updCards(f, t, y, st, redraw) {
         `<div>표면 <span style="color:${bbColor(st.T)}">${Math.round(st.T - 273).toLocaleString()}°C</span> · 밝기 태양의 ${fmtNum(st.L)}배</div><div class="ty">질량 태양의 ${st.M.toFixed(2)}배 · 크기 ${fmtNum(st.Rs)}배</div>`;
       if (cd.det) {
         cd.det.innerHTML = `별이 생긴 지 <b>${fmtYear(y)}</b><br>수소를 태우는 기간: <b>${fmtYear(SYS.star.tMS)}</b><br>` + (SYS.star.giant ? `나중에 적색거성 → 백색왜성 (질량 태양의 ${SYS.star.Mwd.toFixed(2)}배)` : '아주 가벼운 별이라 적색거성이 되지 않음 → 청색왜성 → 백색왜성') +
-          `<br>생명 가능 지대: <b>${fmtNum(0.95 * Math.sqrt(st.L))} ~ ${fmtNum(1.67 * Math.sqrt(st.L))} AU</b>`;
+          `<br>생명 가능 지대: <b>${fmtNum(hzRange(st.L)[0])} ~ ${fmtNum(hzRange(st.L)[1])} AU</b> (지구 같은 행성이 -10°C ~ 60°C)`;
         cd.hist.innerHTML = '';
       }
       continue;
@@ -1254,12 +1268,12 @@ function updCards(f, t, y, st, redraw) {
     const mtxt = n.m >= 30 ? '목성 질량의 ' + fmtNum(n.m * n.g / 318) + '배' : '지구 질량의 ' + fmtNum(n.m * n.g) + '배';
     const esc_ = p.escF >= 0 && f >= p.escF ? ' · 날아가는 중' : p.plF >= 0 && f >= p.plF ? ' · 떨어지는 중' : '';
     cd.tx.innerHTML = `<div class="nm">${esc(pname(p))}</div><div class="ty">${n.g < 0.6 ? '자라는 중' : typeName(p, n.m, n.T)}${surf && n.g >= 0.6 ? ' · ' + surf : ''}${esc_}</div>` +
-      `<div>온도 <span style="color:${tCol(n.T)}">${cTemp(n.T)}</span> · ${fmtNum(n.s.a)} AU</div><div class="ty">${mtxt}${ms.length ? ' · 위성 ' + ms.length : ''}${rg.length ? ' · 고리' : ''}</div>`;
+      `<div>온도 <span style="color:${tCol(n.T)}">${cTemp(n.T)}</span>${n.why ? ' <span class="ty">(' + ({ '갓 생긴 행성의 열': '갓 생긴 열', '행성 속의 열': '속의 열' }[n.why] || n.why) + ')</span>' : ''} · ${fmtNum(n.s.a)} AU</div><div class="ty">${mtxt}${ms.length ? ' · 위성 ' + ms.length : ''}${rg.length ? ' · 고리' : ''}</div>`;
     if (cd.det) {
       const e = n.e, a = n.s.a;
       cd.det.innerHTML = `질량: <b>${mtxt}</b> · 크기: <b>지구의 ${fmtNum(n.Re)}배</b><br>거리: <b>${fmtNum(a)} AU</b> (가까울 때 ${fmtNum(a * (1 - e))}, 멀 때 ${fmtNum(a * (1 + e))})<br>` +
         `이심률: <b>${e.toFixed(3)}</b> ${e < 0.02 ? '(거의 동그라미)' : e < 0.1 ? '(중심이 살짝 비껴남)' : e < 0.3 ? '(찌그러짐)' : '(많이 찌그러짐)'}<br>` +
-        `온도: <b style="color:${tCol(n.T)}">${cTemp(n.T)}</b>${n.ws ? ' · 물: ' + { ocean: '바다', ice: '얼음', none: '없음' }[n.ws] : ''}${p.gh > 2 ? ' · 두꺼운 대기 (온실 효과)' : ''}` +
+        `온도: <b style="color:${tCol(n.T)}">${cTemp(n.T)}</b>${n.why ? ' (' + n.why + ')' : ''}${n.ws ? ' · 물: ' + { ocean: '바다', ice: '얼음', none: '없음' }[n.ws] : ''}<br>별빛만 받을 때 온도: <b>${cTemp(n.Tstar)}</b>${p.gh > 2 ? ' · 두꺼운 대기가 열을 가둠 (온실 효과)' : ''}` +
         (ms.length ? '<br>위성: ' + ms.map(m => `<b>${esc(mname(p, m.idx))}</b>(${m.from === 'planet' ? '붙잡힌 행성' : '붙잡힌 소행성'}, ${m.km >= 1000 ? Math.round(m.km).toLocaleString() : Math.round(m.km)} km${m.retro ? ', 거꾸로 돎' : ''})`).join(', ') : '') +
         (rg.length ? '<br>고리: ' + rg.map(r => '위성 ' + esc(J(mname(p, r.src), '이', '가')) + ' 부서져서 생김').join(', ') : '');
       cd.hist.innerHTML = histHTML(p, false);
