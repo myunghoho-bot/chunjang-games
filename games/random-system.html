@@ -401,11 +401,11 @@ function makeSystem(seed, opt) {
 function chaosF(S, y, st) {
   if (y < S.diskEnd) return 0;
   if (y < 3e8) return 1;
-  if (st.ph === 'ms') return 0.08;
+  if (st.ph === 'ms') return 0.04;
   if ((st.ph === 'wd' || st.ph === 'pn') && y < S.wdStart + 3e8) return 0.9;
   return 0.3;
 }
-let DIFF0 = 0.35, DIFF_S = 6, DIFF_MAX = 28, SPIN_K = 3.2, DAMP_K = 0.03;
+let DIFF0 = 0.5, DIFF_S = 6, DIFF_MAX = 28, SPIN_K = 4, DAMP_K = 0.05;
 
 // ===== 시뮬레이션 (처음부터 끝까지 한 번에) =====
 function simulate(S) {
