@@ -186,19 +186,17 @@ function starAt(y) {
 }
 const GIANT_PH = { sub: 1, rgb: 1, hb: 1, agb: 1 };
 
-// 시간 막대: [나이(년), x1 속도로 걸리는 초]
+// 시간 막대: [나이(년), x1 속도로 걸리는 초, 'lin'이면 그 앞 구간은 진짜 년수 비율(직선)]
+// 별 일생의 대부분인 안정기(주계열)는 진짜 비율대로 길게, 행성이 생기고 부딪히는 앞부분은 짧게 (아이 요청 2026-10-28)
 function makeNodes(s) {
-  const t = s.tMS, base = [[0, 0], [1e6, 8], [1e7, 22], [1e8, 54], [1e9, 76]];
-  const n = base.filter(q => q[0] < t * 0.6);
-  let p = n[n.length - 1][1];
-  if (t * 0.5 > 2e9) { p += 26; n.push([t * 0.5, p]); }
-  p += 24; n.push([t, p]);
+  const t = s.tMS, n = [[0, 0], [1e6, 4], [1e7, 10], [1e8, 26], [3e8, 34]];
+  let p = 34 + 110; n.push([t, p, 'lin']);
   if (s.giant) {
     const x4 = t * 1.132;
-    n.push([t * 1.07, p + 10], [t * 1.12, p + 24], [t * 1.13, p + 31], [x4, p + 43], [x4 + 1e6, p + 52], [x4 + 1e9, p + 64], [x4 + 1e12, p + 74]);
+    n.push([t * 1.07, p + 8, 'lin'], [t * 1.12, p + 20], [t * 1.13, p + 25], [x4, p + 33], [x4 + 1e6, p + 38], [x4 + 1e9, p + 45], [x4 + 1e12, p + 50]);
   } else {
     const x1 = t * 1.1;
-    n.push([x1, p + 16], [x1 + 1e7, p + 24], [x1 + 1e10, p + 40], [x1 + 1e13, p + 52]);
+    n.push([x1, p + 11, 'lin'], [x1 + 1e7, p + 17], [x1 + 1e10, p + 27], [x1 + 1e13, p + 35]);
   }
   return n;
 }
@@ -207,7 +205,7 @@ function yearAt(P) {
   if (P <= 0) return 0;
   for (let i = 1; i < N.length; i++) {
     const y0 = N[i - 1][0], p0 = N[i - 1][1], y1 = N[i][0], p1 = N[i][1];
-    if (P <= p1) { const u = (P - p0) / (p1 - p0); return y0 <= 0 ? y1 * u : y0 * Math.pow(y1 / y0, u); }
+    if (P <= p1) { const u = (P - p0) / (p1 - p0); return y0 <= 0 || N[i][2] ? y0 + (y1 - y0) * u : y0 * Math.pow(y1 / y0, u); }
   }
   return N[N.length - 1][0];
 }
@@ -216,7 +214,7 @@ function pAt(y) {
   if (y <= 0) return 0;
   for (let i = 1; i < N.length; i++) {
     const y0 = N[i - 1][0], p0 = N[i - 1][1], y1 = N[i][0], p1 = N[i][1];
-    if (y <= y1) { const u = y0 <= 0 ? y / y1 : Math.log(y / y0) / Math.log(y1 / y0); return p0 + (p1 - p0) * u; }
+    if (y <= y1) { const u = y0 <= 0 || N[i][2] ? (y - y0) / (y1 - y0) : Math.log(y / y0) / Math.log(y1 / y0); return p0 + (p1 - p0) * u; }
   }
   return N[N.length - 1][1];
 }
@@ -262,10 +260,10 @@ function lap(j, al) {
 // 궤도끼리 당기는 힘(세속 섭동)을 화면에서 보이는 빠르기로: 목성만 한 행성 옆 작은 행성은 약 10초에 한 바퀴 흔들림
 let SEC_F = 1;
 function calibSec() { SEC_F = (TAU / 10) / (W0 / 4 * 9.55e-4 * 0.49 * lap(1, 0.7)); }
-function buildA(L, fM, Mst) {
+function buildA(L, fM, Mst, sk = 1) {
   const n = L.length, A = new Float64Array(n * n), Ms = Mst * MSUN_E;
   for (let i = 0; i < n; i++) {
-    const ai = L[i].s.a * fM, ni = omega(ai) * SEC_F / 4;
+    const ai = L[i].s.a * fM, ni = omega(ai) * sk * SEC_F / 4;
     for (let j = 0; j < n; j++) {
       if (i === j) continue;
       const aj = L[j].s.a * fM;
@@ -302,12 +300,15 @@ function baseTemp(p, aa, e, L) {
 // 온도와 '왜 뜨거운지': 별빛 + 온실 효과에 가스 거인 속의 열 / 갓 생긴 행성의 열 / 충돌 열이 더해짐
 function tempInfo(p, aa, e, L, y, P) {
   const Tb = baseTemp(p, aa, e, L), parts = [];
+  // 식는 빠르기: 우주로 열을 내보내며 식는데, 별빛을 적게 받을수록(생명 가능 지대·바깥쪽) 더 빨리 식음.
+  // 생명 가능 지대 안쪽 끝(60°C)보다 뜨거운 곳은 1배, 그보다 차가우면 (온도비)^3 배로 짧아짐
+  const cf = clamp(Math.pow(Tb / 333, 3), 0.02, 1);
   if (p.comp === 'gas' || p.comp === 'ice') parts.push(['행성 속의 열', Math.min(1600, (p.comp === 'gas' ? 115 : 55) * Math.pow(Math.max(y, 1e5) / 4.5e9, -0.3))]);
   else {
     // 갓 생긴 암석 행성: 다 자라기 전까지 마그마 바다, 그 뒤 빨리 식음
-    if (p.comp === 'rock') parts.push(['갓 생긴 행성의 열', 1200 * Math.exp(-Math.max(0, y - 0.5 * p.tForm) / 8e6) * Math.sqrt(Math.min(1, p.m / 0.5))]);
-    // 충돌 열: 1만 년이면 다 식음 (아이가 정함)
-    let ti = 0; for (const im of p.impacts) if (im[0] <= y) { const d = (y - im[0]) / 1e4; if (d < 1) ti = Math.max(ti, 2300 * (1 - sm(d))); }
+    if (p.comp === 'rock') parts.push(['갓 생긴 행성의 열', 1200 * Math.exp(-Math.max(0, y - 0.5 * p.tForm) / (8e6 * cf)) * Math.sqrt(Math.min(1, p.m / 0.5))]);
+    // 충돌 열: 1만 년이면 다 식음, 멀수록 더 빨리 (아이가 정함)
+    let ti = 0; for (const im of p.impacts) if (im[0] <= y) { const d = (y - im[0]) / (1e4 * cf); if (d < 1) ti = Math.max(ti, 2300 * (1 - sm(d))); }
     parts.push(['충돌 열', ti]);
   }
   let T4 = Tb ** 4, top = null;
@@ -384,6 +385,10 @@ function makeSystem(seed, opt) {
   S.snow = snow;
   const ratio = S.pl[0].a0 / S.aMax0;
   S.PW = ratio < 0.999 ? clamp(Math.log(0.16) / Math.log(ratio), 0.33, 1) : 1;
+  // 공전 빠르기 배수: 행성 충돌기(가스 원반이 사라진 뒤 ~ 3억 년)는 화면 1초에 시간이 많이 흘러서 행성이 더 빨리 돎
+  const q0 = pAt(S.diskEnd), q1 = pAt(3e8);
+  S.spin = new Float32Array(S.F); S.spinT = new Float32Array(S.F);
+  for (let f = 0, acc = 0; f < S.F; f++) { const P = f / 60, k = 1 + (SPIN_K - 1) * sm((P - q0 + 2) / 3) * (1 - sm((P - q1) / 5)); S.spin[f] = k; S.spinT[f] = acc; acc += k / 60; }
   calibSec();
   simulate(S);
   starEvents(S);
@@ -396,11 +401,11 @@ function makeSystem(seed, opt) {
 function chaosF(S, y, st) {
   if (y < S.diskEnd) return 0;
   if (y < 3e8) return 1;
-  if (st.ph === 'ms') return 0.25;
+  if (st.ph === 'ms') return 0.08;
   if ((st.ph === 'wd' || st.ph === 'pn') && y < S.wdStart + 3e8) return 0.9;
   return 0.3;
 }
-let DIFF0 = 0.15, DIFF_S = 5, DIFF_MAX = 24;
+let DIFF0 = 0.35, DIFF_S = 6, DIFF_MAX = 28, SPIN_K = 3.2, DAMP_K = 0.03;
 
 // ===== 시뮬레이션 (처음부터 끝까지 한 번에) =====
 function simulate(S) {
@@ -449,14 +454,16 @@ function simulate(S) {
     const orb = live.filter(p => p.s.mode === 'orb');
 
     // 1) 세속 섭동: 큰 행성이 옆 행성의 궤도 중심을 조금씩 밀고 돌림 (레코드판처럼)
-    if (dirty || f - lastB >= 12) { AL = orb.slice(); A = buildA(AL, fM, st.M); lastB = f; dirty = false; }
+    if (dirty || f - lastB >= 12) { AL = orb.slice(); A = buildA(AL, fM, st.M, S.spin[f]); lastB = f; dirty = false; }
     const n = AL.length;
     if (n > 1) {
       for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += A[i * n + j] * AL[j].s.k; AL[i].s.h += dt * s; }
       for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += A[i * n + j] * AL[j].s.h; AL[i].s.k -= dt * s; }
     }
-    // 2) 가스 원반이 있을 때는 작은 행성 궤도가 동그랗게 유지됨
-    if (y < S.diskEnd) for (const p of orb) if (p.comp === 'rock' || p.comp === 'icy') { const d = Math.exp(-dt * 1.2); p.s.h *= d; p.s.k *= d; }
+    // 2) 작은 행성 궤도를 동그랗게 되돌리는 힘
+    // 가스 원반이 있을 땐 빨리, 충돌기가 끝나 갈 땐 남은 돌 부스러기가 천천히 (역학적 마찰) 작은 행성 궤도를 동그랗게
+    const damp = y < S.diskEnd ? 1.2 : (y > 1e8 && y < 2e9) ? DAMP_K : 0;
+    if (damp > 0) for (const p of orb) if (p.comp === 'rock' || p.comp === 'icy') { const d = Math.exp(-dt * damp); p.s.h *= d; p.s.k *= d; }
     // 3) 너무 가까운 행성끼리는 서로 흔들어 궤도가 찌그러짐
     const chaos = chaosF(S, y, st);
     for (const p of orb) { p.s.cs = 0; const q = Math.sqrt(2 * dt / TAU_N); p.s.nh += -p.s.nh / TAU_N * dt + gauss() * q; p.s.nk += -p.s.nk / TAU_N * dt + gauss() * q; }
@@ -489,7 +496,7 @@ function simulate(S) {
     // 5) 공전
     for (const p of orb) {
       const aa = p.s.a * fM, e = Math.hypot(p.s.h, p.s.k), w = Math.atan2(p.s.h, p.s.k);
-      p.s.L = (p.s.L + omega(aa) * dt) % TAU;
+      p.s.L = (p.s.L + omega(aa) * S.spin[f] * dt) % TAU;
       p.s.M = ((p.s.L - w) % TAU + TAU) % TAU;
       const xy = kepXY(aa, e, w, p.s.M); p.s.x = xy[0]; p.s.y = xy[1];
     }
@@ -947,6 +954,7 @@ function visK(p, f, s) {
   return k;
 }
 function pScreen(p, f, s) { const k = visK(p, f, s); return [CX() + s.x * k, CY() - s.y * k]; }
+function spinAt(P) { const fp = clamp(P * 60, 0, SYS.F - 2), f0 = Math.floor(fp); return lerp(SYS.spinT[f0], SYS.spinT[f0 + 1], fp - f0); }
 function frameAt() { const fp = clamp(PP * 60, 0, SYS.F - 2); const f0 = Math.floor(fp); return [f0, fp - f0]; }
 function pState(p, f0, t) {
   const N = SYS.pl.length, o0 = (f0 * N + p.id) * 6, o1 = o0 + N * 6, fr = SYS.fr;
@@ -994,14 +1002,14 @@ function draw(now) {
   // 원반 먼지
   const da = y >= S.diskEnd ? 0 : 0.55 * (1 - sm(Math.log10(Math.max(y, 1) / 1e5) / Math.log10(S.diskEnd / 1e5)));
   if (da > 0.01) for (const d of S.disk) {
-    const th = d.th + omega(d.a) * PP, [x, yy] = toS(d.a * Math.cos(th), d.a * Math.sin(th));
+    const th = d.th + omega(d.a) * spinAt(PP), [x, yy] = toS(d.a * Math.cos(th), d.a * Math.sin(th));
     ctx.globalAlpha = da; ctx.fillStyle = d.c; ctx.fillRect(x, yy, d.s, d.s);
   }
   // 소행성대
   const ba = 0.55 * sm((y - S.diskEnd * 0.4) / S.diskEnd) * (1 - 0.55 * sm(PP / S.TOTAL));
   if (ba > 0.01) for (const d of S.belts) {
     const a = d.a * fM; if (a < st.R * 1.1) continue;
-    const th = d.th + omega(a) * PP * 0.9, [x, yy] = toS(a * Math.cos(th), a * Math.sin(th));
+    const th = d.th + omega(a) * spinAt(PP) * 0.9, [x, yy] = toS(a * Math.cos(th), a * Math.sin(th));
     ctx.globalAlpha = ba; ctx.fillStyle = d.c; ctx.fillRect(x, yy, d.s, d.s);
   }
   ctx.globalAlpha = 1;
