@@ -1102,7 +1102,7 @@ function openStart(){S.flags.needStart=1;let col=CO_COLORS[0],fem=false;
   on(c,'.seg button','click',el=>{fem=el.dataset.g==='1';c.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===el))});
   $('#cGo').onclick=()=>{const nm=($('#cName').value||'').trim()||'새싹산업';S.name=nm;S.color=col;S.ceoFem=fem;delete S.flags.needStart;PL.look=makeLook('ceo',fem,fem?11:7);
    buildWorld();genOffers();genCands();closeModal();S.log=[];addLog(iga(nm)+' 문을 열었습니다.','big');
-   addLog('먼저 1층 인사과에서 직원을 뽑고, 2층 사장 컴퓨터에서 첫 제품을 기획하세요.');banner(nm,'창업 1일째');save()}})}
+   addLog('먼저 1층 인사과에서 직원을 뽑고, 2층 사장 컴퓨터에서 첫 제품을 기획하세요. 개발자·연구원이 있으면 제품 디자인을 맡길 수 있습니다.');banner(nm,'창업 1일째');save()}})}
 
 // ---------- 엘리베이터 ----------
 function floorName(k){if(k===0)return'1층 로비 · 인사과';if(k===1)return'2층 사장실 · 사무실';return(k+1)+'층 사무실'}
@@ -1207,24 +1207,35 @@ let EP=null;
 function hwQ(type,hw){const T=DEV[type];let s=0,mx=0;for(const k of T.hw){const o=HW[k].o;s+=o[hw[k]||0][1];mx+=Math.max(...o.map(v=>v[1]))}return Math.round(50+50*s/Math.max(1,mx))}
 function hwCost(type,hw){let m=1;for(const k of DEV[type].hw)m*=HW[k].o[hw[k]||0][2];return m}
 function devBonus(role){return Math.min(12,Math.round(staffOf(role).reduce((a,s)=>a+s.skill,0)*.7))}
+function teamSkill(role){return staffOf(role).reduce((a,s)=>a+s.skill,0)}
+// 개발팀이 부품을 고르고 화면을 만든다 (실력이 좋을수록 앱이 많음)
+function autoElec(ep){const sk=teamSkill('edev'),T=DEV[ep.type];ep.hw={};
+ for(const k of T.hw){const o=HW[k].o;let best=0;for(let i=0;i<o.length;i++)if(!(o[i][3]&&o[i][3]>S.tech.elec))best=i;ep.hw[k]=k==='chip'?best:Math.min(best,sk>=6?2:1)}
+ const D=newDesign(ep.type),big=['phone','tablet','laptop'].includes(ep.type);applyTpl(D,big?clamp(1+Math.floor(sk/2),1,6):clamp(1+Math.floor(sk/3),1,4));ep.design=D;ep.team=staffOf('edev').length}
+// 연구팀이 맛·재료·포장을 정하고 시식까지 한다 (실력이 좋을수록 인기 맛에 가까움)
+function autoFood(fp){const sk=teamSkill('fdev'),tr=S.trend[fp.type],off=Math.max(0,3-Math.floor(sk/3)),idx=[0,1,2,3,4].sort(()=>R()-.5).slice(0,off);
+ fp.fl=tr.map((v,i)=>idx.includes(i)?clamp(v+(v>=5?-1:v<=0?1:(R()<.5?-1:1)),0,5):v);fp.ing=sk>=4?1:0;fp.pc=pick(PKG_COLS);fp.icon=pick(FOOD_ICONS);fp.team=staffOf('fdev').length;
+ const ts=tasteScore(fp.fl,tr);let like=0;for(let i=0;i<10;i++)if(ts+(Math.random()-.5)*30>62)like++;fp.test={taste:ts,like,talk:tasteTalk(fp.fl,tr).slice(0,3)}}
 function openElecPlan(d){if(d)EP=d;else EP={type:null,hw:{},color:null,design:null,gen:1};
  if(!EP.type){openModal(`<h2>전자 제품 기획 · 1. 종류 고르기</h2><div class="sub">전자 기술 ${S.tech.elec}단계입니다. 기술이 오르면 더 비싼 기계를 만들 수 있습니다.</div><div class="opts">${DEV_ORDER.map(k=>{const T=DEV[k],lk=T.tech>S.tech.elec;return`<div class="opt${lk?' lock':''}" data-k="${k}"><b>${T.n}</b><span>${T.desc}<br>${lk?'전자 기술 '+T.tech+'단계 필요':'보통 값 '+priceStr(T.price)}</span></div>`}).join('')}</div><div class="acts"><button id="mBack">뒤로</button></div>`,c=>{
-  on(c,'.opt:not(.lock)','click',el=>{EP.type=el.dataset.k;EP.color=DEV[EP.type].body;EP.hw={};for(const k of DEV[EP.type].hw)EP.hw[k]=k==='cam'?1:0;openElecPlan(EP)});$('#mBack').onclick=()=>openComputer('plan')},true);return}
+  on(c,'.opt:not(.lock)','click',el=>{EP.type=el.dataset.k;EP.color=DEV[EP.type].body;EP.hw={};for(const k of DEV[EP.type].hw)EP.hw[k]=k==='cam'?1:0;if(staffOf('edev').length)autoElec(EP);openElecPlan(EP)});$('#mBack').onclick=()=>openComputer('plan')},true);return}
  const T=DEV[EP.type];
  const rows=T.hw.map(k=>`<i>${HW[k].n}</i><div class="seg">${HW[k].o.map((o,i)=>{const lk=o[3]&&o[3]>S.tech.elec;return`<button data-hw="${k}" data-i="${i}" class="${(EP.hw[k]||0)===i?'on':''}" ${lk?'disabled title="기술 '+o[3]+'단계 필요"':''}>${o[0]}</button>`}).join('')}</div>`).join('');
  const bodyCols=['#1c2026','#e9ecef','#a9afb6','#2f6fb0','#c0392b','#e8c8d8','#1f8a5b','#d8b878','#6b4fb3','#f2f2f2'];
  const sw=hwQ(EP.type,EP.hw),sws=EP.design?swScore(EP.design,EP.type).total:0,bon=devBonus('edev'),q=Math.min(100,Math.round(sw*.4+sws*.5+bon)),cm=hwCost(EP.type,EP.hw),cost=Math.round(T.cost*cm),fair=fairPrice(T.price,q,cm);
  openModal(`<h2>전자 제품 기획 · 2. ${T.n} 설계</h2><div class="sub">부품을 고르고, 화면을 만들고, 값을 정하면 공장에서 만들기 시작합니다.${EP.base?' (이전 제품 '+esc(EP.base)+'의 새 버전)':''}</div>
  <div class="two"><div><div class="frm">${rows}<i>몸체 색</i><div>${swatches(bodyCols,EP.color,'c')}<input type="color" id="eCol" value="${EP.color}"></div></div>
-  <h3>화면과 버튼</h3><p class="muted">${EP.design?'화면 '+EP.design.screens.length+'개 · 부품 '+EP.design.screens.reduce((a,s)=>a+s.els.length,0)+'개를 만들었습니다.':'아직 화면을 만들지 않았습니다. 개발 도구에서 화면에 버튼·글씨·그림을 놓고, 누르면 할 일을 정하세요.'}</p>
-  <button class="pri" id="eDev" style="font-size:14px;padding:7px 16px">${EP.design?'화면 고치기 (개발 도구)':'화면 만들기 (개발 도구)'}</button></div>
+  <h3>화면과 버튼</h3><p class="muted">${EP.design?(EP.team?'개발팀 '+EP.team+'명이 만든 화면입니다. ':'')+'화면 '+EP.design.screens.length+'개 · 부품 '+EP.design.screens.reduce((a,s)=>a+s.els.length,0)+'개':'아직 화면이 없습니다. 개발팀에 맡기거나 개발 도구에서 직접 만듭니다.'}</p>
+  <div class="row" style="flex-wrap:wrap;gap:6px"><button class="pri" id="eTeam" style="font-size:14px;padding:7px 16px" ${staffOf('edev').length?'':'disabled'}>${EP.team?'개발팀에 다시 맡기기':'개발팀에 맡기기'}</button><button id="eDev" style="font-size:14px;padding:7px 16px">${EP.design?'직접 고치기 (개발 도구)':'직접 만들기 (개발 도구)'}</button></div>
+  <p class="muted">${staffOf('edev').length?'개발자가 많고 실력이 좋을수록 화면이 많아지고 부품도 좋은 것을 고릅니다.':'1층 인사과에서 전자 개발자를 뽑으면 개발팀에 맡길 수 있습니다.'}</p></div>
  <div><canvas id="ePrev" width="260" height="300" style="width:260px;height:300px;display:block;margin:0 auto 8px;background:#11161b;border-radius:10px"></canvas>
   <div class="kv"><i>부품 점수</i><span>${sw}점</span><i>소프트웨어 점수</i><span>${EP.design?sws+'점':'-'}</span><i>개발팀 보너스</i><span>+${bon}점</span><i><b>품질</b></i><span><b>${q}점</b></span><i>1개 만드는 값</i><span>${priceStr(cost)}</span><i>알맞은 판매 값</i><span>${priceStr(fair)}</span></div></div></div>
  <div class="acts"><button id="mBack">종류 다시 고르기</button><button id="eSave">나중에 이어서</button><button class="pri" id="eGo" ${EP.design?'':'disabled'}>이름 짓고 내놓기</button></div>`,c=>{
   on(c,'button[data-hw]','click',el=>{EP.hw[el.dataset.hw]=+el.dataset.i;openElecPlan(EP)});
   on(c,'.sw','click',el=>{EP.color=el.dataset.c;openElecPlan(EP)});$('#eCol').oninput=e=>{EP.color=e.target.value;drawDevPreview($('#ePrev'),EP)};$('#eCol').onchange=()=>openElecPlan(EP);
   drawDevPreview($('#ePrev'),EP);
-  $('#eDev').onclick=()=>{if(!EP.design)EP.design=newDesign(EP.type);S.draft=EP;closeModal();openEditor(EP.design,{title:'새 '+T.n,body:EP.color,dev:EP.type,onClose:()=>{S.draft=EP;openElecPlan(EP)}})};
+  $('#eTeam').onclick=()=>{autoElec(EP);openElecPlan(EP)};
+  $('#eDev').onclick=()=>{if(!EP.design)EP.design=newDesign(EP.type);EP.team=0;S.draft=EP;closeModal();openEditor(EP.design,{title:'새 '+T.n,body:EP.color,dev:EP.type,onClose:()=>{S.draft=EP;openElecPlan(EP)}})};
   $('#mBack').onclick=()=>{EP.type=null;EP.design=null;openElecPlan(EP)};$('#eSave').onclick=()=>{S.draft=EP;closeModal();toast('만들던 제품을 저장했습니다.')};
   $('#eGo').onclick=()=>{const def=EP.base?EP.base.replace(/\s*\d+$/,'')+' '+EP.gen:(S.name+' '+T.n);const nm=(prompt('제품 이름을 지어 주세요',def)||'').trim();if(!nm)return;
    let price=fair;const pv=prompt('판매 값 (원). 알맞은 값은 '+fmtN(fair)+'원입니다. 비싸면 덜 팔리고 싸면 더 팔립니다.',fair);const n=parseInt(String(pv||'').replace(/[^0-9]/g,''));if(n>0)price=n;
@@ -1382,9 +1393,9 @@ function tplCalc(D){const sc=D.screens[0];sc.bg='#2b3038';sc.els=[];mk(D,0,'box'
  K.forEach((row,r)=>row.forEach((k,c)=>{const op='÷×−+()'.includes(k),bg=k==='C'?'#d9534f':k==='='?'#1f8a5b':k==='←'?'#6a7480':op?'#e08a1e':'#4a5058';
   const acts=k==='C'?[{k:'setText',e:dsp.id,v:'0'}]:k==='='?[{k:'calc',e:dsp.id}]:k==='←'?[{k:'delChar',e:dsp.id}]:[{k:'addText',e:dsp.id,v:k}];
   mk(D,0,'button',12+c*56,98+r*54,48,46,{text:k,size:20,bg,r:10,acts,name:'버튼 '+k})}))}
-function tplPhone(D){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0];s0.name='홈';s0.bg='#0f1a2b';s0.els=[];
+function tplPhone(D,n){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0];s0.name='홈';s0.bg='#0f1a2b';s0.els=[];
  mk(D,0,'clock',0,46,W,70,{size:54,name:'큰 시계'});mk(D,0,'clock',0,114,W,28,{fmt:'date',size:17,bold:0,color:'#c8d4e0',name:'날짜'});
- const apps=[['phone','전화','#1f8a5b'],['msg','메시지','#3a9ad9'],['camera','사진','#6a7480'],['music','음악','#e86fa3'],['gear','설정','#4a5560'],['dice','주사위','#e08a1e']];
+ const apps=[['phone','전화','#1f8a5b'],['msg','메시지','#3a9ad9'],['camera','사진','#6a7480'],['music','음악','#e86fa3'],['gear','설정','#4a5560'],['dice','주사위','#e08a1e']].slice(0,n||6);
  const back=si=>mk(D,si,'icon',12,24,44,44,{icon:'left',bg:'none',color:'#ffffff',name:'뒤로',acts:[{k:'back'}]});
  apps.forEach(([ic,n,bg],i)=>{const si=addScr(D,n,'#121820'),x=28+(i%3)*((W-56-64)/2),y=200+Math.floor(i/3)*110;
   mk(D,0,'icon',x,y,64,64,{icon:ic,bg,r:16,name:n+' 앱',acts:[{k:'go',s:D.screens[si].id}]});mk(D,0,'text',x-18,y+68,100,24,{text:n,size:14,align:'center',name:n+' 이름'});
@@ -1401,12 +1412,12 @@ function tplPhone(D){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0];s0.name='홈
   else{const dv=mk(D,si,'number',W/2-60,150,120,120,{val:1,size:80,name:'주사위 눈'});const ct=mk(D,si,'number',0,290,W,30,{val:0,size:18,bold:0,pre:'굴린 횟수 ',suf:'번',name:'횟수'});
    const win=addScr(D,'다 굴렸음','#1f3a2a');mk(D,win,'icon',W/2-50,180,100,100,{icon:'trophy',bg:'none',color:'#e0b52a'});mk(D,win,'text',0,300,W,40,{text:'10번 다 굴렸습니다!',size:22,align:'center',bold:1});mk(D,win,'button',W/2-70,380,140,50,{text:'처음으로',acts:[{k:'setNum',e:ct.id,n:0},{k:'go',s:s0.id}]});
    mk(D,si,'button',W/2-80,360,160,56,{text:'굴리기',size:20,bg:'#e08a1e',acts:[{k:'randNum',e:dv.id,n:1,m:6},{k:'addNum',e:ct.id,n:1},{k:'sound',v:'삑'},{k:'ifGo',e:ct.id,n:10,s:D.screens[win].id}]})}})}
-function tplSimple(D){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0],sm=Math.min(W,H);s0.name='시작 화면';s0.els=[];
+function tplSimple(D,n){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0],sm=Math.min(W,H);s0.name='시작 화면';s0.els=[];
  if(D.dev==='clock'){s0.bg='#0a0d10';mk(D,0,'clock',0,20,W,90,{size:76,color:'#7cf0c0',fmt:'hm'});mk(D,0,'clock',0,112,W/2,30,{fmt:'date',size:18,bold:0,color:'#7aa'});const al=addScr(D,'알람','#0a0d10');
   mk(D,0,'button',W-120,118,100,44,{text:'알람',size:16,bg:'#2a3340',acts:[{k:'go',s:D.screens[al].id}]});const n=mk(D,al,'number',0,30,W,70,{val:7,size:56,suf:'시',color:'#7cf0c0'});
   mk(D,al,'button',20,118,70,44,{text:'－',size:22,bg:'#2a3340',acts:[{k:'addNum',e:n.id,n:-1}]});mk(D,al,'button',100,118,70,44,{text:'＋',size:22,bg:'#2a3340',acts:[{k:'addNum',e:n.id,n:1}]});mk(D,al,'button',W-150,118,130,44,{text:'맞추기',size:16,bg:'#1f8a5b',acts:[{k:'alert',v:'알람을 맞췄습니다'},{k:'sound',v:'딩동'},{k:'back'}]});return}
  s0.bg='#121820';mk(D,0,'clock',0,sm*.08,W,sm*.24,{size:Math.round(sm*.17)});
- const apps=D.dev==='mp3'?[['music','노래'],['gear','설정']]:D.dev==='watch'?[['heart','심장'],['weather','날씨']]:[['music','음악'],['photo','사진'],['game','게임'],['gear','설정']];
+ const apps=(D.dev==='mp3'?[['music','노래'],['gear','설정']]:D.dev==='watch'?[['heart','심장'],['weather','날씨']]:[['music','음악'],['photo','사진'],['game','게임'],['gear','설정']]).slice(0,n||4);
  const isz=Math.round(sm*.2),gap=(W-apps.length*isz)/(apps.length+1);
  apps.forEach(([ic,n],i)=>{const si=addScr(D,n,'#161d26'),x=gap+i*(isz+gap),y=sm*.42;mk(D,0,'icon',x,y,isz,isz,{icon:ic,bg:['#e86fa3','#3a9ad9','#e08a1e','#4a5560'][i%4],r:isz*.25,acts:[{k:'go',s:D.screens[si].id}]});mk(D,0,'text',x-20,y+isz+4,isz+40,22,{text:n,size:13,align:'center'});
   mk(D,si,'icon',8,8,40,40,{icon:'left',bg:'none',color:'#fff',acts:[{k:'back'}]});mk(D,si,'text',52,12,W-60,32,{text:n,size:20,bold:1});
@@ -1416,7 +1427,7 @@ function tplSimple(D){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0],sm=Math.min
   else if(ic==='photo'){mk(D,si,'photo',20,56,W-40,H-80,{photo:'sea',r:8})}
   else if(ic==='game'){const sc=mk(D,si,'number',0,H*.25,W,50,{val:0,size:36,pre:'점수 '});mk(D,si,'button',W/2-70,H*.5,140,56,{text:'누르기',bg:'#e08a1e',acts:[{k:'addNum',e:sc.id,n:1},{k:'sound',v:'삑'}]})}
   else{mk(D,si,'text',20,70,W-120,30,{text:'소리',size:18});mk(D,si,'switch',W-90,68,62,34,{on:1})}})}
-function applyTpl(D){if(D.dev==='calc')tplCalc(D);else if(D.dev==='phone'||D.dev==='tablet'||D.dev==='laptop')tplPhone(D);else tplSimple(D)}
+function applyTpl(D,n){if(D.dev==='calc')tplCalc(D);else if(D.dev==='phone'||D.dev==='tablet'||D.dev==='laptop')tplPhone(D,n);else tplSimple(D,n)}
 
 // ================= 개발 도구: 편집기 =================
 const ED={D:null,opt:null,si:0,sel:null,run:false,rt:null,hist:[],drag:null,guides:[],sc:1,raf:0,lastTick:0};
@@ -1605,12 +1616,13 @@ function tasteTalk(fl,tr){const out=[],too=['너무 달아요','너무 짜요','
 function openFoodPlan(base){FP=base?{type:base.type,fl:base.fl.slice(),ing:base.ing,pc:base.pc,icon:base.icon,base:base.name,gen:(base.gen||1)+1,test:null}:{type:null,fl:[2,2,0,0,2],ing:0,pc:PKG_COLS[0],icon:'star',test:null,gen:1};showFoodPlan()}
 function showFoodPlan(){
  if(!FP.type){openModal(`<h2>식품 기획 · 1. 종류 고르기</h2><div class="sub">식품 기술 ${S.tech.food}단계입니다.</div><div class="opts">${FOOD_ORDER.map(k=>{const T=FOOD[k],lk=T.tech>S.tech.food;return`<div class="opt${lk?' lock':''}" data-k="${k}"><b>${T.n}</b><span>${lk?'식품 기술 '+T.tech+'단계 필요':'보통 값 '+priceStr(T.price)+' · 하루 '+fmtN(T.rate)+'개 생산'}</span></div>`}).join('')}</div><div class="acts"><button id="mBack">뒤로</button></div>`,c=>{
-  on(c,'.opt:not(.lock)','click',el=>{FP.type=el.dataset.k;FP.test=null;showFoodPlan()});$('#mBack').onclick=()=>openComputer('plan')},true);return}
+  on(c,'.opt:not(.lock)','click',el=>{FP.type=el.dataset.k;FP.test=null;if(staffOf('fdev').length)autoFood(FP);showFoodPlan()});$('#mBack').onclick=()=>openComputer('plan')},true);return}
  const T=FOOD[FP.type],tr=S.trend[FP.type],bon=devBonus('fdev'),ing=GRADE_ING[FP.ing],taste=tasteScore(FP.fl,tr),q=Math.min(100,Math.round(taste*.75+ing[1]+bon)),cost=Math.round(T.cost*ing[2]),fair=fairPrice(T.price,q,ing[2]);
  const sliders=FLAV.map((n,i)=>`<i>${n}</i><div class="nums"><input type="range" min="0" max="5" step="1" data-f="${i}" value="${FP.fl[i]}" style="width:170px"><b style="width:18px">${FP.fl[i]}</b></div>`).join('');
  const surv=S.survey[FP.type]?`<p class="good">시장 조사 결과: 요즘 사람들이 좋아하는 ${T.n} 맛은 ${FLAV.map((n,i)=>n+' '+tr[i]).join(' · ')}</p>`:`<p class="muted">시장 조사를 하면 요즘 인기 있는 맛을 정확히 알 수 있습니다. <button id="fSurv">시장 조사 (${wonS(5e6)})</button></p>`;
  const test=FP.test?`<h3>시식 결과</h3><p>시식단 10명 중 <b>${FP.test.like}명</b>이 좋아했습니다. 맛 점수 <b>${FP.test.taste}점</b></p>${pgBar(FP.test.like/10,'#7cc6a4')}<ul style="margin:8px 0 0 18px;font-size:13px;line-height:1.7">${FP.test.talk.map(t=>'<li>'+t+'</li>').join('')}</ul>`:'<p class="muted">맛을 정한 다음 시식을 해 보세요. 시식은 공짜이고 몇 번이든 할 수 있습니다.</p>';
  openModal(`<h2>식품 기획 · 2. ${T.n} 만들기</h2><div class="sub">맛·재료·포장을 정합니다.${FP.base?' ('+esc(FP.base)+'의 새 맛)':''}</div>
+ <div class="row" style="align-items:center;gap:10px;margin-bottom:10px"><button class="pri" id="fTeam" style="font-size:14px;padding:7px 16px" ${staffOf('fdev').length?'':'disabled'}>${FP.team?'연구팀에 다시 맡기기':'연구팀에 맡기기'}</button><span class="muted">${staffOf('fdev').length?(FP.team?'연구팀 '+FP.team+'명이 맛·재료·포장을 정하고 시식까지 했습니다. ':'')+'연구원이 많고 실력이 좋을수록 인기 있는 맛에 가깝게 만듭니다.':'1층 인사과에서 식품 연구원을 뽑으면 연구팀에 맡길 수 있습니다.'}</span></div>
  <div class="two"><div><h3 style="margin-top:0">맛 (0 ~ 5)</h3><div class="frm">${sliders}</div>
   <div class="frm"><i>재료</i><div class="seg">${GRADE_ING.map((g,i)=>`<button data-ing="${i}" class="${FP.ing===i?'on':''}">${g[0]}</button>`).join('')}</div><i>포장 색</i><div>${swatches(PKG_COLS,FP.pc,'p')}</div>
   <i>포장 그림</i><div class="icg" style="grid-template-columns:repeat(6,34px)">${FOOD_ICONS.map(k=>`<canvas width="34" height="34" data-fi="${k}" class="${k===FP.icon?'on':''}"></canvas>`).join('')}</div></div>${surv}</div>
@@ -1618,12 +1630,13 @@ function showFoodPlan(){
   <div class="acts" style="justify-content:center;margin-top:8px"><button class="pri" id="fTest">시식하기</button></div>${test}
   <div class="kv"><i>맛 점수</i><span>${FP.test?FP.test.taste+'점':'시식 전'}</span><i>재료 점수</i><span>+${ing[1]}점</span><i>연구팀 보너스</i><span>+${bon}점</span><i><b>품질</b></i><span><b>${FP.test?q+'점':'?'}</b></span><i>1개 만드는 값</i><span>${priceStr(cost)}</span><i>알맞은 판매 값</i><span>${FP.test?priceStr(fair):'-'}</span></div></div></div>
  <div class="acts"><button id="mBack">종류 다시 고르기</button><button class="pri" id="fGo" ${FP.test?'':'disabled'}>이름 짓고 내놓기</button></div>`,c=>{
-  on(c,'input[data-f]','input',el=>{FP.fl[+el.dataset.f]=+el.value;el.nextElementSibling.textContent=el.value;FP.test=null});on(c,'input[data-f]','change',()=>showFoodPlan());
+  on(c,'input[data-f]','input',el=>{FP.fl[+el.dataset.f]=+el.value;el.nextElementSibling.textContent=el.value;FP.test=null;FP.team=0});on(c,'input[data-f]','change',()=>showFoodPlan());
   on(c,'button[data-ing]','click',el=>{FP.ing=+el.dataset.ing;showFoodPlan()});on(c,'.sw','click',el=>{FP.pc=el.dataset.p;showFoodPlan()});
   c.querySelectorAll('canvas[data-fi]').forEach(cv3=>{drawIcon(cv3.getContext('2d'),cv3.dataset.fi,5,5,24,'#e8edf2');cv3.onclick=()=>{FP.icon=cv3.dataset.fi;showFoodPlan()}});
   const g=$('#fPrev').getContext('2d');paintPackage(g,{type:FP.type,pc:FP.pc,icon:FP.icon,name:FP.base||T.n},240,240);
   const sv=$('#fSurv');if(sv)sv.onclick=()=>{if(spend(5e6)){S.survey[FP.type]=1;showFoodPlan()}};
   $('#fTest').onclick=()=>{const ts=tasteScore(FP.fl,tr);let like=0;for(let i=0;i<10;i++)if(ts+(Math.random()-.5)*30>62)like++;FP.test={taste:ts,like,talk:tasteTalk(FP.fl,tr).slice(0,3)};showFoodPlan()};
+  $('#fTeam').onclick=()=>{autoFood(FP);showFoodPlan()};
   $('#mBack').onclick=()=>{FP.type=null;showFoodPlan()};
   $('#fGo').onclick=()=>{const def=FP.base?FP.base.replace(/\s*\d+$/,'')+' '+FP.gen:S.name+' '+T.n;const nm=(prompt('제품 이름을 지어 주세요',def)||'').trim();if(!nm)return;
    let price=fair;const pv=prompt('판매 값 (원). 알맞은 값은 '+fmtN(fair)+'원입니다.',fair);const n=parseInt(String(pv||'').replace(/[^0-9]/g,''));if(n>0)price=n;
