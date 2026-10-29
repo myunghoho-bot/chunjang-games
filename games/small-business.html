@@ -416,15 +416,25 @@ const SUR=['김','이','박','최','정','강','조','윤','장','임','한','�
 const GM=['민준','서준','도윤','예준','시우','하준','주원','지호','지후','준서','현우','건우','우진','선우','민재','현준','동현','상훈','성민','재원','영호','태양','승민','정훈','기현','민호','종우','석진'];
 const GF=['서연','서윤','지우','하은','민서','하윤','윤서','지민','채원','수아','지아','은서','다은','예린','수빈','유진','혜원','미영','소희','나연','가은','보람','슬기','현정'];
 const TRAITS=['손이 빠릅니다','꼼꼼합니다','성실합니다','아이디어가 많습니다','경력이 깁니다','배우는 속도가 빠릅니다','차분합니다','동료와 잘 지냅니다','책임감이 강합니다','새 기계를 잘 다룹니다'];
-const DEPT={elec:'전자',food:'식품',build:'건설'};
+const DEPT={soft:'프로그램',elec:'전자',food:'식품',build:'건설'};
 const ROLE={
+ sdev:{n:'프로그래머',d:'soft',office:1,w:220000,c:'#b49fe0',job:'컴퓨터 프로그램 만들기 · 품질 올리기'},
  edev:{n:'전자 개발자',d:'elec',office:1,w:200000,c:'#7fa8e0',job:'전자 제품 연구 · 품질 올리기'},
  eprod:{n:'전자 생산직',d:'elec',w:140000,c:'#9fc4ea',job:'전자 공장 생산 라인 작업'},
  fdev:{n:'식품 연구원',d:'food',office:1,w:190000,c:'#e0b07f',job:'식품 연구 · 맛 올리기'},
  fprod:{n:'식품 생산직',d:'food',w:135000,c:'#ead09f',job:'식품 공장 생산 라인 작업'},
  bdev:{n:'건축 설계사',d:'build',office:1,w:210000,c:'#9fd08a',job:'건물 설계 · 공사 품질 올리기'},
  bwork:{n:'현장 기술자',d:'build',w:160000,c:'#c6e0a0',job:'공사 현장 작업'}};
-const ROLE_ORDER=['edev','eprod','fdev','fprod','bdev','bwork'];
+const ROLE_ORDER=['sdev','edev','eprod','fdev','fprod','bdev','bwork'];
+// 회사 종류: 고른 사업만 한다
+const BIZ={soft:{n:'프로그램 회사',d:['soft'],desc:'윈도우 같은 컴퓨터 프로그램을 만들어 팝니다. 공장 없이 프로그래머가 본사에서 일합니다.'},
+ elec:{n:'전자 회사',d:['elec'],desc:'계산기·스마트폰·노트북 같은 기계를 설계하고 공장에서 만듭니다.'},
+ food:{n:'식품 회사',d:['food'],desc:'과자·음료·라면 같은 식품을 만들어 공장에서 생산합니다.'},
+ build:{n:'건설 회사',d:['build'],desc:'길 건너 빈 땅에 편의점부터 고층 빌딩까지 지어 주고 돈을 받습니다.'},
+ all:{n:'종합 회사',d:['soft','elec','food','build'],desc:'프로그램·전자·식품·건설을 모두 합니다.'}};
+const BIZ_ORDER=['soft','elec','food','build','all'];
+function has(d){return BIZ[(S&&S.biz)||'all'].d.includes(d)}
+function roleOK(r){return has(ROLE[r].d)}
 // 전자 제품: w,h = 화면(앞면) 크기, exp = [화면 수, 동작하는 부품 수, 부품 종류, 부품 수] 기준
 const DEV={
  calc:{n:'계산기',tech:1,w:240,h:380,cost:4000,price:12000,rate:700,market:600,exp:[1,16,3,20],hw:['mat'],r:18,body:'#2b3038',sz:[.09,.016,.15],desc:'숫자 버튼과 계산 화면'},
@@ -434,8 +444,14 @@ const DEV={
  phone:{n:'스마트폰',tech:2,w:300,h:620,cost:250000,price:690000,rate:45,market:38,exp:[6,14,7,30],hw:['scr','chip','bat','cam','mat'],r:38,body:'#1c2026',sz:[.075,.008,.155],desc:'전화·앱이 있는 휴대폰'},
  tablet:{n:'태블릿',tech:3,w:640,h:460,cost:280000,price:790000,rate:36,market:30,exp:[6,14,7,30],hw:['scr','chip','bat','cam','mat'],r:26,body:'#a9afb6',sz:[.25,.007,.18],desc:'큰 화면 판 컴퓨터'},
  laptop:{n:'노트북',tech:4,w:640,h:400,cost:600000,price:1490000,rate:22,market:18,exp:[6,12,7,26],hw:['scr','chip','bat','cam','mat'],r:10,body:'#b9bec4',sz:[.32,.02,.22],desc:'접는 컴퓨터'},
+ tool:{n:'작은 프로그램',soft:1,tech:1,w:800,h:500,cost:300,price:9900,market:180,exp:[2,12,4,18],hw:[],r:4,body:'#1d2228',desc:'계산기 같은 작은 컴퓨터 프로그램'},
+ os:{n:'운영체제',soft:1,tech:1,w:800,h:500,cost:2000,price:129000,market:32,exp:[7,16,7,40],hw:[],r:4,body:'#1d2228',desc:'컴퓨터를 켜면 나오는 바탕 화면·창·시작 메뉴 (윈도우 같은 것)'},
+ game:{n:'컴퓨터 게임',soft:1,tech:2,w:800,h:500,cost:800,price:39000,market:90,exp:[3,8,5,14],hw:[],r:4,body:'#1d2228',desc:'컴퓨터로 하는 게임'},
+ paint:{n:'그림 프로그램',soft:1,tech:3,w:800,h:500,cost:1500,price:89000,market:45,exp:[3,12,5,20],hw:[],r:4,body:'#1d2228',desc:'색을 골라 그림을 그리는 프로그램'},
+ office:{n:'문서 프로그램',soft:1,tech:3,w:800,h:500,cost:1500,price:119000,market:40,exp:[3,10,5,18],hw:[],r:4,body:'#1d2228',desc:'글을 쓰고 저장하는 프로그램'},
  console:{n:'휴대용 게임기',tech:4,w:520,h:300,cost:180000,price:450000,rate:50,market:42,exp:[5,10,6,20],hw:['scr','chip','bat','mat'],r:16,body:'#30343a',sz:[.24,.03,.1],desc:'게임을 하는 기계'}};
 const DEV_ORDER=['calc','clock','mp3','watch','phone','tablet','laptop','console'];
+const SOFT_ORDER=['tool','os','game','paint','office'];
 // 부품 선택: [이름, 품질 점수, 값 배수, 필요한 기술]
 const HW={
  scr:{n:'화면 크기',o:[['작게',0,1],['보통',7,1.12],['크게',13,1.25]]},
@@ -469,6 +485,7 @@ const CLIENT=['푸른','행복','하늘','새벽','바른','한빛','솔빛','�
 const BCOLORS=['#e9e4da','#d8c3a5','#b5654a','#9aa7b0','#f1efe8','#c9b79c','#7f8c8d','#d9d2c0'];
 const EQUIP={exc:{n:'굴착기',price:6e7,d:'땅 파기와 기초 공사가 빨라집니다'},dump:{n:'덤프트럭',price:4e7,d:'흙과 자재를 빨리 나릅니다'},mixer:{n:'레미콘 트럭',price:8e7,d:'뼈대(콘크리트) 공사가 빨라집니다'},crane:{n:'타워 크레인',price:3e8,d:'높은 건물을 지을 수 있고 뼈대 공사가 빨라집니다'}};
 const TECH={
+ soft:{max:3,cost:[0,0,30,120],un:['','작은 프로그램 · 운영체제','컴퓨터 게임','그림 프로그램 · 문서 프로그램'],who:'sdev'},
  elec:{max:4,cost:[0,0,30,120,320],un:['','계산기 · 디지털 탁상시계 · MP3 플레이어','스마트워치 · 스마트폰 · 빠른 칩 · 유리 몸체','태블릿 · 아주 빠른 칩 · 좋은 카메라','노트북 · 휴대용 게임기'],who:'edev'},
  food:{max:3,cost:[0,0,30,120],un:['','과자 · 음료','라면 · 빵','아이스크림'],who:'fdev'},
  build:{max:3,cost:[0,0,50,180],un:['','편의점 · 카페 · 단독 주택 · 빌라','사무실 빌딩 · 학교 · 병원','아파트 · 고층 빌딩'],who:'bdev'}};
@@ -491,8 +508,8 @@ let S=null;
 function freshToday(){return{rev:0,mat:0,wage:0,made:{elec:0,food:0},sold:0,cons:0}}
 function mkTrend(t){return TREND_RANGE[t].map(([a,b])=>rint(a,b))}
 function mkTrends(){const o={};for(const t of FOOD_ORDER)o[t]=mkTrend(t);return o}
-function newState(name,color){return{v:1,name,color,money:2e8,day:1,h:8.3,rep:10,grade:0,staff:[],nid:1,products:[],act:{elec:null,food:null},
- lines:{elec:[1],food:[1]},floors:2,tech:{elec:1,food:1,build:1},res:{elec:0,food:0,build:0},equip:{exc:0,dump:0,mixer:0,crane:0},
+function newState(name,color){return{v:1,biz:'all',name,color,money:2e8,day:1,h:8.3,rep:10,grade:0,staff:[],nid:1,products:[],act:{elec:null,food:null},
+ lines:{elec:[1],food:[1]},floors:2,tech:{soft:1,elec:1,food:1,build:1},res:{soft:0,elec:0,food:0,build:0},equip:{exc:0,dump:0,mixer:0,crane:0},
  offers:[],projects:[],built:[],cands:null,candDay:0,trend:mkTrends(),survey:{},ads:[],today:freshToday(),hist:[],log:[],draft:null,flags:{},stats:{rev:0,sold:0,made:0}}}
 const grade=()=>GRADE[S.grade];
 function staffOf(role){return S.staff.filter(s=>s.role===role)}
@@ -801,8 +818,8 @@ function buildSigns(){if(!S)return;const s=[],n=S.floors,co=S.color;
  const t1=signTex(S.name,co,'#ffffff');s.push({tex:t1.t,m:signM(0,n*FH+1.4,6.42,0,Math.min(12,2.4*t1.a),2.4),grp:'roof'});
  const t2=signTex(S.name,null,'#ffffff',{h:96});s.push({tex:t2.t,m:signM(0,2.2,-1.33,0,Math.min(6.6,1.5*t2.a),1.5),grp:'lobby'});
  const t2b=signTex(S.name,'#20252b','#ffffff',{h:96});s.push({tex:t2b.t,m:signM(-10.2,.75,15.62,0,3.4,.9),grp:'out'});
- for(const d of['elec','food']){const F=FAC[d],t=signTex(S.name+' '+F.name,'#ffffff',co);s.push({tex:t.t,m:signM((F.x0+F.x1)/2,4.1,F.z1+.1,0,Math.min(14,1.7*t.a),1.7),grp:d})}
- const t3=signTex(S.name+' 건설',co,'#ffffff',{h:96});s.push({tex:t3.t,m:signM(28.3,5.9,-2.05,0,Math.min(6,1.1*t3.a),1.1),grp:'out'});
+ for(const d of['elec','food']){if(!has(d))continue;const F=FAC[d],t=signTex(S.name+' '+F.name,'#ffffff',co);s.push({tex:t.t,m:signM((F.x0+F.x1)/2,4.1,F.z1+.1,0,Math.min(14,1.7*t.a),1.7),grp:d})}
+ const t3=signTex(S.name+' 건설',co,'#ffffff',{h:96});if(has('build'))s.push({tex:t3.t,m:signM(28.3,5.9,-2.05,0,Math.min(6,1.1*t3.a),1.1),grp:'out'});
  const ht=signTex('인사과','#2a3340','#ffffff',{h:64});s.push({tex:ht.t,m:signM(7,1.7,-6.15,0,1.4,.45),grp:'lobby'});
  for(const b of S.built){const L=LOTS[b.lot],T=BLD[b.type],z0=L.z+1-T.d/2;let t,y,w,h;
   if(b.type==='apt'){const tb=signTex(S.name,null,'#ffffff',{h:96});s.push({tex:tb.t,m:signM(L.x,.25+T.fl*T.fh+.9,z0-.12,Math.PI,Math.min(T.w-1,1.4*tb.a),1.4),grp:'out'});
@@ -817,10 +834,10 @@ function buildInts(){const I=[];
  I.push({k:'ceo',x:8,z:-4.5,f:1,r:2.3,t:'사장 컴퓨터 켜기',lab:'사장 컴퓨터',y:1.9,act:()=>openComputer()});
  I.push({k:'hr',x:7,z:-3.3,f:0,r:1.9,t:'인사과 (직원 뽑기)',lab:'인사과',y:2,act:()=>openHR()});
  for(let k=0;k<S.floors;k++)I.push({k:'el'+k,x:-6.8,z:-5,f:k,r:1.6,t:'엘리베이터 타기',lab:'엘리베이터',y:2.9,act:()=>openElevator()});
- for(const d of['elec','food']){const F=FAC[d];I.push({k:d+'T',x:F.term[0],z:F.term[1]+.4,f:0,r:1.8,t:F.name+' 관리',lab:F.name+' 관리',y:2,act:()=>openFactory(d)})}
- I.push({k:'yard',x:28.1,z:-1.4,f:0,r:2,t:'건설 사무소 (공사 계약)',lab:'건설 사무소',y:3,act:()=>openBuild()});
+ for(const d of['elec','food']){if(!has(d))continue;const F=FAC[d];I.push({k:d+'T',x:F.term[0],z:F.term[1]+.4,f:0,r:1.8,t:F.name+' 관리',lab:F.name+' 관리',y:2,act:()=>openFactory(d)})}
+ if(has('build'))I.push({k:'yard',x:28.1,z:-1.4,f:0,r:2,t:'건설 사무소 (공사 계약)',lab:'건설 사무소',y:3,act:()=>openBuild()});
  W.ints=I}
-function buildWorld(){buildGround();buildOffice();buildFactory('elec');buildFactory('food');buildYard();buildAllLots();buildInts();buildSigns();rebuildBlocks()}
+function buildWorld(){buildGround();buildOffice();for(const d of['elec','food']){if(has(d))buildFactory(d);else{freeMesh(W.fac[d].base);freeMesh(W.fac[d].upper);W.fac[d]={};BLK[d]=[]}}if(has('build'))buildYard();else{freeMesh(W.yard);W.yard=null;BLK.yard=[]}buildAllLots();buildInts();buildSigns();rebuildBlocks()}
 
 // ================= 그리기 목록 (그림자·본 그림 둘 다 씀) =================
 const DL=[],TL=[];let NOSH=0;
@@ -998,7 +1015,7 @@ const truckAcc={elec:0,food:0};
 function rateH(h){return h>=7&&h<19.5?1/14:1/3.5} // 진짜 1초에 지나가는 게임 시간(시)
 function clockStr(h){const hh=Math.floor(h)%24,mi=Math.floor((h%1)*60/10)*10;return(hh<12?'오전 ':'오후 ')+((hh%12)||12)+':'+String(mi).padStart(2,'0')}
 function lvMul(lv){return 1+.3*(lv-1)}
-function typeOf(P){return P.dept==='elec'?DEV[P.type]:FOOD[P.type]}
+function typeOf(P){return P.dept==='food'?FOOD[P.type]:DEV[P.type]}
 function demand(P){const T=typeOf(P),qf=Math.pow(Math.max(5,P.q)/60,1.6),pf=clamp(Math.pow(P.fair/P.price,2.2),.03,3),brand=1+S.rep/400;
  const k=S.products.some(o=>o!==P&&o.dept===P.dept&&o.type===P.type&&o.day>P.day)?.35:1;return T.market*qf*pf*brand*P.nov*k}
 function dayRate(d){const P=prodById(S.act[d]);if(!P)return 0;const T=typeOf(P);let u=0;for(let i=0;i<S.lines[d].length;i++){const w=d==='elec'?staffOf('eprod').filter(s=>s.line===i).length:staffOf('fprod').filter(s=>s.line===i).length;u+=T.rate*lvMul(S.lines[d][i])*Math.min(3,w)/3}return u}
@@ -1012,9 +1029,9 @@ function produce(d,dh){const P=prodById(S.act[d]);if(!P||S.flags['halt_'+d])retu
  if(S.money<cost){if(!S.flags['nomoney_'+d]){S.flags['nomoney_'+d]=1;addLog(DEPT[d]+' 공장: 재료를 살 돈이 모자라 생산이 멈췄습니다.','bad')}return}
  S.flags['nomoney_'+d]=0;S.money-=cost;S.today.mat+=cost;P.stock+=u;P.made+=u;S.today.made[d]+=u;S.stats.made+=u;
  truckAcc[d]+=dh;if(truckAcc[d]>1.3){truckAcc[d]=0;sendTruck(d)}}
-function sales(dh){if(S.h<8||S.h>=22)return;for(const P of S.products){if(P.stock<=0)continue;const s=Math.min(P.stock,demand(P)*dh/14);if(s<=0)continue;
- P.stock-=s;P.sold+=s;P.td=(P.td||0)+s;const rev=s*P.price;S.money+=rev;S.today.rev+=rev;S.stats.rev+=rev;S.stats.sold+=s;S.today.sold+=s}}
-function research(dh){for(const d of['elec','food','build']){const T=TECH[d];if(S.tech[d]>=T.max){S.res[d]=0;continue}let pts=0;for(const s of S.staff)if(s.role===T.who&&atWork(s))pts+=s.skill;if(!pts)continue;
+function sales(dh){if(S.h<8||S.h>=22)return;for(const P of S.products){const soft=P.dept==='soft';if(!soft&&P.stock<=0)continue;const s=soft?demand(P)*dh/14:Math.min(P.stock,demand(P)*dh/14);if(s<=0)continue;
+ if(soft){const c=s*P.cost;S.money-=c;S.today.mat+=c}else P.stock-=s;P.sold+=s;P.td=(P.td||0)+s;const rev=s*P.price;S.money+=rev;S.today.rev+=rev;S.stats.rev+=rev;S.stats.sold+=s;S.today.sold+=s}}
+function research(dh){for(const d of Object.keys(TECH)){const T=TECH[d];if(S.tech[d]>=T.max){S.res[d]=0;continue}let pts=0;for(const s of S.staff)if(s.role===T.who&&atWork(s))pts+=s.skill;if(!pts)continue;
  S.res[d]+=pts*dh/9*3;const need=T.cost[S.tech[d]+1];if(S.res[d]>=need){S.res[d]=0;S.tech[d]++;banner('새 기술을 개발했습니다',DEPT[d]+' · '+T.un[S.tech[d]]);addLog(DEPT[d]+' 연구 완료: 이제 '+eul(T.un[S.tech[d]])+' 만들 수 있습니다.','big');if(d==='build')genOffers()}}}
 function equipMul(k){const e=S.equip;if(k==='dig'||k==='found')return 1+(e.exc?.6:0)+(e.dump?.25:0);if(k==='frame')return 1+(e.mixer?.35:0)+(e.crane?.5:0);return 1+(e.crane?.2:0)}
 function construction(dh){for(const p of S.projects.slice()){let pts=0;for(const s of S.staff)if(s.role==='bwork'&&s.site===p.id&&atWork(s)&&RT[s.id].loc==='lot:'+p.lot)pts+=s.skill;
@@ -1038,7 +1055,7 @@ function settle(){let w=0;for(const s of S.staff)w+=s.wage;const paid=Math.min(w
  if(paid<w)addLog('자금이 모자라 급여를 다 주지 못했습니다.','bad');showReport()}
 function newDay(){S.hist.push({d:S.day,rev:S.today.rev,mat:S.today.mat,wage:S.today.wage});if(S.hist.length>60)S.hist.shift();
  const yRev=S.today.rev;S.day++;S.today=freshToday();
- for(const P of S.products){P.nov=Math.max(P.dept==='elec'?.35:.6,P.nov*(P.dept==='elec'?.97:.99));P.td=0}
+ for(const P of S.products){P.nov=P.dept==='food'?Math.max(.6,P.nov*.99):Math.max(.35,P.nov*(P.dept==='soft'?.98:.97));P.td=0}
  for(let i=S.ads.length-1;i>=0;i--){const a=S.ads[i];S.rep+=a.per;if(--a.left<=0)S.ads.splice(i,1)}
  S.rep=S.rep*.995+Math.min(14,Math.sqrt(Math.max(0,yRev)/1e6));S.rep=clamp(S.rep,0,3000);
  if(S.day%20===0){const t=pick(FOOD_ORDER),f=rint(0,4),[a,b]=TREND_RANGE[t][f],o=S.trend[t][f];const nv=clamp(o+(R()<.5?-1:1),a,b);if(nv!==o){S.trend[t][f]=nv;S.survey[t]=0;addLog('사람들이 좋아하는 '+FOOD[t].n+' 맛이 조금 바뀌고 있습니다.')}}
@@ -1069,8 +1086,8 @@ function buyEquip(k){if(S.equip[k])return;if(!spend(EQUIP[k].price))return;S.equ
 function runAd(k){const A=ADS.find(a=>a.k===k);if(!spend(A.cost))return;const per=A.rep/A.days;S.ads.push({k,left:A.days-1,per});S.rep+=per;addLog(eul(A.n)+' 시작했습니다. '+A.days+'일 동안 인지도가 오릅니다.','good')}
 // ---------- 제품 ----------
 const TEX={};
-function launch(P){P.id='p'+(S.nid++);P.day=S.day;P.stock=0;P.made=0;P.sold=0;P.td=0;P.nov=P.dept==='elec'?1.3:1.15;S.products.push(P);S.act[P.dept]=P.id;S.flags['halt_'+P.dept]=0;
- if(TEX[P.id])delete TEX[P.id];banner('새 제품을 내놓았습니다',P.name+' · 품질 '+P.q+'점 · '+priceStr(P.price));addLog(DEPT[P.dept]+' 신제품 '+eul(P.name)+' 내놓았습니다('+typeOf(P).n+'). 공장에서 바로 만듭니다.','big');save()}
+function launch(P){P.id='p'+(S.nid++);P.day=S.day;P.stock=0;P.made=0;P.sold=0;P.td=0;P.nov=P.dept==='food'?1.15:1.3;S.products.push(P);S.act[P.dept]=P.id;S.flags['halt_'+P.dept]=0;
+ if(TEX[P.id])delete TEX[P.id];banner('새 제품을 내놓았습니다',P.name+' · 품질 '+P.q+'점 · '+priceStr(P.price));addLog(DEPT[P.dept]+' 신제품 '+eul(P.name)+' 내놓았습니다('+typeOf(P).n+'). '+(P.dept==='soft'?'바로 내려받기로 팔기 시작합니다.':'공장에서 바로 만듭니다.'),'big');save()}
 function fairPrice(base,q,cm){return Math.max(100,Math.round(base*(.7+q/150)*Math.pow(cm,.7)/(base>=1e5?1e4:base>=1e4?1e3:100))*(base>=1e5?1e4:base>=1e4?1e3:100))}
 // ---------- 기록 ----------
 function addLog(t,c){S.log.push({d:S.day,h:S.h,t,c:c||''});if(S.log.length>80)S.log.shift();renderLog()}
@@ -1094,15 +1111,17 @@ function on(c,sel,ev,fn){c.querySelectorAll(sel).forEach(el=>el.addEventListener
 function swatches(cols,cur,attr){return cols.map(c=>`<span class="sw${c===cur?' on':''}" style="background:${c}" data-${attr}="${c}"></span>`).join('')}
 
 // ---------- 시작 ----------
-function openStart(){S.flags.needStart=1;let col=CO_COLORS[0],fem=false;
- openModal(`<h2>새 회사 세우기</h2><div class="sub">전자 제품·식품·건설 세 가지 사업을 함께 하는 작은 회사로 시작합니다. 직원을 뽑고, 제품을 기획하고, 공사를 따내서 회사를 키웁니다.</div>
+function openStart(){S.flags.needStart=1;let col=CO_COLORS[0],fem=false,biz='soft';
+ openModal(`<h2>새 회사 세우기</h2><div class="sub">어떤 회사를 세울지 고릅니다. 고른 사업만 합니다. 직원을 뽑고, 제품을 만들어 팔아서 회사를 키웁니다.</div>
+ <h3 style="margin-top:4px">회사 종류</h3><div class="opts">${BIZ_ORDER.map(k=>`<div class="opt${k===biz?' on':''}" data-b="${k}"><b>${BIZ[k].n}</b><span>${BIZ[k].desc}</span></div>`).join('')}</div>
  <div class="frm"><i>회사 이름</i><input id="cName" type="text" maxlength="12" value="새싹산업"><i>회사 색</i><div>${swatches(CO_COLORS,col,'c')}</div><i>사장님</i><div class="seg"><button data-g="0" class="on">남자</button><button data-g="1">여자</button></div></div>
  <p class="muted">시작 자금은 2억 원입니다. 빚은 없습니다.</p><div class="acts"><button class="pri" id="cGo">회사 세우기</button></div>`,c=>{
   on(c,'.sw','click',el=>{col=el.dataset.c;c.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===el))});
+  on(c,'.opt[data-b]','click',el=>{biz=el.dataset.b;c.querySelectorAll('.opt[data-b]').forEach(x=>x.classList.toggle('on',x===el))});
   on(c,'.seg button','click',el=>{fem=el.dataset.g==='1';c.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===el))});
-  $('#cGo').onclick=()=>{const nm=($('#cName').value||'').trim()||'새싹산업';S.name=nm;S.color=col;S.ceoFem=fem;delete S.flags.needStart;PL.look=makeLook('ceo',fem,fem?11:7);
+  $('#cGo').onclick=()=>{const nm=($('#cName').value||'').trim()||'새싹산업';S.name=nm;S.color=col;S.ceoFem=fem;S.biz=biz;hrRole=ROLE_ORDER.find(roleOK);delete S.flags.needStart;PL.look=makeLook('ceo',fem,fem?11:7);
    buildWorld();genOffers();genCands();closeModal();S.log=[];addLog(iga(nm)+' 문을 열었습니다.','big');
-   addLog('먼저 1층 인사과에서 직원을 뽑고, 2층 사장 컴퓨터에서 첫 제품을 기획하세요. 개발자·연구원이 있으면 제품 디자인을 맡길 수 있습니다.');banner(nm,'창업 1일째');save()}})}
+   addLog(biz==='build'?'먼저 1층 인사과에서 현장 기술자를 뽑고, 회사 마당 오른쪽 건설 사무소에서 공사를 계약하세요.':'먼저 1층 인사과에서 직원을 뽑고, 2층 사장 컴퓨터에서 첫 제품을 기획하세요. 개발자·연구원·프로그래머가 있으면 디자인을 맡길 수 있습니다.');banner(nm,'창업 1일째');save()}})}
 
 // ---------- 엘리베이터 ----------
 function floorName(k){if(k===0)return'1층 로비 · 인사과';if(k===1)return'2층 사장실 · 사무실';return(k+1)+'층 사무실'}
@@ -1111,12 +1130,12 @@ function openElevator(){let h='';for(let k=S.floors-1;k>=0;k--)h+=`<button class
 function goFloor(k){if(k===PL.f)return;const f=$('#fade');f.style.opacity=.85;setTimeout(()=>{PL.f=k;PL.x=-6.3;PL.z=-5;PL.ry=Math.PI/2;PL.tgt=null;cam.ty=k*FH;f.style.opacity=0},350)}
 
 // ---------- 인사과 ----------
-let hrRole='edev',hrTab='hire';
+let hrRole='sdev',hrTab='hire';
 function roleCap(r){const RL=ROLE[r];if(RL.office){const free=allSeats().length-S.staff.filter(s=>ROLE[s.role].office).length;return'본사 빈 책상 '+free+'개'}
  if(r==='bwork')return'인원 제한 없음';const d=RL.d,free=S.lines[d].length*3-staffOf(r).length;return'빈 라인 자리 '+free+'개'}
-function openHR(){if(!S.cands||S.candDay!==S.day)genCands();
+function openHR(){if(!S.cands||S.candDay!==S.day||!S.cands.sdev)genCands();if(!roleOK(hrRole))hrRole=ROLE_ORDER.find(roleOK);
  const tabs=`<div class="tabs"><button data-t="hire" class="${hrTab==='hire'?'on':''}">직원 뽑기</button><button data-t="list" class="${hrTab==='list'?'on':''}">직원 목록 (${S.staff.length}명)</button></div>`;let body='';
- if(hrTab==='hire'){body=`<div class="opts">${ROLE_ORDER.map(r=>`<div class="opt${r===hrRole?' on':''}" data-r="${r}"><b>${ROLE[r].n} <span>${staffOf(r).length}명</span></b><span>${ROLE[r].job}<br>${roleCap(r)}</span></div>`).join('')}</div>
+ if(hrTab==='hire'){body=`<div class="opts">${ROLE_ORDER.filter(roleOK).map(r=>`<div class="opt${r===hrRole?' on':''}" data-r="${r}"><b>${ROLE[r].n} <span>${staffOf(r).length}명</span></b><span>${ROLE[r].job}<br>${roleCap(r)}</span></div>`).join('')}</div>
   <h3>${ROLE[hrRole].n} 지원자</h3><table><tr><th>이름</th><th>실력</th><th>하루 급여</th><th>특징</th><th></th></tr>${(S.cands[hrRole]||[]).map((c,i)=>`<tr><td>${esc(c.name)}</td><td>${stars(c.skill)}</td><td>${won(c.wage)}</td><td class="muted">${c.trait}</td><td><button class="pri" data-h="${i}">뽑기</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">오늘 지원자를 다 뽑았습니다. 내일 새 지원자가 옵니다.</td></tr>'}</table>
   <p class="muted">실력이 높을수록 일을 잘하고(생산·연구·공사가 빨라짐) 급여가 조금 더 비쌉니다. 급여는 매일 오후 6시에 나갑니다.</p>`}
  else{body=`<table><tr><th>이름</th><th>하는 일</th><th>실력</th><th>하루 급여</th><th>일한 날</th><th>지금</th><th></th></tr>${S.staff.map(s=>{const r=RT[s.id];const now=!r||r.st==='away'?'퇴근':r.st==='come'?'출근 중':r.st==='go'?'퇴근 중':r.st==='brk'?'쉬는 중':'일하는 중';
@@ -1157,33 +1176,36 @@ function openBuild(){if(!S.offers.length)genOffers();
 
 // ---------- 사장 컴퓨터 ----------
 let pcTab='plan';
+function coverScr(D){return D&&D.dev==='os'&&D.screens.length>1?1:0}
 function thumbOf(P,sz){const c=document.createElement('canvas');c.width=c.height=sz||64;const g=c.getContext('2d');
- if(P.dept==='elec'){const T=DEV[P.type],k=Math.min(sz/T.w,sz/T.h)*.86,w=T.w*k,h=T.h*k;g.fillStyle=P.color;rr(g,(sz-w)/2-3,(sz-h)/2-3,w+6,h+6,6);g.fill();g.save();g.translate((sz-w)/2,(sz-h)/2);g.scale(k,k);paintScreen(g,P.design,0,null);g.restore()}
+ if(P.dept!=='food'){const T=DEV[P.type],k=Math.min(sz/T.w,sz/T.h)*.86,w=T.w*k,h=T.h*k;g.fillStyle=P.color;rr(g,(sz-w)/2-3,(sz-h)/2-3,w+6,h+6,6);g.fill();g.save();g.translate((sz-w)/2,(sz-h)/2);g.scale(k,k);paintScreen(g,P.design,coverScr(P.design),null);g.restore()}
  else paintPackage(g,P,sz,sz);return c.toDataURL()}
 function openComputer(tab){if(tab)pcTab=tab;const T=['plan','prod','res','fac','ad','info'],N={plan:'제품 기획',prod:'내 제품',res:'연구',fac:'시설',ad:'광고',info:'회사 현황'};
  const tabs=`<div class="tabs">${T.map(t=>`<button data-t="${t}" class="${t===pcTab?'on':''}">${N[t]}</button>`).join('')}</div>`;let body='',bind=null;
- if(pcTab==='plan'){body=`<div class="opts" style="grid-template-columns:1fr 1fr">
-  <div class="opt" id="goE"><b>전자 제품 기획</b><span>계산기·스마트폰·노트북 같은 기계를 설계합니다. 부품을 고르고, 화면과 버튼을 직접 만들어 누르면 동작하게 합니다.</span><br><span class="muted">전자 기술 ${S.tech.elec}단계 · 개발자 ${staffOf('edev').length}명</span></div>
-  <div class="opt" id="goF"><b>식품 기획</b><span>과자·음료·라면 같은 식품을 만듭니다. 맛을 고르고 시식단에게 맛을 보인 뒤 포장을 꾸밉니다.</span><br><span class="muted">식품 기술 ${S.tech.food}단계 · 연구원 ${staffOf('fdev').length}명</span></div></div>
-  ${S.draft?`<p class="muted" style="margin-top:12px">만들다 만 전자 제품이 있습니다: ${DEV[S.draft.type].n}. <button id="goD">이어서 만들기</button></p>`:''}
+ if(pcTab==='plan'){body=`<div class="opts" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+  ${has('soft')?`<div class="opt" id="goS"><b>프로그램 기획</b><span>윈도우 같은 운영체제, 계산기, 게임 같은 컴퓨터 프로그램을 만듭니다. 화면과 버튼을 만들어 누르면 동작하게 합니다.</span><br><span class="muted">프로그램 기술 ${S.tech.soft}단계 · 프로그래머 ${staffOf('sdev').length}명</span></div>`:''}
+  ${has('elec')?`<div class="opt" id="goE"><b>전자 제품 기획</b><span>계산기·스마트폰·노트북 같은 기계를 설계합니다. 부품을 고르고, 화면과 버튼을 직접 만들어 누르면 동작하게 합니다.</span><br><span class="muted">전자 기술 ${S.tech.elec}단계 · 개발자 ${staffOf('edev').length}명</span></div>`:''}
+  ${has('food')?`<div class="opt" id="goF"><b>식품 기획</b><span>과자·음료·라면 같은 식품을 만듭니다. 맛을 고르고 시식단에게 맛을 보인 뒤 포장을 꾸밉니다.</span><br><span class="muted">식품 기술 ${S.tech.food}단계 · 연구원 ${staffOf('fdev').length}명</span></div>`:''}
+  ${S.biz==='build'?'<div class="opt"><b>건설 회사</b><span>건설 회사는 제품을 만들지 않습니다. 회사 마당 오른쪽 건설 사무소에서 공사를 계약합니다.</span></div>':''}</div>
+  ${S.draft&&S.draft.type?`<p class="muted" style="margin-top:12px">만들다 만 것이 있습니다: ${DEV[S.draft.type].n}. <button id="goD">이어서 만들기</button></p>`:''}
   <p class="muted" style="margin-top:12px">개발자·연구원이 많고 실력이 좋을수록 제품 품질에 보너스가 붙습니다.</p>`;
-  bind=c=>{$('#goE').onclick=()=>openElecPlan(null);$('#goF').onclick=()=>openFoodPlan();const d=$('#goD');if(d)d.onclick=()=>openElecPlan(S.draft)}}
+  bind=c=>{const gs=$('#goS'),ge=$('#goE'),gf=$('#goF');if(gs)gs.onclick=()=>openElecPlan(null,'soft');if(ge)ge.onclick=()=>openElecPlan(null);if(gf)gf.onclick=()=>openFoodPlan();const d=$('#goD');if(d)d.onclick=()=>openElecPlan(S.draft)}}
  else if(pcTab==='prod'){const list=S.products.slice().reverse();
-  body=`<table><tr><th></th><th>이름</th><th>종류</th><th>품질</th><th>값</th><th>재고</th><th>오늘 팔림</th><th>인기</th><th></th></tr>${list.map(p=>`<tr><td><img src="${thumbOf(p,48)}" width="48" height="48" style="border-radius:6px;display:block"></td><td><b>${esc(p.name)}</b>${S.act[p.dept]===p.id?'<br><span class="good">공장에서 만드는 중</span>':''}</td><td>${typeOf(p).n}</td><td>${p.q}점</td><td>${priceStr(p.price)}<br><button data-pr="${p.id}">값 바꾸기</button></td><td>${fmtN(p.stock)}</td><td>${fmtN(p.td||0)}</td><td>${pgBar(p.nov/1.3,'#d9aa5c')}</td>
-   <td style="white-space:nowrap">${p.dept==='elec'?`<button data-run="${p.id}">켜 보기</button> <button data-v="${p.id}">새 버전</button>`:`<button data-fv="${p.id}">새 맛</button>`}${S.act[p.dept]!==p.id?` <button data-a="${p.id}">이것 만들기</button>`:''}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">아직 만든 제품이 없습니다.</td></tr>'}</table>
-   <p class="muted">인기는 날이 갈수록 조금씩 떨어집니다(전자 제품은 빨리, 식품은 천천히). 새 제품이나 새 버전을 내면 다시 잘 팔립니다.</p>`;
+  body=`<table><tr><th></th><th>이름</th><th>종류</th><th>품질</th><th>값</th><th>재고</th><th>오늘 팔림</th><th>인기</th><th></th></tr>${list.map(p=>`<tr><td><img src="${thumbOf(p,48)}" width="48" height="48" style="border-radius:6px;display:block"></td><td><b>${esc(p.name)}</b>${p.dept==='soft'?'<br><span class="good">내려받기로 파는 중</span>':S.act[p.dept]===p.id?'<br><span class="good">공장에서 만드는 중</span>':''}</td><td>${typeOf(p).n}</td><td>${p.q}점</td><td>${priceStr(p.price)}<br><button data-pr="${p.id}">값 바꾸기</button></td><td>${p.dept==='soft'?'-':fmtN(p.stock)}</td><td>${fmtN(p.td||0)}</td><td>${pgBar(p.nov/1.3,'#d9aa5c')}</td>
+   <td style="white-space:nowrap">${p.dept!=='food'?`<button data-run="${p.id}">켜 보기</button> <button data-v="${p.id}">새 버전</button>`:`<button data-fv="${p.id}">새 맛</button>`}${p.dept!=='soft'&&S.act[p.dept]!==p.id?` <button data-a="${p.id}">이것 만들기</button>`:''}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">아직 만든 제품이 없습니다.</td></tr>'}</table>
+   <p class="muted">인기는 날이 갈수록 조금씩 떨어집니다(전자 제품은 빨리, 프로그램은 조금 천천히, 식품은 천천히). 새 제품이나 새 버전을 내면 다시 잘 팔립니다.</p>`;
   bind=c=>{on(c,'button[data-run]','click',el=>{const p=prodById(el.dataset.run);closeModal();openEditor(p.design,{run:true,title:p.name,body:p.color,dev:p.type,onClose:()=>openComputer('prod')})});
-   on(c,'button[data-v]','click',el=>{const p=prodById(el.dataset.v);openElecPlan({type:p.type,hw:Object.assign({},p.hw),color:p.color,design:JSON.parse(JSON.stringify(p.design)),base:p.name,gen:(p.gen||1)+1})});
+   on(c,'button[data-v]','click',el=>{const p=prodById(el.dataset.v);openElecPlan({type:p.type,hw:Object.assign({},p.hw||{}),color:p.color,design:JSON.parse(JSON.stringify(p.design)),base:p.name,gen:(p.gen||1)+1,soft:p.dept==='soft'})});
    on(c,'button[data-fv]','click',el=>{const p=prodById(el.dataset.fv);openFoodPlan(p)});
    on(c,'button[data-a]','click',el=>{const p=prodById(el.dataset.a);S.act[p.dept]=p.id;openComputer('prod')});
    on(c,'button[data-pr]','click',el=>{const p=prodById(el.dataset.pr);const v=prompt(p.name+'의 새 값 (원). 알맞은 값은 '+fmtN(p.fair)+'원 정도입니다.',p.price);const n=parseInt(String(v||'').replace(/[^0-9]/g,''));if(n>0){p.price=n;openComputer('prod')}})}}
- else if(pcTab==='res'){body=['elec','food','build'].map(d=>{const T=TECH[d],lv=S.tech[d],mx=lv>=T.max,need=mx?1:T.cost[lv+1],who=staffOf(T.who);
+ else if(pcTab==='res'){body=['soft','elec','food','build'].filter(has).map(d=>{const T=TECH[d],lv=S.tech[d],mx=lv>=T.max,need=mx?1:T.cost[lv+1],who=staffOf(T.who);
   return`<h3>${DEPT[d]} 기술 ${lv}단계</h3><p class="muted">지금 만들 수 있는 것: ${T.un.slice(1,lv+1).join(' · ')}</p>${mx?'<p class="good">최고 단계입니다.</p>':`<p>다음 단계: <b>${T.un[lv+1]}</b></p>${pgBar(S.res[d]/need)}<p class="muted">${ROLE[T.who].n} ${who.length}명이 연구 중 · 하루에 약 ${who.reduce((a,s)=>a+s.skill,0)*3}점 (필요 ${need}점, 지금 ${Math.floor(S.res[d])}점)${who.length?'':' — '+eul(ROLE[T.who].n)+' 뽑아야 연구가 됩니다'}</p>`}`}).join('')}
  else if(pcTab==='fac'){const g=grade(),nl=d=>S.lines[d].length;
   body=`<p class="muted">지금 회사 등급: <b>${g.n}</b> — 생산 라인 ${g.lines}개, 본사 ${g.floors}층까지 지을 수 있습니다. 직원이 늘면 등급이 오릅니다.</p>
   <table><tr><td><b>본사 건물</b><br><span class="muted">${S.floors}층 · 책상 ${allSeats().length}개 (사무직 ${S.staff.filter(s=>ROLE[s.role].office).length}명)</span></td><td>${S.floors<g.floors?`<button class="pri" id="aF">한 층 더 올리기 (${wonS(floorCost())})</button>`:'<span class="muted">지금 등급에서는 더 못 올림</span>'}</td></tr>
-  ${['elec','food'].map(d=>`<tr><td><b>${FAC[d].name}</b><br><span class="muted">라인 ${nl(d)}개 · ${S.lines[d].map(v=>v+'단계').join(', ')}</span></td><td>${nl(d)<g.lines&&nl(d)<4?`<button class="pri" data-l="${d}">라인 늘리기 (${wonS(LINE_COST[nl(d)])})</button>`:'<span class="muted">'+(nl(d)>=4?'라인 자리가 꽉 찼습니다':'회사가 더 커지면 늘릴 수 있음')+'</span>'}<br><span class="muted">라인 단계 올리기는 공장 안 관리 컴퓨터에서</span></td></tr>`).join('')}
-  <tr><td><b>건설 장비</b><br><span class="muted">${Object.keys(EQUIP).filter(k=>S.equip[k]).map(k=>EQUIP[k].n).join(', ')||'없음'}</span></td><td><span class="muted">건설 사무소에서 살 수 있습니다</span></td></tr></table>`;
+  ${['elec','food'].filter(has).map(d=>`<tr><td><b>${FAC[d].name}</b><br><span class="muted">라인 ${nl(d)}개 · ${S.lines[d].map(v=>v+'단계').join(', ')}</span></td><td>${nl(d)<g.lines&&nl(d)<4?`<button class="pri" data-l="${d}">라인 늘리기 (${wonS(LINE_COST[nl(d)])})</button>`:'<span class="muted">'+(nl(d)>=4?'라인 자리가 꽉 찼습니다':'회사가 더 커지면 늘릴 수 있음')+'</span>'}<br><span class="muted">라인 단계 올리기는 공장 안 관리 컴퓨터에서</span></td></tr>`).join('')}
+  ${has('build')?`<tr><td><b>건설 장비</b><br><span class="muted">${Object.keys(EQUIP).filter(k=>S.equip[k]).map(k=>EQUIP[k].n).join(', ')||'없음'}</span></td><td><span class="muted">건설 사무소에서 살 수 있습니다</span></td></tr>`:''}</table>`;
   bind=c=>{const a=$('#aF');if(a)a.onclick=()=>{addFloor();openComputer('fac')};on(c,'button[data-l]','click',el=>{addLine(el.dataset.l);openComputer('fac')})}}
  else if(pcTab==='ad'){body=`<p class="muted">광고를 하면 인지도가 오릅니다. 인지도가 높을수록 모든 제품이 더 잘 팔리고, 실력 좋은 사람이 지원합니다. 지금 인지도 ${Math.round(S.rep)}</p>
   <table>${ADS.map(a=>`<tr><td><b>${a.n}</b><br><span class="muted">${a.days}일 동안 인지도 +${a.rep}</span></td><td>${won(a.cost)}</td><td><button class="pri" data-ad="${a.k}">시작</button></td></tr>`).join('')}</table>
@@ -1193,8 +1215,8 @@ function openComputer(tab){if(tab)pcTab=tab;const T=['plan','prod','res','fac','
  openModal(`<h2>사장 컴퓨터</h2><div class="sub">${esc(S.name)} · ${GRADE[S.grade].n} · 창업 ${S.day}일째 · 자금 ${won(S.money)}</div>${tabs}${body}<div class="acts"><button id="mClose">닫기</button></div>`,c=>{
   on(c,'.tabs button','click',el=>openComputer(el.dataset.t));$('#mClose').onclick=closeModal;if(bind)bind(c)},true)}
 function infoHTML(){const g=GRADE[S.grade],ng=GRADE[S.grade+1],cnt={};for(const s of S.staff)cnt[s.role]=(cnt[s.role]||0)+1;const y=S.hist[S.hist.length-1];
- return`<div class="two"><div><div class="kv"><i>회사 등급</i><span>${g.n}${ng?' <span class="muted">(직원 '+ng.min+'명이면 '+ng.n+')</span>':''}</span><i>직원</i><span>${S.staff.length}명</span><i>자금</i><span>${won(S.money)}</span><i>오늘 매출</i><span>${won(S.today.rev)}</span><i>어제 매출</i><span>${y?won(y.rev):'-'}</span><i>지금까지 매출</i><span>${won(S.stats.rev)}</span><i>판 제품</i><span>${fmtN(S.stats.sold)}개</span><i>지은 건물</i><span>${S.built.length}채</span><i>인지도</i><span>${Math.round(S.rep)}</span></div></div>
- <div><h3 style="margin-top:0">직원 구성</h3><table>${ROLE_ORDER.map(r=>`<tr><td>${ROLE[r].n}</td><td>${cnt[r]||0}명</td></tr>`).join('')}</table></div></div>
+ return`<div class="two"><div><div class="kv"><i>회사 등급</i><span>${g.n}${ng?' <span class="muted">(직원 '+ng.min+'명이면 '+ng.n+')</span>':''}</span><i>직원</i><span>${S.staff.length}명</span><i>자금</i><span>${won(S.money)}</span><i>오늘 매출</i><span>${won(S.today.rev)}</span><i>어제 매출</i><span>${y?won(y.rev):'-'}</span><i>지금까지 매출</i><span>${won(S.stats.rev)}</span><i>판 제품</i><span>${fmtN(S.stats.sold)}개</span><i>회사 종류</i><span>${BIZ[S.biz||'all'].n}</span>${has('build')?`<i>지은 건물</i><span>${S.built.length}채</span>`:''}<i>인지도</i><span>${Math.round(S.rep)}</span></div></div>
+ <div><h3 style="margin-top:0">직원 구성</h3><table>${ROLE_ORDER.filter(roleOK).map(r=>`<tr><td>${ROLE[r].n}</td><td>${cnt[r]||0}명</td></tr>`).join('')}</table></div></div>
  <h3>최근 매출과 이익</h3><canvas id="chart" width="900" height="200" style="width:100%;height:200px;background:#141a20;border-radius:8px"></canvas>`}
 function drawChart(c){if(!c)return;const g=c.getContext('2d'),H=S.hist.slice(-20),W=c.width,Hh=c.height;g.clearRect(0,0,W,Hh);g.font='20px "Malgun Gothic"';
  if(!H.length){g.fillStyle='#8c9aab';g.fillText('하루가 지나면 여기에 기록이 나옵니다.',24,100);return}
@@ -1209,47 +1231,49 @@ function hwCost(type,hw){let m=1;for(const k of DEV[type].hw)m*=HW[k].o[hw[k]||0
 function devBonus(role){return Math.min(12,Math.round(staffOf(role).reduce((a,s)=>a+s.skill,0)*.7))}
 function teamSkill(role){return staffOf(role).reduce((a,s)=>a+s.skill,0)}
 // 개발팀이 부품을 고르고 화면을 만든다 (실력이 좋을수록 앱이 많음)
-function autoElec(ep){const sk=teamSkill('edev'),T=DEV[ep.type];ep.hw={};
+function autoElec(ep){const sk=teamSkill(ep.soft?'sdev':'edev'),T=DEV[ep.type];ep.hw={};
  for(const k of T.hw){const o=HW[k].o;let best=0;for(let i=0;i<o.length;i++)if(!(o[i][3]&&o[i][3]>S.tech.elec))best=i;ep.hw[k]=k==='chip'?best:Math.min(best,sk>=6?2:1)}
- const D=newDesign(ep.type),big=['phone','tablet','laptop'].includes(ep.type);applyTpl(D,big?clamp(1+Math.floor(sk/2),1,6):clamp(1+Math.floor(sk/3),1,4));ep.design=D;ep.team=staffOf('edev').length}
+ const D=newDesign(ep.type),big=['phone','tablet','laptop','os'].includes(ep.type);applyTpl(D,big?clamp(1+Math.floor(sk/2),1,6):clamp(1+Math.floor(sk/3),1,4));ep.design=D;ep.team=staffOf(ep.soft?'sdev':'edev').length}
 // 연구팀이 맛·재료·포장을 정하고 시식까지 한다 (실력이 좋을수록 인기 맛에 가까움)
 function autoFood(fp){const sk=teamSkill('fdev'),tr=S.trend[fp.type],off=Math.max(0,3-Math.floor(sk/3)),idx=[0,1,2,3,4].sort(()=>R()-.5).slice(0,off);
  fp.fl=tr.map((v,i)=>idx.includes(i)?clamp(v+(v>=5?-1:v<=0?1:(R()<.5?-1:1)),0,5):v);fp.ing=sk>=4?1:0;fp.pc=pick(PKG_COLS);fp.icon=pick(FOOD_ICONS);fp.team=staffOf('fdev').length;
  const ts=tasteScore(fp.fl,tr);let like=0;for(let i=0;i<10;i++)if(ts+(Math.random()-.5)*30>62)like++;fp.test={taste:ts,like,talk:tasteTalk(fp.fl,tr).slice(0,3)}}
-function openElecPlan(d){if(d)EP=d;else EP={type:null,hw:{},color:null,design:null,gen:1};
- if(!EP.type){openModal(`<h2>전자 제품 기획 · 1. 종류 고르기</h2><div class="sub">전자 기술 ${S.tech.elec}단계입니다. 기술이 오르면 더 비싼 기계를 만들 수 있습니다.</div><div class="opts">${DEV_ORDER.map(k=>{const T=DEV[k],lk=T.tech>S.tech.elec;return`<div class="opt${lk?' lock':''}" data-k="${k}"><b>${T.n}</b><span>${T.desc}<br>${lk?'전자 기술 '+T.tech+'단계 필요':'보통 값 '+priceStr(T.price)}</span></div>`}).join('')}</div><div class="acts"><button id="mBack">뒤로</button></div>`,c=>{
-  on(c,'.opt:not(.lock)','click',el=>{EP.type=el.dataset.k;EP.color=DEV[EP.type].body;EP.hw={};for(const k of DEV[EP.type].hw)EP.hw[k]=k==='cam'?1:0;if(staffOf('edev').length)autoElec(EP);openElecPlan(EP)});$('#mBack').onclick=()=>openComputer('plan')},true);return}
+function openElecPlan(d,mode){if(d)EP=d;else EP={type:null,hw:{},color:null,design:null,gen:1,soft:mode==='soft'};
+ const SF=!!EP.soft,TL0=SF?'프로그램':'전자',TLV=S.tech[SF?'soft':'elec'],ROLEK=SF?'sdev':'edev';
+ if(!EP.type){openModal(`<h2>${SF?'프로그램 기획':'전자 제품 기획'} · 1. 종류 고르기</h2><div class="sub">${TL0} 기술 ${TLV}단계입니다. 기술이 오르면 더 비싼 것을 만들 수 있습니다.</div><div class="opts">${(SF?SOFT_ORDER:DEV_ORDER).map(k=>{const T=DEV[k],lk=T.tech>TLV;return`<div class="opt${lk?' lock':''}" data-k="${k}"><b>${T.n}</b><span>${T.desc}<br>${lk?TL0+' 기술 '+T.tech+'단계 필요':'보통 값 '+priceStr(T.price)}</span></div>`}).join('')}</div><div class="acts"><button id="mBack">뒤로</button></div>`,c=>{
+  on(c,'.opt:not(.lock)','click',el=>{EP.type=el.dataset.k;EP.color=DEV[EP.type].body;EP.hw={};for(const k of DEV[EP.type].hw)EP.hw[k]=k==='cam'?1:0;if(staffOf(ROLEK).length)autoElec(EP);openElecPlan(EP)});$('#mBack').onclick=()=>openComputer('plan')},true);return}
  const T=DEV[EP.type];
  const rows=T.hw.map(k=>`<i>${HW[k].n}</i><div class="seg">${HW[k].o.map((o,i)=>{const lk=o[3]&&o[3]>S.tech.elec;return`<button data-hw="${k}" data-i="${i}" class="${(EP.hw[k]||0)===i?'on':''}" ${lk?'disabled title="기술 '+o[3]+'단계 필요"':''}>${o[0]}</button>`}).join('')}</div>`).join('');
  const bodyCols=['#1c2026','#e9ecef','#a9afb6','#2f6fb0','#c0392b','#e8c8d8','#1f8a5b','#d8b878','#6b4fb3','#f2f2f2'];
- const sw=hwQ(EP.type,EP.hw),sws=EP.design?swScore(EP.design,EP.type).total:0,bon=devBonus('edev'),q=Math.min(100,Math.round(sw*.4+sws*.5+bon)),cm=hwCost(EP.type,EP.hw),cost=Math.round(T.cost*cm),fair=fairPrice(T.price,q,cm);
- openModal(`<h2>전자 제품 기획 · 2. ${T.n} 설계</h2><div class="sub">부품을 고르고, 화면을 만들고, 값을 정하면 공장에서 만들기 시작합니다.${EP.base?' (이전 제품 '+esc(EP.base)+'의 새 버전)':''}</div>
- <div class="two"><div><div class="frm">${rows}<i>몸체 색</i><div>${swatches(bodyCols,EP.color,'c')}<input type="color" id="eCol" value="${EP.color}"></div></div>
-  <h3>화면과 버튼</h3><p class="muted">${EP.design?(EP.team?'개발팀 '+EP.team+'명이 만든 화면입니다. ':'')+'화면 '+EP.design.screens.length+'개 · 부품 '+EP.design.screens.reduce((a,s)=>a+s.els.length,0)+'개':'아직 화면이 없습니다. 개발팀에 맡기거나 개발 도구에서 직접 만듭니다.'}</p>
-  <div class="row" style="flex-wrap:wrap;gap:6px"><button class="pri" id="eTeam" style="font-size:14px;padding:7px 16px" ${staffOf('edev').length?'':'disabled'}>${EP.team?'개발팀에 다시 맡기기':'개발팀에 맡기기'}</button><button id="eDev" style="font-size:14px;padding:7px 16px">${EP.design?'직접 고치기 (개발 도구)':'직접 만들기 (개발 도구)'}</button></div>
-  <p class="muted">${staffOf('edev').length?'개발자가 많고 실력이 좋을수록 화면이 많아지고 부품도 좋은 것을 고릅니다.':'1층 인사과에서 전자 개발자를 뽑으면 개발팀에 맡길 수 있습니다.'}</p></div>
+ const sw=hwQ(EP.type,EP.hw),sws=EP.design?swScore(EP.design,EP.type).total:0,bon=devBonus(ROLEK),q=Math.min(100,Math.round(SF?sws*.88+bon:sw*.4+sws*.5+bon)),cm=SF?1:hwCost(EP.type,EP.hw),cost=Math.round(T.cost*cm),fair=fairPrice(T.price,q,cm);
+ const TEAM=SF?'프로그래머':'개발팀';
+ openModal(`<h2>${SF?'프로그램 기획':'전자 제품 기획'} · 2. ${T.n} ${SF?'만들기':'설계'}</h2><div class="sub">${SF?'화면과 버튼을 만들고 값을 정하면 바로 내려받기로 팔기 시작합니다. 공장은 필요 없습니다.':'부품을 고르고, 화면을 만들고, 값을 정하면 공장에서 만들기 시작합니다.'}${EP.base?' (이전 제품 '+esc(EP.base)+'의 새 버전)':''}</div>
+ <div class="two"><div>${SF?`<p class="muted" style="margin-top:0">컴퓨터 화면 크기: ${T.w} × ${T.h}</p>`:`<div class="frm">${rows}<i>몸체 색</i><div>${swatches(bodyCols,EP.color,'c')}<input type="color" id="eCol" value="${EP.color}"></div></div>`}
+  <h3>화면과 버튼</h3><p class="muted">${EP.design?(EP.team?TEAM+' '+EP.team+'명이 만든 화면입니다. ':'')+'화면 '+EP.design.screens.length+'개 · 부품 '+EP.design.screens.reduce((a,s)=>a+s.els.length,0)+'개':'아직 화면이 없습니다. '+TEAM+'에게 맡기거나 개발 도구에서 직접 만듭니다.'}</p>
+  <div class="row" style="flex-wrap:wrap;gap:6px"><button class="pri" id="eTeam" style="font-size:14px;padding:7px 16px" ${staffOf(ROLEK).length?'':'disabled'}>${TEAM}${EP.team?'에게 다시 맡기기':'에게 맡기기'}</button><button id="eDev" style="font-size:14px;padding:7px 16px">${EP.design?'직접 고치기 (개발 도구)':'직접 만들기 (개발 도구)'}</button></div>
+  <p class="muted">${staffOf(ROLEK).length?(SF?'프로그래머':'개발자')+'가 많고 실력이 좋을수록 화면이 많아집니다.':'1층 인사과에서 '+ROLE[ROLEK].n+eul(ROLE[ROLEK].n).slice(-1)+' 뽑으면 맡길 수 있습니다.'}</p></div>
  <div><canvas id="ePrev" width="260" height="300" style="width:260px;height:300px;display:block;margin:0 auto 8px;background:#11161b;border-radius:10px"></canvas>
-  <div class="kv"><i>부품 점수</i><span>${sw}점</span><i>소프트웨어 점수</i><span>${EP.design?sws+'점':'-'}</span><i>개발팀 보너스</i><span>+${bon}점</span><i><b>품질</b></i><span><b>${q}점</b></span><i>1개 만드는 값</i><span>${priceStr(cost)}</span><i>알맞은 판매 값</i><span>${priceStr(fair)}</span></div></div></div>
+  <div class="kv">${SF?'':`<i>부품 점수</i><span>${sw}점</span>`}<i>소프트웨어 점수</i><span>${EP.design?sws+'점':'-'}</span><i>${TEAM} 보너스</i><span>+${bon}점</span><i><b>품질</b></i><span><b>${q}점</b></span><i>${SF?'1개 팔 때 드는 값':'1개 만드는 값'}</i><span>${priceStr(cost)}</span><i>알맞은 판매 값</i><span>${priceStr(fair)}</span></div></div></div>
  <div class="acts"><button id="mBack">종류 다시 고르기</button><button id="eSave">나중에 이어서</button><button class="pri" id="eGo" ${EP.design?'':'disabled'}>이름 짓고 내놓기</button></div>`,c=>{
   on(c,'button[data-hw]','click',el=>{EP.hw[el.dataset.hw]=+el.dataset.i;openElecPlan(EP)});
-  on(c,'.sw','click',el=>{EP.color=el.dataset.c;openElecPlan(EP)});$('#eCol').oninput=e=>{EP.color=e.target.value;drawDevPreview($('#ePrev'),EP)};$('#eCol').onchange=()=>openElecPlan(EP);
+  on(c,'.sw','click',el=>{EP.color=el.dataset.c;openElecPlan(EP)});const ec=$('#eCol');if(ec){ec.oninput=e=>{EP.color=e.target.value;drawDevPreview($('#ePrev'),EP)};ec.onchange=()=>openElecPlan(EP)}
   drawDevPreview($('#ePrev'),EP);
   $('#eTeam').onclick=()=>{autoElec(EP);openElecPlan(EP)};
   $('#eDev').onclick=()=>{if(!EP.design)EP.design=newDesign(EP.type);EP.team=0;S.draft=EP;closeModal();openEditor(EP.design,{title:'새 '+T.n,body:EP.color,dev:EP.type,onClose:()=>{S.draft=EP;openElecPlan(EP)}})};
-  $('#mBack').onclick=()=>{EP.type=null;EP.design=null;openElecPlan(EP)};$('#eSave').onclick=()=>{S.draft=EP;closeModal();toast('만들던 제품을 저장했습니다.')};
+  $('#mBack').onclick=()=>{EP.type=null;EP.design=null;openElecPlan(EP)};$('#eSave').onclick=()=>{S.draft=EP;closeModal();toast('만들던 것을 저장했습니다.')};
   $('#eGo').onclick=()=>{const def=EP.base?EP.base.replace(/\s*\d+$/,'')+' '+EP.gen:(S.name+' '+T.n);const nm=(prompt('제품 이름을 지어 주세요',def)||'').trim();if(!nm)return;
    let price=fair;const pv=prompt('판매 값 (원). 알맞은 값은 '+fmtN(fair)+'원입니다. 비싸면 덜 팔리고 싸면 더 팔립니다.',fair);const n=parseInt(String(pv||'').replace(/[^0-9]/g,''));if(n>0)price=n;
-   launch({dept:'elec',type:EP.type,name:nm,q,hw:Object.assign({},EP.hw),color:EP.color,design:EP.design,cost,price,fair,gen:EP.gen||1,sw:sws,hwq:sw});S.draft=null;EP=null;closeModal()}},true)}
+   launch({dept:SF?'soft':'elec',type:EP.type,name:nm,q,hw:Object.assign({},EP.hw),color:EP.color,design:EP.design,cost,price,fair,gen:EP.gen||1,sw:sws,hwq:sw});S.draft=null;EP=null;closeModal()}},true)}
 function drawDevPreview(c,ep){const g=c.getContext('2d'),T=DEV[ep.type],W=c.width,H=c.height;g.clearRect(0,0,W,H);const k=Math.min((W-50)/T.w,(H-50)/T.h),w=T.w*k,h=T.h*k,x=(W-w)/2,y=(H-h)/2,pad=Math.max(6,Math.min(w,h)*.06);
  g.fillStyle='rgba(0,0,0,.35)';rr(g,x-pad+4,y-pad+6,w+pad*2,h+pad*2,T.r*k+pad);g.fill();g.fillStyle=ep.color;rr(g,x-pad,y-pad,w+pad*2,h+pad*2,T.r*k+pad);g.fill();
- g.save();rr(g,x,y,w,h,T.r*k*.7);g.clip();g.translate(x,y);g.scale(k,k);if(ep.design)paintScreen(g,ep.design,0,null);else{g.fillStyle='#0b0e12';g.fillRect(0,0,T.w,T.h);g.fillStyle='#5a6672';g.font='16px "Malgun Gothic"';g.textAlign='center';g.fillText('화면 없음',T.w/2,T.h/2)}g.restore()}
+ g.save();rr(g,x,y,w,h,T.r*k*.7);g.clip();g.translate(x,y);g.scale(k,k);if(ep.design)paintScreen(g,ep.design,coverScr(ep.design),null);else{g.fillStyle='#0b0e12';g.fillRect(0,0,T.w,T.h);g.fillStyle='#5a6672';g.font='16px "Malgun Gothic"';g.textAlign='center';g.fillText('화면 없음',T.w/2,T.h/2)}g.restore()}
 
 // ---------- 회사 현황·도움말 ----------
 function openInfo(){openModal(`<h2>회사 현황</h2><div class="sub">${esc(S.name)} · 창업 ${S.day}일째</div>${infoHTML()}<div class="acts"><button id="mClose">닫기</button></div>`,c=>{drawChart($('#chart'));$('#mClose').onclick=closeModal},true)}
 function openHelp(){openModal(`<h2>도움말</h2><div class="sub">중소기업 3D</div>
  <div class="kv"><i>걷기</i><span>W A S D 또는 방향키 · 땅을 누르면 그곳으로 걸어감 · Shift 누르면 뛰기</span><i>카메라</i><span>마우스로 끌어서 돌리기 · 휠로 가까이/멀리</span><i>하기</i><span>E 또는 스페이스 (가까이 가면 아래에 뜸) · 이름표를 누르면 그쪽으로 걸어감</span><i>속 보기</i><span>F 또는 위쪽 '속 보기' — 지붕을 걷어 건물 안을 봅니다</span></div>
- <h3>회사 키우는 순서</h3><p>1. 본사 1층 <b>인사과</b>에서 직원을 뽑습니다. 생산직은 공장 라인에서, 개발자·연구원·설계사는 본사 책상에서, 현장 기술자는 공사장에서 일합니다.</p>
- <p>2. 엘리베이터로 2층에 올라가 <b>사장 컴퓨터</b>에서 제품을 기획합니다. 전자 제품은 개발 도구에서 화면과 버튼을 직접 만듭니다.</p>
+ <h3>회사 키우는 순서</h3><p>0. 처음에 회사 종류를 고릅니다(프로그램·전자·식품·건설·종합). 고른 사업만 합니다.</p><p>1. 본사 1층 <b>인사과</b>에서 직원을 뽑습니다. 생산직은 공장 라인에서, 프로그래머·개발자·연구원·설계사는 본사 책상에서, 현장 기술자는 공사장에서 일합니다.</p>
+ <p>2. 엘리베이터로 2층에 올라가 <b>사장 컴퓨터</b>에서 제품을 기획합니다. 프로그래머·개발자·연구원에게 디자인을 맡기거나, 개발 도구에서 화면과 버튼을 직접 만듭니다. 프로그램은 공장 없이 바로 팔립니다.</p>
  <p>3. 공장이 제품을 만들고 트럭이 실어 가면 가게에서 팔립니다. <b>건설 사무소</b>에서 공사를 계약하면 길 건너에 건물을 짓습니다.</p>
  <p>4. 직원이 늘면 회사 등급이 올라(창업 회사 → 소기업 → 중소기업 → 중견기업 → 대기업) 라인과 본사 층을 더 늘릴 수 있습니다.</p>
  <div class="acts"><button id="mReset" class="red">처음부터 새로</button><button id="mClose" class="pri">닫기</button></div>`,c=>{$('#mClose').onclick=closeModal;$('#mReset').onclick=()=>{if(confirm('회사를 처음부터 다시 시작할까요? 지금 회사는 사라집니다.')){localStorage.removeItem(SAVE_KEY);S=null;location.reload()}}})}
@@ -1365,7 +1389,7 @@ function paintScreen(g,D,si,rt){const T=DEV[D.dev],sc=D.screens[si];if(!sc)retur
  g.restore()}
 
 // ================= 개발 도구: 모양 정하기 =================
-function newDesign(dev){return{dev,n:0,screens:[{id:'s1',name:'시작 화면',bg:dev==='calc'?'#2b3038':'#11161c',els:[],open:[],tick:[]}],sn:1}}
+function newDesign(dev){return{dev,n:0,screens:[{id:'s1',name:'시작 화면',bg:dev==='calc'?'#2b3038':DEV[dev].soft?'#1e5aa8':'#11161c',els:[],open:[],tick:[]}],sn:1}}
 function newEl(D,t){const T=DEV[D.dev],cnt=D.screens.reduce((a,s)=>a+s.els.filter(e=>e.t===t).length,0)+1,id='e'+(++D.n);
  const d={text:{w:160,h:34,text:'글씨',size:20,color:'#ffffff',align:'left',bold:0},button:{w:120,h:46,text:'버튼',size:17,color:'#ffffff',bg:'#2f6fb0',r:10,bold:1},
   box:{w:160,h:100,bg:'#2a3340',r:12},icon:{w:60,h:60,icon:'home',color:'#ffffff',bg:'#2f6fb0',r:14},number:{w:120,h:44,val:0,size:26,color:'#ffffff',pre:'',suf:'',align:'center',bold:1},
@@ -1427,7 +1451,55 @@ function tplSimple(D,n){const T=DEV[D.dev],W=T.w,H=T.h,s0=D.screens[0],sm=Math.m
   else if(ic==='photo'){mk(D,si,'photo',20,56,W-40,H-80,{photo:'sea',r:8})}
   else if(ic==='game'){const sc=mk(D,si,'number',0,H*.25,W,50,{val:0,size:36,pre:'점수 '});mk(D,si,'button',W/2-70,H*.5,140,56,{text:'누르기',bg:'#e08a1e',acts:[{k:'addNum',e:sc.id,n:1},{k:'sound',v:'삑'}]})}
   else{mk(D,si,'text',20,70,W-120,30,{text:'소리',size:18});mk(D,si,'switch',W-90,68,62,34,{on:1})}})}
-function applyTpl(D,n){if(D.dev==='calc')tplCalc(D);else if(D.dev==='phone'||D.dev==='tablet'||D.dev==='laptop')tplPhone(D,n);else tplSimple(D,n)}
+// ---- 컴퓨터 프로그램 기본 틀 ----
+function winFrame(D,si,title,x,y,w,h){const co=(S&&S.color)||'#2f6fb0';mk(D,si,'box',x+5,y+6,w,h,{bg:'#00000055',r:8,name:title+' 그림자'});mk(D,si,'box',x,y,w,h,{bg:'#f4f6f8',r:8,name:title+' 창'});
+ mk(D,si,'box',x,y,w,36,{bg:co,r:8,name:title+' 제목줄'});mk(D,si,'icon',x+8,y+6,24,24,{icon:'memo',bg:'none',color:'#ffffff',name:title+' 작은 그림'});mk(D,si,'text',x+38,y+6,w-90,26,{text:title,size:16,bold:1,color:'#ffffff',name:title+' 제목'});
+ mk(D,si,'button',x+w-44,y+6,36,24,{text:'×',size:17,bg:'#d9534f',r:5,acts:[{k:'back'}],name:title+' 닫기'})}
+function calcGrid(D,si,x,y,bw,bh,g,dsp){[['C','←','÷','×'],['7','8','9','−'],['4','5','6','+'],['1','2','3','('],['0','.',')','=']].forEach((row,r)=>row.forEach((k,c)=>{const op='÷×−+()'.includes(k),bg=k==='C'?'#d9534f':k==='='?'#1f8a5b':k==='←'?'#6a7480':op?'#e08a1e':'#4a5058';
+ mk(D,si,'button',x+c*(bw+g),y+r*(bh+g),bw,bh,{text:k,size:18,bg,r:6,name:'버튼 '+k,acts:k==='C'?[{k:'setText',e:dsp.id,v:'0'}]:k==='='?[{k:'calc',e:dsp.id}]:k==='←'?[{k:'delChar',e:dsp.id}]:[{k:'addText',e:dsp.id,v:k}]})}))}
+function osDesk(D,si){const W=800,H=500;mk(D,si,'photo',0,0,W,H-40,{photo:'mountain',r:0,name:'바탕 그림'});mk(D,si,'box',0,H-40,W,40,{bg:'#141a22',r:0,name:'작업 표시줄'});mk(D,si,'clock',W-130,H-38,120,36,{size:15,fmt:'ampm',bold:0,name:'시계'})}
+function appBody(D,si,ic,an,x,y,w,h){const cx=x+16,cy=y+50,ink='#1d232a';
+ if(ic==='memo'){const t=mk(D,si,'text',cx,cy,w-32,h-120,{text:'',size:17,color:ink,name:'메모 글씨'});
+  [['인사 쓰기','안녕하세요. '],['날씨 쓰기','오늘은 맑습니다. '],['약속 쓰기','3시에 만나요. ']].forEach(([b,v],j)=>mk(D,si,'button',cx+j*98,y+h-54,92,38,{text:b,size:14,bg:'#3a4654',r:6,acts:[{k:'addText',e:t.id,v}]}));
+  mk(D,si,'button',x+w-200,y+h-54,84,38,{text:'지우기',size:14,bg:'#6a7480',r:6,acts:[{k:'clearText',e:t.id}]});mk(D,si,'button',x+w-108,y+h-54,92,38,{text:'저장',size:14,bg:'#1f8a5b',r:6,acts:[{k:'alert',v:'메모를 저장했습니다'},{k:'sound',v:'딩동'}]})}
+ else if(ic==='calc'){mk(D,si,'box',cx,cy,w-32,56,{bg:'#c8d4b8',r:6,name:'계산 판'});const dsp=mk(D,si,'text',cx+6,cy+6,w-44,46,{text:'0',size:30,color:'#1d2a1a',align:'right',name:'계산 화면'});const bw=Math.floor((w-32-18)/4),bh=Math.floor((h-136-24)/5);calcGrid(D,si,cx,cy+66,bw,bh,6,dsp)}
+ else if(ic==='photo'){const k=['mountain','sea','city','flower'],pw=(w-44)/2,ph=(h-74)/2;k.forEach((q,j)=>mk(D,si,'photo',cx+(j%2)*(pw+12),cy+Math.floor(j/2)*(ph+8),pw,ph-6,{photo:q,r:6,acts:[{k:'alert',v:PHOTOS[q]+' 사진'}]}))}
+ else if(ic==='game'){const sc=mk(D,si,'number',cx,cy+10,(w-32)/2,50,{val:0,size:32,pre:'점수 ',color:ink,name:'점수'}),tm=mk(D,si,'number',cx+(w-32)/2,cy+10,(w-32)/2,50,{val:0,size:32,pre:'',suf:'초',color:'#c0392b',name:'시간'});
+  const end=addScr(D,an+' 끝',D.screens[si].bg);osDesk(D,end);winFrame(D,end,an+' 끝',x+60,y+60,w-120,h-140);mk(D,end,'icon',x+w/2-36,y+110,72,72,{icon:'trophy',bg:'none',color:'#e0b52a'});mk(D,end,'text',x+60,y+190,w-120,30,{text:'10초가 지났습니다!',size:20,bold:1,align:'center',color:ink});
+  mk(D,end,'button',x+w/2-70,y+230,140,40,{text:'다시 하기',bg:'#e08a1e',acts:[{k:'back'}]});
+  D.screens[si].open=[{k:'setNum',e:sc.id,n:0},{k:'setNum',e:tm.id,n:0}];D.screens[si].tick=[{k:'addNum',e:tm.id,n:1},{k:'ifGo',e:tm.id,n:10,s:D.screens[end].id}];
+  mk(D,si,'icon',x+w/2-40,cy+80,80,80,{icon:'star',bg:'none',color:'#e0b52a',name:'별'});mk(D,si,'button',x+w/2-80,y+h-70,160,50,{text:'누르기',size:20,bg:'#e08a1e',r:10,acts:[{k:'addNum',e:sc.id,n:1},{k:'sound',v:'삑'}]})}
+ else if(ic==='trash'){mk(D,si,'icon',x+w/2-40,cy+60,80,80,{icon:'trash',bg:'none',color:'#6a7480'});mk(D,si,'text',x,cy+160,w,30,{text:'휴지통이 비어 있습니다',size:18,align:'center',color:ink})}
+ else if(ic==='paint'){const cvb=mk(D,si,'box',cx,cy,w-32-90,h-70,{bg:'#ffffff',r:4,name:'그림판'});const st=[['weather','#e0b52a',.15,.1],['home','#c0392b',.45,.45],['heart','#e86fa3',.7,.15],['star','#2f6fb0',.15,.55]].map(([q,c,fx,fy])=>mk(D,si,'icon',cx+(w-122)*fx,cy+(h-70)*fy,80,80,{icon:q,bg:'none',color:c,hidden:1,name:'도장 '+q}));
+  ['#ffffff','#fff2c8','#d8ecff','#e0f5e0'].forEach((c,j)=>mk(D,si,'button',x+w-100,cy+j*34,84,28,{text:'',bg:c,r:4,name:'바탕 '+(j+1),acts:[{k:'color',e:cvb.id,c}]}));
+  st.forEach((e,j)=>mk(D,si,'icon',x+w-100+(j%2)*44,cy+150+Math.floor(j/2)*44,40,40,{icon:e.icon,bg:'#3a4654',r:6,color:'#ffffff',acts:[{k:'show',e:e.id},{k:'sound',v:'미'}]}));
+  mk(D,si,'button',x+w-100,y+h-54,84,36,{text:'지우기',size:14,bg:'#6a7480',r:6,acts:[...st.map(e=>({k:'hide',e:e.id})),{k:'color',e:cvb.id,c:'#ffffff'}]})}
+ else if(ic==='doc'){const t=mk(D,si,'text',cx,cy,w-32,h-120,{text:'제목 없는 문서\n',size:17,color:ink,name:'문서'});
+  [['인사말','안녕하십니까. '],['회사 소개',(S?S.name:'우리 회사')+'는 좋은 프로그램을 만듭니다. '],['줄 바꾸기','\n']].forEach(([b,v],j)=>mk(D,si,'button',cx+j*98,y+h-54,92,38,{text:b,size:14,bg:'#3a4654',r:6,acts:[{k:'addText',e:t.id,v}]}));
+  mk(D,si,'button',x+w-200,y+h-54,84,38,{text:'인쇄',size:14,bg:'#6a7480',r:6,acts:[{k:'alert',v:'인쇄합니다'},{k:'sound',v:'삑'}]});mk(D,si,'button',x+w-108,y+h-54,92,38,{text:'저장',size:14,bg:'#1f8a5b',r:6,acts:[{k:'alert',v:'문서를 저장했습니다'},{k:'sound',v:'딩동'}]})}
+ else{['와이파이','소리','밤 화면'].forEach((t,j)=>{mk(D,si,'text',cx,cy+j*50,200,34,{text:t,size:17,color:ink});mk(D,si,'switch',x+w-100,cy+j*50,62,34,{on:j<2?1:0})});mk(D,si,'text',cx,cy+160,200,30,{text:'화면 밝기',size:17,color:ink});const b=mk(D,si,'bar',cx,cy+200,w-32,12,{val:70,name:'밝기'});
+  mk(D,si,'button',cx,cy+222,70,34,{text:'어둡게',size:13,bg:'#3a4654',acts:[{k:'addNum',e:b.id,n:-10}]});mk(D,si,'button',x+w-86,cy+222,70,34,{text:'밝게',size:13,bg:'#3a4654',acts:[{k:'addNum',e:b.id,n:10}]})}}
+function tplOS(D,n){const W=800,H=500,co=(S&&S.color)||'#2f6fb0',nm=(S&&S.name)||'새싹',s0=D.screens[0];s0.name='켜기';s0.bg='#0b0f14';s0.els=[];
+ mk(D,0,'text',0,170,W,60,{text:nm+' OS',size:44,bold:1,align:'center',name:'로고'});const bar=mk(D,0,'bar',W/2-150,262,300,10,{val:0,max:100,color:co,name:'켜지는 막대'});mk(D,0,'text',0,284,W,30,{text:'켜는 중...',size:16,align:'center',color:'#9aa7b3',bold:0});
+ const dk=addScr(D,'바탕 화면','#1e5aa8');s0.open=[{k:'setNum',e:bar.id,n:0}];s0.tick=[{k:'addNum',e:bar.id,n:25},{k:'ifGo',e:bar.id,n:100,s:D.screens[dk].id}];
+ const off=addScr(D,'꺼짐','#000000');mk(D,off,'icon',W/2-30,170,60,60,{icon:'power',bg:'none',color:'#5a6672'});mk(D,off,'text',0,244,W,30,{text:'전원이 꺼졌습니다',size:18,align:'center',color:'#9aa7b3'});mk(D,off,'button',W/2-60,296,120,40,{text:'다시 켜기',bg:co,acts:[{k:'go',s:s0.id}]});
+ osDesk(D,dk);const apps=[['memo','메모장'],['calc','계산기'],['photo','사진'],['game','게임'],['trash','휴지통'],['gear','설정']].slice(0,n||6),mh=(apps.length+2)*38+14,my=H-44-mh;
+ const sids=apps.map(([ic,an],i)=>{const si=addScr(D,an,'#1e5aa8'),sid=D.screens[si].id,ix=24+Math.floor(i/4)*100,iy=20+(i%4)*100;
+  mk(D,dk,'icon',ix,iy,56,56,{icon:ic,bg:'#ffffff33',r:12,color:'#ffffff',name:an+' 아이콘',acts:[{k:'go',s:sid}]});mk(D,dk,'text',ix-20,iy+60,96,22,{text:an,size:13,align:'center',name:an+' 이름'});
+  osDesk(D,si);winFrame(D,si,an,140,40,520,380);appBody(D,si,ic,an,140,40,520,380);return sid});
+ const menu=[mk(D,dk,'box',6,my,236,mh,{bg:'#1d2530',r:8,hidden:1,name:'시작 메뉴'}),mk(D,dk,'text',20,my+8,200,28,{text:nm+' OS',size:15,bold:1,hidden:1,name:'시작 메뉴 제목'})];
+ apps.forEach(([ic,an],i)=>menu.push(mk(D,dk,'button',16,my+40+38*i,216,32,{text:an,size:14,bg:'#2a3442',r:6,hidden:1,acts:[{k:'go',s:sids[i]}],name:'메뉴 '+an})));
+ menu.push(mk(D,dk,'button',16,my+40+38*apps.length,216,32,{text:'전원 끄기',size:14,bg:'#8a2f2f',r:6,hidden:1,acts:[{k:'go',s:D.screens[off].id}],name:'전원 끄기'}));
+ mk(D,dk,'button',6,H-36,92,32,{text:'시작',size:15,bg:co,r:6,name:'시작 버튼',acts:menu.map(m=>({k:'toggle',e:m.id}))})}
+function tplApp(D){const W=800,H=500,s0=D.screens[0],T=DEV[D.dev];s0.name=T.n;s0.bg='#1e2630';s0.els=[];
+ if(D.dev==='game'){s0.name='게임 시작';mk(D,0,'photo',0,0,W,H,{photo:'space',r:0,name:'배경'});mk(D,0,'text',0,140,W,70,{text:((S&&S.name)||'')+' 별 모으기',size:46,bold:1,align:'center',name:'게임 제목'});
+  const g=addScr(D,'게임','#0b1020');mk(D,0,'button',W/2-90,260,180,56,{text:'시작',size:22,bg:'#e08a1e',r:10,acts:[{k:'go',s:D.screens[g].id},{k:'sound',v:'딩동'}]});mk(D,0,'button',W/2-90,330,180,44,{text:'끝내기',size:16,bg:'#4a5560',r:10,acts:[{k:'alert',v:'다음에 또 만나요'}]});
+  mk(D,g,'photo',0,0,W,H,{photo:'space',r:0});winFrame(D,g,'별 모으기',140,40,520,400);appBody(D,g,'game','별 모으기',140,40,520,400);return}
+ const ic=D.dev==='tool'?'calc':D.dev==='paint'?'paint':'doc',an=D.dev==='tool'?'계산기':D.dev==='paint'?'그림판':'문서';
+ winFrame(D,0,an,40,20,720,440);appBody(D,0,ic,an,40,20,720,440);
+ const inf=addScr(D,'정보','#1e2630');winFrame(D,inf,'정보',200,120,400,240);mk(D,inf,'icon',380,170,40,40,{icon:'check',bg:'none',color:'#1f8a5b'});mk(D,inf,'text',200,220,400,60,{text:((S&&S.name)||'')+' '+an+'\n버전 1.0',size:16,align:'center',color:'#1d232a'});
+ mk(D,0,'button',40+720-150,20+6,96,24,{text:'정보',size:13,bg:'#ffffff33',r:5,acts:[{k:'go',s:D.screens[inf].id}]})}
+function applyTpl(D,n){if(DEV[D.dev].soft){if(D.dev==='os')tplOS(D,n);else tplApp(D);return}if(D.dev==='calc')tplCalc(D);else if(D.dev==='phone'||D.dev==='tablet'||D.dev==='laptop')tplPhone(D,n);else tplSimple(D,n)}
 
 // ================= 개발 도구: 편집기 =================
 const ED={D:null,opt:null,si:0,sel:null,run:false,rt:null,hist:[],drag:null,guides:[],sc:1,raf:0,lastTick:0};
@@ -1447,7 +1519,7 @@ function openEditor(D,opt){ED.D=D;ED.opt=opt||{};ED.si=0;ED.sel=null;ED.hist=[];
  if(ro){$('#dvLeft').style.display='none';pp.style.display='none';startRun()}else edRefresh();edLayout()}
 function closeEditor(){stopRun(true);$('#dev').classList.add('hide');$('#dev').innerHTML='';modalOpen=false;const f=ED.opt&&ED.opt.onClose;ED.D=null;if(f)f()}
 function edLayout(){if(!ED.D)return;const T=DEV[ED.D.dev],mid=$('#dvMid'),fr=$('#dvFrame'),cv2=$('#dvCv');if(!mid)return;const pad=Math.round(Math.max(10,Math.min(T.w,T.h)*.05));
- const extraW=ED.D.dev==='console'?T.h*.7:0,extraH=ED.D.dev==='laptop'?T.h*.16:ED.D.dev==='watch'?T.h*.5:ED.D.dev==='clock'?T.h*.2:0;
+ const extraW=ED.D.dev==='console'?T.h*.7:0,extraH=T.soft?T.h*.2:ED.D.dev==='laptop'?T.h*.16:ED.D.dev==='watch'?T.h*.5:ED.D.dev==='clock'?T.h*.2:0;
  const sc=Math.min((mid.clientWidth-60)/(T.w+pad*2+extraW*2),(mid.clientHeight-70)/(T.h+pad*2+extraH),ED.run?2.4:1.8);ED.sc=sc;
  cv2.style.width=T.w*sc+'px';cv2.style.height=T.h*sc+'px';cv2.style.borderRadius=Math.max(2,T.r*.6*sc)+'px';
  const body=ED.opt.body||T.body;fr.style.background=body;fr.style.padding=(pad*sc)+'px '+((pad+extraW)*sc)+'px';fr.style.borderRadius=((T.r+pad)*sc)+'px';
@@ -1456,6 +1528,7 @@ function edLayout(){if(!ED.D)return;const T=DEV[ED.D.dev],mid=$('#dvMid'),fr=$('
  if(ED.D.dev==='phone')deco(`left:50%;top:${pad*sc+8*sc}px;width:${12*sc}px;height:${12*sc}px;margin-left:${-6*sc}px;border-radius:50%;background:#05070a`);
  if(ED.D.dev==='watch'){deco(`left:18%;right:18%;top:${-T.h*.25*sc}px;height:${T.h*.26*sc}px;background:#2a2e33;border-radius:${10*sc}px ${10*sc}px 0 0`);deco(`left:18%;right:18%;bottom:${-T.h*.25*sc}px;height:${T.h*.26*sc}px;background:#2a2e33;border-radius:0 0 ${10*sc}px ${10*sc}px`)}
  if(ED.D.dev==='laptop')deco(`left:${-6*sc}%;right:${-6*sc}%;bottom:${-T.h*.12*sc}px;height:${T.h*.12*sc}px;background:linear-gradient(#c9ced3,#9aa0a6);border-radius:0 0 ${18*sc}px ${18*sc}px`);
+ if(T.soft){deco(`left:44%;right:44%;bottom:${-T.h*.13*sc}px;height:${T.h*.13*sc}px;background:#2a2e33`);deco(`left:30%;right:30%;bottom:${-T.h*.17*sc}px;height:${T.h*.05*sc}px;background:#2a2e33;border-radius:${6*sc}px`)}
  if(ED.D.dev==='clock')deco(`left:30%;right:30%;bottom:${-T.h*.18*sc}px;height:${T.h*.18*sc}px;background:${dark};border-radius:0 0 ${8*sc}px ${8*sc}px`);
  if(ED.D.dev==='console'){const s=T.h*.13*sc;deco(`left:${extraW*sc*.3}px;top:45%;width:${s*3}px;height:${s}px;background:#15181c;border-radius:4px`);deco(`left:${extraW*sc*.3+s}px;top:calc(45% - ${s}px);width:${s}px;height:${s*3}px;background:#15181c;border-radius:4px`);
   for(const[dx,dy,c]of[[0,-1,'#d9534f'],[1,0,'#3a9ad9'],[0,1,'#4cc38a'],[-1,0,'#e0b52a']])deco(`right:${extraW*sc*.32+s*(1-dx)}px;top:calc(45% + ${s*dy}px);width:${s}px;height:${s}px;border-radius:50%;background:${c}`)}
@@ -1657,7 +1730,7 @@ function paintPackage(g,P,W,H){const k=FOOD[P.type].pkg,pc=P.pc,dk=mixHex(pc,'#0
  g.restore()}
 function mixHex(a,b,t){const A=hex(a),B=hex(b),c=mixc(A,B,t);return'#'+c.map(v=>Math.round(clamp(v,0,1)*255).toString(16).padStart(2,'0')).join('')}
 function prodTex(P){if(TEX[P.id])return TEX[P.id];const c=document.createElement('canvas');
- if(P.dept==='elec'){const T=DEV[P.type],k=Math.min(1,512/Math.max(T.w,T.h));c.width=Math.round(T.w*k);c.height=Math.round(T.h*k);const g=c.getContext('2d');g.scale(k,k);paintScreen(g,P.design,0,null)}
+ if(P.dept!=='food'){const T=DEV[P.type],k=Math.min(1,512/Math.max(T.w,T.h));c.width=Math.round(T.w*k);c.height=Math.round(T.h*k);const g=c.getContext('2d');g.scale(k,k);paintScreen(g,P.design,coverScr(P.design),null)}
  else{c.width=c.height=256;paintPackage(c.getContext('2d'),P,256,256)}
  TEX[P.id]=mkTex(c);return TEX[P.id]}
 
@@ -1726,10 +1799,11 @@ function buildDL(tm){DL.length=0;TL.length=0;const ov=officeVis(),camN=(x,z)=>Ma
  // 할 수 있는 곳 표시
  for(const I of W.ints){if(I.f!==PL.f||!near(I.x,I.z,30))continue;const p=.75+Math.sin(tm*3+I.x)*.25;put(M4.trs(I.x,I.f*FH+.04,I.z,0,.45,1,.45),[1,.85,.35],MESH.disk,1.2*p,1)}
  // 직원
+ const softP=S.products.filter(p=>p.dept==='soft').pop()||null;
  for(const s of S.staff){const r=RT[s.id];if(!r||r.st==='away'||r.hide)continue;if(!near(r.x,r.z,90))continue;
   const inO=r.f>0||(r.x>OFF.x0&&r.x<OFF.x1&&r.z>OFF.z0&&r.z<OFF.z1);if(inO&&r.f!==ov.sf)continue;
   let fac=null;for(const d of['elec','food']){const F=FAC[d];if(r.f===0&&r.x>F.x0&&r.x<F.x1&&r.z>F.z0&&r.z<F.z1)fac=d}if(fac&&!facOpen(fac))continue;
-  const ps=staffPose(s,r);NOSH=Math.hypot(r.x-cam.tx,r.z-cam.tz)>45?1:0;drawPerson({x:r.x,z:r.z,f:r.f,ry:r.ry,walk:r.walk,mv:r.mv,a:r.look,pose:ps==='sitwork'?'sit':ps,t:r.t,carry:s.role==='bwork'&&r.mv>.5&&s.id%3===0?[.6,.45,.3]:null},camN(r.x,r.z));NOSH=0}
+  const ps=staffPose(s,r);if(s.role==='sdev'&&ps==='sitwork'&&softP){const st=station(s);if(st)TL.push({tex:prodTex(softP),m:mm(M4.tr(st.x,r.f*FH+1.1,st.z-1.0),M4.sc(.56,.29,1)),e:.75})}NOSH=Math.hypot(r.x-cam.tx,r.z-cam.tz)>45?1:0;drawPerson({x:r.x,z:r.z,f:r.f,ry:r.ry,walk:r.walk,mv:r.mv,a:r.look,pose:ps==='sitwork'?'sit':ps,t:r.t,carry:s.role==='bwork'&&r.mv>.5&&s.id%3===0?[.6,.45,.3]:null},camN(r.x,r.z));NOSH=0}
  // 안내 데스크 직원
  if(S.h>=8&&S.h<19&&ov.sf===0){if(!W.recep)W.recep=makeLook('recep',true,99);drawPerson({x:0,z:-.15,f:0,ry:0,a:W.recep,mv:0},camN(0,0))}
  // 주차된 차
@@ -1738,7 +1812,7 @@ function buildDL(tm){DL.length=0;TL.length=0;const ov=officeVis(),camN=(x,z)=>Ma
  for(const c of W.cars)if(near(c.x,c.z,120))drawCar(c);
  drawBus(W.bus);for(const t of W.trucks)drawTruck(t);
  // 공장 안
- for(const d of['elec','food']){if(!facOpen(d)||!near((FAC[d].x0+FAC[d].x1)/2,-24,70))continue;const P=prodById(S.act[d]);
+ for(const d of['elec','food']){if(!has(d)||!facOpen(d)||!near((FAC[d].x0+FAC[d].x1)/2,-24,70))continue;const P=prodById(S.act[d]);
   for(let i=0;i<S.lines[d].length;i++){const lx=FAC[d].lineX[i],run=lineRunning(d,i)>0,t=tm*(run?1:0);
    if(d==='elec'){const base=M4.trs(lx-1,.75,-25,Math.sin(t*1.3)*1.1+.2,1,1,1);boxAt(base,0,0,0,.36,.3,.36,YELLOW);const a1=.55+.2*Math.sin(t*2.6),a2=-1.1+.35*Math.sin(t*2.6+1),e1=[Math.cos(a1)*.7,.32+Math.sin(a1)*.7],e2=[e1[0]+Math.cos(a2)*.6,e1[1]+Math.sin(a2)*.6];
     seg(base,0,.32,e1[0],e1[1],.14,YELLOW);seg(base,e1[0],e1[1],e2[0],e2[1],.1,[.85,.86,.88]);boxAt(base,e2[0],e2[1]-.12,0,.1,.12,.18,[.25,.25,.27]);
@@ -1801,8 +1875,8 @@ function render(tm){const w=cv.clientWidth|0,h=cv.clientHeight|0,dpr=Math.min(de
 const LBP=[];
 function labelsNow(){const L=[],ov=officeVis(),io=inOffice();
  for(const I of W.ints){if(I.f!==PL.f)continue;if(I.f===0&&!io&&(I.k==='hr'||/^el\d/.test(I.k)))continue;const fc=I.k==='elecT'?'elec':I.k==='foodT'?'food':null;if(fc&&!facOpen(fc))continue;L.push({x:I.x,y:I.f*FH+I.y,z:I.z,t:I.lab,c:'act',go:[I.x,I.z],f:I.f})}
- if(!io){L.push({x:0,y:S.floors*FH+4.6,z:4,t:'본사 · '+S.floors+'층',c:'',go:[0,8.2],f:0});for(const d of['elec','food']){const F=FAC[d];if(!inFac(d))L.push({x:(F.x0+F.x1)/2,y:9.5,z:F.z1,t:F.name+' · 라인 '+S.lines[d].length+'개',c:'',go:[F.door,-12.6],f:0})}
-  L.push({x:31,y:6.6,z:-3,t:'건설 야적장',c:'',go:[22,5],f:0});
+ if(!io){L.push({x:0,y:S.floors*FH+4.6,z:4,t:'본사 · '+S.floors+'층',c:'',go:[0,8.2],f:0});for(const d of['elec','food']){const F=FAC[d];if(has(d)&&!inFac(d))L.push({x:(F.x0+F.x1)/2,y:9.5,z:F.z1,t:F.name+' · 라인 '+S.lines[d].length+'개',c:'',go:[F.door,-12.6],f:0})}
+  if(has('build'))L.push({x:31,y:6.6,z:-3,t:'건설 야적장',c:'',go:[22,5],f:0});
   for(const b of S.built){const Lt=LOTS[b.lot],T=BLD[b.type];L.push({x:Lt.x,y:T.fl*T.fh+(b.type==='house'?3:1.6),z:Lt.z,t:b.name,c:'bld',go:[Lt.x,Lt.z-9],f:0})}
   for(const p of S.projects){const Lt=LOTS[p.lot],st=projStage(p),T=BLD[p.type];L.push({x:Lt.x,y:Math.max(4,st.sf*T.fh+3),z:Lt.z,t:'공사 중 · '+p.name+' '+Math.floor(p.pts/p.need*100)+'%',c:'site',go:[Lt.x,Lt.z-9],f:0})}}
  return L}
@@ -1822,20 +1896,21 @@ function hud(dt){if(toastT>0)toastT-=dt;if(bannerT>0){bannerT-=dt;if(bannerT<=0)
  $('#tStaff').textContent=S.staff.length+'명';$('#tRep').textContent=Math.round(S.rep);$('#tWhere').textContent=whereStr();$('#tClock').textContent=clockStr(S.h);
  const hh=S.h;$('#tDay').textContent=(hh<7?'새벽':hh<9?'출근 시간':hh<12?'오전 근무':hh<13?'점심 시간':hh<18?'오후 근무':hh<20?'퇴근 시간':'밤')+(modalOpen?' · 멈춤':'');
  const fc=$('#floorCtl');if(CUT&&!inOffice()){fc.style.display='flex';$('#fNow').textContent=(clamp(viewF,0,S.floors-1)+1)+'층'}else fc.style.display='none';
- let s='';for(const d of['elec','food']){const P=prodById(S.act[d]);s+=`<h4>${DEPT[d]} · ${FAC[d].name}</h4>`;
+ let s='';if(has('soft')){const L=S.products.filter(p=>p.dept==='soft');s+=`<h4>프로그램</h4>`+(L.length?`<div class="ln"><span>파는 프로그램 ${L.length}개</span><span>오늘 ${fmtN(L.reduce((a,p)=>a+(p.td||0),0))}개 팔림</span></div>`+L.slice(-2).reverse().map(p=>`<div class="ln"><b>${esc(p.name)}</b><span>품질 ${p.q}</span></div>`).join(''):`<div class="ln"><span>프로그램 없음 — 사장 컴퓨터에서 기획</span></div>`)}
+ for(const d of['elec','food']){if(!has(d))continue;const P=prodById(S.act[d]);s+=`<h4>${DEPT[d]} · ${FAC[d].name}</h4>`;
   if(!P)s+=`<div class="ln"><span>제품 없음 — 사장 컴퓨터에서 기획</span></div>`;else{const w=staffOf(d==='elec'?'eprod':'fprod').length;s+=`<div class="ln"><b>${esc(P.name)}</b><span>품질 ${P.q}</span></div><div class="ln"><span>하루 생산 약 ${fmtN(dayRate(d))}개</span><span>재고 ${fmtN(P.stock)}</span></div>`+(w?'':`<div class="ln"><span class="bad">생산직이 없습니다</span></div>`)+(S.flags['halt_'+d]?'<div class="ln"><span class="bad">생산을 멈췄습니다</span></div>':'')}}
- s+=`<h4>건설</h4>`+(S.projects.length?S.projects.map(p=>`<div class="ln"><span>${esc(p.name)}</span><b>${Math.floor(p.pts/p.need*100)}%</b></div>`).join(''):`<div class="ln"><span>공사 없음 · 지은 건물 ${S.built.length}채</span></div>`);
- s+=`<h4>기술</h4><div class="ln"><span>전자 ${S.tech.elec} · 식품 ${S.tech.food} · 건설 ${S.tech.build}단계</span></div>`;$('#side').innerHTML=s}
+ if(has('build'))s+=`<h4>건설</h4>`+(S.projects.length?S.projects.map(p=>`<div class="ln"><span>${esc(p.name)}</span><b>${Math.floor(p.pts/p.need*100)}%</b></div>`).join(''):`<div class="ln"><span>공사 없음 · 지은 건물 ${S.built.length}채</span></div>`);
+ s+=`<h4>기술</h4><div class="ln"><span>${['soft','elec','food','build'].filter(has).map(d=>DEPT[d]+' '+S.tech[d]).join(' · ')}단계</span></div>`;$('#side').innerHTML=s}
 
 // ================= 시작 =================
 function update(dt){if(!S||S.flags.needStart)return;if(!modalOpen){liveStep(dt);simStep(dt);stepStaff(dt);stepLines(dt);stepTraffic(dt)}
  cam.tx+=(PL.x-cam.tx)*Math.min(1,dt*5);cam.tz+=(PL.z-cam.tz)*Math.min(1,dt*5)}
 let last=performance.now();
 function loop(now){requestAnimationFrame(loop);
- try{const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);render(now/1000);hud(dt)}catch(e){console.error(e);if(!loop.err){loop.err=1;toast('오류: '+e.message)}}}
+ try{const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);if(!ED.D)render(now/1000);hud(dt)}catch(e){console.error(e);if(!loop.err){loop.err=1;toast('오류: '+e.message)}}}
 setInterval(()=>{if(S&&!S.flags.needStart)save()},10000);
 addEventListener('beforeunload',()=>{if(S&&!S.flags.needStart)save()});
-function fixState(){const d=newState(S.name,S.color);for(const k in d)if(S[k]===undefined)S[k]=d[k];for(const k in d.today)if(S.today[k]===undefined)S.today[k]=d.today[k]}
+function fixState(){const d=newState(S.name,S.color);for(const k in d)if(S[k]===undefined)S[k]=d[k];for(const k of['tech','res'])for(const q in d[k])if(S[k][q]===undefined)S[k][q]=d[k][q];for(const k in d.today)if(S.today[k]===undefined)S.today[k]=d.today[k]}
 function boot(){const s=loadSave();
  if(s&&s.v===1&&!(s.flags&&s.flags.needStart)){S=s;fixState();PL.x=s.px!==undefined?s.px:8;PL.z=s.pz!==undefined?s.pz:-5.8;PL.f=s.pf||0;PL.look=makeLook('ceo',S.ceoFem,S.ceoFem?11:7);
   buildWorld();initStaffRT();initTraffic();renderLog();if(!S.offers.length)genOffers();if(!S.cands)genCands()}
