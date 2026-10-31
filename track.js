@@ -6,7 +6,7 @@
 (function () {
   const BITS = ['airplane', 'block', 'factory', 'cruise', 'airline', 'sailor', 'star-life', 'observatory',
     'microbe-evolution', 'sapling2d', 'solar-timeline', 'microbe-sandbox', 'microbe-genetics', 'microbe-family',
-    'monkey-clicker', 'dot-baseball', 'terraform', 'sapling3d', 'random-life', 'small-station', 'random-system', 'small-business', 'sandcastle'];
+    'monkey-clicker', 'dot-baseball', 'terraform', 'sapling3d', 'random-life', 'small-station', 'random-system', 'small-business', 'sandcastle', 'ssuksu'];
   window.CHUNJANG_BITS = BITS;
   if (location.protocol === 'file:') return;
   if (navigator.webdriver || /bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)) return;
