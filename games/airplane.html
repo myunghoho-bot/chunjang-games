@@ -527,6 +527,7 @@ const PLANES=[
   {id:'b777', name:'B777',       cls:'L', eng:2, len:74, hgt:6.2, pax:300, mount:'wing'},
   {id:'dc10', name:'DC-10',      cls:'L', eng:3, len:55, hgt:6.0, pax:270, mount:'tri'},
   {id:'md11', name:'MD-11',      cls:'L', eng:3, len:61, hgt:6.0, pax:290, mount:'tri'},
+  {id:'l1011', name:'L-1011 트라이스타', cls:'L', eng:3, len:54, hgt:6.0, pax:250, mount:'wing', sTail:1},  // 가운데 엔진이 동체 속 S덕트 — 흡입구는 수직미익 밑동, 배기는 꼬리 끝
   {id:'md83', name:'MD-83',      cls:'M', eng:2, len:45, hgt:3.4, pax:150, mount:'tail', ttail:1},
   {id:'md80', name:'MD-80',      cls:'M', eng:2, len:45, hgt:3.4, pax:140, mount:'tail', ttail:1},
   {id:'il62', name:'Il-62',      cls:'L', eng:4, len:53, hgt:4.6, pax:180, mount:'tail', ttail:1},  // 꼬리에 4발(옆에서 2개)+T꼬리
@@ -584,7 +585,7 @@ const AIRLINES=[
   {id:'jin',   name:'진에어',       body:'#f6f7f2', tail:'#95c11f', stripe:'#95c11f', text:'#5c7a12', ic:'🦋',
     fleet:['b777','b737']},
   {id:'ana',   name:'전일본공수',   body:'#f2f4f8', tail:'#10286e', stripe:'#10286e', text:'#10286e', ic:'🗻',
-    fleet:['a300','q400','b777','b737','atr72','atr42','q300f']},
+    fleet:['a300','q400','b777','b737','atr72','atr42','q300f','l1011']},
   {id:'swa',   name:'사우스웨스트', body:'#304cb2', tail:'#d5152e', stripe:'#f9b612', text:'#ffffff', ic:'❤️',
     fleet:['md83','md80','b737','atr72']},
   {id:'tropic',name:'트로픽 에어',  body:'#fdf8ee', tail:'#e8542f', stripe:'#f2b132', text:'#c34a20', ic:'🌴',
@@ -610,11 +611,11 @@ const AIRLINES=[
   {id:'aal',   name:'아메리칸',     body:'#d3d8dd', tail:'#0d47a1', stripe:'#c8102e', text:'#0d47a1', ic:'🦅',
     fleet:['b777','b737','md83','dc10','b377']},
   {id:'dal',   name:'델타',         body:'#f2f4f7', tail:'#0a2444', stripe:'#c8102e', text:'#0a2444', ic:'🔺',
-    fleet:['b777','b737','md80','md11']},
+    fleet:['b777','b737','md80','md11','l1011']},
   {id:'baw',   name:'브리티시',     body:'#f4f6f8', tail:'#1d4f91', stripe:'#c8102e', text:'#1d4f91', ic:'🎩',
-    fleet:['b747','b777','a300','conni','conc','comet','b377','a380']},
+    fleet:['b747','b777','a300','conni','conc','comet','b377','a380','l1011']},
   {id:'cpa',   name:'캐세이퍼시픽', body:'#f2f5f4', tail:'#006564', stripe:'#a3d4c8', text:'#006564', ic:'🐉',
-    fleet:['b747','b777','a330f','a300']},
+    fleet:['b747','b777','a330f','a300','l1011']},
   {id:'fedex', name:'페덱스',       body:'#f5f4f8', tail:'#4d148c', stripe:'#ff6200', text:'#4d148c', ic:'📦',
     fleet:['b747f','b777f','b737f','q300f','dc10f','md11f','a330f','belugaf','il76']},
   {id:'dhl',   name:'DHL',          body:'#ffcc00', tail:'#ffcc00', stripe:'#d40511', text:'#d40511', ic:'🟡',
@@ -1419,6 +1420,30 @@ function drawPlane(c,cx,cy,sc,P,A,o){
       c.strokeStyle='#8a97a1'; c.lineWidth=1.4; c.beginPath(); c.moveTo(mx-0.07*L,my-Hh*0.11); c.lineTo(mx-0.11*L,my-Hh*0.24); c.lineTo(mx-0.03*L,my-Hh*0.11); c.stroke();
     }
   }
+  if(P.sTail){ // L-1011: 2번 엔진이 동체 속에 들어가 있어 흡입구와 배기구만 보인다
+    // 흡입구 — 수직미익 밑동 앞에 얹힌 공기 통로 (동체와 같은 색으로 이어지게)
+    c.fillStyle=A.body;
+    c.beginPath();
+    c.moveTo(l+0.285*L,cy-Hh*0.50);
+    c.lineTo(l+0.277*L,cy-Hh*0.67);                                  // 앞면을 뭉툭하게 — 구멍 들어갈 자리
+    c.quadraticCurveTo(l+0.20*L,cy-Hh*0.92, l+0.105*L,cy-Hh*0.78);
+    c.lineTo(l+0.07*L,cy-Hh*0.50);
+    c.closePath(); c.fill();
+    c.strokeStyle='rgba(60,80,95,.35)'; c.lineWidth=1; c.stroke();
+    c.fillStyle='#39454f';
+    c.beginPath(); c.ellipse(l+0.272*L,cy-Hh*0.585,Hh*0.032,Hh*0.072,0,0,7); c.fill();
+    // 배기구 — 꼬리 끝이 그대로 엔진 노즐 (동체 뾰족한 끝을 살짝 넘어감)
+    c.fillStyle='#b9c0c7';
+    c.beginPath();
+    c.moveTo(l+0.030*L,cy-Hh*0.22);
+    c.lineTo(l-0.022*L,cy-Hh*0.165);
+    c.lineTo(l-0.022*L,cy+Hh*0.005);
+    c.lineTo(l+0.030*L,cy-Hh*0.002);
+    c.closePath(); c.fill();
+    c.strokeStyle='rgba(60,80,95,.35)'; c.lineWidth=1; c.stroke();
+    c.fillStyle='#2c3944';
+    c.beginPath(); c.ellipse(l-0.020*L,cy-Hh*0.080,Hh*0.042,Hh*0.078,0,0,7); c.fill();
+  }
   // ── 바퀴
   if(o.gear!==false){
     const wr=Math.max(2.5,Hh*0.17);
@@ -1536,6 +1561,9 @@ const DEX={
   dc10:{s:'수직미익을 관통하는 3번 엔진을 가진 3발기',
     l:'주익 아래에 2개, 수직미익 밑동에 1개, 합쳐서 엔진이 3개다. 과거에는 쌍발기가 대양을 횡단하는 것이 규정으로 금지돼 있었다. 그렇다고 4발기는 비용이 많이 들기 때문에 절충안으로 3발 구조가 나온 것이다. 3번 엔진은 수직미익을 관통하는 형태로 배치했다.',
     f:'지금은 쌍발기도 대양을 건널 수 있게 규정이 바뀌어 3발 여객기는 거의 사라졌다.'},
+  l1011:{s:'가운데 엔진이 동체 속에 숨은 3발기',
+    l:'꼬리 쪽에 엔진이 하나 더 있는 3발 여객기다. 같은 3발기인 DC-10은 그 엔진을 수직미익에 매달았지만, L-1011은 동체 안에 집어넣었다. 공기는 수직미익 밑동의 구멍으로 들어가 S자로 굽은 관을 타고 내려와 엔진을 지난 뒤 꼬리 끝으로 빠져나간다. 그래서 옆에서 보면 엔진 자체는 보이지 않고 흡입구와 꼬리 끝 배기구만 보인다.',
+    f:'관을 S자로 굽히면 공기 흐름이 나빠져 설계가 어렵지만, 엔진을 낮은 곳에 둘 수 있어 정비가 편해진다.'},
   md11:{s:'DC-10의 개량형. 날개 끝에 윙렛이 달렸다',
     l:'DC-10을 개량한 기종이다. 가장 눈에 띄는 차이는 날개 끝에 위아래로 뻗은 윙렛이다. 날개 끝에서는 공기가 소용돌이치며 양력을 깎아먹는데, 윙렛이 이 소용돌이를 억제해 연비를 개선한다. 동체도 DC-10보다 길어져 좌석 수가 늘었다.',
     f:'현재 남아 있는 기체는 대부분 화물기로 운용되고 있다.'},
