@@ -1834,68 +1834,92 @@ function sprTree(kind, v) {
   }
   return outline(c, .5, .7);
 }
+// 서기 19373년의 건물들. win = 밤에 켜지는 창, glow = 늘 빛나는 곳([x,y,w,h,색,세기])
 function sprBuilding(type) {
-  const win = [];
-  const W = (g, x, y, w, h) => { g.fillStyle = '#26364a'; g.fillRect(x, y, w, h); g.fillStyle = '#41566e'; g.fillRect(x, y, w, 1); win.push([x + 1, y + 1, w, h]); };
+  const win = [], glow = [];
   let c, g;
-  if (type === 'house') {
-    c = mk(34, 28); g = c.getContext('2d'); const wl = ramp(32, .16, .76, 5, .08), rf = ramp(192, .36, .44, 5, .1), tr = ramp(24, .32, .36, 4, .08);
-    g.fillStyle = wl[2]; g.fillRect(2, 11, 20, 17); g.fillStyle = wl[3]; g.fillRect(2, 11, 20, 1); g.fillRect(2, 11, 1, 17); g.fillStyle = wl[1]; g.fillRect(19, 12, 3, 16);
-    for (let i = 0; i < 6; i++) { const w = 12 + i * 2, x0 = 12 - w / 2; g.fillStyle = rf[i < 2 ? 3 : 2]; g.fillRect(x0, 5 + i, w, 1); g.fillStyle = rf[1]; g.fillRect(x0 + w - 3, 5 + i, 3, 1); }
-    g.fillStyle = rf[4]; g.fillRect(8, 5, 4, 1);
-    g.fillStyle = wl[2]; g.fillRect(22, 17, 10, 11); g.fillStyle = wl[1]; g.fillRect(29, 17, 3, 11); g.fillStyle = rf[2]; g.fillRect(21, 15, 12, 2); g.fillStyle = rf[3]; g.fillRect(21, 15, 12, 1);
-    W(g, 5, 14, 4, 3); W(g, 13, 14, 4, 3); W(g, 5, 20, 4, 3); W(g, 25, 20, 4, 3);
-    g.fillStyle = tr[1]; g.fillRect(13, 21, 5, 7); g.fillStyle = tr[2]; g.fillRect(13, 21, 1, 7);
-    g.fillStyle = wl[0]; g.fillRect(17, 1, 1, 4);
-  } else if (type === 'yard') {
-    c = mk(46, 40); g = c.getContext('2d'); const cr = ramp(42, .62, .52, 5, .09), hl = ramp(212, .14, .6, 5, .09), pd = ramp(220, .1, .3, 4, .06);
-    g.fillStyle = pd[1]; g.fillRect(0, 36, 46, 4); g.fillStyle = pd[2]; g.fillRect(0, 36, 46, 1);
-    for (const x of [3, 40]) { g.fillStyle = cr[2]; g.fillRect(x, 6, 3, 30); g.fillStyle = cr[3]; g.fillRect(x, 6, 1, 30); g.fillStyle = cr[1]; for (let y = 9; y < 34; y += 5) g.fillRect(x, y, 3, 1); }
-    g.fillStyle = cr[2]; g.fillRect(3, 3, 40, 4); g.fillStyle = cr[3]; g.fillRect(3, 3, 40, 1); g.fillStyle = cr[1]; for (let x = 6; x < 42; x += 5) g.fillRect(x, 4, 1, 3);
-    g.fillStyle = '#3a3f4a'; g.fillRect(24, 7, 1, 9); g.fillStyle = cr[1]; g.fillRect(21, 7, 7, 2);
-    for (let x = 9; x <= 37; x++) { const t = (x - 9) / 28, hh = Math.round(Math.sin(t * Math.PI) * 6 + 2); g.fillStyle = hl[2]; g.fillRect(x, 26 - hh, 1, hh * 2); g.fillStyle = hl[3]; g.fillRect(x, 26 - hh, 1, 2); g.fillStyle = hl[1]; g.fillRect(x, 26 + hh - 2, 1, 2); }
-    g.fillStyle = hl[1]; g.fillRect(6, 23, 4, 6); W(g, 31, 22, 3, 2); g.fillStyle = '#e66a4f'; g.fillRect(15, 25, 10, 1);
-    g.fillStyle = pd[2]; g.fillRect(12, 32, 4, 4); g.fillRect(30, 32, 4, 4);
-  } else if (type === 'port') {
-    c = mk(44, 30); g = c.getContext('2d'); const pd = ramp(220, .1, .34, 4, .07), tw = ramp(206, .14, .7, 5, .08);
-    g.fillStyle = pd[1]; g.fillRect(0, 26, 32, 4); g.fillStyle = pd[2]; g.fillRect(0, 26, 32, 1); g.fillStyle = '#d9b44a'; for (let x = 2; x < 30; x += 6) g.fillRect(x, 27, 3, 1);
-    const cc = ['#b85a4a', '#4a7fb8', '#c49a3a', '#5a9a62', '#8a62b0'];
-    let k = 0; for (let row = 0; row < 3; row++) for (let i = 0; i < 4 - row; i++) { const x = 2 + i * 7 + row * 3, y = 21 - row * 5; const col = cc[(k++ * 3 + row) % 5]; g.fillStyle = col; g.fillRect(x, y, 6, 5); g.fillStyle = mix(col, '#ffffff', .25); g.fillRect(x, y, 6, 1); g.fillStyle = mix(col, '#101830', .35); g.fillRect(x + 5, y, 1, 5); }
-    g.fillStyle = tw[2]; g.fillRect(33, 6, 8, 24); g.fillStyle = tw[3]; g.fillRect(33, 6, 1, 24); g.fillStyle = tw[1]; g.fillRect(39, 7, 2, 23);
-    g.fillStyle = tw[2]; g.fillRect(31, 4, 12, 3); g.fillStyle = tw[3]; g.fillRect(31, 4, 12, 1);
-    W(g, 33, 8, 8, 2); W(g, 35, 14, 3, 2); W(g, 35, 20, 3, 2);
-    g.fillStyle = '#9aa6b8'; g.fillRect(36, 0, 1, 4); g.fillRect(34, 1, 5, 1);
-  } else if (type === 'lab') {
-    c = mk(36, 30); g = c.getContext('2d'); const gl = ramp(188, .42, .62, 5, .1), mt = ramp(218, .1, .56, 5, .08);
-    for (let y = -12; y <= 0; y++) for (let x = -13; x <= 13; x++) { if (x * x / 169 + y * y / 144 > 1) continue; const lit = -x / 13 * .55 - y / 12 * .6; g.fillStyle = gl[lit > .45 ? 3 : lit > .05 ? 2 : 1]; g.fillRect(17 + x, 21 + y, 1, 1); }
-    g.fillStyle = gl[4]; g.fillRect(10, 12, 3, 1); g.fillRect(9, 13, 2, 1);
-    g.fillStyle = gl[0]; for (const x of [11, 17, 23]) g.fillRect(x, 10 + Math.abs(x - 17) / 3, 1, 21 - 10 - Math.abs(x - 17) / 3);
-    g.fillStyle = mt[2]; g.fillRect(2, 21, 30, 9); g.fillStyle = mt[3]; g.fillRect(2, 21, 30, 1); g.fillStyle = mt[1]; g.fillRect(28, 22, 4, 8);
-    W(g, 6, 24, 3, 2); W(g, 12, 24, 3, 2); W(g, 18, 24, 3, 2);
-    g.fillStyle = mt[1]; g.fillRect(31, 8, 1, 13); g.fillStyle = mt[3]; for (let i = 0; i < 5; i++) g.fillRect(28 + i, 4 + Math.abs(i - 2), 1, 2);
-  } else if (type === 'refin') {
-    c = mk(38, 36); g = c.getContext('2d'); const tk = ramp(205, .12, .62, 5, .08), ch = ramp(8, .45, .5, 4, .1);
-    for (const x0 of [2, 15]) { for (let x = 0; x < 11; x++) { const k = x / 10; g.fillStyle = tk[k < .2 ? 3 : k < .7 ? 2 : 1]; g.fillRect(x0 + x, 12, 1, 24); } g.fillStyle = tk[3]; g.fillRect(x0 + 1, 11, 9, 1); g.fillStyle = tk[0]; g.fillRect(x0, 20, 11, 1); g.fillRect(x0, 28, 11, 1); }
-    for (let y = 0; y < 36; y++) { g.fillStyle = (Math.floor(y / 4) % 2) ? '#e8e2da' : ch[2]; g.fillRect(29, y, 5, 1); g.fillStyle = 'rgba(20,30,60,.25)'; g.fillRect(32, y, 2, 1); }
-    g.fillStyle = tk[1]; g.fillRect(13, 16, 2, 2); g.fillRect(26, 22, 3, 2); W(g, 5, 30, 4, 2);
-  } else if (type === 'garden') {
-    c = mk(44, 24); g = c.getContext('2d'); const lf = ramp(118, .45, .42, 5, .09), st = ramp(30, .14, .66, 4, .08), wa = ramp(200, .55, .58, 4, .1);
-    for (const tx of [7, 36]) { g.fillStyle = '#5a4030'; g.fillRect(tx, 10, 2, 12); shadeDisc(g, tx + 1, 8, 6, 5, lf); }
-    g.fillStyle = lf[1]; g.fillRect(0, 19, 44, 5); g.fillStyle = lf[2]; g.fillRect(0, 19, 44, 1);
-    g.fillStyle = st[2]; g.fillRect(17, 16, 10, 4); g.fillStyle = st[3]; g.fillRect(17, 16, 10, 1); g.fillStyle = wa[2]; g.fillRect(18, 17, 8, 2);
-    g.fillStyle = wa[3]; g.fillRect(21, 9, 2, 7); g.fillStyle = wa[2]; g.fillRect(20, 10, 1, 3); g.fillRect(23, 10, 1, 3);
-    g.fillStyle = '#7a5640'; g.fillRect(29, 17, 5, 1); g.fillRect(29, 18, 1, 2); g.fillRect(33, 18, 1, 2);
-    for (const [fx, col] of [[3, '#e88aa8'], [12, '#f2d36a'], [40, '#e88aa8'], [14, '#c9a8ff']]) { g.fillStyle = col; g.fillRect(fx, 18, 2, 1); }
+  const R = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const WL = ramp(210, .08, .86, 5, .07), MT = ramp(222, .14, .36, 5, .07), GL = ramp(195, .5, .42, 5, .1);
+  const CY = '#7ff3ff', VI = '#c9a8ff', WA = '#ffd98a';
+  const pod = (x, y, w, h, rp) => { // 모서리가 둥근 상자, 빛은 왼쪽 위
+    R(rp[2], x, y, w, h); R(rp[3], x + 1, y, w - 2, 1); R(rp[3], x, y + 1, 1, h - 2); R(rp[1], x + w - 1, y + 1, 1, h - 2); R(rp[1], x + 1, y + h - 1, w - 2, 1);
+    R(rp[4], x + 2, y, 3, 1);
+    g.clearRect(x, y, 1, 1); g.clearRect(x + w - 1, y, 1, 1); g.clearRect(x, y + h - 1, 1, 1); g.clearRect(x + w - 1, y + h - 1, 1, 1);
+  };
+  const band = (x, y, w) => { R(GL[1], x, y, w, 2); R(GL[2], x, y, w, 1); win.push([x + 1, y + 1, w, 2]); };
+  if (type === 'house') { // 주거 탑: 가운데 기둥에 집 세 칸이 매달려 떠 있음
+    c = mk(32, 46); g = c.getContext('2d');
+    R(MT[2], 14, 4, 4, 37); R(MT[3], 14, 4, 1, 37); R(MT[1], 17, 4, 1, 37);
+    [[3, 28, 26, 10], [6, 17, 20, 9], [9, 7, 14, 8]].forEach(([x, y, w, h], i) => {
+      pod(x, y, w, h, WL); band(x + 2, y + Math.floor(h / 2) - 1, w - 4);
+      glow.push([x + 1, y + h - 2, 1, 1, CY, 1], [x + w - 2, y + h - 2, 1, 1, CY, 1]);
+    });
+    R(MT[1], 9, 41, 14, 2); R(MT[3], 9, 41, 14, 1); glow.push([10, 44, 12, 1, CY, .8]);
+    R(MT[1], 15, 0, 2, 5); glow.push([15, 0, 2, 1, '#ff8a70', 1]);
+  } else if (type === 'port') { // 무역 부두: 떠 있는 판 위에 화물 캡슐과 관제 첨탑
+    c = mk(48, 34); g = c.getContext('2d');
+    R(MT[2], 0, 20, 48, 4); R(MT[3], 0, 20, 48, 1); R(MT[1], 0, 23, 48, 1);
+    glow.push([0, 24, 48, 1, CY, .9], [6, 25, 4, 9, CY, .22], [38, 25, 4, 9, CY, .22]);
+    const cc = [ramp(180, .4, .5, 5, .1), ramp(38, .55, .55, 5, .1), ramp(270, .35, .55, 5, .1), ramp(200, .35, .6, 5, .1)];
+    [[2, 14, 9, 6, 0], [12, 14, 9, 6, 1], [22, 14, 9, 6, 2], [7, 8, 9, 6, 3], [17, 8, 9, 6, 0]].forEach(([x, y, w, h, k]) => pod(x, y, w, h, cc[k]));
+    for (let y = 2; y < 20; y++) { const w = y < 6 ? 2 : y < 12 ? 4 : 6; R(WL[2], 39 - Math.floor(w / 2), y, w, 1); R(WL[3], 39 - Math.floor(w / 2), y, 1, 1); R(WL[1], 39 - Math.floor(w / 2) + w - 1, y, 1, 1); }
+    band(37, 9, 4); band(36, 14, 6); glow.push([38, 0, 2, 2, CY, 1]);
+  } else if (type === 'yard') { // 궤도 조선소: 빛의 집게 사이에 떠 있는 배
+    c = mk(52, 46); g = c.getContext('2d');
+    for (let y = 8; y < 42; y++) { const o = y < 15 ? 15 - y : 0, k = Math.min(4, Math.floor(o / 2)); R(MT[2], 3 + k, y, 4, 1); R(MT[3], 3 + k, y, 1, 1); R(MT[2], 45 - k, y, 4, 1); R(MT[1], 48 - k, y, 1, 1); }
+    glow.push([7, 8, 2, 2, CY, 1], [43, 8, 2, 2, CY, 1]);
+    for (let x = 12; x <= 40; x++) {
+      const t = (x - 12) / 28, hh = Math.max(1, Math.round((t < .35 ? t / .35 : 1 - (t - .35) / .65 * .85) * 5.5));
+      R(WL[2], x, 23 - hh, 1, hh * 2); R(WL[3], x, 23 - hh, 1, 1); R(WL[1], x, 23 + hh - 1, 1, 1);
+    }
+    R(GL[2], 30, 21, 5, 2); R(GL[3], 30, 21, 2, 1); R(MT[1], 14, 22, 10, 1);
+    glow.push([10, 21, 2, 4, '#9fd8ff', 1], [8, 23, 4, 1, CY, .5], [41, 23, 4, 1, CY, .5], [20, 31, 12, 1, CY, .25]);
+    R(MT[1], 0, 42, 52, 4); R(MT[2], 0, 42, 52, 1); glow.push([2, 44, 48, 1, CY, .6]);
+  } else if (type === 'lab') { // 연구 구체: 받침 위에 떠 있는 유리 공
+    c = mk(36, 42); g = c.getContext('2d');
+    for (let y = 34; y < 42; y++) { const w = 12 + (y - 34); R(MT[2], 18 - Math.floor(w / 2), y, w, 1); R(MT[3], 18 - Math.floor(w / 2), y, 1, 1); R(MT[1], 18 - Math.floor(w / 2) + w - 1, y, 1, 1); }
+    R(MT[3], 12, 34, 12, 1); glow.push([14, 36, 8, 1, CY, .8]);
+    const ell = (front) => { for (let a = 0; a < 64; a++) { const an = a / 64 * TAU, x = Math.round(18 + Math.cos(an) * 15), y = Math.round(18 + Math.sin(an) * 4); if ((Math.sin(an) > 0) === front) R(Math.sin(an) > 0 ? MT[3] : MT[1], x, y, 1, 1); } };
+    ell(false); shadeDisc(g, 18, 17, 10, 10, GL); disc(g, 18, 18, 3, '#bff8ff'); glow.push([16, 16, 5, 5, '#d8fbff', .9]);
+    R(GL[4], 12, 11, 2, 1); R(GL[4], 11, 12, 1, 2); ell(true);
+  } else if (type === 'refin') { // 에너지 정제탑: 보라색 결정 기둥을 고리가 붙잡음
+    c = mk(34, 48); g = c.getContext('2d');
+    const CR = ramp(272, .5, .56, 5, .1);
+    for (let y = 2; y < 40; y++) {
+      const w = y < 10 ? 1 + Math.floor((y - 2) * .6) : y < 32 ? 6 : Math.max(2, 6 - (y - 32));
+      const x0 = 17 - Math.floor(w / 2); R(CR[2], x0, y, w, 1); R(CR[3], x0, y, Math.max(1, Math.floor(w / 3)), 1); R(CR[1], x0 + w - 1, y, 1, 1);
+    }
+    glow.push([16, 6, 2, 30, VI, .85]);
+    for (const y of [12, 21, 30]) { R(MT[2], 10, y, 14, 2); R(MT[3], 10, y, 14, 1); R(MT[1], 23, y, 1, 2); glow.push([11, y + 1, 1, 1, CY, 1], [22, y + 1, 1, 1, CY, 1]); }
+    pod(4, 38, 26, 10, MT); band(7, 41, 20);
+  } else if (type === 'garden') { // 공중 정원: 떠 있는 섬 두 개와 빛 폭포
+    c = mk(48, 40); g = c.getContext('2d');
+    const RK = ramp(28, .3, .38, 4, .08), GR = ramp(110, .48, .44, 5, .09), WT = ramp(200, .55, .62, 4, .1);
+    const island = (x0, x1, top, depth) => {
+      for (let x = x0; x <= x1; x++) { const k = 1 - Math.abs((x - x0) / (x1 - x0) * 2 - 1), d = Math.max(2, Math.round(depth * Math.pow(k, .7))); R(RK[x < (x0 + x1) / 2 ? 2 : 1], x, top + 2, 1, d); R(RK[0], x, top + 1 + d, 1, 1); R(GR[3], x, top, 1, 1); R(GR[2], x, top + 1, 1, 1); }
+      glow.push([Math.round((x0 + x1) / 2) - 1, top + depth + 3, 3, 1, CY, .7]);
+    };
+    island(2, 22, 8, 9); island(26, 46, 18, 8);
+    shadeDisc(g, 10, 4, 4, 4, GR); R('#5a4030', 10, 7, 1, 2); shadeDisc(g, 38, 14, 4, 4, GR); R('#5a4030', 38, 17, 1, 2);
+    for (let y = 11; y < 34; y++) R(y % 3 ? WT[2] : WT[3], 21, y, 1, 1);
+    R('#8a96a8', 12, 34, 22, 1); R(WT[1], 13, 35, 20, 3); R(WT[2], 13, 35, 20, 1); R('#6a7486', 12, 38, 22, 2);
+    for (const [fx, col] of [[4, '#e88aa8'], [17, '#f2d36a'], [30, '#c9a8ff'], [43, '#e88aa8']]) R(col, fx, fx < 24 ? 7 : 17, 2, 1);
+    glow.push([21, 12, 1, 22, '#bff4ff', .35], [6, 22, 1, 1, WA, 1], [33, 9, 1, 1, WA, 1]);
   }
-  return { c: outline(c, .45, .65), win, w: c.width + 2, h: c.height + 2 };
+  const hover = type === 'house' || type === 'lab' || type === 'garden';
+  return { c: outline(c, .45, .65), win, glow: glow.map(([x, y, w, h, col, a]) => [x + 1, y + 1, w, h, col, a]), w: c.width + 2, h: c.height + 2, hover };
 }
 function sprPerson(look, frame) {
-  const shirts = ['#c4584a', '#4a7fc4', '#d9a84a', '#5a9a62', '#8a62b0', '#d0d6de', '#3f8f9a', '#b86a3a'];
-  const hairs = ['#2a2230', '#5a3a26', '#c9a26a', '#8a8a92', '#7a2a2a'], skins = ['#f0c8a0', '#d9a07a', '#a8704e'];
-  const sh = shirts[look % 8], hr = hairs[(look >> 3) % 5], sk = skins[(look * 7 >> 2) % 3], pa = ['#2e3a52', '#3a3430', '#4a4a56'][look % 3];
-  const rows = frame === 0 ? ['.hh.', 'hssh', '.ss.', 'LccD', 'LccD', 'sccs', '.pp.', '.pp.', '.ff.'] :
-    frame === 1 ? ['.hh.', 'hssh', '.ss.', 'LccD', 'LccD', 'sccs', '.pp.', 'p..p', 'f..f'] : ['.hh.', 'hssh', '.ss.', 'LccD', 'LccD', 'sccs', '.pp.', '.pp.', '.ff.'];
-  return outline(sprite(rows, { h: hr, s: sk, c: sh, L: mix(sh, '#ffffff', .2), D: mix(sh, '#101830', .3), p: pa, f: '#1e1e26' }), .45, .6);
+  if (look >= 32) { // 로봇
+    const mt = ['#c8d0dc', '#9aa6b8', '#6a7486'], m = mt[look % 3];
+    const rows = frame === 0 ? ['.mm.', 'mvvm', '.mm.', 'LmmD', 'LmmD', 'm..m', '.dd.', '.dd.', '.dd.'] : ['.mm.', 'mvvm', '.mm.', 'LmmD', 'LmmD', 'm..m', '.dd.', 'd..d', 'd..d'];
+    return outline(sprite(rows, { m, v: '#7ff3ff', L: mix(m, '#ffffff', .3), D: mix(m, '#101830', .35), d: mix(m, '#101830', .45) }), .45, .6);
+  }
+  const suits = ['#e8eef6', '#2a3444', '#8a9cb8', '#3f8f9a', '#b8a0d8', '#d0b080', '#e8eef6', '#4a5a7a'];
+  const hairs = ['#2a2230', '#5a3a26', '#c9a26a', '#e8e8f0', '#7a2a6a'], skins = ['#f0c8a0', '#d9a07a', '#a8704e'];
+  const sh = suits[look % 8], hr = hairs[(look >> 3) % 5], sk = skins[(look * 7 >> 2) % 3];
+  const rows = frame === 0 ? ['.hh.', 'hssh', '.ss.', 'LcgD', 'LccD', 'sccs', '.pp.', '.pp.', '.ff.'] : ['.hh.', 'hssh', '.ss.', 'LcgD', 'LccD', 'sccs', '.pp.', 'p..p', 'f..f'];
+  return outline(sprite(rows, { h: hr, s: sk, c: sh, g: look % 2 ? '#7ff3ff' : '#ffd98a', L: mix(sh, '#ffffff', .2), D: mix(sh, '#101830', .3), p: mix(sh, '#101830', .4), f: '#e8eef6' }), .45, .6);
 }
 function makeRingSprites() {
   SPR = { tree: {}, b: {}, ppl: [], cloud: [] };
@@ -2003,6 +2027,7 @@ function buildLayers() {
   for (let x = 0; x < FW; x++) {
     const bio = bioOf(segAt(x, FW));
     let h = 14 + ring(x, FW, 40, 3) * 46; if (bio === 'dormant') h = 10 + Math.round(ring(x, FW, 18, 8) * 30 / 6) * 6; if (bio === 'ocean') h = 6 + ring(x, FW, 30, 4) * 14;
+    if (bio !== 'dormant') { const sw = FW / 8, off = modv(x, FW) % sw; for (const c of [.28, .71]) { const d = Math.abs(off - sw * c); if (d < 1.6) h = Math.max(h, (62 + hash(Math.floor(x / sw), c * 10 | 0, 3) * 24) - (d > .9 ? 6 : 0)); } } // 먼 하늘탑
     const hp = 14 + ring(x - 1, FW, 40, 3) * 46;
     const base = blend(x, FW, FARC, SKYH, .52);
     for (let y = Math.round(FH - h); y < FH; y++) {
@@ -2018,7 +2043,7 @@ function buildLayers() {
     if (bio === 'forest') h += Math.abs(Math.sin(x / 5.3)) * 6 + Math.abs(Math.sin(x / 3.1)) * 3;
     if (bio === 'desert') h = 10 + Math.round(ring(x, MW, 30, 17) * 4) * 7;
     if (bio === 'ocean') h = 3 + (ring(x, MW, 12, 19) > .62 ? 8 : 0);
-    if (bio === 'city') h = 10 + (hash(Math.floor(x / 9), 2, 7) * 40 | 0);
+    if (bio === 'city') { h = 16 + (hash(Math.floor(x / 9), 2, 7) * 48 | 0); if (x % 9 === 0 || x % 9 === 8) h -= 5; }
     if (bio === 'dormant') h = 6 + (hash(Math.floor(x / 14), 3, 5) * 26 | 0);
     for (let y = Math.round(MH - h); y < MH; y++) {
       let col = base;
@@ -2041,6 +2066,7 @@ function ringResize() {
 }
 function dayPhase() { return (G.t / 200) % 1; }
 function dayLight() { const p = dayPhase(); if (p < .55) return 1; if (p < .65) return 1 - smooth((p - .55) / .1) * .82; if (p < .88) return .18; return .18 + smooth((p - .88) / .12) * .82; }
+function ringDate() { const d = Math.floor(G.t / 200); return `서기 ${19373 + Math.floor(d / 360)}년 ${Math.floor(d % 360 / 30) + 1}월 ${d % 30 + 1}일`; }
 function dayName() { const p = dayPhase(); return p < .55 ? '낮' : p < .65 ? '저녁' : p < .88 ? '밤' : '새벽'; }
 const DIG = ['111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001', '111100111001111', '111100111101111', '111001010010010', '111101111101111', '111101111001111'];
 function digits(g, str, x, y, col) { let cx = x; for (const ch of String(str)) { const m = DIG[ch.charCodeAt(0) - 48]; if (!m) { cx += 2; continue; } g.fillStyle = col; for (let i = 0; i < 15; i++) if (m[i] === '1') g.fillRect(cx + (i % 3), y + ((i / 3) | 0), 1, 1); cx += 4; } }
@@ -2080,12 +2106,27 @@ function drawRing(t, dt) {
   l.clearRect(0, 0, BW, BH);
   const wrapDraw = (img, par, yb) => { const w = img.width, ox = Math.round(modv(-(RWV.cam * par) + BW / 2, w) - w); for (let x = ox; x < BW; x += w) l.drawImage(img, x, yb - img.height); };
   wrapDraw(RWV.far, .25, gy + 4); wrapDraw(RWV.mid, .55, gy + 4);
-  // 모노레일
-  const ry = gy - 46;
-  for (let x = 0; x < BW; x++) { const wx = modv(RWV.cam - BW / 2 + x, CIRC); l.fillStyle = '#5a6476'; l.fillRect(x, ry, 1, 2); l.fillStyle = '#8a96aa'; l.fillRect(x, ry, 1, 1); if (Math.round(wx) % 90 === 0) { l.fillStyle = '#4a5262'; l.fillRect(x, ry + 2, 2, 46); l.fillStyle = '#6a7486'; l.fillRect(x, ry + 2, 1, 46); } }
-  RWV.train = modv((RWV.train || 0) + dt * 34, CIRC);
+  // 자기부상 빛길과 열차, 하늘길의 비행차 (서기 19373년)
+  const ry = gy - 62, emis = [];
+  RWV.train = modv((RWV.train || 0) + dt * 70, CIRC);
   const tx0 = Math.round(relX(RWV.train));
-  for (let k = 0; k < 3; k++) { const x = tx0 - k * 17; if (x < -20 || x > BW + 4) continue; l.fillStyle = '#d8dee8'; l.fillRect(x, ry - 7, 16, 6); l.fillStyle = '#eef2f8'; l.fillRect(x, ry - 7, 16, 1); l.fillStyle = '#8a96aa'; l.fillRect(x, ry - 2, 16, 1); l.fillStyle = '#3a6aa8'; l.fillRect(x + 1, ry - 5, 14, 1); if (k === 0) { l.fillStyle = '#c8d0dc'; l.fillRect(x + 16, ry - 6, 2, 4); } }
+  for (let x = 0; x < BW; x++) { l.fillStyle = '#3a4252'; l.fillRect(x, ry, 1, 1); }
+  emis.push(['glow', 0, ry + 1, BW, 1, '#7ff3ff', .3]);
+  for (let k = 0; k < 3; k++) {
+    const x = tx0 - k * 21; if (x < -24 || x > BW + 6) continue;
+    l.fillStyle = '#e8eef6'; l.fillRect(x, ry - 6, 20, 5); l.fillStyle = '#ffffff'; l.fillRect(x + 1, ry - 6, 18, 1); l.fillStyle = '#9aa6b8'; l.fillRect(x, ry - 2, 20, 1);
+    if (k === 0) { l.fillStyle = '#e8eef6'; l.fillRect(x + 20, ry - 5, 2, 3); l.fillRect(x + 22, ry - 4, 1, 2); }
+    emis.push(['glow', x + 1, ry - 4, 18, 1, '#7ff3ff', .9]);
+  }
+  if (!RWV.cars) { const rnd = mulberry(77); RWV.cars = []; for (let i = 0; i < 22; i++) RWV.cars.push({ x: rnd() * CIRC, lane: Math.floor(rnd() * 4), v: (rnd() < .5 ? -1 : 1) * (40 + rnd() * 50), col: ['#e8eef6', '#c84a4a', '#3a6aa8', '#2a3444', '#d0b080'][Math.floor(rnd() * 5)] }); }
+  for (const car of RWV.cars) {
+    car.x = modv(car.x + car.v * dt, CIRC);
+    const x = Math.round(relX(car.x)), y = gy - 78 - car.lane * 11; if (x < -10 || x > BW + 10) continue;
+    const d = car.v > 0 ? 1 : -1;
+    l.fillStyle = mix(car.col, '#101830', .3); l.fillRect(x - 4, y, 9, 3); l.fillStyle = car.col; l.fillRect(x - 4, y, 9, 2); l.fillStyle = mix(car.col, '#ffffff', .4); l.fillRect(x - 3, y, 7, 1);
+    l.fillStyle = '#26364a'; l.fillRect(x - 2 + (d > 0 ? 1 : -1), y - 1, 4, 1); l.fillStyle = '#4d6278'; l.fillRect(x - 1 + (d > 0 ? 1 : -1), y - 1, 2, 1);
+    emis.push(['glow', x + d * 5, y + 1, 1, 1, '#fff6d8', 1], ['glow', x - d * 5, y + 1, 1, 1, '#ff6a50', .9], ['glow', x - 3, y + 3, 7, 1, '#7ff3ff', .5], ['glow', d > 0 ? x - 10 : x + 6, y + 1, 4, 1, '#7ff3ff', .22]);
+  }
   // 구획 땅
   const startX = RWV.cam - BW / 2, i0 = Math.floor(startX / SEGW);
   for (let i = i0; i * SEGW < startX + BW; i++) { const si = modv(i, 8); l.drawImage(RWV.segC[si], Math.round(i * SEGW - startX), gy - SURF); }
@@ -2094,16 +2135,17 @@ function drawRing(t, dt) {
     const si = modv(i, 8); if (bioOf(si) !== 'ocean') continue; const ox = Math.round(i * SEGW - startX);
     for (let x = 0; x < SEGW; x += 1) if (!isIsland(x) && ((x + Math.floor(t * 6)) % 11) < 3) { l.fillStyle = '#9fd0f0'; l.fillRect(ox + x, gy + 3, 1, 1); }
   }
-  // 우주항 탑 (1구획)
+  // 우주항 탑 (1구획): 하늘까지 이어진 궤도 엘리베이터
   const tX = Math.round(relX(200));
   if (tX > -40 && tX < BW + 40) {
-    const m = ramp(210, .12, .62, 5, .08);
-    l.fillStyle = m[1]; l.fillRect(tX - 3, 0, 7, gy - 16); l.fillStyle = m[3]; l.fillRect(tX - 3, 0, 1, gy - 16); l.fillStyle = m[0]; l.fillRect(tX + 3, 0, 1, gy - 16);
-    l.fillStyle = m[0]; for (let y = 4; y < gy - 18; y += 6) { l.fillRect(tX - 2, y, 5, 1); l.fillRect(tX - 2 + (y / 6 % 2 ? 0 : 4), y + 1, 1, 4); }
-    l.fillStyle = m[2]; l.fillRect(tX - 14, gy - 18, 29, 18); l.fillStyle = m[3]; l.fillRect(tX - 14, gy - 18, 29, 2); l.fillRect(tX - 14, gy - 18, 2, 18); l.fillStyle = m[1]; l.fillRect(tX + 11, gy - 16, 4, 16);
-    l.fillStyle = '#26364a'; l.fillRect(tX - 10, gy - 12, 20, 3); l.fillStyle = '#3a4252'; l.fillRect(tX - 3, gy - 7, 7, 7);
+    const m = ramp(210, .08, .84, 5, .07), mt = ramp(222, .14, .36, 5, .07);
+    l.fillStyle = m[2]; l.fillRect(tX - 3, 0, 7, gy - 16); l.fillStyle = m[3]; l.fillRect(tX - 3, 0, 1, gy - 16); l.fillStyle = m[1]; l.fillRect(tX + 3, 0, 1, gy - 16);
+    l.fillStyle = mt[1]; for (let y = 6; y < gy - 18; y += 12) l.fillRect(tX - 4, y, 9, 1);
+    for (let y = 0; y < 14; y++) { const w = 34 - Math.round(Math.pow(y / 13, 2) * 20); l.fillStyle = y > 10 ? m[3] : m[2]; l.fillRect(tX - Math.floor(w / 2), gy - 1 - y, w, 1); l.fillStyle = m[1]; l.fillRect(tX + Math.floor(w / 2) - 2, gy - 1 - y, 2, 1); }
+    l.fillStyle = '#26364a'; l.fillRect(tX - 12, gy - 6, 24, 2); l.fillStyle = '#3a4252'; l.fillRect(tX - 2, gy - 5, 5, 5);
     const cy = Math.round((gy - 30) * (.5 + .5 * Math.sin(t * .25)));
-    l.fillStyle = '#e8eef6'; l.fillRect(tX - 5, cy, 11, 6); l.fillStyle = '#9aa6b8'; l.fillRect(tX - 5, cy + 5, 11, 1);
+    l.fillStyle = '#e8eef6'; l.fillRect(tX - 6, cy, 13, 7); l.fillStyle = '#ffffff'; l.fillRect(tX - 6, cy, 13, 1); l.fillStyle = '#9aa6b8'; l.fillRect(tX - 6, cy + 6, 13, 1);
+    emis.push(['glow', tX, 0, 1, gy - 16, '#7ff3ff', .55], ['glow', tX - 4, cy + 3, 9, 1, '#7ff3ff', .9], ['glow', tX - 10, gy - 6, 20, 1, '#7ff3ff', .7]);
   }
   // 구획 경계 기둥
   for (let i = i0; i * SEGW < startX + BW + 1; i++) {
@@ -2112,7 +2154,6 @@ function drawRing(t, dt) {
     l.fillStyle = '#26303e'; l.fillRect(x + 3, gy - 27, 11, 9); digits(l, si + 1, x + 5, gy - 25, '#cfe6f2');
   }
   // 건물
-  const emis = [];
   for (let i = i0; i * SEGW < startX + BW; i++) {
     const si = modv(i, 8), s = G.ring.segs[si], ox = i * SEGW - startX;
     for (let k = 0; k < 6; k++) {
@@ -2125,7 +2166,7 @@ function drawRing(t, dt) {
         l.fillStyle = selHere ? '#62d2ec' : 'rgba(220,230,240,.42)'; l.fillRect(x - 13, gy - 4, 1, 3); l.fillRect(x + 12, gy - 4, 1, 3);
         continue;
       }
-      const sp = SPR.b[ty], bx = x - Math.floor(sp.w / 2), by = gy - sp.h + 1;
+      const sp = SPR.b[ty], bx = x - Math.floor(sp.w / 2), bob = sp.hover && !(s.bt[k] > 0) ? (Math.floor(t * 1.4 + k * .7 + si) % 2) : 0, by = gy - sp.h + 1 - bob;
       if (s.bt[k] > 0) {
         const pr = 1 - s.bt[k] / 15, hh = Math.round(sp.h * pr);
         l.drawImage(sp.c, 0, sp.h - hh, sp.w, hh, bx, by + sp.h - hh, sp.w, hh);
@@ -2134,7 +2175,11 @@ function drawRing(t, dt) {
       } else {
         l.drawImage(sp.c, bx, by);
         for (const [wx, wy, ww, wh] of sp.win) emis.push(['win', bx + wx, by + wy, ww, wh, hash(si * 7 + k, wx, wy)]);
-        if (ty === 'refin' && Math.random() < dt * 4) RWV.steam.push({ x: si * SEGW + SLX[k] + 12, y: by + 1, t: 0 });
+        for (const [gx2, gy2, gw, gh, col, ga] of sp.glow) emis.push(['glow', bx + gx2, by + gy2, gw, gh, col, ga]);
+        if (ty === 'refin' && Math.random() < dt * 6) RWV.steam.push({ x: si * SEGW + SLX[k] + (Math.random() - .5) * 4, y: by + 3, t: 0 });
+        if (ty === 'port' || ty === 'yard') emis.push(['holo', bx + 6, by - 12, 16, 8, hash(si, k, 5)]);
+        const da = t * (.9 + k * .13) + k * 2 + si;
+        emis.push(['drone', Math.round(x + Math.sin(da) * 16), Math.round(by - 6 + Math.cos(da * 1.3) * 4)]);
       }
     }
     if (si === 0) emis.push(['beacon', Math.round(ox + 200), 2]);
@@ -2158,8 +2203,8 @@ function drawRing(t, dt) {
     if (bio === 'snow') for (let k = 0; k < 40; k++) { const sx2 = Math.round(ox + hash(k, si, 1) * SEGW + Math.sin(t + k) * 3), sy = Math.round(modv(hash(k, si, 2) * gy + t * 12, gy)); l.fillStyle = 'rgba(255,255,255,.85)'; l.fillRect(sx2, sy, 1, 1); }
     if (bio === 'ocean') { const fp = (t * .35 + si * .3) % 1; if (fp < .25) { const k = fp / .25, fx = Math.round(ox + 70 + (si * 37 % 200) + k * 14), fy = Math.round(gy + 4 - Math.sin(k * Math.PI) * 9); l.fillStyle = '#c8d8e8'; l.fillRect(fx, fy, 2, 1); } }
   }
-  for (const s of RWV.steam) { s.t += dt; s.y -= dt * 6; s.x += dt * 2; } RWV.steam = RWV.steam.filter(s => s.t < 3);
-  for (const s of RWV.steam) { const x = Math.round(relX(s.x)), r = 1 + Math.floor(s.t); l.fillStyle = `rgba(235,240,246,${.55 * (1 - s.t / 3)})`; l.fillRect(x - r, Math.round(s.y) - r, r * 2, r * 2); }
+  for (const s of RWV.steam) { s.t += dt; s.y -= dt * 14; } RWV.steam = RWV.steam.filter(s => s.t < 2.2);
+  for (const s of RWV.steam) emis.push(['spark', Math.round(relX(s.x + Math.sin(s.t * 5 + s.y) * 2)), Math.round(s.y), s.t]);
   // 밤 색 씌우기
   l.globalCompositeOperation = 'source-atop';
   if (L < 1) { l.fillStyle = `rgba(16,24,62,${(1 - L) * .68})`; l.fillRect(0, 0, BW, BH); }
@@ -2172,10 +2217,26 @@ function drawRing(t, dt) {
     if (e[0] === 'win') { if (night > .25 || e[5] < .2) { b.fillStyle = e[5] < .35 ? `rgba(255,222,150,${.3 + night * .7})` : `rgba(255,236,190,${night * .9})`; b.fillRect(e[1], e[2], e[3], e[4]); } }
     else if (e[0] === 'bar') { b.fillStyle = '#1a2230'; b.fillRect(e[1], e[2], e[3], 2); b.fillStyle = '#f2b84b'; b.fillRect(e[1], e[2], Math.round(e[3] * e[4]), 2); }
     else if (e[0] === 'beacon') { if (Math.floor(t * 1.5) % 2) { b.fillStyle = '#ff6a50'; for (let y = e[2]; y < gy - 20; y += 24) b.fillRect(e[1] - 3, y, 1, 1); } }
+    else if (e[0] === 'glow') { b.fillStyle = rgba(e[5], Math.min(1, e[6] * (.55 + .45 * night))); b.fillRect(e[1], e[2], e[3], e[4]); }
+    else if (e[0] === 'holo') {
+      if (hash(Math.floor(t * 9), e[5] * 99 | 0, 3) < .06) continue;
+      const x = e[1], y = e[2], w = e[3], h = e[4], hs = e[5];
+      b.fillStyle = `rgba(127,243,255,${.16 + .1 * night})`; b.fillRect(x, y, w, h);
+      b.fillStyle = `rgba(190,250,255,${.55 + .3 * night})`; b.fillRect(x, y, w, 1); b.fillRect(x, y + h - 1, w, 1);
+      for (let i = 0; i < 4; i++) if (hash(i, hs * 50 | 0, Math.floor(t / 3)) < .7) b.fillRect(x + 2 + i * 3, y + 2 + (i % 2), 2, 1 + (i % 2) * 2);
+      b.fillStyle = 'rgba(127,243,255,.25)'; b.fillRect(x + Math.floor(w / 2), y + h, 1, 4);
+    }
+    else if (e[0] === 'drone') { b.fillStyle = '#3a4252'; b.fillRect(e[1] - 1, e[2], 3, 1); b.fillStyle = Math.floor(t * 4) % 2 ? '#7ff3ff' : '#ffffff'; b.fillRect(e[1], e[2] + 1, 1, 1); }
+    else if (e[0] === 'spark') { const k = 1 - e[3] / 2.2; b.fillStyle = e[3] < .8 ? `rgba(230,210,255,${k})` : `rgba(160,120,255,${k})`; b.fillRect(e[1], e[2], 1, 1); }
+  }
+  // 땅 속 빛길: 깨어난 구획마다 흐르는 빛
+  for (let i = i0; i * SEGW < startX + BW; i++) {
+    const si = modv(i, 8); if (!G.ring.segs[si].on) continue; const ox = Math.round(i * SEGW - startX), off = Math.floor(t * 24);
+    for (let x = 0; x < SEGW; x += 2) { const on = ((x + off) % 40) < 6; b.fillStyle = on ? `rgba(160,250,255,${.55 + .35 * night})` : `rgba(127,243,255,${.12 + .2 * night})`; b.fillRect(ox + x, gy + 3, 1, 1); }
   }
   if (night > .3) {
     for (let i = i0; i * SEGW < startX + BW; i++) { const si = modv(i, 8); if (bioOf(si) !== 'city') continue; const ox = i * SEGW - startX; for (let x = 20; x < SEGW; x += 40) { b.fillStyle = `rgba(255,230,160,${night})`; b.fillRect(Math.round(ox + x + 2), gy - 19, 2, 1); } }
-    for (let k = 0; k < 3; k++) { const x = tx0 - k * 17; b.fillStyle = `rgba(255,236,180,${night})`; for (let w = 2; w < 15; w += 3) b.fillRect(x + w, ry - 5, 2, 1); }
+    for (let k = 0; k < 3; k++) { const x = tx0 - k * 21; b.fillStyle = `rgba(255,236,180,${night})`; for (let w = 2; w < 18; w += 3) b.fillRect(x + w, ry - 5, 2, 1); }
   }
   // 고른 칸 표시
   if (RWV.sel && RWV.sel.slot != null) {
@@ -2194,7 +2255,7 @@ function drawRing(t, dt) {
   ctx.drawImage(RWV.buf, 0, 0, RWV.BW * RWV.S, RWV.BH * RWV.S);
   ctx.imageSmoothingEnabled = true;
 }
-const PLINES = ['그림자판이 지나가면 별이 잘 보여요.', '새로 깨어난 구획에서 바람 냄새가 달라졌어요.', '오늘은 화물선이 여러 번 다녀갔어요.', '링 너머로 보이는 땅이 또 색이 바뀌었네요.',
+const PLINES = ['19373년이 되어도 그림자판은 옛날 방식 그대로래요.', '드론이 아침마다 공중 정원에 물을 줘요.', '저 위 하늘길의 비행차는 우주항 탑까지 가요.', '정제탑이 보라색으로 빛나면 에테르가 잘 정제되고 있는 거예요.', '로봇 친구가 오늘 길을 알려 줬어요.', '홀로그램 광고가 바뀌었네요. 이번엔 새 화물선이래요.', '빛길을 따라 걸으면 집까지 금방이에요.', '그림자판이 지나가면 별이 잘 보여요.', '새로 깨어난 구획에서 바람 냄새가 달라졌어요.', '오늘은 화물선이 여러 번 다녀갔어요.', '링 너머로 보이는 땅이 또 색이 바뀌었네요.',
   '정원에 앉아 있으면 시간이 천천히 가요.', '옛날 루하이 사람들도 이 하늘을 봤을까요?', '선장님, 오늘도 수고 많으십니다.', '모노레일이 한 바퀴 도는 데 한참 걸려요.',
   '밤이 되면 하늘의 링에 불빛이 반짝여요.', '다음 구획에는 누가 살게 될까요?', '프라임에서 온 과일이 맛있었어요.', '관리소장님이 요즘 바빠 보여요.',
   '해적이 물러갔다는 소식 들으셨어요?', '이 땅 아래에는 아주 오래된 기계가 있대요.', '우주항 탑 꼭대기에서 보면 고리 전체가 보인대요.', '저는 여기서 태어났어요. 1구획 토박이죠.'];
@@ -2551,7 +2612,7 @@ function renderRingSide(force) {
 function renderRingHud() {
   const si = modv(Math.floor(RWV.cam / SEGW), 8), s = G.ring.segs[si];
   $('rTitleB').textContent = `하이옌 링 · ${si + 1}구획 · ${s.on ? BIO[s.bio].nm : '잠든 구획'}`;
-  $('rTitleS').textContent = `${dayName()} · 인구 ${fmt(pop())}명 · 깨어난 구획 ${segsOn()} / 8`;
+  $('rTitleS').textContent = `${ringDate()} ${dayName()} · 인구 ${fmt(pop())}명 · 깨어난 구획 ${segsOn()} / 8`;
   const c = $('rMap'), g = c.getContext('2d'), cx = 132, cy = 132, R0 = 92;
   g.clearRect(0, 0, 264, 264);
   for (let i = 0; i < 8; i++) {
