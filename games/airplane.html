@@ -526,6 +526,8 @@ const PLANES=[
   {id:'b747', name:'B747',       cls:'L', eng:4, len:71, hgt:6.4, pax:350, hump:1, mount:'wing'},
   {id:'b737', name:'B737',       cls:'M', eng:2, len:39, hgt:3.8, pax:150, mount:'wing'},
   {id:'b777', name:'B777',       cls:'L', eng:2, len:74, hgt:6.2, pax:300, mount:'wing'},
+  {id:'a359', name:'A350-900',   cls:'L', eng:2, len:67, hgt:5.9, pax:315, mount:'wing', mask:1, winglet:1},
+  {id:'a351', name:'A350-1000',  cls:'L', eng:2, len:74, hgt:5.9, pax:370, mount:'wing', mask:1, winglet:1, bogie6:1},  // -900보다 7m 길고 주바퀴가 6개
   {id:'dc10', name:'DC-10',      cls:'L', eng:3, len:55, hgt:6.0, pax:270, mount:'tri'},
   {id:'md11', name:'MD-11',      cls:'L', eng:3, len:61, hgt:6.0, pax:290, mount:'tri'},
   {id:'l1011', name:'L-1011 트라이스타', cls:'L', eng:3, len:54, hgt:6.0, pax:250, mount:'wing', sTail:1},  // 가운데 엔진이 동체 속 S덕트 — 흡입구는 수직미익 밑동, 배기는 꼬리 끝
@@ -580,9 +582,9 @@ const PLANES=[
 const AIRLINES=[
   {id:'hj',    name:'HJ항공',       body:'#f6f5f1', tail:'#2F6B4F', stripe:'#2F6B4F', text:'#2F6B4F', all:1, ic:'✈️'},
   {id:'lh',    name:'루프트한자',   body:'#f4f5f7', tail:'#0a1e5e', stripe:'#ffce00', text:'#0a1e5e', ic:'🦢',
-    fleet:['b747','b737','b777','b747f','a380','vfw614']},
+    fleet:['b747','b737','b777','b747f','a380','vfw614','a359']},
   {id:'ke',    name:'대한항공',     body:'#cfe4f0', tail:'#79b6d4', stripe:'#79b6d4', text:'#1c4c6b', ic:'🌀',
-    fleet:['b747','b777','b737','dc10','b777f','b747f','a380']},
+    fleet:['b747','b777','b737','dc10','b777f','b747f','a380','a359']},
   {id:'jin',   name:'진에어',       body:'#f6f7f2', tail:'#95c11f', stripe:'#95c11f', text:'#5c7a12', ic:'🦋',
     fleet:['b777','b737']},
   {id:'ana',   name:'전일본공수',   body:'#f2f4f8', tail:'#10286e', stripe:'#10286e', text:'#10286e', ic:'🗻',
@@ -600,23 +602,23 @@ const AIRLINES=[
   {id:'emir',  name:'에미레이트',   body:'#f5f2ea', tail:'#d71921', stripe:'#c8a24a', text:'#d71921', ic:'🌙',
     fleet:['b747','b777','a300','a330f','a380']},
   {id:'sia',   name:'싱가포르항공', body:'#f3f0e6', tail:'#0a2a5e', stripe:'#c9a24a', text:'#0a2a5e', ic:'🦁',
-    fleet:['b747','b777','a300','md11','a380']},
+    fleet:['b747','b777','a300','md11','a380','a359']},
   {id:'afr',   name:'에어프랑스',   body:'#f4f6f8', tail:'#00205b', stripe:'#e2001a', text:'#00205b', ic:'🗼',
-    fleet:['a300','b777','b737','conni','conc','comet','a380']},
+    fleet:['a300','b777','b737','conni','conc','comet','a380','a359','a351']},
   {id:'klm',   name:'KLM',          body:'#e7f1f8', tail:'#00a1de', stripe:'#ffffff', text:'#0a3d62', ic:'👑',
     fleet:['b747','b777','md11','b737']},
   {id:'qfa',   name:'콴타스',       body:'#f6f4f2', tail:'#e0002b', stripe:'#e0002b', text:'#e0002b', ic:'🦘',
-    fleet:['b747','b777','a300','dc10','a380','b377']},
+    fleet:['b747','b777','a300','dc10','a380','b377','a351']},
   {id:'thy',   name:'터키항공',     body:'#f4f6f7', tail:'#c8102e', stripe:'#c8102e', text:'#c8102e', ic:'🌷',
-    fleet:['b737','b777','a300','a330f']},
+    fleet:['b737','b777','a300','a330f','a359','a351']},
   {id:'aal',   name:'아메리칸',     body:'#d3d8dd', tail:'#0d47a1', stripe:'#c8102e', text:'#0d47a1', ic:'🦅',
     fleet:['b777','b737','md83','dc10','b377']},
   {id:'dal',   name:'델타',         body:'#f2f4f7', tail:'#0a2444', stripe:'#c8102e', text:'#0a2444', ic:'🔺',
-    fleet:['b777','b737','md80','md11','l1011']},
+    fleet:['b777','b737','md80','md11','l1011','a359']},
   {id:'baw',   name:'브리티시',     body:'#f4f6f8', tail:'#1d4f91', stripe:'#c8102e', text:'#1d4f91', ic:'🎩',
-    fleet:['b747','b777','a300','conni','conc','comet','b377','a380','l1011']},
+    fleet:['b747','b777','a300','conni','conc','comet','b377','a380','l1011','a351']},
   {id:'cpa',   name:'캐세이퍼시픽', body:'#f2f5f4', tail:'#006564', stripe:'#a3d4c8', text:'#006564', ic:'🐉',
-    fleet:['b747','b777','a330f','a300','l1011']},
+    fleet:['b747','b777','a330f','a300','l1011','a359','a351']},
   {id:'fedex', name:'페덱스',       body:'#f5f4f8', tail:'#4d148c', stripe:'#ff6200', text:'#4d148c', ic:'📦',
     fleet:['b747f','b777f','b737f','q300f','dc10f','md11f','a330f','belugaf','il76']},
   {id:'dhl',   name:'DHL',          body:'#ffcc00', tail:'#ffcc00', stripe:'#d40511', text:'#d40511', ic:'🟡',
@@ -1203,6 +1205,16 @@ function drawPlane(c,cx,cy,sc,P,A,o){
     c.closePath(); c.fill();
     c.strokeStyle='rgba(60,80,95,.3)'; c.stroke();
   }
+  if(P.winglet){ // A350: 날개 끝이 위로 부드럽게 휘어 올라감
+    c.fillStyle='#dde2e7';
+    c.beginPath();
+    c.moveTo(cx-0.266*L,cy+Hh*1.015);                       // 날개 끝 바깥에서 시작 (겹치면 날개가 둘로 보임)
+    c.quadraticCurveTo(cx-0.284*L,cy+Hh*0.88, cx-0.288*L,cy+Hh*0.70);
+    c.lineTo(cx-0.305*L,cy+Hh*0.715);
+    c.quadraticCurveTo(cx-0.302*L,cy+Hh*0.90, cx-0.288*L,cy+Hh*1.035);
+    c.closePath(); c.fill();
+    c.strokeStyle='rgba(60,80,95,.3)'; c.lineWidth=1; c.stroke();
+  }
   // 아반티: 코 근처에 붙은 작은 앞날개(카나드) — 그래서 날개가 3개
   if(P.canard){
     c.fillStyle='#dde2e7';
@@ -1346,6 +1358,13 @@ function drawPlane(c,cx,cy,sc,P,A,o){
       c.lineTo(r-0.35*L,cy-Hh*0.28);
       c.lineTo(r-0.34*L,cy-Hh*0.10);
       c.lineTo(r-0.295*L,cy-Hh*0.10);
+    }else if(P.mask){ // A350: 조종석 유리가 검은 띠처럼 옆으로 길게 이어진다
+      c.moveTo(r-0.045*L,cy-Hh*0.30);
+      c.lineTo(r-0.115*L,cy-Hh*0.325);
+      c.lineTo(r-0.178*L,cy-Hh*0.255);
+      c.lineTo(r-0.132*L,cy-Hh*0.185);
+      c.lineTo(r-0.100*L,cy-Hh*0.125);
+      c.lineTo(r-0.042*L,cy-Hh*0.130);
     }else{
       c.moveTo(r-0.055*L,cy-Hh*0.30);
       c.lineTo(r-0.115*L,cy-Hh*0.30);
@@ -1451,7 +1470,10 @@ function drawPlane(c,cx,cy,sc,P,A,o){
     c.strokeStyle='#55636e'; c.lineWidth=Math.max(1.5,wr*0.4);
     c.fillStyle='#222b32';
     const gy=cy+Hh/2;
-    [[P.droop?r-0.32*L:r-0.20*L,1],[cx-0.10*L,1.15],[cx-0.10*L+wr*2.4,1.15]].forEach(w=>{
+    const mains=P.bogie6                                   // A350-1000: 무거워서 주바퀴 축이 3줄
+      ?[[cx-0.14*L,1.15],[cx-0.14*L+wr*2.3,1.15],[cx-0.14*L+wr*4.6,1.15]]
+      :[[cx-0.10*L,1.15],[cx-0.10*L+wr*2.4,1.15]];
+    [[P.droop?r-0.32*L:r-0.20*L,1]].concat(mains).forEach(w=>{
       c.beginPath(); c.moveTo(w[0],gy-2); c.lineTo(w[0],gy+wr*1.6*w[1]); c.stroke();
       c.beginPath(); c.arc(w[0],gy+wr*1.6*w[1],wr,0,7); c.fill();
     });
@@ -1559,6 +1581,12 @@ const DEX={
   b777:{s:'엔진 2개로 대륙을 건너는 대형기',
     l:'엔진이 2개뿐인데도 300명 넘게 태우고 대양을 횡단한다. 엔진 흡입구 지름이 B737의 동체 굵기와 비슷할 정도로 크다. 종이 도면 없이 처음부터 끝까지 컴퓨터로만 설계한 최초의 여객기이기도 하다.',
     f:'엔진 하나가 정지해도 남은 하나로 몇 시간을 더 비행할 수 있도록 인증받았기 때문에 태평양 횡단이 가능하다.'},
+  a359:{s:'탄소 섬유로 만든 현대 쌍발 와이드바디',
+    l:'동체와 날개의 절반 이상을 금속 대신 탄소 섬유 복합재로 만들어 같은 크기의 옛 기종보다 가볍다. 옆에서 보면 조종석 유리가 검은 띠처럼 뒤로 길게 이어져 있어 멀리서도 바로 알아볼 수 있다. 날개 끝은 꺾이지 않고 위로 부드럽게 휘어 올라간다. -900은 A350 가족의 기본형이다.',
+    f:'기내 공기를 다른 기종보다 촘촘하게 유지해서 오래 타도 덜 피곤하도록 만들었다.'},
+  a351:{s:'A350-900을 7m 늘린 큰 형. 주바퀴가 6개',
+    l:'A350-900의 동체를 약 7m 늘린 형식이다. 길어진 만큼 무거워져서 주바퀴가 한쪽에 4개가 아니라 6개로 늘었다. 엔진도 -900보다 힘이 센 것을 단다. 생김새가 -900과 거의 같아서, 둘을 구별할 때는 길이보다 주바퀴 축이 2줄인지 3줄인지를 보는 쪽이 확실하다.',
+    f:'바퀴를 늘리는 이유는 무게를 넓게 나눠 밟아 활주로가 덜 상하게 하기 위해서다.'},
   dc10:{s:'수직미익을 관통하는 3번 엔진을 가진 3발기',
     l:'주익 아래에 2개, 수직미익 밑동에 1개, 합쳐서 엔진이 3개다. 과거에는 쌍발기가 대양을 횡단하는 것이 규정으로 금지돼 있었다. 그렇다고 4발기는 비용이 많이 들기 때문에 절충안으로 3발 구조가 나온 것이다. 3번 엔진은 수직미익을 관통하는 형태로 배치했다.',
     f:'지금은 쌍발기도 대양을 건널 수 있게 규정이 바뀌어 3발 여객기는 거의 사라졌다.'},
