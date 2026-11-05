@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>쇵루하이옌 성단</title>
+<title>シュエンルハイエン星団</title>
 <style>
 :root{
   --bg:#04070d; --panel:rgba(8,14,25,.92); --panel2:rgba(13,22,38,.95);
@@ -173,7 +173,7 @@ body.ringmode #crumb,body.ringmode #fleet,body.ringmode #zoomBox,body.ringmode #
 #title{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;justify-content:center;padding-left:9vw;
   background:radial-gradient(ellipse at 70% 50%,rgba(0,0,0,0) 0,rgba(2,4,9,.45) 60%,rgba(2,4,9,.85) 100%)}
 #title .kick{font-size:12px;letter-spacing:.32em;color:var(--cy);opacity:.85}
-#title h1{font-size:clamp(34px,6.2vw,72px);font-weight:800;letter-spacing:.04em;line-height:1.08;margin-top:12px;
+#title h1{font-family:"Yu Gothic UI","Yu Gothic","Meiryo","Hiragino Sans","Malgun Gothic",sans-serif;font-size:clamp(30px,5.4vw,66px);font-weight:800;letter-spacing:.04em;line-height:1.08;margin-top:12px;
   text-shadow:0 0 30px rgba(98,210,236,.25)}
 #title .loc{margin-top:14px;font-size:13px;color:var(--tx2);letter-spacing:.06em}
 #title .loc span{color:var(--tx3);margin:0 6px}
@@ -242,7 +242,7 @@ body.ringmode #crumb,body.ringmode #fleet,body.ringmode #zoomBox,body.ringmode #
 
 <div id="title">
   <div class="kick">LARGE MAGELLANIC CLOUD · SECTOR A-1.1</div>
-  <h1>쇵루하이옌<br>성단</h1>
+  <h1 lang="ja">シュエンルハイエン<br>星団</h1>
   <div class="loc">대마젤란운<span>›</span>쇵루하이옌 성단<span>›</span>A-1.1 섹터<span>›</span>1.1구역</div>
   <div class="tb">
     <button class="btn on" id="tContinue" data-act="tContinue">이어서 하기</button>
@@ -464,6 +464,16 @@ const QUESTS = [
   { who: 'miru', title: '보라색 결정', goal: '에테르 결정 30을 캡니다', need: () => [G.S.eth, 30], rew: { cr: 800, xp: 150 },
     lines: [['miru', '루하이의 기계는 에테르 결정으로 움직입니다. 성운 구역과 블랙홀 구역에 보라색 결정이 떠 있어요.'],
       ['miru', '에테르는 단단해서 채굴 레이저가 3단계 이상이어야 캘 수 있습니다. 링에 연구소를 지으면 3단계까지 올릴 수 있습니다.']] },
+  { who: 'miru', title: '은하 관문', goal: '1.1구역의 은하 관문을 엽니다', need: () => [G.gate ? 1 : 0, 1], rew: { cr: 1000, xp: 200 },
+    lines: [['miru', '에테르를 모으다가 알게 된 것이 있어요. 1.1구역 왼쪽 위 구석에 있는 고리 모양 구조물, 그건 루하이의 은하 관문이에요.'],
+      ['miru', '대마젤란운도 아주 넓지만, 루하이는 더 먼 곳까지 다녔어요. 우리은하와 소마젤란운까지요.'],
+      ['miru', '관문을 누르면 여는 데 필요한 재료가 나옵니다. 크레딧 3,000, 광물 1,500, 에테르 40이에요.']],
+    done: [['miru', '관문이 깨어났어요! 기둥 여섯 개가 다시 돌기 시작했습니다.']] },
+  { who: 'miru', title: '다른 은하로', goal: '우리은하나 소마젤란운의 1.1구역에 갑니다', need: () => [G.exList.some(n => n[0] !== 'A') ? 1 : 0, 1], rew: { et: 20, xp: 250 },
+    lines: [['miru', '배를 관문 바로 옆에 세운 뒤 그 배를 누르면, 건너갈 은하를 고를 수 있어요.'],
+      ['miru', 'B는 우리은하예요. 32768.32768구역까지 있는 아주 큰 은하예요. C는 소마젤란운이고 512.512구역까지 있어요.'],
+      ['miru', '다른 은하에는 링 항구가 없어요. 채굴선은 관문에 짐을 내리면 되고, 화물을 나르려면 그 은하에서 행성을 개척해야 해요.']],
+    done: [['miru', '다른 은하의 별빛이에요. 루하이도 이 하늘을 봤겠죠.']] },
   { who: 'miru', title: '두 번째 유적', goal: '유적 2곳을 조사합니다', need: () => [G.S.relics, 2], rew: { et: 15, xp: 200 },
     lines: [['miru', '에테르를 분석하다가 두 번째 신호를 찾았습니다. 5.5구역입니다.']],
     done: [['miru', '두 번째 핵입니다. 유적 벽의 글자도 조금 읽었어요. 고리가 다시 돌면, 우리는 돌아온다.']] },
@@ -686,7 +696,7 @@ function makeShip(type, x, y) {
 }
 function newGame(name) {
   buildWorld();
-  G = { v: 2, name, cr: 500, mi: 150, et: 0, core: 0, xp: 0, lv: 1, t: 0, speed: 1, snd: 1, nid: 1, nci: 1, cnt: {}, bsOk: 0, title: '', exList: ['A:1.1'], gate: 0,
+  G = { v: 3, name, cr: 500, mi: 150, et: 0, core: 0, xp: 0, lv: 1, t: 0, speed: 1, snd: 1, nid: 1, nci: 1, cnt: {}, bsOk: 0, title: '', exList: ['A:1.1'], gate: 0,
     ships: [], ring: blankRing(), ringCargo: [], ringGt: 0, q: 0, qSeen: -1,
     S: { delivered: 0, mined: 0, built: 0, shipsBuilt: 0, tradeCr: 0, relics: 0, pirates: 0, eth: 0, modUps: 0, bsUps: 0, planetUps: 0, boss: 0 },
     yardQ: null, savedAt: Date.now() };
@@ -712,6 +722,7 @@ function load() {
   G.exList = G.exList.map(nm => nm.includes(':') ? nm : 'A:' + nm);
   for (const nm of G.exList) { const [k, c] = nm.split(':'), g = GALS.findIndex(o => o.key === k), [x, y] = c.split('.').map(Number); const z = g >= 0 ? getZone(g, x - 1, y - 1) : null; if (z) explore(z.i, true); }
   G.gate = G.gate || 0;
+  if ((G.v || 1) < 3) { if (G.q >= 15) { G.q += 2; G.qSeen += 2; } G.v = 3; } // 관문 임무 2개가 들어온 자리
   (w.zd || []).forEach((d, i) => { if (EXZ[i]) EXZ[i].down = d; });
   w.p.forEach((d, i) => { const p = P[i]; if (!p || !d) return; [p.own, p.lv, p.cargo, p.upT, p.colT, p.rn, p.ci, p.a, p.gt] = d; p.cargo = p.cargo || []; p.gt = p.gt || 0; });
   w.a.forEach((d, i) => { if (A[i] && d) { A[i].amt = d[0]; A[i].a = d[1]; } });
@@ -1205,6 +1216,7 @@ function update(dt) {
   for (const p of P) p.a = (p.a + p.w * dt) % TAU;
   for (const a of A) { a.a = (a.a + a.w * dt) % TAU; a.rot += a.rs * dt; if (a.amt < a.max) a.amt = Math.min(a.max, a.amt + a.max * 0.004 * dt); }
   for (const r of R) r.rot += dt * 0.12;
+  for (const q of GT) q.rot += dt * (G.gate ? .4 : .05);
   econ(dt);
   for (const s of G.ships) shipUpdate(s, dt);
   pirates(dt);
@@ -2396,7 +2408,7 @@ function sidePanel() {
   }
   if (SEL.k === 'zone') {
     const z = Z[SEL.id];
-    let h = head(`${z.name}구역`, `A-1.1 섹터 · ${z.ex ? zoneTypeName(z) : '미탐사'} · 1.1구역에서 ${z.d}구역, 약 ${fmt(zoneLY(z))}광년`);
+    let h = head(`${z.name}구역`, `${GALS[z.g].nm} ${secName(z.g)} · ${z.ex ? zoneTypeName(z) : '미탐사'} · 1.1구역에서 ${fmt(z.d)}구역, 약 ${fmt(zoneLY(z))}광년`);
     if (!z.ex) return h + `<div class="sec"><div class="note">아직 아무도 가 보지 않은 구역입니다. 배를 골라 이 구역을 누르면 탐사합니다.</div></div>`;
     h += '<div class="sec">';
     if (z.star) h += kv('별', `${z.sname} · ${z.star.nm}`) + kv('분광형', `${z.star.cls}${z.star.sub}`);
@@ -2419,6 +2431,14 @@ function sidePanel() {
   if (SEL.k === 'relic') {
     const r = R[SEL.id];
     return head(r.name, `${Z[r.zi].name}구역 · 고대 유적`) + `<div class="sec">${kv('상태', r.done ? '조사 완료' : r.prog > 0 ? `조사 중 ${Math.floor(r.prog / 25 * 100)}%` : '조사 전')}${r.done ? '' : bar(r.prog / 25, '#f2e2b0')}<div class="note">${r.done ? '루하이 문명이 남긴 구조물입니다. 조사를 마쳤습니다.' : (r.key ? '강한 신호가 나옵니다. 고대 핵이 있을지도 모릅니다. ' : '') + '아무 배나 골라 유적을 누르면 옆에서 조사합니다. 25초 걸리고, 여러 척이 같이 하면 빨라집니다.'}</div></div>`;
+  }
+  if (SEL.k === 'gate') {
+    const q = GT[SEL.id], gc = { cr: 3000, mi: 1500, et: 40 };
+    let h = head('은하 관문', `${GALS[q.g].key} · ${GALS[q.g].nm} · 1.1구역`);
+    h += `<div class="sec"><div class="note">루하이가 은하와 은하 사이를 오가려고 만든 관문입니다. 기둥 여섯 개가 고리를 붙잡고 있습니다.</div>${kv('상태', G.gate ? '열림' : '잠듦')}</div>`;
+    if (!G.gate) h += `<div class="sec"><h4>관문 열기</h4><div>${costHTML(gc)}</div><div class="btnrow"><button class="btn gold wide" data-act="gateOpen" ${canPay(gc) ? '' : 'disabled'}>관문 열기</button></div></div>`;
+    h += `<div class="sec"><h4>이어진 은하</h4>${GALS.map((o, i) => kv(`${o.key} · ${o.nm}`, `${fmt(o.n)} × ${fmt(o.n)}구역${i === q.g ? ' · 여기' : ''}`)).join('')}<div class="note">${G.gate ? '배를 골라 관문을 누르면 옆으로 갑니다. 그다음 배 창에서 건너갈 은하를 고르십시오.' : '관문이 열리면 배가 다른 은하의 1.1구역으로 건너갈 수 있습니다.'} 채굴선은 열린 관문에 광물을 내릴 수도 있습니다.</div></div>`;
+    return h;
   }
   if (SEL.k === 'pb') {
     const b = B[SEL.id], alive = PS.filter(q => q.b === b.id && q.alive).length;
@@ -2483,7 +2503,8 @@ function renderTop() {
   $('bRing').classList.toggle('on', RWV.on);
   if (!RWV.on) {
     const zi = zoneAt(cam.x, cam.y), z = Z[zi];
-    $('crumb').innerHTML = `대마젤란운<span>›</span>쇵루하이옌 성단<span>›</span>A-1.1 섹터` + (z && cam.z > .13 ? `<span>›</span><b>${z.name}구역</b> · ${z.ex ? zoneTypeName(z) : '미탐사'}` : '');
+    const gi = galAt(cam.x, cam.y), path = gi < 0 ? '은하 사이 우주' : `${GALS[gi].nm}${gi === 0 ? '<span>›</span>쇵루하이옌 성단' : ''}<span>›</span>${secName(gi)}`;
+    $('crumb').innerHTML = path + (z && cam.z > .13 ? `<span>›</span><b>${z.name}구역</b> · ${z.ex ? zoneTypeName(z) : '미탐사'}` : '');
     const sh = SEL && SEL.k === 'ship';
     $('hint').textContent = sh ? '목적지를 누르면 출발합니다 · 오른쪽 클릭: 선택 풀기' : '끌기: 지도 이동 · 휠: 확대와 축소 · 숫자 1~9: 함선 고르기';
   }
@@ -2598,7 +2619,7 @@ function renderModal(force) {
 // 대화
 const DLG = { open: false, q: [], i: 0, shown: 0, full: '', cb: null };
 function showDlg(lines, cb) {
-  DLG.q = lines.map(([w, t]) => [w, t.replace(/\{N\}/g, G.name)]); DLG.i = 0; DLG.cb = cb; DLG.open = true;
+  DLG.q = lines.map(([w, t]) => [w, t.replace(/\{N\} 선장/g, G.name === '선장' ? '선장' : G.name + ' 선장').replace(/\{N\}/g, G.name)]); DLG.i = 0; DLG.cb = cb; DLG.open = true;
   $('dlg').classList.remove('hidden'); dlgLine();
 }
 function dlgLine() { const [w, txt] = DLG.q[DLG.i]; DLG.full = txt; DLG.shown = 0; $('dlgName').innerHTML = `${CH[w].nm}<small>${CH[w].role}</small>`; drawFaceTo($('dlgFace'), w); $('dlgText').textContent = ''; }
