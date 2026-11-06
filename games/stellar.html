@@ -117,7 +117,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const fmtN=(v,d=0)=>Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d,minimumFractionDigits:0});
 
 /* ---------- 저장 ---------- */
-const DEF_SAVE={name:'Player',id:0,credits:0,owned:{},seen:{},runs:0,recent:[],names:{},set:{speed:1,hz:1,dust:2,neb:1,info:1,unit:0,load:1,many:0}};
+const DEF_SAVE={name:'Player',id:0,credits:0,owned:{},seen:{},runs:0,recent:[],names:{},set:{speed:1,hz:1,dust:2,neb:1,info:1,unit:0,load:1,many:0,labels:1}};
 function loadSave(){let d=JSON.parse(JSON.stringify(DEF_SAVE));try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s){d=Object.assign(d,s);d.set=Object.assign({},DEF_SAVE.set,s.set||{});}}catch(e){}if(!d.id)d.id=10000+Math.floor(Math.random()*90000);return d;}
 let SV=loadSave();
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SV));}catch(e){}}
@@ -126,7 +126,7 @@ save();
 /* ---------- 캔버스 ---------- */
 const cv=$('#cv'),ctx=cv.getContext('2d');
 let W=800,H=600,DPR=1;
-function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=Math.max(320,window.innerWidth||800);H=Math.max(240,window.innerHeight||600);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);TEX.clear();makeBG();if(SIM){layoutSim();buildNebula();}}
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=Math.max(320,window.innerWidth||800);H=Math.max(240,window.innerHeight||600);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);TEX.clear();makeBG();if(SIM){layoutSim();buildNebula();if(SIM.sys.star.kind==='universe')buildUni(SIM.sys);}}
 window.addEventListener('resize',resize);
 
 /* ---------- 별 종류 ---------- */
@@ -143,13 +143,18 @@ const TYPES={
  T:{name:'T형 갈색왜성',kind:'bd',M:.040,pl:[1,3],aIn:.003,pG:0,edge:.11,col:'#a03c78',sel:.048,neb:'#7a4a6a',info:'질량 태양의 0.04배(목성의 42배) · 표면 약 1,000°C'},
  Y:{name:'Y형 갈색왜성',kind:'bd',M:.015,pl:[1,2],aIn:.0025,pG:0,edge:.11,col:'#6a3060',sel:.045,neb:'#5a4a5a',info:'질량 태양의 0.015배(목성의 16배) · 가장 차가운 갈색왜성'},
 };
+TYPES.SOL=Object.assign({},TYPES.G,{name:'태양계 타임라인',starName:'G형 주계열성 (태양)',col:'#ffd84a',sel:.07,info:'진짜 태양계 8행성 + 명왕성 + 옛날 행성(테이아 · 행성 V · 다섯 번째 거대 행성) · 46억 년 전부터'});
+TYPES.UNI={name:'우주 타임라인',kind:'universe',col:'#b9a8ff',sel:.07,neb:'#6a6a90',info:'빅뱅부터 우주의 끝(열 죽음)까지 · 10의 100제곱 년이 넘는 시간'};
 const ORDER1=['O','B','A','F','G','K','M'],ORDER2=['L','T','Y'];
 const WD_T=[[1e4,150000],[1e6,70000],[1e7,40000],[1e8,20000],[1e9,10000],[1e10,5500],[1e11,3000],[1e12,1500],[1e13,600],[1e14,200],[1e15,60],[1e18,5]];
 function wdTemp(tc){const tb=WD_T;if(tc<=tb[0][0])return tb[0][1];for(let i=1;i<tb.length;i++){if(tc<=tb[i][0]){const[a0,t0]=tb[i-1],[a1,t1]=tb[i];return lerpLog(t0,t1,Math.log(tc/a0)/Math.log(a1/a0));}}return tb[tb.length-1][1];}
 const teffOf=(L,R)=>5772*Math.pow(L/(R*R),0.25);
 const lumOf=(R,T)=>R*R*Math.pow(T/5772,4);
 
-const PH_NAME={pre:'원시별',ms:'주계열성',sg:'준거성',rgb:'적색거성',hb:'헬륨을 태우는 별',agb:'점근거성가지 별',pn:'행성상 성운',wd:'백색왜성',bk:'흑색왜성',blue:'청색왜성',contract:'백색왜성이 되는 중',bdM:'어린 갈색왜성',bdL:'L형 갈색왜성',bdT:'T형 갈색왜성',bdY:'Y형 갈색왜성',bdX:'식어 버린 갈색왜성',ysg:'황색 초거성',rsg:'적색 초거성',bsg2:'청색 초거성',lbv:'고광도 청색 변광성',yhg:'황색 극대거성',wr:'울프-레이에 별',sn:'초신성 폭발',ns:'중성자별',bh:'블랙홀'};
+const PH_NAME={pre:'원시별',ms:'주계열성',sg:'준거성',rgb:'적색거성',hb:'헬륨을 태우는 별',agb:'점근거성가지 별',pn:'행성상 성운',wd:'백색왜성',bk:'흑색왜성',blue:'청색왜성',contract:'백색왜성이 되는 중',bdM:'어린 갈색왜성',bdL:'L형 갈색왜성',bdT:'T형 갈색왜성',bdY:'Y형 갈색왜성',bdX:'식어 버린 갈색왜성',ysg:'황색 초거성',rsg:'적색 초거성',bsg2:'청색 초거성',lbv:'고광도 청색 변광성',yhg:'황색 극대거성',wr:'울프-레이에 별',sn:'초신성 폭발',ns:'중성자별',bh:'블랙홀',u_planck:'플랑크 시대',u_infl:'급팽창 시대',u_quark:'쿼크 시대',u_hadron:'양성자 · 중성자 시대',u_nucleo:'원자핵이 생기는 시대',u_plasma:'빛의 시대 (뜨거운 안개)',u_dark:'암흑 시대',u_dawn:'첫 별의 시대',u_gal:'은하의 시대',u_late:'별이 줄어드는 시대',u_degen:'별의 시체 시대',u_bh:'블랙홀 시대',u_end:'열 죽음 (암흑의 시대)'};
+const UNI_PH=[[-50.5,'u_planck'],[-39.5,'u_infl'],[-13.5,'u_quark'],[-5.2,'u_hadron'],[-4.4,'u_nucleo'],[5.58,'u_plasma'],[8.25,'u_dark'],[9,'u_dawn'],[11.2,'u_gal'],[14,'u_late'],[20,'u_degen'],[100,'u_bh'],[1e9,'u_end']];
+function uniPhase(age){const u=Math.log10(Math.max(age,1e-60));for(const[t,n]of UNI_PH)if(u<t)return n;return'u_end';}
+const UNI_DESC={u_planck:'우주가 원자보다 훨씬 작고 엄청나게 뜨겁습니다. 지금의 과학으로는 무슨 일이 있었는지 알 수 없습니다.',u_infl:'우주가 아주 짧은 순간에 엄청나게 커졌습니다. 아주 작은 흔들림이 나중에 은하의 씨앗이 됩니다.',u_quark:'뜨거운 수프 속에서 쿼크와 글루온이 마구 날아다닙니다.',u_hadron:'쿼크 3개씩 모여 양성자(빨강)와 중성자(파랑)가 되었습니다.',u_nucleo:'양성자와 중성자가 붙어 헬륨 원자핵이 생겼습니다. 수소 75%, 헬륨 25%.',u_plasma:'원자핵과 전자가 따로 날아다녀서 빛이 똑바로 가지 못합니다. 우주가 뿌연 안개 같습니다.',u_dark:'우주가 투명해졌지만 아직 별이 하나도 없습니다. 가스가 그물처럼 천천히 모입니다.',u_dawn:'가스 그물의 매듭에서 아주 크고 파란 첫 별들이 태어나고 금방 폭발합니다.',u_gal:'작은 은하들이 부딪치고 합쳐져 큰 은하가 됩니다. 우리 은하와 태양계도 이때 생깁니다.',u_late:'새 별이 거의 태어나지 않고, 남은 별들이 하나씩 꺼집니다. 은하가 붉고 어두워집니다.',u_degen:'백색왜성, 중성자별, 블랙홀 같은 별의 시체만 남았습니다. 시체들은 은하 밖으로 날아가거나 블랙홀에 빨려 들어갑니다.',u_bh:'우주에는 블랙홀만 남았습니다. 블랙홀은 아주 천천히 빛을 내며(호킹 복사) 작아집니다.',u_end:'마지막 블랙홀까지 증발했습니다. 우주는 차갑고 텅 비었습니다.'};
 const PH_EV={pre:'가스 구름이 뭉쳐 별이 생겨나고 있습니다.',ms:'별이 수소를 태우기 시작했습니다.',sg:'중심의 수소가 다 떨어져 별이 부풀기 시작했습니다.',rgb:'별이 크게 부풀어 적색거성이 되었습니다.',hb:'중심에서 헬륨이 타기 시작해 별이 다시 작아졌습니다.',agb:'별이 다시 크게 부풀었습니다.',pn:'바깥 껍질이 날아가 행성상 성운이 생겼습니다.',wd:'가운데에 백색왜성이 남았습니다.',bk:'백색왜성이 다 식어 흑색왜성이 되었습니다.',blue:'별이 점점 뜨거워져 청색왜성이 되었습니다.',contract:'연료가 다 떨어져 별이 오그라듭니다.',bdM:'가스 구름이 뭉쳐 갈색왜성이 생겨나고 있습니다.',bdL:'L형 갈색왜성이 되었습니다.',bdT:'더 식어서 T형 갈색왜성이 되었습니다.',bdY:'더 식어서 Y형 갈색왜성이 되었습니다.',bdX:'갈색왜성이 거의 다 식었습니다.',ysg:'별이 부풀어 황색 초거성이 되었습니다.',rsg:'별이 더 부풀어 적색 초거성이 되었습니다.',bsg2:'겉껍질을 잃고 다시 뜨거운 청색 초거성이 되었습니다.',lbv:'별이 불안정해져 가스를 뿜어냅니다.',yhg:'별이 부풀어 황색 극대거성이 되었습니다.',wr:'겉껍질이 다 날아가 울프-레이에 별이 되었습니다.',sn:'초신성이 폭발했습니다.',ns:'가운데에 중성자별(펄서)이 남았습니다.',bh:'가운데가 무너져 블랙홀이 되었습니다.'};
 
 function makeStar(key,variant){
@@ -162,6 +167,7 @@ function makeStar(key,variant){
   }else if(S.kind==='red'){
     S.Mf=T.M*0.98;S.Rwd=0.016;S.tPre=1e9;S.tMS=T.tMS;S.tBD=T.tMS*1.35;S.tC=S.tBD+0.04*T.tMS;S.wdOff=6e8;S.tEnd=S.tC;
   }else if(S.kind==='bd'){S.Mf=T.M;S.tEnd=1e10;}
+  else if(S.kind==='universe'){S.tEnd=1e110;S.M0=1;S.Mf=1;}
   else{
     const hv=variant==='heavy';S.heavy=hv;S.M0=hv?60:25;S.Mf=hv?12:1.4;
     S.tMS=hv?3.6e6:7e6;S.L0=hv?4e5:8e4;S.R0=hv?11:7;
@@ -171,6 +177,7 @@ function makeStar(key,variant){
   S.at=age=>starAt(S,age);return S;
 }
 function starAt(S,age){
+  if(S.kind==='universe')return{L:1,R:1,T:3,M:1,ph:uniPhase(age),cp:0};
   const T=S.T;let L,R,M=S.M0,ph,cp=0,x;
   if(S.kind==='normal'){
     if(age<S.tPre){x=smooth(age/S.tPre);L=T.L0*lerpLog(4,1,x);R=T.R0*lerpLog(2.5,1,x);ph='pre';}
@@ -206,6 +213,7 @@ function makeNodes(S){
   let n;const k=S.kind;
   if(k==='normal'){const t=S.tMS;n=[[0,0],[Math.min(1e7,.03*t),5],[Math.min(1e8,.1*t),14],[Math.min(1e9,.25*t),22],[.97*t,62],[t,65],[S.tSG,70],[S.tRGB,80],[S.tHB,84],[S.tAGB,90],[S.tPN,95],[S.tPN+1e10,103],[S.tPN+1e12,111],[S.tPN+1e14,119],[1e18,127]];}
   else if(k==='red'){n=[[0,0],[1e7,5],[1e8,14],[1e9,22],[.97*S.tMS,62],[S.tMS,66],[S.tBD,76],[S.tC,81],[S.tC+1e10,89],[S.tC+1e12,97],[S.tC+1e14,105],[1e18,113]];}
+  else if(k==='universe'){n=[[0,0],[1e-51,1],[3e-44,7],[3e-14,13],[3e-8,17],[6e-6,22],[4e-5,25],[3.8e5,34],[1e8,41],[2e8,44],[1e9,51],[9.2e9,59],[1.38e10,65],[1.83e10,70],[1.5e11,77],[1e14,85],[1e20,93],[1e40,99],[1e67,106],[1e100,114],[1e106,120]];}
   else if(k==='bd'){n=[[0,0],[1e7,5],[1e8,12],[1e9,22],[1e10,34],[1e11,44],[1e12,52],[1e14,60],[1e18,70]];}
   else{n=[[0,0],[1e5,4],[1e6,10],[.95*S.tMS,24],[S.tMS,28]];let sec=28;for(const q of S.seq){sec+=6;n.push([q.t1,sec]);}n.push([S.tSN+3e4,sec+6]);n.push([S.tSN+1e6,sec+13]);n.push([S.tSN+1e8,sec+20]);n.push([1e9,sec+26]);}
   for(let i=1;i<n.length;i++)n[i][2]=n[i-1][0]>0&&n[i][0]/n[i-1][0]>30;
@@ -214,7 +222,15 @@ function makeNodes(S){
 function ageAt(N,sec){if(sec<=0)return 0;for(let i=1;i<N.length;i++){if(sec<=N[i][1]){const a=N[i-1],b=N[i],x=(sec-a[1])/(b[1]-a[1]);return b[2]?lerpLog(a[0],b[0],x):lerp(a[0],b[0],x);}}return N[N.length-1][0];}
 function secAt(N,age){if(age<=0)return 0;for(let i=1;i<N.length;i++){if(age<=N[i][0]){const a=N[i-1],b=N[i];const x=b[2]?Math.log(age/a[0])/Math.log(b[0]/a[0]):(age-a[0])/(b[0]-a[0]);return lerp(a[1],b[1],x);}}return N[N.length-1][1];}
 const UNITS_EN=[[1e17,1e15,'QDY'],[1e14,1e12,'TY'],[1e11,1e9,'BY'],[0,1e6,'MY']];
+const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+const sup=n=>'10'+String(n).split('').map(c=>SUP[c]).join('');
+function uniCounter(age){const ko=SV.set.unit;if(age<=0)return['0',ko?'초':'s'];const sc=age*3.156e7;
+  if(sc<1)return[sup(Math.floor(Math.log10(sc))),ko?'초':'s'];if(sc<60)return[String(Math.floor(sc)),ko?'초':'s'];if(sc<3600)return[String(Math.floor(sc/60)),ko?'분':'min'];if(age<1)return[String(Math.floor(sc/86400)),ko?'일':'day'];
+  if(age>=1e20)return[sup(Math.floor(Math.log10(age))),ko?'년':'YR'];
+  if(ko){if(age<1e4)return[fmtN(Math.floor(age)),'년'];if(age<1e8)return[fmtN(Math.floor(age/1e4)),'만 년'];if(age<1e12)return[fmtN(Math.floor(age/1e8)),'억 년'];if(age<1e16)return[fmtN(Math.floor(age/1e12)),'조 년'];return[fmtN(Math.floor(age/1e16)),'경 년'];}
+  if(age<1e3)return[String(Math.floor(age)),'YR'];if(age<1e6)return[String(Math.floor(age/1e3)),'KY'];return null;}
 function counterParts(age){
+  if(SIM&&SIM.sys.star.kind==='universe'){const r=uniCounter(age);if(r)return r;}
   if(SV.set.unit){
     if(age<1e8)return[fmtN(Math.floor(age/1e4)),'만 년'];if(age<1e12)return[fmtN(Math.floor(age/1e8)),'억 년'];if(age<1e16)return[fmtN(Math.floor(age/1e12)),'조 년'];return[fmtN(Math.floor(age/1e16)),'경 년'];
   }
@@ -223,15 +239,15 @@ function counterParts(age){
 function fmtAge(age){const[a,b]=counterParts(age);return a+(SV.set.unit?'':' ')+b;}
 
 /* ---------- 행성 ---------- */
-const LK={forming:0,magma:1,steam:2,ocean:3,life:4,green:5,ice:6,desert:7,barren:8,hot:9,gas:10,hotgas:11,icegiant:12};
-const LK_NAME=['만들어지는 중','마그마 바다','두꺼운 수증기 대기','바다','생명이 사는 바다','식물로 덮인 땅','얼음','사막','메마른 바위','뜨거운 바위','가스 행성','뜨거운 가스 행성','얼음 거인'];
+const LK={forming:0,magma:1,steam:2,ocean:3,life:4,green:5,ice:6,desert:7,barren:8,hot:9,gas:10,hotgas:11,icegiant:12,cloud:13};
+const LK_NAME=['만들어지는 중','마그마 바다','두꺼운 수증기 대기','바다','생명이 사는 바다','식물로 덮인 땅','얼음','사막','메마른 바위','뜨거운 바위','가스 행성','뜨거운 가스 행성','얼음 거인','두꺼운 이산화탄소 구름 (460°C)'];
 const MOON_COL=['#9a9a9a','#b5ada0','#d8d8d0','#8a8070','#c9b89a'];
 const RING_COL=['#c8b48a','#a89a80','#9a8ab0','#b0b8c0','#c09a7a'];
 const GAS_PAL=[['#c9a46b','#8e6a3a','#ead4a8'],['#d8c48a','#b39a5c','#f0e4bc'],['#c97b4a','#8a4a2a','#eab08a'],['#b06ad6','#7a3fa0','#dcaaf2'],['#d98aa8','#a85878','#f2c2d2'],['#9aa060','#6a7038','#c9cd92']];
 const ICE_PAL=[['#6fd3e0','#3fa8b8','#b8eef5'],['#4a78d8','#2a4ea8','#9cb9f0'],['#9a9ae0','#6a6ab8','#cacaf5'],['#5fc9a8','#2f9a80','#aaecd8']];
 const OCEAN=['#2766c9','#1f5bb8','#2b72d4','#1d6aa8'],LAND=['#8b7b4e','#9a8458','#7d6a48'],DESERT=['#c98f55','#c27a48','#d0a068'],BARREN=['#8c8984','#7f7a74','#9a958c'];
 
-function sysName(R,key){const T=TYPES[key];
+function sysName(R,key){const T=TYPES[key];if(key==='SOL')return'태양계';if(key==='UNI')return'우리 우주';
   if(T.kind==='bd')return(R()<0.5?'WISE J':'2MASS J')+String(R.int(0,2359)).padStart(4,'0')+(R()<0.5?'+':'-')+String(R.int(0,8999)).padStart(4,'0');
   if(key==='M')return R.pick(['Gliese ','GJ ','LHS ','Ross ','Wolf '])+R.int(100,4999);
   return R.pick(['HD ','HIP ','Kepler-','TOI-','HD '])+R.int(100,99999);}
@@ -279,17 +295,55 @@ function makePlanets(sys,R){
   ex.forEach(e=>{e.id=P.length;P.push(e);});
   return P;
 }
+const EARTH_L=[[0,LK.forming],[4.5e7,LK.magma],[1.6e8,LK.ocean],[8e8,LK.life],[3.88e9,LK.ice],[3.965e9,LK.life],[4.13e9,LK.green],[5.6e9,LK.steam]];
+const EARTH_T=[[0,1500],[1.6e8,70],[8e8,40],[2.4e9,20],[3.88e9,-40],[3.965e9,15],[4.6e9,15],[5.6e9,95],[7e9,300]];
+const MARS_L=[[0,LK.forming],[2e7,LK.magma],[8e7,LK.ocean],[1.2e9,LK.desert]],MARS_T=[[0,1500],[8e7,5],[1.2e9,-60]];
+const keyLook=(K,a)=>{let v=K[0][1];for(const k of K)if(a>=k[0])v=k[1];return v;};
+const keyT=(K,a)=>{if(a<=K[0][0])return K[0][1];for(let i=1;i<K.length;i++)if(a<=K[i][0])return lerp(K[i-1][1],K[i][1],(a-K[i-1][0])/(K[i][0]-K[i-1][0]));return K[K.length-1][1];};
+function makeSolar(sys,R){
+  const P=[];
+  const add=o=>{const p=Object.assign({extra:false,mergeHist:[],moons:[],w:0,gh:1.08,lifeOK:false,lifeDelay:1e9,oc:'#2766c9',land:'#8b7b4e',ds:'#c98f55',br:'#8c8984',seed:(R()*1e9)|0,tEj:Math.pow(10,R.range(14.5,17.8))},o);P.push(p);return p;};
+  const rk=(t0,t1,mo)=>({tStart:t0,tFull:t1,molt:mo});
+  const moon=(t,sz,col,name,o)=>Object.assign({tForm:t,size:sz,col,name},o||{});
+  add(Object.assign({nameFixed:'수성',kind:'rock',a0:0.387,m:0.055,br:'#8f8b86'},rk(1e6,3e7,1.5e8)));
+  add(Object.assign({nameFixed:'금성',kind:'rock',a0:0.723,m:0.815,w:0.6,gh:1.1,venus:1},rk(1e6,4e7,1.2e8)));
+  const E=add(Object.assign({nameFixed:'지구',kind:'rock',a0:1.0,m:0.89,w:0.9,gh:1.06,script:{L:EARTH_L,T:EARTH_T},scriptEnd:7e9,wAfter:0,venusAfter:1,oc:'#2a6fd6',land:'#7d6a48'},rk(1e6,4e7,1.5e8)));
+  E.moons.push(moon(4.6e7,0.8,'#cfcfc8','달',{silent:1}));
+  const Ma=add(Object.assign({nameFixed:'화성',kind:'rock',a0:1.524,m:0.107,w:0.4,gh:1.25,script:{L:MARS_L,T:MARS_T},scriptEnd:1.2e9,wAfter:0,marsDry:1,ds:'#c1552a'},rk(1e6,2e7,8e7)));
+  Ma.moons.push(moon(1e8,0.34,'#8a7a6a','포보스',{tEnd:4.65e9}),moon(1e8,0.26,'#9a8a7a','데이모스'));
+  Ma.ring={t0:4.65e9,t1:4.85e9,col:'#a08a70',e0txt:'포보스가 화성에 너무 가까워져 부서졌습니다. 조각이 모여 화성에 고리가 생겼습니다.'};
+  add(Object.assign({nameFixed:'행성 V',kind:'rock',a0:1.95,m:0.2,tEj:7e8,ejKind:'plunge',ejTxt:'궤도가 흔들린 행성 V가 태양 쪽으로 떨어져 사라졌습니다. (가설)'},rk(1e6,5e7,1.2e8)));
+  const J=add({nameFixed:'목성',kind:'gas',a0:5.2,m:318,tStart:2e5,tFull:3e6,pal:GAS_PAL[0]});
+  J.moons.push(moon(4e6,0.62,'#e0c060','이오'),moon(4e6,0.55,'#d8d0c0','유로파'),moon(4e6,0.85,'#9a9080','가니메데'),moon(4e6,0.8,'#6a6258','칼리스토'));
+  const Sa=add({nameFixed:'토성',kind:'gas',a0:9.58,m:95,tStart:4e5,tFull:6e6,pal:GAS_PAL[1]});
+  Sa.moons.push(moon(7e6,0.8,'#d8a850','타이탄'),moon(7e6,0.4,'#cfcfcf','레아'),moon(7e6,0.38,'#a8a8a0','이아페투스'));
+  Sa.ring={t0:4.4e9,t1:4.95e9,col:'#d6c49a',e0txt:'얼음 위성 하나가 부서져 토성에 크고 밝은 고리가 생겼습니다.'};
+  add({nameFixed:'다섯 번째 거대 행성',kind:'ice',a0:13.5,m:15,tStart:8e5,tFull:1e7,pal:ICE_PAL[2],tEj:6e8,ejTxt:'목성과 토성의 중력에 밀려 다섯 번째 거대 행성이 태양계 밖으로 튕겨 나갔습니다. (니스 모형 가설)'});
+  const U=add({nameFixed:'천왕성',kind:'ice',a0:19.2,m:14.5,tStart:1e6,tFull:1.2e7,pal:ICE_PAL[0]});
+  U.moons.push(moon(1.3e7,0.42,'#bdb8b0','티타니아'),moon(1.3e7,0.4,'#a8a098','오베론'));U.ring={t0:1e9,t1:Infinity,col:'#7f8c96'};
+  const N=add({nameFixed:'해왕성',kind:'ice',a0:30.1,m:17.1,tStart:1e6,tFull:1.4e7,pal:ICE_PAL[1]});
+  N.moons.push(moon(9e8,0.5,'#d0c8c8','트리톤',{captured:1}));
+  const Pl=add(Object.assign({nameFixed:'명왕성',kind:'rock',a0:39.5,m:0.0022,w:1,gh:1},rk(2e6,6e7,6e7)));
+  Pl.moons.push(moon(1.2e8,0.35,'#a8a098','카론',{silent:1}));
+  P.sort((a,b)=>a.a0-b.a0);P.forEach((p,i)=>{p.id=i;p.letter='';});
+  const Th={nameFixed:'테이아',kind:'rock',extra:true,a0:1.2,m:0.1,seed:(R()*1e9)|0,target:E.id,tStart:1e6,tMerge:4.5e7,tFull:3e7,molt:Infinity,tEj:Infinity,moons:[],mergeHist:[],w:0,letter:'',mergeTxt:'테이아가 {P}와 부딪쳤습니다. 튀어나간 조각이 모여 달이 생겼습니다.'};
+  E.mergeHist.push([Th.tMerge,Th.m]);Th.id=P.length;P.push(Th);
+  sys.belts=[];for(let i=0;i<170;i++)sys.belts.push({a:R.logr(2.1,3.3),dy:(R()+R()-1)*0.07,s:R()<.2?2:1.3,b:R.range(.35,.8)});for(let i=0;i<230;i++)sys.belts.push({a:R.logr(31,50),dy:(R()+R()-1)*0.1,s:R()<.15?2:1.3,b:R.range(.3,.7)});
+  sys.script=[[1.6e8,'지구에 비가 내려 바다가 생겼습니다.','life'],[4e8,'소행성과 혜성이 아주 많이 떨어졌습니다. (후기 대폭격)','planet'],[8e8,'지구의 바다에서 첫 생명이 나타났습니다. (38억 년 전)','life'],[1e8,'화성에 강과 바다가 생겼습니다.','life'],[1.2e9,'화성의 자기장이 꺼지고 공기가 날아가 바다가 사라졌습니다.','bad'],[2.2e9,'광합성을 하는 미생물 때문에 공기에 산소가 많아졌습니다. (24억 년 전)','life'],[3.88e9,'지구 전체가 꽁꽁 얼었습니다. (눈덩이 지구)','planet'],[3.965e9,'얼음이 녹고 다시 바다가 생겼습니다.','life'],[4.06e9,'바다에 여러 동물이 한꺼번에 나타났습니다. (캄브리아기 대폭발)','life'],[4.13e9,'식물이 땅 위로 올라왔습니다.','life'],[4.37e9,'공룡이 나타났습니다.','life'],[4.534e9,'커다란 소행성이 떨어져 공룡이 사라졌습니다.','bad'],[4.5997e9,'사람이 나타났습니다.','life'],[4.6e9,'지금 (태양계 나이 46억 년)','now'],[5.6e9,'태양이 밝아져서 지구의 바다가 끓기 시작했습니다.','bad'],[7e9,'지구도 금성처럼 두꺼운 구름에 덮인 뜨거운 행성이 되었습니다.','bad'],[9.1e9,'안드로메다 은하와 우리 은하가 부딪쳤습니다. (별이 너무 멀어서 태양계는 무사합니다)','planet']];
+  return P;
+}
 function stepPlanet(sys,p,i,age,sec,dA,s,ev){
   if(p.dead)return;
   if(age<p.tStart)return;
-  if(p.extra&&age>=p.tMerge){p.dead='merge';p.deadSec=sec;p.deadAge=age;const tg=sys.planets[p.target];if(!tg.dead)tg.molt=Math.max(tg.molt,age+2.5e7*sys.fT);ev(age,sec,'원시 행성이 {P}와 부딪쳐 하나로 합쳐졌습니다.',tg.id,'planet');return;}
+  if(p.extra&&age>=p.tMerge){p.dead='merge';p.deadSec=sec;p.deadAge=age;const tg=sys.planets[p.target];if(!tg.dead)tg.molt=Math.max(tg.molt,age+2.5e7*sys.fT);ev(age,sec,p.mergeTxt||'원시 행성이 {P}와 부딪쳐 하나로 합쳐졌습니다.',tg.id,'planet');return;}
   const a=p.a0*sys.star.M0/s.M;
   if(age>p.tStart+1e5&&s.cp<0.5&&s.R*RS_AU>=0.85*a){p.dead='engulf';p.deadSec=sec;p.deadAge=age;p.deadA=a;p.deadLook=p.prevLk;ev(age,sec,'{P}가 부풀어 오른 별에 삼켜졌습니다.',p.id,'bad');return;}
-  if(age>=p.tEj){p.dead='eject';p.deadSec=sec;p.deadAge=age;p.deadA=a;p.deadLook=p.prevLk;ev(age,sec,'옆을 지나가던 별 때문에 {P}가 행성계 밖으로 튕겨 나갔습니다.',p.id,'bad');return;}
+  if(age>=p.tEj){p.dead=p.ejKind||'eject';p.deadSec=sec;p.deadAge=age;p.deadA=a;p.deadLook=p.prevLk;ev(age,sec,p.ejTxt||'옆을 지나가던 별 때문에 {P}가 행성계 밖으로 튕겨 나갔습니다.',p.id,'bad');return;}
   p.alive[i]=1;
   if(!p.extra&&!p.bornEv&&age>=p.tFull){p.bornEv=1;ev(age,sec,'{P}가 다 자랐습니다.',p.id,'planet');}
-  for(const mo of p.moons)if(mo.impact&&!mo.ev&&age>=mo.tForm){mo.ev=1;ev(age,sec,'부딪쳐 튀어나간 조각이 모여 {P}에 위성이 생겼습니다.',p.id,'planet');}
-  if(p.ring){if(!p.ring.e0&&age>=p.ring.t0){p.ring.e0=1;ev(age,sec,'위성 하나가 부서져 {P}에 고리가 생겼습니다.',p.id,'planet');}if(!p.ring.e1&&age>=p.ring.t1){p.ring.e1=1;ev(age,sec,'{P}의 고리가 흩어져 사라졌습니다.',p.id,'planet');}}
+  for(const mo of p.moons){if(mo.impact&&!mo.ev&&age>=mo.tForm){mo.ev=1;ev(age,sec,'부딪쳐 튀어나간 조각이 모여 {P}에 위성이 생겼습니다.',p.id,'planet');}if(mo.captured&&!mo.ev&&age>=mo.tForm){mo.ev=1;ev(age,sec,'{P}가 지나가던 얼음 천체를 붙잡아 위성 '+mo.name+'이 생겼습니다.',p.id,'planet');}}
+  if(p.ring){if(!p.ring.e0&&age>=p.ring.t0){p.ring.e0=1;ev(age,sec,p.ring.e0txt||'위성 하나가 부서져 {P}에 고리가 생겼습니다.',p.id,'planet');}if(!p.ring.e1&&age>=p.ring.t1){p.ring.e1=1;ev(age,sec,'{P}의 고리가 흩어져 사라졌습니다.',p.id,'planet');}}
+  if(p.script){if(age<p.scriptEnd){const lk=keyLook(p.script.L,age),Tc=keyT(p.script.T,age);p.look[i]=lk;p.tcA[i]=Tc;p.prevLk=lk;return;}if(!p.scriptDone){p.scriptDone=1;if(p.wAfter!=null)p.w=p.wAfter;if(p.venusAfter)p.venus=1;}}
   let Tk=278*Math.pow(s.L,0.25)/Math.sqrt(a),lk,Tc;
   if(p.kind==='rock'){
     let g=p.w>0?p.gh:1;if(p.w>0&&Tk*g>340)g*=1+Math.min(1.2,(Tk*g-340)/120);
@@ -298,7 +352,7 @@ function stepPlanet(sys,p,i,age,sec,dA,s,ev){
     else if(p.w>0){
       if(Tc>100){lk=LK.steam;p.w-=dA/1.5e9;if(p.w<=0){p.w=0;ev(age,sec,'{P}의 바다가 모두 끓어 우주로 날아갔습니다.',p.id,'bad');}}
       else if(Tc>=0)lk=LK.ocean;else lk=LK.ice;
-    }else lk=Tc>350?LK.hot:Tc>-40?LK.desert:LK.barren;
+    }else if(p.venus){lk=LK.cloud;Tc=Math.max(Tc,460);}else if(p.marsDry&&Tc<350)lk=LK.desert;else lk=Tc>350?LK.hot:Tc>-40?LK.desert:LK.barren;
     const pl=p.prevLk;
     if(!p.extra){
       if(lk===LK.ocean&&pl!==undefined&&pl!==LK.ocean&&pl!==LK.life&&pl!==LK.green)ev(age,sec,pl===LK.ice?'{P}의 얼음이 녹아 바다가 생겼습니다.':'{P}에 비가 내려 바다가 생겼습니다.',p.id,'life');
@@ -318,7 +372,7 @@ function buildSystem(key,variant,seed){
   sys.fT=S.kind==='normal'?Math.min(1,S.tMS/1.5e9):1;
   sys.tf2=S.kind==='normal'?Math.min(1e8,.1*S.tMS):S.kind==='massive'?1e6:1e8;
   sys.tf3=S.kind==='normal'?Math.min(1e9,.25*S.tMS):S.kind==='massive'?3e6:1e9;
-  sys.planets=makePlanets(sys,R);
+  sys.planets=key==='SOL'?makeSolar(sys,R):S.kind==='universe'?[]:makePlanets(sys,R);
   sys.Lref=S.kind==='bd'?S.at(1e9).L:S.kind==='massive'?S.L0:S.T.L0;
   const NS=Math.ceil(sys.end/sys.DT)+2;sys.NS=NS;
   for(const p of sys.planets){p.look=new Int8Array(NS);p.alive=new Uint8Array(NS);p.tcA=new Float32Array(NS);}
@@ -331,6 +385,8 @@ function buildSystem(key,variant,seed){
     for(const p of sys.planets)stepPlanet(sys,p,i,age,sec,dA,s,ev);
   }
   for(const p of sys.planets)if(p.extra){p.mergeSec=secAt(nodes,p.tMerge);const h=sys.planets[p.target].mergeHist.find(q=>q[0]===p.tMerge);if(h)h[2]=Math.max(p.tMerge*1.0001,ageAt(nodes,p.mergeSec+0.9));}
+  if(sys.script)for(const[a,t,k]of sys.script)ev(a,secAt(nodes,a),t,-1,k);
+  if(S.kind==='universe')for(const[a,t,k]of UNI_EV)ev(a,secAt(nodes,a),t,-1,k);
   if(S.kind==='massive'){const a=1.2e6;ev(a,secAt(nodes,a),'별빛이 너무 강해서 주위의 원반이 날아가 버렸습니다. 행성은 생기지 못했습니다.',-1,'planet');ev(S.tMS*0.4,secAt(nodes,S.tMS*0.4),'별빛이 가스 구름을 밀어내 큰 거품이 생겼습니다.',-1,'planet');}
   evs.sort((a,b)=>a.sec-b.sec);sys.events=evs;
   return sys;
@@ -363,6 +419,7 @@ function planetTex(p,lk,r){
     case LK.hot:base('#5a3427');paintBlobs(g,R,r,'#3a1f16',6,.15,.35,.8);paintCracks(g,R,r,'#e0602a',6,.035,.85);break;
     case LK.gas:base(p.pal[0]);paintBands(g,R,r,[p.pal[1],p.pal[2],p.pal[0]],.75,1);g.fillStyle=p.pal[1];g.globalAlpha=.7;g.beginPath();g.ellipse(R.range(-.4,.4)*r,R.range(-.5,.5)*r,.18*r,.1*r,0,0,6.283);g.fill();g.globalAlpha=1;break;
     case LK.hotgas:base('#7a2a18');paintBands(g,R,r,['#a8401e','#4f1a10','#8a3418'],.8,1);break;
+    case LK.cloud:base('#e3c48a');paintBands(g,R,r,['#d2ad6c','#efdcae','#c89a5a'],.6,1.6);paintClouds(g,R,r,6,.3);break;
     case LK.icegiant:base(p.pal[0]);paintBands(g,R,r,[p.pal[1],p.pal[2]],.3,.6);break;
   }
   const sh=g.createRadialGradient(-r*.45,-r*.25,r*.1,0,0,r*1.05);sh.addColorStop(0,'rgba(255,255,255,0.18)');sh.addColorStop(.55,'rgba(0,0,0,0)');sh.addColorStop(1,'rgba(0,0,0,0.45)');g.fillStyle=sh;g.fillRect(-r-1,-r-1,2*r+2,2*r+2);
@@ -410,7 +467,7 @@ function layoutSim(){
   const main=sys.planets.filter(p=>!p.extra).sort((a,b)=>a.a0-b.a0);
   if(!main.length){SIM.pts=[];SIM.k=W*0.3;return;}
   const rs=main.map(p=>pradBase(p,massNow(p,1e18)));
-  const X0=SIM.edge+W*0.04+rs[0],X1=Math.min(W*0.94-rs[rs.length-1],X0+(W*0.94-X0)*0.68);
+  const X0=SIM.edge+W*0.04+rs[0],X1=Math.min(W*0.94-rs[rs.length-1],X0+(W*0.94-X0)*(sys.key==='SOL'?1:0.68));
   const la=main.map(p=>Math.log10(p.a0)),lmin=la[0],lmax=la[la.length-1];
   let xs=main.map((p,i)=>main.length===1?X0+(X1-X0)*0.35:lerp(X0+(X1-X0)*(la[i]-lmin)/(lmax-lmin||1),X0+(X1-X0)*i/(main.length-1),0.4));
   const gap=W*0.012;
@@ -421,12 +478,14 @@ function layoutSim(){
 function fx(a){const l=Math.log10(Math.max(1e-12,a)),P=SIM.pts;if(!P.length)return W*0.5+(l+1)*SIM.k;if(l<=P[0][0])return P[0][1]-(P[0][0]-l)*SIM.k;const L=P[P.length-1];if(l>=L[0])return L[1]+(l-L[0])*SIM.k;for(let i=1;i<P.length;i++)if(l<=P[i][0]){const t=(l-P[i-1][0])/(P[i][0]-P[i-1][0]||1);return lerp(P[i-1][1],P[i][1],t);}return L[1];}
 function envAt(age){const sys=SIM.sys,S=sys.star;let neb=age<sys.tf2?lerp(1,0.3,age/sys.tf2):age<sys.tf3?lerp(0.3,0,(age-sys.tf2)/(sys.tf3-sys.tf2)):0;let dust=age<sys.tf2?1:age<S.tEnd?0.6:clamp(1-Math.log10((age-S.tEnd)/1e9+1)/3,0,1)*0.5;return{neb,dust,veil:dust*0.8};}
 function lightF(s){const sys=SIM.sys;let lf=clamp(1+0.2*Math.log10(Math.max(1e-30,s.L/sys.Lref)),0.1,1);if(s.ph==='bk'||s.ph==='bdX')lf=Math.min(lf,0.08);return lf;}
+const shownMoons=(p,age)=>p.moons.filter(m=>age>=m.tForm&&!(m.tEnd&&age>=m.tEnd));
 const sampleI=sec=>clamp(Math.round(sec/SIM.sys.DT),0,SIM.sys.NS-1);
 
 function drawSim(sec,now){
   const sys=SIM.sys,S=sys.star,age=ageAt(sys.nodes,sec),s=S.at(age);
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   if(S.kind==='massive'){drawMassive(sec,age,s,now);drawCounter(age);return;}
+  if(S.kind==='universe'){drawUniverse(sec,age,now);drawCounter(age);return;}
   const env=envAt(age);
   if(SV.set.neb&&env.neb>0.003){ctx.globalAlpha=env.neb;ctx.drawImage(NEB,Math.sin(now*4e-5)*W*0.015-W*0.02,0,W*1.04,H);ctx.globalAlpha=1;}
   if(SV.set.neb&&env.veil>0.003){ctx.globalAlpha=env.veil;ctx.drawImage(VEIL,0,0,W,H);ctx.globalAlpha=1;}
@@ -470,17 +529,18 @@ function drawPlanetAt(p,lk,x,y,r,lf,age,showMoons){
   const dk=hotLk?Math.min(1,lf+0.5):lf;
   if(dk<0.995){ctx.fillStyle=`rgba(0,0,0,${1-dk})`;ctx.beginPath();ctx.arc(x,y,rr+1,0,6.283);ctx.fill();}
   if(ring)drawRing(x,y,r,p.ring,'front',lf);
-  if(showMoons){const ms=p.moons.filter(m=>age>=m.tForm);ms.forEach((m,k)=>{const mr=Math.max(2.2,H*0.0075*m.size+1.2);drawMoon(x+(k-(ms.length-1)/2)*mr*3.4+r*0.25,y-r-mr*2.6-(k%2)*mr*1.6-(ring?r*0.2:0),mr,m.col,lf);});}
+  if(showMoons){const ms=shownMoons(p,age);ms.forEach((m,k)=>{const mr=Math.max(2.2,H*0.0075*m.size+1.2);drawMoon(x+(k-(ms.length-1)/2)*mr*3.4+r*0.25,y-r-mr*2.6-(k%2)*mr*1.6-(ring?r*0.2:0),mr,m.col,lf);});}
   if(SIM.sel&&SIM.sel.p===p){ctx.strokeStyle='rgba(255,255,255,.8)';ctx.setLineDash([4,4]);ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+6,0,6.283);ctx.stroke();ctx.setLineDash([]);}
   ctx.restore();
 }
 function drawPlanets(sec,age,s){
   const sys=SIM.sys,S=sys.star,i=sampleI(sec),lf=lightF(s),y=H/2;SIM.hits=[];
+  if(sys.belts&&age>1e7){const ba=smooth((age-1e7)/5e7);ctx.fillStyle='#b8b0a4';for(const b of sys.belts){const x=fx(b.a*S.M0/s.M);if(x>W+4||x<SIM.starHitX)continue;ctx.globalAlpha=b.b*lf*ba;ctx.fillRect(x,y+b.dy*H,b.s,b.s);}ctx.globalAlpha=1;}
   for(const p of sys.planets){
     if(p.dead&&sec>=p.deadSec){
       const t=sec-p.deadSec;
       if(p.dead==='engulf'&&t<1){const x=fx(p.deadA),r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=1-t;ctx.strokeStyle='#ffb040';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r*(1+t*2.5),0,6.283);ctx.stroke();ctx.restore();}
-      else if(p.dead==='eject'&&t<1.6){const x=fx(p.deadA*S.M0/s.M*s.M/S.M0)+t*t*W*0.35,r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=clamp(1-t/1.6,0,1);drawPlanetAt(p,p.deadLook==null?LK.barren:p.deadLook,x,y,r,lf,p.deadAge,false);ctx.restore();}
+      else if((p.dead==='eject'||p.dead==='plunge')&&t<1.6){const x=fx(p.deadA)+(p.dead==='plunge'?-1:1)*t*t*W*0.35,r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=clamp(1-t/1.6,0,1);drawPlanetAt(p,p.deadLook==null?LK.barren:p.deadLook,x,y,r,lf,p.deadAge,false);ctx.restore();}
       else if(p.dead==='merge'&&t<1.2){const tg=sys.planets[p.target],x=fx(tg.a0*S.M0/s.M),r=pradNow(tg,age)*SIM.rScale*(1.4+t*1.2);const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(255,235,190,${0.55*Math.pow(1-t/1.2,1.5)})`);g.addColorStop(1,'rgba(255,160,60,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();}
       continue;
     }
@@ -488,6 +548,7 @@ function drawPlanets(sec,age,s){
     let x=fx(p.a0*S.M0/s.M);const r=pradNow(p,age)*SIM.rScale;
     let rr=r;if(p.extra){const D=2.5,t0=p.mergeSec-D;if(sec>t0){const tg=sys.planets[p.target],u=clamp((sec-t0)/D,0,1);x=lerp(x,fx(tg.a0*S.M0/s.M),u*u*(3-2*u));rr=r*(1-0.7*smooth((u-0.8)/0.2));}}
     drawPlanetAt(p,p.look[i],x,y,rr,lf,age,true);
+    if(SV.set.labels&&(!p.extra||p.nameFixed)){ctx.save();ctx.font=`${Math.round(clamp(H*0.019,10,14))}px 'Malgun Gothic',sans-serif`;ctx.textAlign='center';ctx.fillStyle=`rgba(200,205,212,${0.35+0.5*lf})`;ctx.fillText(pname(p).replace(/ 행성$/,''),x,y+rr+(p.ring&&age>=p.ring.t0&&age<p.ring.t1?rr*0.7:0)+Math.max(13,H*0.026));ctx.restore();}
     SIM.hits.push({p,x,y,r});
   }
 }
@@ -516,6 +577,94 @@ function drawMassive(sec,age,s,now){
 }
 function drawCounter(age){const[num,unit]=counterParts(age);const fs=Math.round(clamp(H*0.075,22,64));ctx.save();ctx.shadowColor='#000';ctx.shadowBlur=5;ctx.fillStyle='#fff';ctx.textAlign='right';ctx.textBaseline='alphabetic';ctx.font=`${Math.round(fs*0.38)}px Arial,'Malgun Gothic',sans-serif`;const uw=ctx.measureText(unit).width;ctx.fillText(unit,W-12,H-16);ctx.font=`${fs}px Arial,sans-serif`;ctx.fillText(num,W-12-uw-Math.max(14,fs*0.4),H-16);ctx.restore();}
 
+/* ---------- 우주 타임라인 ---------- */
+const YS=1/3.156e7;
+const UNI_EV=[[1e-51,'빅뱅: 우주가 아주 작고 뜨거운 한 점에서 시작되었습니다.','star'],[3e-51,'플랑크 시대: 지금의 과학으로는 알 수 없는 아주 짧은 시간입니다.','planet'],[1e-36*YS,'급팽창: 눈 깜짝할 시간보다 훨씬 짧은 동안 우주가 엄청나게 커졌습니다.','star'],[1e-32*YS,'급팽창이 끝나고 뜨거운 입자 수프가 생겼습니다.','planet'],[1e-12*YS,'힘이 지금처럼 네 가지(중력 · 전자기력 · 강한 힘 · 약한 힘)로 나뉘었습니다.','planet'],[1e-6*YS,'쿼크 3개씩 모여 양성자와 중성자가 생겼습니다.','star'],[1*YS,'우주가 식어서 중성미자가 빠져나갔습니다.','planet'],[180*YS,'양성자와 중성자가 붙어 헬륨 원자핵이 생기기 시작했습니다.','star'],[1200*YS,'원자핵 만들기가 끝났습니다. 수소 75%, 헬륨 25%입니다.','planet'],[5e4,'물질이 빛보다 많아졌습니다.','planet'],[3.8e5,'전자가 원자핵에 붙어 원자가 되었습니다. 우주가 투명해졌습니다. (우주 배경 복사)','star'],[2e6,'암흑 시대: 빛을 내는 별이 하나도 없습니다.','planet'],[1e8,'암흑 물질과 가스가 그물처럼 모였습니다.','planet'],[1.8e8,'첫 번째 별들이 태어났습니다. 아주 크고 파랗습니다.','star'],[4e8,'첫 은하들이 생겼습니다.','star'],[1e9,'별빛이 우주의 가스를 다시 밝혔습니다. (재이온화)','planet'],[3.5e9,'별이 가장 많이 태어나던 때입니다.','life'],[9.2e9,'우리 은하 한쪽에서 태양계가 태어났습니다.','life'],[9.8e9,'우주가 점점 더 빨리 커지기 시작했습니다. (암흑 에너지)','planet'],[1.38e10,'지금 (우주 나이 138억 년)','now'],[1.83e10,'안드로메다 은하와 우리 은하가 합쳐져 밀코메다 은하가 되었습니다.','star'],[1.5e11,'다른 은하들이 너무 빨리 멀어져서 더 이상 보이지 않습니다.','planet'],[1e12,'새 별이 거의 태어나지 않습니다.','bad'],[1e14,'마지막 별(적색왜성)이 꺼졌습니다.','star'],[1e15,'지나가는 별 때문에 행성들이 모두 튕겨 나갔습니다.','bad'],[1e19,'별의 시체들이 은하 밖으로 날아가거나 블랙홀에 빨려 들어갔습니다.','planet'],[1e20,'블랙홀 시대가 시작되었습니다.','star'],[1e40,'(가설) 양성자가 부서져 원자가 모두 사라졌습니다.','bad'],[1e67,'별만 한 블랙홀들이 호킹 복사로 모두 증발했습니다.','star'],[1e100,'가장 큰 블랙홀까지 증발했습니다.','star'],[1e103,'열 죽음: 우주는 차갑고 텅 비었습니다.','bad']];
+function uniTemp(age){if(age<=0)return'알 수 없음';const sc=age*3.156e7;let T;if(sc<1.58e12)T=1.5e10/Math.sqrt(Math.max(sc,5.4e-44));else if(age<1.38e10)T=11900*Math.pow(age/5e4,-2/3);else T=2.725*Math.exp(-(age-1.38e10)/1.6e10);
+  if(T<1e-30)return'거의 0 K (절대 영도에 아주 가까움)';if(T>=1e6)return sup(Math.floor(Math.log10(T)))+' K 넘게';if(T>=100)return fmtN(Math.round(T))+' K ('+fmtN(Math.round(T-273))+' °C)';if(T>=0.01)return T.toFixed(2)+' K';return sup(Math.floor(Math.log10(T)))+' K';}
+let UNI=null;
+function mkC(w,h){const c=document.createElement('canvas');c.width=Math.max(1,w);c.height=Math.max(1,h);return c;}
+function galSprite(R,size,type,col,tilt){
+  const s=Math.ceil(size*2.4),c=mkC(s,s),g=c.getContext('2d');g.translate(s/2,s/2);const cc=hexRGB(col);
+  g.save();g.rotate(R()*6.28);g.scale(1,tilt);
+  let gr=g.createRadialGradient(0,0,0,0,0,size);gr.addColorStop(0,rgba(mixC(cc,[255,250,230],.8),.95));gr.addColorStop(type==='e'?0.35:0.12,rgba(mixC(cc,[255,230,170],.4),.6));gr.addColorStop(1,rgba(cc,0));g.fillStyle=gr;g.beginPath();g.arc(0,0,size,0,6.283);g.fill();
+  if(type==='s'){const arms=2+(R()<.3?1:0),tw=R.range(0.22,0.32);for(let i=0;i<900;i++){const k=i%arms,th=R()*4.2,r=size*0.1*Math.exp(tw*th*1.6);if(r>size)continue;const a=th+k*6.283/arms+R.range(-.25,.25)*(1-r/size*.5);const x=Math.cos(a)*r+R.range(-1,1)*r*0.08,y=Math.sin(a)*r+R.range(-1,1)*r*0.08;const blue=R()<0.6;g.fillStyle=blue?`rgba(190,210,255,${R.range(.25,.8)})`:`rgba(255,225,190,${R.range(.2,.6)})`;const d=R.range(.6,1.7)*Math.max(1,size/60);g.fillRect(x,y,d,d);if(R()<0.04){g.fillStyle='rgba(255,140,190,.5)';g.beginPath();g.arc(x,y,d*1.5,0,6.283);g.fill();}}}
+  else{for(let i=0;i<350;i++){const r=size*Math.abs(R()+R()+R()-1.5)/1.5,a=R()*6.28;g.fillStyle=`rgba(255,${200+R()*40|0},${150+R()*50|0},${R.range(.15,.5)})`;g.fillRect(Math.cos(a)*r,Math.sin(a)*r,1.2,1.2);}}
+  g.restore();return c;}
+function buildUni(sys){
+  const R=RNG(sys.seed^0x777),U={};
+  const nz=mkC(256,256),g=nz.getContext('2d'),id=g.createImageData(256,256);for(let i=0;i<id.data.length;i+=4){const v=R()*255;id.data[i]=v;id.data[i+1]=v;id.data[i+2]=Math.min(255,v*1.1);id.data[i+3]=255;}g.putImageData(id,0,0);U.nzp=ctx.createPattern(nz,'repeat');
+  const cw=Math.ceil(W/4),ch=Math.ceil(H/4);U.cmb=mkC(cw,ch);{const q=U.cmb.getContext('2d');q.fillStyle='#b55a1e';q.fillRect(0,0,cw,ch);for(let i=0;i<500;i++){const x=R()*cw,y=R()*ch,r=R.range(2,9);const hot=R()<0.5;const gr=q.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,hot?'rgba(255,190,110,.35)':'rgba(90,30,10,.35)');gr.addColorStop(1,'rgba(0,0,0,0)');q.fillStyle=gr;q.fillRect(x-r,y-r,2*r,2*r);}}
+  const ww=Math.ceil(W/2),wh=Math.ceil(H/2);U.web=mkC(ww,wh);U.nodes=[];{const q=U.web.getContext('2d');for(let i=0;i<80;i++)U.nodes.push({x:R()*1.2-0.1,y:R()*1.2-0.1,m:R()});
+    q.lineCap='round';for(const a of U.nodes){const near=U.nodes.filter(b=>b!==a).sort((b,c)=>(b.x-a.x)**2+(b.y-a.y)**2-(c.x-a.x)**2-(c.y-a.y)**2).slice(0,3);for(const b of near){q.strokeStyle=`rgba(150,165,210,${R.range(.08,.2)})`;q.lineWidth=R.range(2,6);q.beginPath();q.moveTo(a.x*ww,a.y*wh);const mx=(a.x+b.x)/2*ww+R.range(-12,12),my=(a.y+b.y)/2*wh+R.range(-12,12);q.quadraticCurveTo(mx,my,b.x*ww,b.y*wh);q.stroke();}}
+    for(const a of U.nodes){const r=6+a.m*16;const gr=q.createRadialGradient(a.x*ww,a.y*wh,0,a.x*ww,a.y*wh,r);gr.addColorStop(0,'rgba(190,200,240,.45)');gr.addColorStop(1,'rgba(190,200,240,0)');q.fillStyle=gr;q.fillRect(a.x*ww-r,a.y*wh-r,2*r,2*r);}}
+  U.parts=[];for(let i=0;i<340;i++)U.parts.push({x:R(),y:R(),c:i%3,ph:R()*6.28,sp:R.range(.002,.006),e:R()});
+  const S0=Math.min(W,H);U.gals=[];for(let i=0;i<70;i++){let x=R.range(-1.25,1.25),y=R.range(-1.25,1.25);if(Math.abs(x)<0.25&&Math.abs(y)<0.3){x+=x<0?-0.3:0.3;}const type=R()<0.6?'s':'e';const sz=S0*R.range(0.018,0.05);U.gals.push({x,y,type,sz,spr:galSprite(R,sz,type,type==='s'?R.pick(['#9fb8ff','#c0c8ff','#ffe0b0']):R.pick(['#ffd8a0','#ffc890']),R.range(.35,1)),born:R.range(8.7,9.6)});}
+  U.mw=galSprite(R,S0*0.16,'s','#cfd8ff',0.55);U.an=galSprite(R,S0*0.13,'s','#d8d8ff',0.4);U.mk=galSprite(R,S0*0.2,'e','#ffe0b0',0.8);U.mkr=galSprite(RNG(sys.seed^0x99),S0*0.2,'e','#ff9a70',0.8);
+  U.rem=[];for(let i=0;i<180;i++){const r=Math.abs(R()+R()+R()-1.5)/1.5;U.rem.push({r,a:R()*6.283,b:R.range(.2,.6),c:R()<0.8?[220,225,255]:[255,170,120],v:R.range(.5,2)});}
+  U.bhs=[];for(let i=0;i<9;i++)U.bhs.push({x:R.range(-.45,.45),y:R.range(-.35,.35),r:R.range(.004,.008),life:R.range(66.6,67.4)});
+  U.photons=[];for(let i=0;i<120;i++)U.photons.push({x:R(),y:R(),b:R.range(.1,.4)});
+  UNI=U;}
+function drawBH(x,y,r,glow,now){const g=ctx.createRadialGradient(x,y,r*0.9,x,y,r*3.2);g.addColorStop(0,`rgba(255,190,140,${0.35*glow})`);g.addColorStop(1,'rgba(255,190,140,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*3.2,0,6.283);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();ctx.strokeStyle=`rgba(255,225,200,${0.25+0.5*glow})`;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r*1.15,0,6.283);ctx.stroke();}
+function drawUniverse(sec,age,now){
+  const U=UNI,u=Math.log10(Math.max(age,1e-60)),cx=W/2,cy=H/2,S0=Math.min(W,H);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  // 1. 플랑크 · 급팽창
+  if(u<-39){const f=clamp((u+51)/12,0,1),fa=1-smooth((u+40.5)/1.5);
+    ctx.save();ctx.globalAlpha=0.75*fa;ctx.fillStyle=U.nzp;ctx.translate((Math.random()*256)|0,(Math.random()*256)|0);ctx.fillRect(-256,-256,W+512,H+512);ctx.restore();
+    const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,S0*(0.05+f*1.4));gr.addColorStop(0,`rgba(255,255,255,${fa})`);gr.addColorStop(0.5,`rgba(220,230,255,${0.6*fa})`);gr.addColorStop(1,'rgba(200,210,255,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+    if(u>-50.5){const z=(u+50.5)/11*7;for(let k=0;k<3;k++){const ph=(z+k/3)%1,sp=S0*0.02*Math.pow(10,ph),al=Math.sin(Math.PI*ph)*0.7*fa;ctx.fillStyle=`rgba(255,255,255,${al})`;const n=Math.ceil(Math.max(W,H)/sp/2)+1;for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++){const x=cx+i*sp,y=cy+j*sp;if(x<0||y<0||x>W||y>H)continue;ctx.fillRect(x-1,y-1,2,2);}}}}
+  // 2. 뜨거운 입자 수프 ~ 재결합
+  if(u>-41&&u<5.75){
+    const heat=clamp((5.58-u)/45,0,1),fin=smooth((u+41)/1.5),fog=u<5.42?1:clamp(1-(u-5.42)/0.16,0,1),A=fin*fog;
+    const bc=mixC([230,110,40],[255,250,235],Math.pow(heat,0.6));
+    const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.hypot(cx,cy));gr.addColorStop(0,rgba(mixC(bc,[255,255,255],.3),A));gr.addColorStop(1,rgba(mulC(bc,.75),A));ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+    const stage=u<-13.5?0:u<-5.2?1:2,t=now*0.001;
+    for(let i=0;i<U.parts.length;i++){const q=U.parts[i];const jit=stage===0?14:stage===1?8:5;const x=(q.x*W+Math.sin(t*q.sp*900+q.ph)*jit+t*20*(q.e-.5))%W,y=(q.y*H+Math.cos(t*q.sp*700+q.ph*1.3)*jit)%H;const X=x<0?x+W:x,Y=y<0?y+H:y;
+      if(stage===0){const col=q.c===0?[255,70,70]:q.c===1?[70,220,90]:[80,120,255];ctx.fillStyle=rgba(col,0.85*A);ctx.beginPath();ctx.arc(X,Y,2.4,0,6.283);ctx.fill();if(i%3===0&&i+1<U.parts.length){const q2=U.parts[i+1];ctx.strokeStyle=`rgba(255,255,255,${0.25*A})`;ctx.lineWidth=0.8;ctx.beginPath();ctx.moveTo(X,Y);ctx.lineTo(((q2.x*W)%W),((q2.y*H)%H));ctx.stroke();}}
+      else if(i%3===0){const he=stage===2&&i%12===0&&u>-5.2,prot=q.e<0.87;if(he){for(const[dx,dy,cc]of[[-2.5,-2.5,[230,60,50]],[2.5,-2.5,[90,110,220]],[-2.5,2.5,[90,110,220]],[2.5,2.5,[230,60,50]]]){ctx.fillStyle=rgba(cc,0.9*A);ctx.beginPath();ctx.arc(X+dx,Y+dy,2.6,0,6.283);ctx.fill();}}else{ctx.fillStyle=rgba(prot||stage===2?[230,60,50]:[90,110,220],0.9*A);ctx.beginPath();ctx.arc(X,Y,3.4,0,6.283);ctx.fill();}}
+      else if(stage===2&&i%3===1){ctx.fillStyle=`rgba(255,255,255,${0.8*A})`;ctx.fillRect(X,Y,1.6,1.6);}}
+    if(stage===2){ctx.fillStyle=rgba([230,120,50],0.45*A*clamp((u+4)/9,0,1));ctx.fillRect(0,0,W,H);}
+  }
+  // 3. 우주 배경 복사
+  if(u>5.38&&u<7.4){const a=u<5.58?smooth((u-5.38)/0.2):1-smooth((u-5.58)/1.7);ctx.save();ctx.globalAlpha=a*0.85;ctx.drawImage(U.cmb,0,0,W,H);ctx.restore();ctx.fillStyle=`rgba(0,0,0,${clamp((u-5.58)/1.5,0,0.8)})`;ctx.fillRect(0,0,W,H);}
+  // 4. 우주 그물
+  if(u>6.3&&u<11.6){const a=u<8.25?smooth((u-6.3)/1.95)*0.75:lerp(0.75,0.15,smooth((u-8.25)/1.6))*(1-smooth((u-10.6)/1));ctx.save();ctx.globalAlpha=a;const sc=u<10.14?1+0.25*smooth((u-8)/2.1):1.25;ctx.translate(cx,cy);ctx.scale(sc,sc);ctx.drawImage(U.web,-W/2,-H/2,W,H);ctx.restore();}
+  // 5. 첫 별
+  if(u>8.15&&u<10.4){const a=smooth((u-8.15)/0.25)*(1-smooth((u-9.7)/0.7)),fr=clamp((u-8.15)/0.8,0,1);U.nodes.forEach((n,i)=>{if((i*0.6180339)%1>fr)return;const sc=u<10.14?1+0.25*smooth((u-8)/2.1):1.25;const x=cx+(n.x*W-W/2)*sc,y=cy+(n.y*H-H/2)*sc;const fl=((now/350+i*0.37)%9)<0.12;const r=fl?6:2.2;const g=ctx.createRadialGradient(x,y,0,x,y,r*5);g.addColorStop(0,`rgba(${fl?'255,255,255':'150,190,255'},${a})`);g.addColorStop(1,'rgba(150,190,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*5,0,6.283);ctx.fill();});}
+  // 6. 은하
+  if(u>8.6&&u<15){
+    const sc=age<1.38e10?lerp(0.55,1,smooth((u-9)/(10.14-9))):Math.exp((age-1.38e10)/1.6e10);
+    for(const gg of U.gals){const ga=smooth((u-gg.born)/0.4)*(1-smooth((sc-2.5)/2));if(ga<=0.01)continue;const gs=lerp(0.45,1,smooth((u-9)/1.1));const x=cx+gg.x*W*0.5*sc,y=cy+gg.y*H*0.5*sc,w=gg.spr.width*gs;if(x<-w||x>W+w||y<-w||y>H+w)continue;ctx.globalAlpha=ga;ctx.drawImage(gg.spr,x-w/2,y-w/2,w,w);}
+    ctx.globalAlpha=1;
+    const mwA=smooth((u-9.1)/0.5),mwS=lerp(0.35,1,smooth((u-9.2)/0.95)),mx=cx-W*0.04,my=cy;
+    const m=smooth((age-1.74e10)/0.12e10),appr=smooth((age-1.38e10)/(1.8e10-1.38e10));
+    const ax=lerp(cx+W*0.3,mx+W*0.03,appr),ay=lerp(cy-H*0.2,my,appr);
+    const red=smooth((u-11.4)/2),dim=1-0.88*smooth((u-12)/2);
+    if(m<1){ctx.globalAlpha=mwA*(1-m);let w=U.mw.width*mwS;ctx.drawImage(U.mw,mx-w/2,my-w/2,w,w);w=U.an.width*mwS;ctx.globalAlpha=mwA*(1-m)*smooth((u-9.2)/0.4);ctx.drawImage(U.an,ax-w/2,ay-w/2,w,w);}
+    if(m>0){const w=U.mk.width;ctx.globalAlpha=m*dim*(1-red);ctx.drawImage(U.mk,mx-w/2,my-w/2,w,w);ctx.globalAlpha=m*dim*red;ctx.drawImage(U.mkr,mx-w/2,my-w/2,w,w);}
+    ctx.globalAlpha=1;
+    if(age>9.2e9&&age<1.15e10){const t=(age-9.2e9)/2.3e9,px=mx+S0*0.07,py=my+S0*0.02,pr=4+((now/500)%1)*14;ctx.strokeStyle=`rgba(255,220,90,${(1-t)*(1-((now/500)%1))})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,pr,0,6.283);ctx.stroke();ctx.fillStyle=`rgba(255,230,120,${1-t})`;ctx.beginPath();ctx.arc(px,py,2.5,0,6.283);ctx.fill();ctx.font="12px 'Malgun Gothic',sans-serif";ctx.textAlign='left';ctx.fillText('태양계',px+10,py-8);}
+  }
+  // 7. 별의 시체 · 블랙홀
+  if(u>13.6){
+    const ra=u<20?smooth((u-13.6)/0.6)*(1-smooth((u-18.6)/1.4)):0;
+    if(ra>0){const spread=1+4*smooth((u-15)/4);for(const q of U.rem){const r=q.r*S0*0.22*spread*(q.v*0.3+0.7),x=cx-W*0.04+Math.cos(q.a)*r,y=cy+Math.sin(q.a)*r*0.75;if(x<0||x>W||y<0||y>H)continue;ctx.fillStyle=rgba(q.c,q.b*ra*(0.5+0.5*smooth((15-u)/1)));ctx.fillRect(x,y,1.6,1.6);}
+      if(((now/600)%11)<0.08&&u<18){const q=U.rem[(Math.floor(now/6600))%U.rem.length];const x=cx-W*0.04+Math.cos(q.a)*q.r*S0*0.22,y=cy+Math.sin(q.a)*q.r*S0*0.17;const g=ctx.createRadialGradient(x,y,0,x,y,30);g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(x-30,y-30,60,60);}}
+    const cA=smooth((u-13.8)/1);
+    if(u<100.6&&cA>0){const life=100,glow=smooth((u-(life-4))/4),r=S0*(0.004+0.014*smooth((u-14)/6))*(1-0.5*smooth((u-97)/3));if(u<100)drawBH(cx-W*0.04,cy,r,0.4*cA+glow,now);else{const t=(u-100)/0.6;const g=ctx.createRadialGradient(cx,cy,0,cx,cy,S0*0.4*t+5);g.addColorStop(0,`rgba(255,255,255,${1-t})`);g.addColorStop(1,'rgba(200,220,255,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}}
+    if(u>18.5)for(const b of U.bhs){const a=smooth((u-18.5)/1.5);if(u<b.life)drawBH(cx+b.x*W,cy+b.y*H,b.r*S0*(1-0.5*smooth((u-(b.life-3))/3)),a*0.5+smooth((u-(b.life-3))/3),now);else if(u<b.life+0.5){const t=(u-b.life)/0.5;const g=ctx.createRadialGradient(cx+b.x*W,cy+b.y*H,0,cx+b.x*W,cy+b.y*H,40*t+4);g.addColorStop(0,`rgba(255,255,255,${1-t})`);g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}}
+    if(u>100){const a=clamp(1-(u-100)/5,0,1)*0.6;for(const q of U.photons){ctx.fillStyle=`rgba(255,200,170,${q.b*a})`;ctx.fillRect(q.x*W,q.y*H,1,1);}}
+  }
+  SIM.starHit={cx,cy};
+}
+function drawSelIcon(it,hov,now){
+  const{x,y,r}=it;
+  if(it.icon==='sol'){const g=ctx.createRadialGradient(x,y,r*.2,x,y,r*(hov?2.2:1.7));g.addColorStop(0,'rgba(255,220,90,.5)');g.addColorStop(1,'rgba(255,220,90,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*2.2,0,6.283);ctx.fill();
+    const g2=ctx.createRadialGradient(x-r*.2,y-r*.2,r*.05,x,y,r*.55);g2.addColorStop(0,'#fff8d0');g2.addColorStop(.7,'#ffd84a');g2.addColorStop(1,'#e8a020');ctx.fillStyle=g2;ctx.beginPath();ctx.arc(x,y,r*.55,0,6.283);ctx.fill();
+    const pl=[[0.8,'#2a6fd6',.08],[1.05,'#c1552a',.06],[1.35,'#c9a46b',.16],[1.65,'#d8c48a',.13]];pl.forEach(([d,c,s],k)=>{const a=now*0.0004*(2-k*0.4)+k*1.7;ctx.strokeStyle='rgba(255,255,255,.18)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(x,y,r*d,r*d*0.35,0,0,6.283);ctx.stroke();ctx.fillStyle=c;ctx.beginPath();ctx.arc(x+Math.cos(a)*r*d,y+Math.sin(a)*r*d*0.35,r*s,0,6.283);ctx.fill();});}
+  else{if(!SEL.uniSpr)SEL.uniSpr=galSprite(RNG(31),Math.max(30,H*0.11),'s','#c8c0ff',0.55);const w=SEL.uniSpr.width*(hov?1.15:1);ctx.save();ctx.translate(x,y);ctx.rotate(now*0.00008);ctx.drawImage(SEL.uniSpr,-w/2,-w/2,w,w);ctx.restore();}
+}
 /* ---------- 시작 화면 · 로딩 · 별 고르기 ---------- */
 const WARP=[];const newWarp=init=>({a:Math.random()*6.283,d:init?Math.random():0.02+Math.random()*0.05,v:0.25+Math.random()*0.6,w:0.5+Math.random()*1.4});
 for(let i=0;i<520;i++)WARP.push(newWarp(true));
@@ -528,8 +677,10 @@ function drawLoading(now){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);const x=cla
   const x0=W*0.1,x1=W*0.9,y=H*0.7;ctx.fillStyle='#8a8a8a';ctx.fillRect(x0,y,x1-x0,3);ctx.fillStyle='#2fdc3a';ctx.fillRect(x0,y-0.5,(x1-x0)*pc/100,4);
   ctx.fillStyle='#fff';ctx.font=`${Math.round(clamp(H*0.035,14,26))}px Arial,sans-serif`;ctx.textAlign='center';ctx.fillText(pc+'%',cx,y+H*0.05);}
 const SEL={page:0,hover:null,msg:'',msgT:0};
+function itemLocked(it){if(['L','T','Y'].includes(it.k))return!SV.owned.bd;if(it.k==='SOL')return!SV.owned.solar;if(it.k==='UNI')return!SV.owned.universe;return false;}
 function selItems(){
   const pg=SEL.page;
+  if(pg===3)return[{k:'SOL',x:W*0.36,y:H*0.5,r:H*0.09,lab:'태양계',col:'#ffd84a',icon:'sol'},{k:'UNI',x:W*0.64,y:H*0.5,r:H*0.1,lab:'우주',col:'#b9a8ff',icon:'uni'}];
   if(pg===2)return[{k:'O',v:'heavy',x:W*0.36,y:H*0.5,r:H*0.11,lab:'Heavy',col:'#5b8fff'},{k:'O',v:'light',x:W*0.64,y:H*0.5,r:H*0.085,lab:'Light',col:'#6fb0ff'}];
   const keys=pg===0?ORDER1:ORDER2;const rs=keys.map(k=>H*TYPES[k].sel);const D=rs.reduce((a,r)=>a+r*2,0);const avail=W*0.84;let sc=D>avail*0.9?avail*0.9/D:1;
   const gapN=keys.length>1?(avail-D*sc)/(keys.length-1):0;let x=W*0.08+(keys.length===3?W*0.12:0);const g2=keys.length===3?(avail-W*0.24-D*sc)/2:gapN;
@@ -538,31 +689,32 @@ function selItems(){
 function drawFlare(x,y,r,t){ctx.save();ctx.translate(x,y);ctx.rotate(0.5+Math.sin(t*0.0008)*0.05);for(let k=0;k<4;k++){ctx.rotate(Math.PI/2);const L=r*(k%2?2.4:3.6);const g=ctx.createLinearGradient(0,0,L,0);g.addColorStop(0,'rgba(255,255,230,.9)');g.addColorStop(1,'rgba(255,255,230,0)');ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,-r*0.12);ctx.lineTo(L,0);ctx.lineTo(0,r*0.12);ctx.fill();}ctx.restore();}
 function drawSelect(now){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);for(const s of BGSTARS){ctx.globalAlpha=s[2];ctx.fillStyle='#fff';ctx.fillRect(s[0],s[1],s[3],s[3]);}ctx.globalAlpha=1;
-  const items=selItems(),locked=SEL.page===1&&!SV.owned.bd,maxR=Math.max(...items.map(i=>i.r));
+  const items=selItems(),maxR=Math.max(...items.map(i=>i.r));let locked=false;
   ctx.textAlign='center';ctx.textBaseline='alphabetic';
   for(const it of items){
-    const c=hexRGB(it.col),hov=SEL.hover===it;ctx.globalAlpha=locked?0.3:1;
+    const c=hexRGB(it.col),hov=!!SEL.hover&&SEL.hover.k===it.k&&SEL.hover.v===it.v;const lk=itemLocked(it);if(lk&&hov)locked=true;ctx.globalAlpha=lk?0.3:1;
+    if(it.icon){drawSelIcon(it,hov,now);ctx.font=`bold ${Math.round(clamp(H*0.055,16,44))}px 'Malgun Gothic',sans-serif`;ctx.fillStyle=it.col;ctx.fillText(it.lab,it.x,H*0.5-maxR-H*0.08);if(lk){ctx.font=`${Math.round(clamp(H*0.024,11,16))}px 'Malgun Gothic',sans-serif`;ctx.fillStyle='#bbb';ctx.fillText('구매 필요',it.x,it.y+it.r+H*0.07);}ctx.globalAlpha=1;continue;}
     let g=ctx.createRadialGradient(it.x,it.y,it.r*0.6,it.x,it.y,it.r*(hov?2.4:1.8));g.addColorStop(0,rgba(c,.55));g.addColorStop(1,rgba(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r*(hov?2.4:1.8),0,6.283);ctx.fill();
     g=ctx.createRadialGradient(it.x-it.r*.3,it.y-it.r*.3,it.r*.1,it.x,it.y,it.r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.6),1));g.addColorStop(.7,rgba(c,1));g.addColorStop(1,rgba(mulC(c,.75),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r,0,6.283);ctx.fill();
     ctx.font=`bold ${Math.round(clamp(H*(it.lab.length>1?0.06:0.075),18,60))}px Georgia,'Times New Roman',serif`;ctx.fillStyle=it.col==='#ffffff'?'#f0f0f0':it.col;ctx.fillText(it.lab,it.x,H*0.5-maxR-H*0.06);
-    if(hov&&!locked)drawFlare(it.x,it.y,it.r,now);
+    if(hov&&!lk)drawFlare(it.x,it.y,it.r,now);
     ctx.globalAlpha=1;
   }
   const ay=H*0.76,as=H*0.07;ctx.fillStyle='#fff';
   const tri=(x,dir)=>{ctx.beginPath();ctx.moveTo(x+dir*as,ay-as*0.8);ctx.lineTo(x+dir*as,ay+as*0.8);ctx.lineTo(x-dir*as*0.1,ay);ctx.closePath();ctx.fill();};
-  ctx.globalAlpha=SEL.page===0?0.25:1;tri(W*0.06,1);ctx.globalAlpha=SEL.page===0?1:0.25;tri(W*0.94,-1);ctx.globalAlpha=1;
+  ctx.globalAlpha=SEL.page===0?0.25:1;tri(W*0.06,1);ctx.globalAlpha=(SEL.page===0||SEL.page===1)?1:0.25;tri(W*0.94,-1);ctx.globalAlpha=1;
   ctx.font=`${Math.round(clamp(H*0.026,12,18))}px 'Malgun Gothic',sans-serif`;ctx.fillStyle='#cfcfcf';
-  let info='';if(locked)info='갈색왜성은 구매 화면에서 "갈색왜성 L · T · Y"를 사면 고를 수 있습니다.';else if(SEL.hover){const h=SEL.hover;info=h.v?(h.v==='heavy'?'무거운 O형 주계열성 · 질량 태양의 60배 · 마지막에 블랙홀이 됩니다.':'가벼운 O형 주계열성 · 질량 태양의 25배 · 마지막에 중성자별이 됩니다.'):TYPES[h.k].name+' · '+TYPES[h.k].info;}
-  else info=SEL.page===0?'주계열성 (O · B · A · F · G · K · M)':SEL.page===1?'갈색왜성 (L · T · Y)':'O형 주계열성: 무거운 별과 가벼운 별 중 하나를 고르세요.';
+  let info='';if(locked)info='구매 화면에서 "'+(SEL.hover.k==='SOL'?'태양계':SEL.hover.k==='UNI'?'우주 타임라인':'갈색왜성 L · T · Y')+'"를 사면 고를 수 있습니다.';else if(SEL.hover){const h=SEL.hover;info=h.v?(h.v==='heavy'?'무거운 O형 주계열성 · 질량 태양의 60배 · 마지막에 블랙홀이 됩니다.':'가벼운 O형 주계열성 · 질량 태양의 25배 · 마지막에 중성자별이 됩니다.'):TYPES[h.k].name+' · '+TYPES[h.k].info;}
+  else info=SEL.page===0?'주계열성 (O · B · A · F · G · K · M)':SEL.page===1?'갈색왜성 (L · T · Y)':SEL.page===3?'특별한 타임라인 (태양계 · 우주)':'O형 주계열성: 무거운 별과 가벼운 별 중 하나를 고르세요.';
   ctx.fillText(info,W/2,H*0.9);
   if(SEL.msgT>0){ctx.fillStyle='#ffd27a';ctx.fillText(SEL.msg,W/2,H*0.95);}
 }
 function selHit(x,y){for(const it of selItems())if(Math.hypot(x-it.x,y-it.y)<it.r*1.3+6)return it;return null;}
 function selClick(x,y){
   const ay=H*0.76,as=H*0.07;
-  if(Math.abs(y-ay)<as*1.3){if(x<W*0.06+as*1.6){if(SEL.page!==0){SEL.page=0;SEL.hover=null;}return;}if(x>W*0.94-as*1.6){if(SEL.page===0){SEL.page=1;SEL.hover=null;}return;}}
+  if(Math.abs(y-ay)<as*1.3){if(x<W*0.06+as*1.6){if(SEL.page===2||SEL.page===1)SEL.page=0;else if(SEL.page===3)SEL.page=1;SEL.hover=null;return;}if(x>W*0.94-as*1.6){if(SEL.page===0)SEL.page=1;else if(SEL.page===1)SEL.page=3;SEL.hover=null;return;}}
   const it=selHit(x,y);if(!it)return;
-  if(SEL.page===1&&!SV.owned.bd){SEL.msg='아직 열리지 않았습니다.';SEL.msgT=2;return;}
+  if(itemLocked(it)){SEL.msg='아직 열리지 않았습니다. 구매 화면에서 열 수 있습니다.';SEL.msgT=2;return;}
   if(SEL.page===0&&it.k==='O'){SEL.page=2;SEL.hover=null;return;}
   startSim(it.k,it.v||null,(Math.random()*2**31)|0);
 }
@@ -571,7 +723,7 @@ function selClick(x,y){
 function startSim(key,variant,seed){
   const sys=buildSystem(key,variant,seed);
   SIM={sys,sec:0,playing:true,speed:SV.set.speed,sel:null,played:0,rewarded:false,idle:0,hits:[],pts:[],k:1,edge:0,cx:0,rScale:1};
-  layoutSim();buildNebula();
+  layoutSim();buildNebula();if(sys.star.kind==='universe')buildUni(sys);
   SV.recent=SV.recent.filter(r=>r.seed!==seed);SV.recent.unshift({seed,key,variant,name:sys.name,d:Date.now()});SV.recent=SV.recent.slice(0,6);save();
   buildBar();$('#card').classList.add('hide');$('#endPanel').classList.add('hide');
   ZOOMT=0;setScreen('zoom');
@@ -598,7 +750,7 @@ const ICON_PLAY='<svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff"/
 function speedList(){const l=[0.5,1,2,4,8];if(SV.owned.fast)l.push(16,32);return l;}
 function buildBar(){
   $('#speeds').innerHTML=speedList().map(v=>`<button class="tb${SIM.speed===v?' on':''}" data-sp="${v}">x${v}</button>`).join('');
-  const sys=SIM.sys;$('#ticks').innerHTML=sys.events.filter(e=>e.kind==='star').map(e=>`<div class="tick" style="left:${(e.sec/sys.end*100).toFixed(2)}%"></div>`).join('');
+  const sys=SIM.sys;$('#ticks').innerHTML=sys.events.filter(e=>e.kind==='star'||e.kind==='now').map(e=>`<div class="tick" style="left:${(e.sec/sys.end*100).toFixed(2)}%;${e.kind==='now'?'background:#7fd4ff;opacity:1;width:3px':''}"></div>`).join('');
   SIM.hudKey='';
 }
 $('#speeds').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(!b)return;SIM.speed=+b.dataset.sp;buildBar();});
@@ -613,10 +765,11 @@ function seekTo(ev){const r=$('#prog').getBoundingClientRect();const f=clamp((ev
 $('#prog').addEventListener('pointerdown',e=>{seeking=true;seekTo(e);e.preventDefault();});
 window.addEventListener('pointermove',e=>{if(seeking&&SIM)seekTo(e);if(SIM)SIM.idle=0;});
 window.addEventListener('pointerup',()=>{seeking=false;});
-const EVC={star:'#ffd27a',life:'#86dc7a',bad:'#ff9a7a',planet:'#cfd8e0'};
+const EVC={star:'#ffd27a',life:'#86dc7a',bad:'#ff9a7a',planet:'#cfd8e0',now:'#7fd4ff'};
 function nameKey(p){return SIM.sys.seed+':'+p.id;}
-function pname(p){if(!p)return'';const n=SV.names[nameKey(p)];return n?n:(p.extra?'원시 행성':p.letter+' 행성');}
-function evText(e){return e.txt.replace('{P}',pname(SIM.sys.planets[e.pid]));}
+function pname(p){if(!p)return'';const n=SV.names[nameKey(p)];return n?n:p.nameFixed?p.nameFixed:(p.extra?'원시 행성':p.letter+' 행성');}
+function josa(w,a,b){const c=w.charCodeAt(w.length-1);if(c<0xAC00||c>0xD7A3)return w+b;return w+(((c-0xAC00)%28)?a:b);}
+function evText(e){const n=pname(SIM.sys.planets[e.pid]);return e.txt.replace(/\{P\}(가|와|는)?/g,(m,j)=>!j?n:j==='가'?josa(n,'이','가'):j==='와'?josa(n,'과','와'):josa(n,'은','는'));}
 function lastEv(sec){const E=SIM.sys.events;let lo=0,hi=E.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(E[m].sec<=sec+1e-9){r=m;lo=m+1;}else hi=m-1;}return r;}
 function updateHUD(){
   if(!SIM)return;const sys=SIM.sys,age=ageAt(sys.nodes,SIM.sec),s=sys.star.at(age);
@@ -634,16 +787,17 @@ function updateHUD(){
 function zoneText(a,L){const c=Math.sqrt(L);return a<0.72*c?'생명 가능 지대보다 안쪽 (뜨거움)':a>1.28*c?'생명 가능 지대보다 바깥 (차가움)':'생명 가능 지대 안';}
 function updateCard(){
   const card=$('#card'),sys=SIM.sys,S=sys.star,age=ageAt(sys.nodes,SIM.sec),s=S.at(age),sel=SIM.sel;let title='',rows=[],btn='';
-  if(sel.type==='star'){
-    title=sys.name;const diam=s.R<0.05?fmtN(s.R*696000*2)+' km':'태양의 '+fmtN(s.R,s.R<10?2:0)+'배';
-    rows=[['종류',(sys.variant?(sys.variant==='heavy'?'무거운 ':'가벼운 '):'')+sys.T.name],['지금 단계',PH_NAME[s.ph]],['나이',fmtAge(age)],['질량','태양의 '+fmtN(s.M,3)+'배'],['지름',diam],['밝기','태양의 '+(s.L<0.001?s.L.toExponential(1):fmtN(s.L,s.L<10?3:0))+'배'],['표면 온도',fmtN(Math.round(s.T-273))+' °C']];
+  if(sel.type==='star'&&S.kind==='universe'){title='우리 우주';rows=[['시대',PH_NAME[s.ph]],['나이',fmtAge(age)],['우주 온도',uniTemp(age)],['설명',UNI_DESC[s.ph]]];}
+  else if(sel.type==='star'){
+    title=sys.key==='SOL'?'태양':sys.name;const diam=s.R<0.05?fmtN(s.R*696000*2)+' km':'태양의 '+fmtN(s.R,s.R<10?2:0)+'배';
+    rows=[['종류',(sys.variant?(sys.variant==='heavy'?'무거운 ':'가벼운 '):'')+(sys.T.starName||sys.T.name)],['지금 단계',PH_NAME[s.ph]],['나이',fmtAge(age)],['질량','태양의 '+fmtN(s.M,3)+'배'],['지름',diam],['밝기','태양의 '+(s.L<0.001?s.L.toExponential(1):fmtN(s.L,s.L<10?3:0))+'배'],['표면 온도',fmtN(Math.round(s.T-273))+' °C']];
   }else{
     const p=sel.p,i=sampleI(SIM.sec);title=pname(p);if(!p.extra)btn='<button class="btn" data-c="rename">이름 바꾸기</button>';
     const kind=p.extra?'원시 행성':p.kind==='rock'?'암석 행성':p.kind==='gas'?'가스 행성':'얼음 거인';
     if(p.dead&&SIM.sec>=p.deadSec){rows=[['종류',kind],['상태',p.dead==='merge'?'다른 행성과 합쳐짐':p.dead==='engulf'?'별에 삼켜짐':'행성계 밖으로 튕겨 나감'],['사라진 때',fmtAge(p.deadAge)]];}
     else if(age<p.tStart){rows=[['종류',kind],['상태','아직 생기지 않음']];}
     else{const m=massNow(p,age),a=p.a0*S.M0/s.M,Re=p.kind==='rock'?Math.pow(m,0.28):p.kind==='ice'?3.9*Math.pow(m/15,0.1):11.2*Math.pow(m/318,-0.04);
-      const nm=p.moons.filter(o=>age>=o.tForm).length,ring=p.ring&&age>=p.ring.t0&&age<p.ring.t1;
+      const nm=shownMoons(p,age).length,ring=p.ring&&age>=p.ring.t0&&age<p.ring.t1;
       rows=[['종류',kind],['상태',LK_NAME[p.look[i]]],['질량','지구의 '+fmtN(m,m<1?2:1)+'배'],['지름',fmtN(Math.round(Re*12742))+' km'],['별까지 거리',fmtN(a,a<0.1?4:2)+' AU'],['위치',zoneText(a,s.L)],['표면 온도',fmtN(Math.round(p.tcA[i]))+' °C'],['위성',nm+'개'],['고리',ring?'있음':'없음']];}
   }
   const h=`<div class="ct"><span>${esc(title)}</span><button class="btn" data-c="close">닫기</button></div><table>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>${btn?`<div class="cb">${btn}</div>`:''}`;
@@ -651,6 +805,7 @@ function updateCard(){
 }
 $('#card').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;if(b.dataset.c==='close'){SIM.sel=null;$('#card').classList.add('hide');}else if(b.dataset.c==='rename'){const p=SIM.sel.p,v=prompt('행성 이름을 입력하세요',SV.names[nameKey(p)]||'');if(v!=null){const t=v.trim().slice(0,20);if(t)SV.names[nameKey(p)]=t;else delete SV.names[nameKey(p)];save();updateHUD();}}});
 function simClick(x,y){
+  if(SIM.sys.star.kind==='universe'){SIM.sel={type:'star'};updateCard();return;}
   if(SIM.sys.star.kind==='massive'){const h=SIM.starHit;if(h&&Math.hypot(x-h.cx,y-h.cy)<40){SIM.sel={type:'star'};updateCard();}else{SIM.sel=null;$('#card').classList.add('hide');}return;}
   for(const h of SIM.hits)if(Math.hypot(x-h.x,y-h.y)<h.r+8){SIM.sel={type:'planet',p:h.p};updateCard();return;}
   if(x<SIM.starHitX){SIM.sel={type:'star'};updateCard();return;}
@@ -661,16 +816,16 @@ function simClick(x,y){
 function openModal(t,html){$('#mTitle').textContent=t;$('#mBody').innerHTML=html;$('#modal').classList.remove('hide');}
 $('#mClose').addEventListener('click',()=>$('#modal').classList.add('hide'));
 $('#modal').addEventListener('pointerdown',e=>{if(e.target.id==='modal')$('#modal').classList.add('hide');});
-const SET_ROWS=[['speed','처음 재생 속도',[[0.5,'x0.5'],[1,'x1'],[2,'x2'],[4,'x4'],[8,'x8']]],['hz','생명 가능 지대 (초록 띠)',[[1,'표시'],[0,'숨김']]],['dust','먼지',[[2,'많이'],[1,'조금'],[0,'없음']]],['neb','가스 구름',[[1,'표시'],[0,'숨김']]],['info','단계 · 기록 글씨',[[1,'표시'],[0,'숨김']]],['unit','시간 단위',[[0,'MY · BY · TY'],[1,'만 · 억 · 조 년']]],['load','로딩 화면',[[1,'보통'],[0,'짧게']]]];
+const SET_ROWS=[['speed','처음 재생 속도',[[0.5,'x0.5'],[1,'x1'],[2,'x2'],[4,'x4'],[8,'x8']]],['hz','생명 가능 지대 (초록 띠)',[[1,'표시'],[0,'숨김']]],['dust','먼지',[[2,'많이'],[1,'조금'],[0,'없음']]],['neb','가스 구름',[[1,'표시'],[0,'숨김']]],['info','단계 · 기록 글씨',[[1,'표시'],[0,'숨김']]],['labels','행성 이름',[[1,'표시'],[0,'숨김']]],['unit','시간 단위',[[0,'MY · BY · TY'],[1,'만 · 억 · 조 년']]],['load','로딩 화면',[[1,'보통'],[0,'짧게']]]];
 function openSettings(){
   const rows=SET_ROWS.slice();if(SV.owned.many)rows.push(['many','행성 많은 행성계 (다음 행성계부터)',[[1,'켜기'],[0,'끄기']]]);
   openModal('설정',rows.map(([k,l,opts])=>`<div class="row"><span class="lab">${esc(l)}</span><span class="seg">${opts.map(([v,t])=>`<button class="btn${SV.set[k]===v?' on':''}" data-set="${k}" data-v="${v}">${esc(t)}</button>`).join('')}</span></div>`).join('')+'<div class="muted" style="margin-top:8px">바꾼 설정은 바로 저장됩니다.</div>');
 }
-const SHOP=[{id:'bd',name:'갈색왜성 L · T · Y',desc:'별 고르기 화면의 두 번째 쪽에 갈색왜성 3종류가 생깁니다.',price:300},{id:'fast',name:'빠른 재생 x16 · x32',desc:'재생 속도 버튼에 x16, x32가 생깁니다.',price:200},{id:'many',name:'행성 많은 행성계',desc:'설정에서 켜면 행성이 1~2개 더 생깁니다.',price:500}];
+const SHOP=[{id:'bd',name:'갈색왜성 L · T · Y',desc:'별 고르기 화면의 두 번째 쪽에 갈색왜성 3종류가 생깁니다.',price:300},{id:'fast',name:'빠른 재생 x16 · x32',desc:'재생 속도 버튼에 x16, x32가 생깁니다.',price:200},{id:'many',name:'행성 많은 행성계',desc:'설정에서 켜면 행성이 1~2개 더 생깁니다.',price:500},{id:'solar',name:'태양계',desc:'별 고르기 마지막 쪽에 진짜 태양계가 생깁니다. 지구의 역사와 테이아 · 행성 V · 다섯 번째 거대 행성 같은 옛날 행성도 나옵니다.',price:400},{id:'universe',name:'우주 타임라인',desc:'별 고르기 마지막 쪽에 빅뱅부터 우주의 끝(열 죽음)까지 보는 타임라인이 생깁니다.',price:600}];
 function openShop(){
   openModal('구매',`<div class="row"><span class="lab">가진 크레딧</span><b>${fmtN(SV.credits)}</b></div>`+SHOP.map(it=>`<div class="item"><div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div></div>${SV.owned[it.id]?'<button class="btn" disabled>가지고 있음</button>':`<button class="btn" data-buy="${it.id}" ${SV.credits<it.price?'disabled':''}>${fmtN(it.price)} 크레딧</button>`}</div>`).join('')+'<div class="muted" style="margin-top:8px">타임라인을 끝까지 보면 크레딧 100을 받습니다. 처음 보는 별이면 200을 더 받습니다.</div>');
 }
-const SEEN_KEYS=[['O_heavy','무거운 O'],['O_light','가벼운 O'],['B','B'],['A','A'],['F','F'],['G','G'],['K','K'],['M','M'],['L','L'],['T','T'],['Y','Y']];
+const SEEN_KEYS=[['O_heavy','무거운 O'],['O_light','가벼운 O'],['B','B'],['A','A'],['F','F'],['G','G'],['K','K'],['M','M'],['L','L'],['T','T'],['Y','Y'],['SOL','태양계'],['UNI','우주']];
 function openAccount(){
   openModal('계정',`<div class="row"><span class="lab">이름</span><span>${esc(SV.name)} <button class="btn" data-acc="name">이름 바꾸기</button></span></div><div class="row"><span class="lab">계정 번호</span><span>#${SV.id}</span></div><div class="row"><span class="lab">크레딧</span><span>${fmtN(SV.credits)}</span></div><div class="row"><span class="lab">끝까지 본 타임라인</span><span>${fmtN(SV.runs)}번</span></div>
   <div style="margin-top:8px" class="lab">별마다 본 횟수</div><div class="grid">${SEEN_KEYS.map(([k,l])=>`<div>${esc(l)}: ${SV.seen[k]||0}번</div>`).join('')}</div>
@@ -682,7 +837,7 @@ $('#mBody').addEventListener('click',e=>{
   const b=e.target.closest('[data-buy]');if(b){const it=SHOP.find(x=>x.id===b.dataset.buy);if(it&&SV.credits>=it.price&&!SV.owned[it.id]){SV.credits-=it.price;SV.owned[it.id]=true;if(it.id==='many')SV.set.many=1;save();if(SIM)buildBar();}openShop();return;}
   const a=e.target.closest('[data-acc]');if(!a)return;const t=a.dataset.acc;
   if(t==='name'){const v=prompt('이름을 입력하세요',SV.name);if(v!=null&&v.trim()){SV.name=v.trim().slice(0,16);save();}openAccount();}
-  else if(t==='replay'){const r=SV.recent[+a.dataset.i];if(r){if(r.key in{L:1,T:1,Y:1}&&!SV.owned.bd)return;$('#modal').classList.add('hide');startSim(r.key,r.variant,r.seed);}}
+  else if(t==='replay'){const r=SV.recent[+a.dataset.i];if(r){if(itemLocked({k:r.key}))return;$('#modal').classList.add('hide');startSim(r.key,r.variant,r.seed);}}
   else if(t==='reset'){if(confirm('크레딧, 산 것, 기록을 모두 지울까요?')){const id=SV.id;SV=JSON.parse(JSON.stringify(DEF_SAVE));SV.id=id;save();openAccount();}}
 });
 
