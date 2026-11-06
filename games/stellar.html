@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stellar Simulation</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Malgun Gothic','맑은 고딕',sans-serif;color:#e8e8e8;user-select:none;-webkit-user-select:none;touch-action:none}
+#cv{position:fixed;left:0;top:0;display:block}
+.hide{display:none!important}
+#ver{position:fixed;right:10px;bottom:6px;font:12px Arial,sans-serif;color:#cfcfcf;pointer-events:none;z-index:5}
+#titleUI{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vh;z-index:3}
+.logo{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;text-align:center;line-height:.95;filter:drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 16px #000)}
+.logo div{background:linear-gradient(180deg,#ffe7a6 0%,#f4a63c 45%,#b45a10 78%,#ffd27a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1.5px #2a1203}
+.logo .l1{font-size:clamp(46px,11vw,104px)}
+.logo .l2{font-size:clamp(28px,6vw,56px)}
+.menu{display:grid;grid-template-columns:repeat(2,auto);gap:8px;padding:8px;background:rgba(55,55,58,.6);border:2px solid #6c6c6c}
+.mbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:clamp(150px,22vw,200px);height:clamp(52px,8vh,66px);padding:0 10px 0 16px;font:700 clamp(20px,3vw,28px) 'Malgun Gothic',sans-serif;color:#fff;text-shadow:1px 1px 0 #333,-1px -1px 0 #333,0 0 3px #000;background:linear-gradient(#bdbdbd,#878787);border:3px solid;border-color:#e6e6e6 #4a4a4a #4a4a4a #e6e6e6;cursor:pointer}
+.mbtn:hover{filter:brightness(1.12)}
+.mbtn:active{border-color:#4a4a4a #e6e6e6 #e6e6e6 #4a4a4a}
+.mbtn svg{width:clamp(30px,4.5vw,40px);height:clamp(30px,4.5vw,40px);flex:none}
+#selUI{position:fixed;inset:0;pointer-events:none;z-index:3}
+#selUI .back{position:absolute;left:10px;top:10px;pointer-events:auto}
+#selHint{position:absolute;left:12px;bottom:8px;font-size:12px;color:#aaa}
+.btn{font:inherit;font-size:13px;padding:5px 12px;background:linear-gradient(#5c5c62,#3e3e44);color:#eee;border:1px solid;border-color:#8c8c92 #222 #222 #8c8c92;cursor:pointer;white-space:nowrap}
+.btn:hover{filter:brightness(1.2)}
+.btn.on{background:linear-gradient(#2f7fd0,#1e5ea0);border-color:#7fb8ff #12385e #12385e #7fb8ff;color:#fff}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+#modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center}
+.win{width:min(580px,94vw);max-height:90vh;display:flex;flex-direction:column;background:#2a2a2e;border:3px solid;border-color:#d0d0d0 #484848 #484848 #d0d0d0;box-shadow:0 10px 40px #000}
+.wt{display:flex;align-items:center;justify-content:space-between;padding:7px 10px 7px 14px;background:linear-gradient(#acacac,#7b7b7b);font-weight:700;font-size:18px;color:#fff;text-shadow:1px 1px 0 #333}
+.wb{padding:10px 14px 14px;overflow:auto;font-size:14px;line-height:1.5}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #3c3c42}
+.row .lab{color:#cfd3d8}
+.seg{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.item{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #3c3c42}
+.item .nm{font-weight:700;color:#fff}.item .ds{font-size:12px;color:#aab}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin:6px 0}
+.grid div{background:#1e1e22;border:1px solid #3a3a40;padding:4px 6px;font-size:12px}
+.muted{color:#999;font-size:12px}
+#topbar{position:fixed;left:0;right:0;top:0;height:42px;display:flex;align-items:center;gap:6px;padding:0 10px;background:linear-gradient(rgba(0,0,0,.88),rgba(0,0,0,.45));z-index:6;transition:opacity .35s}
+#topbar.fade{opacity:0;pointer-events:none}
+.tb{height:28px;min-width:30px;padding:0 8px;font:12px 'Malgun Gothic',sans-serif;color:#eee;background:linear-gradient(#5c5c62,#3a3a40);border:1px solid;border-color:#8c8c92 #1e1e22 #1e1e22 #8c8c92;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tb svg{width:14px;height:14px}
+.tb.on{background:linear-gradient(#2f7fd0,#1e5ea0);color:#fff}
+#speeds{display:flex;gap:2px}
+#prog{flex:1;height:14px;position:relative;background:#2c2c30;border:1px solid #555;cursor:pointer;min-width:60px}
+#progFill{position:absolute;left:0;top:0;bottom:0;background:#36a03a}
+.tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:#ffd27a;opacity:.75;pointer-events:none}
+#hud{position:fixed;left:12px;top:50px;z-index:4;pointer-events:none;max-width:min(46vw,430px);font-size:13px;text-shadow:0 1px 2px #000,0 0 4px #000}
+#hName{font-weight:700;font-size:14px;color:#fff}
+#hPhase{color:#ffd27a;margin-bottom:6px}
+#hLog div{margin:2px 0}
+#card{position:fixed;right:12px;top:50px;width:min(310px,46vw);z-index:7;background:rgba(26,26,30,.93);border:2px solid;border-color:#9a9a9a #3a3a3a #3a3a3a #9a9a9a;font-size:13px}
+#card .ct{background:linear-gradient(#8f8f8f,#626262);padding:5px 8px;font-weight:700;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:6px}
+#card table{width:100%;border-collapse:collapse}
+#card td{padding:3px 8px;border-bottom:1px solid #333;vertical-align:top}
+#card td:first-child{color:#9aa3ad;white-space:nowrap;width:38%}
+#card .cb{padding:6px 8px;display:flex;gap:6px;justify-content:flex-end}
+#endPanel{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:7;background:rgba(26,26,30,.94);border:2px solid;border-color:#9a9a9a #3a3a3a #3a3a3a #9a9a9a;padding:10px 14px;font-size:14px;display:flex;flex-direction:column;gap:8px;align-items:center;max-width:94vw}
+#endPanel .bs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+</style>
+<script src="../mobile.js"></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="titleUI">
+  <div class="logo"><div class="l1">Stellar</div><div class="l2">Simulation</div></div>
+  <div class="menu">
+    <button class="mbtn" data-act="start"><span>시작</span><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff"/></svg></button>
+    <button class="mbtn" data-act="settings"><span>설정</span><svg id="gearIcon" viewBox="-12 -12 24 24"></svg></button>
+    <button class="mbtn" data-act="shop"><span>구매</span><svg viewBox="0 0 24 24"><path d="M7.5 9 L10.5 3 M16.5 9 L13.5 3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M2 9h20l-2.6 12H4.6z" fill="#fff"/><path d="M8 12v6M12 12v6M16 12v6" stroke="#8a8a8a" stroke-width="1.7"/></svg></button>
+    <button class="mbtn" data-act="account"><span>계정</span><svg viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="4.6" fill="#fff"/><path d="M3 22c0-5.2 4-8.6 9-8.6s9 3.4 9 8.6z" fill="#fff"/></svg></button>
+  </div>
+</div>
+
+<div id="selUI" class="hide">
+  <button class="btn back" id="selBack">메뉴로</button>
+  <div id="selHint">별을 누르면 타임라인이 시작됩니다. 화살표로 쪽을 넘깁니다.</div>
+</div>
+
+<div id="simUI" class="hide">
+  <div id="topbar">
+    <button class="tb" id="bPlay" title="재생 / 멈춤 (스페이스)"></button>
+    <div id="speeds"></div>
+    <div id="prog"><div id="progFill"></div><div id="ticks"></div></div>
+    <button class="tb" data-a="restart">처음부터</button>
+    <button class="tb" data-a="settings">설정</button>
+    <button class="tb" data-a="select">별 고르기</button>
+    <button class="tb" data-a="menu">메뉴</button>
+  </div>
+  <div id="hud"><div id="hName"></div><div id="hPhase"></div><div id="hLog"></div></div>
+  <div id="card" class="hide"></div>
+  <div id="endPanel" class="hide"></div>
+</div>
+
+<div id="modal" class="hide"><div class="win"><div class="wt"><span id="mTitle"></span><button class="btn" id="mClose">닫기</button></div><div class="wb" id="mBody"></div></div></div>
+<div id="ver">V1.0.0</div>
+
+<script>
+'use strict';
+const VERSION='V1.0.0', SAVE_KEY='stellarSim1';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const lerpLog=(a,b,t)=>Math.exp(Math.log(a)+(Math.log(b)-Math.log(a))*t);
+const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+function mulberry(seed){let a=seed>>>0;return function(){a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function RNG(seed){const r=mulberry(seed);r.range=(a,b)=>a+(b-a)*r();r.int=(a,b)=>Math.floor(a+(b-a+1)*r());r.pick=arr=>arr[Math.floor(r()*arr.length)];r.logr=(a,b)=>Math.exp(r.range(Math.log(a),Math.log(b)));return r;}
+const hexRGB=h=>{h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
+const rgba=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const mixC=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)];
+const mulC=(c,k)=>[clamp(c[0]*k,0,255),clamp(c[1]*k,0,255),clamp(c[2]*k,0,255)];
+const shade=(hex,k)=>{const c=hexRGB(hex);return rgba(k>=0?mixC(c,[255,255,255],k):mulC(c,1+k),1);};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtN=(v,d=0)=>Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d,minimumFractionDigits:0});
+
+/* ---------- 저장 ---------- */
+const DEF_SAVE={name:'Player',id:0,credits:0,owned:{},seen:{},runs:0,recent:[],names:{},set:{speed:1,hz:1,dust:2,neb:1,info:1,unit:0,load:1,many:0}};
+function loadSave(){let d=JSON.parse(JSON.stringify(DEF_SAVE));try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s){d=Object.assign(d,s);d.set=Object.assign({},DEF_SAVE.set,s.set||{});}}catch(e){}if(!d.id)d.id=10000+Math.floor(Math.random()*90000);return d;}
+let SV=loadSave();
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SV));}catch(e){}}
+save();
+
+/* ---------- 캔버스 ---------- */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+let W=800,H=600,DPR=1;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=Math.max(320,window.innerWidth||800);H=Math.max(240,window.innerHeight||600);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);TEX.clear();makeBG();if(SIM){layoutSim();buildNebula();}}
+window.addEventListener('resize',resize);
+
+/* ---------- 별 종류 ---------- */
+const RS_AU=0.00465047;
+const TYPES={
+ O:{name:'O형 주계열성',kind:'massive',col:'#5b8fff',sel:.085,neb:'#9ea2ac',info:'질량 태양의 25~60배 · 표면 약 35,000°C · 수명 약 400만~800만 년'},
+ B:{name:'B형 주계열성',kind:'normal',M:3.2,L0:80,R0:2.2,tMS:3.6e8,Rtip:150,Ltip:3000,Rhb:25,Lhb:400,Ragb:320,Lagb:9000,pl:[1,3],aIn:2.2,pG:.85,edge:.10,col:'#8fdcff',sel:.06,neb:'#d4ca86',info:'질량 태양의 3.2배 · 표면 약 11,000°C · 수명 약 3억 6천만 년'},
+ A:{name:'A형 주계열성',kind:'normal',M:1.9,L0:11,R0:1.6,tMS:1.6e9,Rtip:120,Ltip:1800,Rhb:12,Lhb:80,Ragb:250,Lagb:7000,pl:[2,6],aIn:.7,pG:.7,edge:.09,col:'#ffffff',sel:.047,neb:'#c6c29a',info:'질량 태양의 1.9배 · 표면 약 8,000°C · 수명 약 16억 년'},
+ F:{name:'F형 주계열성',kind:'normal',M:1.3,L0:2.4,R0:1.2,tMS:4.5e9,Rtip:160,Ltip:2500,Rhb:10,Lhb:55,Ragb:210,Lagb:5500,pl:[3,7],aIn:.35,pG:.6,edge:.08,col:'#fff1c0',sel:.041,neb:'#b8b8b8',info:'질량 태양의 1.3배 · 표면 약 6,300°C · 수명 약 45억 년'},
+ G:{name:'G형 주계열성',kind:'normal',M:1.0,L0:.75,R0:.9,tMS:1e10,Rtip:170,Ltip:2500,Rhb:10,Lhb:50,Ragb:215,Lagb:5000,pl:[4,8],aIn:.25,pG:.6,edge:.075,col:'#ffe050',sel:.037,neb:'#d09848',info:'질량 태양의 1.0배 · 표면 약 5,400°C · 수명 약 100억 년'},
+ K:{name:'K형 주계열성',kind:'normal',M:.7,L0:.17,R0:.65,tMS:3.2e10,Rtip:160,Ltip:2400,Rhb:9,Lhb:45,Ragb:200,Lagb:4500,pl:[3,7],aIn:.06,pG:.5,edge:.065,col:'#ff9a2e',sel:.031,neb:'#b5b0a8',info:'질량 태양의 0.7배 · 표면 약 4,300°C · 수명 약 320억 년'},
+ M:{name:'M형 주계열성',kind:'red',M:.15,L0:.0032,R0:.18,tMS:3e12,pl:[3,6],aIn:.012,pG:.35,edge:.035,col:'#ff4a1a',sel:.025,neb:'#c06a28',info:'질량 태양의 0.15배 · 표면 약 2,950°C · 수명 약 3조 년'},
+ L:{name:'L형 갈색왜성',kind:'bd',M:.065,pl:[1,3],aIn:.004,pG:0,edge:.11,col:'#c8402a',sel:.05,neb:'#9a4a2a',info:'질량 태양의 0.065배(목성의 68배) · 수소를 태우지 못하는 천체'},
+ T:{name:'T형 갈색왜성',kind:'bd',M:.040,pl:[1,3],aIn:.003,pG:0,edge:.11,col:'#a03c78',sel:.048,neb:'#7a4a6a',info:'질량 태양의 0.04배(목성의 42배) · 표면 약 1,000°C'},
+ Y:{name:'Y형 갈색왜성',kind:'bd',M:.015,pl:[1,2],aIn:.0025,pG:0,edge:.11,col:'#6a3060',sel:.045,neb:'#5a4a5a',info:'질량 태양의 0.015배(목성의 16배) · 가장 차가운 갈색왜성'},
+};
+const ORDER1=['O','B','A','F','G','K','M'],ORDER2=['L','T','Y'];
+const WD_T=[[1e4,150000],[1e6,70000],[1e7,40000],[1e8,20000],[1e9,10000],[1e10,5500],[1e11,3000],[1e12,1500],[1e13,600],[1e14,200],[1e15,60],[1e18,5]];
+function wdTemp(tc){const tb=WD_T;if(tc<=tb[0][0])return tb[0][1];for(let i=1;i<tb.length;i++){if(tc<=tb[i][0]){const[a0,t0]=tb[i-1],[a1,t1]=tb[i];return lerpLog(t0,t1,Math.log(tc/a0)/Math.log(a1/a0));}}return tb[tb.length-1][1];}
+const teffOf=(L,R)=>5772*Math.pow(L/(R*R),0.25);
+const lumOf=(R,T)=>R*R*Math.pow(T/5772,4);
+
+const PH_NAME={pre:'원시별',ms:'주계열성',sg:'준거성',rgb:'적색거성',hb:'헬륨을 태우는 별',agb:'점근거성가지 별',pn:'행성상 성운',wd:'백색왜성',bk:'흑색왜성',blue:'청색왜성',contract:'백색왜성이 되는 중',bdM:'어린 갈색왜성',bdL:'L형 갈색왜성',bdT:'T형 갈색왜성',bdY:'Y형 갈색왜성',bdX:'식어 버린 갈색왜성',ysg:'황색 초거성',rsg:'적색 초거성',bsg2:'청색 초거성',lbv:'고광도 청색 변광성',yhg:'황색 극대거성',wr:'울프-레이에 별',sn:'초신성 폭발',ns:'중성자별',bh:'블랙홀'};
+const PH_EV={pre:'가스 구름이 뭉쳐 별이 생겨나고 있습니다.',ms:'별이 수소를 태우기 시작했습니다.',sg:'중심의 수소가 다 떨어져 별이 부풀기 시작했습니다.',rgb:'별이 크게 부풀어 적색거성이 되었습니다.',hb:'중심에서 헬륨이 타기 시작해 별이 다시 작아졌습니다.',agb:'별이 다시 크게 부풀었습니다.',pn:'바깥 껍질이 날아가 행성상 성운이 생겼습니다.',wd:'가운데에 백색왜성이 남았습니다.',bk:'백색왜성이 다 식어 흑색왜성이 되었습니다.',blue:'별이 점점 뜨거워져 청색왜성이 되었습니다.',contract:'연료가 다 떨어져 별이 오그라듭니다.',bdM:'가스 구름이 뭉쳐 갈색왜성이 생겨나고 있습니다.',bdL:'L형 갈색왜성이 되었습니다.',bdT:'더 식어서 T형 갈색왜성이 되었습니다.',bdY:'더 식어서 Y형 갈색왜성이 되었습니다.',bdX:'갈색왜성이 거의 다 식었습니다.',ysg:'별이 부풀어 황색 초거성이 되었습니다.',rsg:'별이 더 부풀어 적색 초거성이 되었습니다.',bsg2:'겉껍질을 잃고 다시 뜨거운 청색 초거성이 되었습니다.',lbv:'별이 불안정해져 가스를 뿜어냅니다.',yhg:'별이 부풀어 황색 극대거성이 되었습니다.',wr:'겉껍질이 다 날아가 울프-레이에 별이 되었습니다.',sn:'초신성이 폭발했습니다.',ns:'가운데에 중성자별(펄서)이 남았습니다.',bh:'가운데가 무너져 블랙홀이 되었습니다.'};
+
+function makeStar(key,variant){
+  const T=TYPES[key],S={key,T,kind:T.kind,M0:T.M||1};
+  if(S.kind==='normal'){
+    S.Mf=0.109*T.M+0.394;S.Rwd=0.0125*Math.cbrt(0.6/S.Mf);
+    S.tPre=Math.min(5e7*Math.pow(T.M,-2.5),0.02*T.tMS);S.tMS=T.tMS;S.tSG=T.tMS*1.08;S.tRGB=T.tMS*1.13;S.tHB=T.tMS*1.14;S.tAGB=T.tMS*1.143;S.tPN=S.tAGB+2e5;
+    S.L1=T.L0*2.5;S.R1=T.R0*1.7;S.L2=S.L1*1.3;S.R2=S.R1*2.2;S.Mrgb=T.M-0.3*(T.M-S.Mf);
+    S.tEnd=S.tPN;
+  }else if(S.kind==='red'){
+    S.Mf=T.M*0.98;S.Rwd=0.016;S.tPre=1e9;S.tMS=T.tMS;S.tBD=T.tMS*1.35;S.tC=S.tBD+0.04*T.tMS;S.wdOff=6e8;S.tEnd=S.tC;
+  }else if(S.kind==='bd'){S.Mf=T.M;S.tEnd=1e10;}
+  else{
+    const hv=variant==='heavy';S.heavy=hv;S.M0=hv?60:25;S.Mf=hv?12:1.4;
+    S.tMS=hv?3.6e6:7e6;S.L0=hv?4e5:8e4;S.R0=hv?11:7;
+    S.seq=hv?[[1.5e5,8e5,90,'lbv'],[1.5e5,8e5,600,'yhg'],[3e5,6e5,3,'wr']]:[[2.5e5,1.3e5,400,'ysg'],[4.5e5,1.5e5,1000,'rsg'],[1.5e5,1.6e5,60,'bsg2']];
+    let t=S.tMS;for(const q of S.seq){q.t0=t;t+=q[0];q.t1=t;}S.tSN=t;S.tEnd=t;
+  }
+  S.at=age=>starAt(S,age);return S;
+}
+function starAt(S,age){
+  const T=S.T;let L,R,M=S.M0,ph,cp=0,x;
+  if(S.kind==='normal'){
+    if(age<S.tPre){x=smooth(age/S.tPre);L=T.L0*lerpLog(4,1,x);R=T.R0*lerpLog(2.5,1,x);ph='pre';}
+    else if(age<S.tMS){x=(age-S.tPre)/(S.tMS-S.tPre);L=T.L0*(1+0.9*x+0.6*x**8);R=T.R0*(1+0.4*x+0.3*x**8);ph='ms';}
+    else if(age<S.tSG){x=(age-S.tMS)/(S.tSG-S.tMS);L=S.L1*(1+0.3*x);R=S.R1*lerpLog(1,2.2,x);ph='sg';}
+    else if(age<S.tRGB){x=(age-S.tSG)/(S.tRGB-S.tSG);const e=x**2.5;L=lerpLog(S.L2,T.Ltip,e);R=lerpLog(S.R2,T.Rtip,e);M=lerp(S.M0,S.Mrgb,e);ph='rgb';}
+    else if(age<S.tHB){x=(age-S.tRGB)/(S.tHB-S.tRGB);const e=smooth(Math.min(1,x*6));L=lerpLog(T.Ltip,T.Lhb,e);R=lerpLog(T.Rtip,T.Rhb,e);M=S.Mrgb;ph='hb';}
+    else if(age<S.tAGB){x=(age-S.tHB)/(S.tAGB-S.tHB);const e=x*x;L=lerpLog(T.Lhb,T.Lagb,e);R=lerpLog(T.Rhb,T.Ragb,e);M=lerp(S.Mrgb,S.Mf,e);ph='agb';}
+    else if(age<S.tPN){x=(age-S.tAGB)/(S.tPN-S.tAGB);const e=smooth(Math.min(1,x*1.6));R=lerpLog(T.Ragb,S.Rwd,e);L=lerpLog(T.Lagb,lumOf(S.Rwd,wdTemp(1e4)),e);M=S.Mf;ph='pn';cp=e;}
+    else{const Tf=wdTemp(age-S.tPN+1e4);return{L:lumOf(S.Rwd,Tf),R:S.Rwd,T:Tf,M:S.Mf,ph:Tf<350?'bk':'wd',cp:1};}
+  }else if(S.kind==='red'){
+    if(age<S.tPre){x=smooth(age/S.tPre);L=T.L0*lerpLog(8,1,x);R=T.R0*lerpLog(3,1,x);ph='pre';}
+    else if(age<S.tMS){x=(age-S.tPre)/(S.tMS-S.tPre);L=T.L0*(1+2.5*x**3);R=T.R0*(1+0.3*x**3);ph='ms';}
+    else if(age<S.tBD){x=smooth((age-S.tMS)/(S.tBD-S.tMS));L=T.L0*lerpLog(3.5,40,x);R=T.R0*lerpLog(1.3,0.9,x);ph='blue';}
+    else if(age<S.tC){x=smooth((age-S.tBD)/(S.tC-S.tBD));R=lerpLog(T.R0*0.9,S.Rwd,x);L=lerpLog(T.L0*40,lumOf(S.Rwd,wdTemp(S.wdOff)),x);ph='contract';cp=x;M=lerp(S.M0,S.Mf,x);}
+    else{const Tf=wdTemp(age-S.tC+S.wdOff);return{L:lumOf(S.Rwd,Tf),R:S.Rwd,T:Tf,M:S.Mf,ph:Tf<350?'bk':'wd',cp:1};}
+  }else if(S.kind==='bd'){
+    R=0.1*(1+1.6*Math.sqrt(1e6/(age+1e6)));
+    const Tf=Math.min(2900,1550*Math.pow((age+3e5)/1e9,-0.32)*Math.pow(T.M/0.05,0.83));
+    L=lumOf(R,Tf);ph=Tf>2300?'bdM':Tf>1300?'bdL':Tf>500?'bdT':Tf>250?'bdY':'bdX';
+    return{L,R,T:Tf,M,ph,cp:0};
+  }else{
+    if(age<1e5){x=smooth(age/1e5);L=S.L0*lerp(0.2,1,x);R=S.R0*lerp(3,1,x);ph='pre';}
+    else if(age<S.tMS){x=(age-1e5)/(S.tMS-1e5);L=S.L0*(1+0.6*x);R=S.R0*(1+1.2*x);ph='ms';}
+    else if(age<S.tSN){let pL=S.L0*1.6,pR=S.R0*2.2;for(const q of S.seq){if(age<q.t1){x=smooth((age-q.t0)/(q.t1-q.t0));L=lerpLog(pL,q[1],x);R=lerpLog(pR,q[2],x);ph=q[3];break;}pL=q[1];pR=q[2];}}
+    else{const tc=age-S.tSN;M=S.Mf;if(S.heavy)return{L:1e-6,R:1e-4,T:1e6,M,ph:tc<3e4?'sn':'bh',cp:1};return{L:1e-4,R:1.5e-5,T:clamp(2e6*Math.pow((tc+1e3)/1e5,-0.3),1e4,2e6),M,ph:tc<3e4?'sn':'ns',cp:1};}
+  }
+  return{L,R,T:teffOf(L,R),M,ph,cp};
+}
+
+/* ---------- 시간 ---------- */
+function makeNodes(S){
+  let n;const k=S.kind;
+  if(k==='normal'){const t=S.tMS;n=[[0,0],[Math.min(1e7,.03*t),5],[Math.min(1e8,.1*t),14],[Math.min(1e9,.25*t),22],[.97*t,62],[t,65],[S.tSG,70],[S.tRGB,80],[S.tHB,84],[S.tAGB,90],[S.tPN,95],[S.tPN+1e10,103],[S.tPN+1e12,111],[S.tPN+1e14,119],[1e18,127]];}
+  else if(k==='red'){n=[[0,0],[1e7,5],[1e8,14],[1e9,22],[.97*S.tMS,62],[S.tMS,66],[S.tBD,76],[S.tC,81],[S.tC+1e10,89],[S.tC+1e12,97],[S.tC+1e14,105],[1e18,113]];}
+  else if(k==='bd'){n=[[0,0],[1e7,5],[1e8,12],[1e9,22],[1e10,34],[1e11,44],[1e12,52],[1e14,60],[1e18,70]];}
+  else{n=[[0,0],[1e5,4],[1e6,10],[.95*S.tMS,24],[S.tMS,28]];let sec=28;for(const q of S.seq){sec+=6;n.push([q.t1,sec]);}n.push([S.tSN+3e4,sec+6]);n.push([S.tSN+1e6,sec+13]);n.push([S.tSN+1e8,sec+20]);n.push([1e9,sec+26]);}
+  for(let i=1;i<n.length;i++)n[i][2]=n[i-1][0]>0&&n[i][0]/n[i-1][0]>30;
+  return n;
+}
+function ageAt(N,sec){if(sec<=0)return 0;for(let i=1;i<N.length;i++){if(sec<=N[i][1]){const a=N[i-1],b=N[i],x=(sec-a[1])/(b[1]-a[1]);return b[2]?lerpLog(a[0],b[0],x):lerp(a[0],b[0],x);}}return N[N.length-1][0];}
+function secAt(N,age){if(age<=0)return 0;for(let i=1;i<N.length;i++){if(age<=N[i][0]){const a=N[i-1],b=N[i];const x=b[2]?Math.log(age/a[0])/Math.log(b[0]/a[0]):(age-a[0])/(b[0]-a[0]);return lerp(a[1],b[1],x);}}return N[N.length-1][1];}
+const UNITS_EN=[[1e17,1e15,'QDY'],[1e14,1e12,'TY'],[1e11,1e9,'BY'],[0,1e6,'MY']];
+function counterParts(age){
+  if(SV.set.unit){
+    if(age<1e8)return[fmtN(Math.floor(age/1e4)),'만 년'];if(age<1e12)return[fmtN(Math.floor(age/1e8)),'억 년'];if(age<1e16)return[fmtN(Math.floor(age/1e12)),'조 년'];return[fmtN(Math.floor(age/1e16)),'경 년'];
+  }
+  for(const u of UNITS_EN)if(age>=u[0]){const v=age/u[1];const dec=SIM&&SIM.sys.star.kind==='massive'&&v<100;return[dec?v.toFixed(1):String(Math.floor(v)),u[2]];}
+}
+function fmtAge(age){const[a,b]=counterParts(age);return a+(SV.set.unit?'':' ')+b;}
+
+/* ---------- 행성 ---------- */
+const LK={forming:0,magma:1,steam:2,ocean:3,life:4,green:5,ice:6,desert:7,barren:8,hot:9,gas:10,hotgas:11,icegiant:12};
+const LK_NAME=['만들어지는 중','마그마 바다','두꺼운 수증기 대기','바다','생명이 사는 바다','식물로 덮인 땅','얼음','사막','메마른 바위','뜨거운 바위','가스 행성','뜨거운 가스 행성','얼음 거인'];
+const MOON_COL=['#9a9a9a','#b5ada0','#d8d8d0','#8a8070','#c9b89a'];
+const RING_COL=['#c8b48a','#a89a80','#9a8ab0','#b0b8c0','#c09a7a'];
+const GAS_PAL=[['#c9a46b','#8e6a3a','#ead4a8'],['#d8c48a','#b39a5c','#f0e4bc'],['#c97b4a','#8a4a2a','#eab08a'],['#b06ad6','#7a3fa0','#dcaaf2'],['#d98aa8','#a85878','#f2c2d2'],['#9aa060','#6a7038','#c9cd92']];
+const ICE_PAL=[['#6fd3e0','#3fa8b8','#b8eef5'],['#4a78d8','#2a4ea8','#9cb9f0'],['#9a9ae0','#6a6ab8','#cacaf5'],['#5fc9a8','#2f9a80','#aaecd8']];
+const OCEAN=['#2766c9','#1f5bb8','#2b72d4','#1d6aa8'],LAND=['#8b7b4e','#9a8458','#7d6a48'],DESERT=['#c98f55','#c27a48','#d0a068'],BARREN=['#8c8984','#7f7a74','#9a958c'];
+
+function sysName(R,key){const T=TYPES[key];
+  if(T.kind==='bd')return(R()<0.5?'WISE J':'2MASS J')+String(R.int(0,2359)).padStart(4,'0')+(R()<0.5?'+':'-')+String(R.int(0,8999)).padStart(4,'0');
+  if(key==='M')return R.pick(['Gliese ','GJ ','LHS ','Ross ','Wolf '])+R.int(100,4999);
+  return R.pick(['HD ','HIP ','Kepler-','TOI-','HD '])+R.int(100,99999);}
+
+function makePlanets(sys,R){
+  const S=sys.star,T=S.T;if(S.kind==='massive')return[];
+  let n0=T.pl[0],n1=T.pl[1];if(SV.owned.many&&SV.set.many){n0+=1;n1+=2;}
+  const n=R.int(n0,n1),fT=sys.fT;
+  const snow=S.kind==='bd'?0.012*Math.sqrt(T.M/0.05):2.7*Math.sqrt(T.L0*1.3);
+  const P=[];let a=T.aIn*R.range(0.8,1.25);
+  const hot='GFK'.includes(S.key)&&R()<0.07;
+  const mr=S.key==='M'?[-1.1,0.6]:S.kind==='bd'?[-1.4,0]:[-1.1,0.85];
+  for(let i=0;i<n;i++){
+    let kind='rock';
+    if(i===0&&hot)kind='gas';else if(a>snow*0.85&&R()<T.pG)kind=R()<0.55?'gas':'ice';
+    if(S.key==='B'&&R()<0.5)kind=R()<0.7?'gas':'ice';
+    const p={kind,a0:a,seed:(R()*1e9)|0};
+    p.m=kind==='rock'?Math.pow(10,R.range(mr[0],mr[1])):kind==='gas'?Math.pow(10,R.range(1.8,3.1)):R.range(9,26);
+    P.push(p);a*=kind==='rock'?R.range(1.25,1.6):R.range(1.4,1.9);
+  }
+  const Lm=S.kind==='bd'?S.at(3e8).L:S.at(Math.min(S.tMS*0.3,3e9)).L,hzC=Math.sqrt(Lm);
+  const rocks=P.filter(p=>p.kind==='rock'&&p.m>0.25);
+  if(rocks.length&&!rocks.some(p=>p.a0>0.72*hzC&&p.a0<1.28*hzC)&&R()<0.75){let best=rocks[0],bd=1e9;for(const p of rocks){const d=Math.abs(Math.log(p.a0/hzC));if(d<bd){bd=d;best=p;}}const f=hzC*R.range(0.9,1.1)/best.a0;for(const p of P)p.a0*=f;}
+  P.sort((x,y)=>x.a0-y.a0);
+  P.forEach((p,i)=>{
+    p.id=i;p.letter='bcdefghijklm'[i];p.extra=false;p.mergeHist=[];
+    if(p.kind==='gas'){p.tStart=R.range(2e5,1e6);p.tFull=R.range(3e6,9e6);p.pal=R.pick(GAS_PAL);}
+    else if(p.kind==='ice'){p.tStart=R.range(5e5,2e6);p.tFull=R.range(6e6,1.5e7);p.pal=R.pick(ICE_PAL);}
+    else{p.tStart=R.range(1e6,6e6)*Math.max(fT,0.3);p.tFull=R.range(3e7,1e8)*fT;}
+    p.molt=p.kind==='rock'?p.tFull+R.range(1e7,4e7)*fT:0;
+    if(p.kind==='rock'){const r=p.a0/snow,inHZ=p.a0>0.6*hzC&&p.a0<2.2*hzC;p.w=p.m<0.15?0:r>0.7?R.range(0.6,1):inHZ?(R()<0.85?R.range(0.4,0.9):0):r>0.3?(R()<0.75?R.range(0.2,0.7):0):(R()<0.35?R.range(0.05,0.3):0);p.gh=R.range(1.05,1.16);p.lifeOK=p.m>=0.25&&R()<0.8;p.lifeDelay=R.range(2.5e8,1.2e9);p.oc=R.pick(OCEAN);p.land=R.pick(LAND);p.ds=R.pick(DESERT);p.br=R.pick(BARREN);}
+    else p.w=0;
+    p.moons=[];const nm=p.kind==='gas'?R.int(1,4):p.kind==='ice'?R.int(0,3):(R()<0.15?1:0);
+    for(let k=0;k<nm;k++)p.moons.push({tForm:p.tFull*R.range(0.9,1.4)*(p.kind==='rock'?R.range(1,3):1),size:R.range(0.5,1),col:R.pick(MOON_COL)});
+    if(p.kind!=='rock'&&R()<0.45){const t0=p.tFull*R.range(1.5,6);p.ring={t0,t1:R()<0.35?Infinity:t0*R.logr(3,60),col:R.pick(RING_COL)};}
+    p.tEj=Math.pow(10,R.range(14.2,17.8));
+  });
+  const pairs=[];for(let j=0;j+1<P.length;j++)if(P[j].kind==='rock'&&P[j+1].kind==='rock')pairs.push(j);
+  const ne=Math.min(pairs.length,R.int(1,2)),ex=[];
+  for(let k=0;k<ne;k++){const j=pairs.splice(R.int(0,pairs.length-1),1)[0],A=P[j],B=P[j+1];
+    const e={kind:'rock',extra:true,a0:Math.sqrt(A.a0*B.a0)*R.range(0.96,1.04),m:R.range(0.05,0.35),seed:(R()*1e9)|0,target:R()<0.5?A.id:B.id,tStart:R.range(1e6,5e6)*Math.max(fT,0.3),tMerge:R.range(1.5e7,9e7)*fT,moons:[],mergeHist:[],w:0,letter:'',molt:Infinity,tEj:Infinity};
+    e.tFull=e.tMerge*0.7;
+    const tg=P[e.target];tg.mergeHist.push([e.tMerge,e.m]);if(R()<0.45)tg.moons.push({tForm:e.tMerge+2e6*fT,size:R.range(0.5,0.9),col:R.pick(MOON_COL),impact:true});
+    ex.push(e);}
+  ex.forEach(e=>{e.id=P.length;P.push(e);});
+  return P;
+}
+function stepPlanet(sys,p,i,age,sec,dA,s,ev){
+  if(p.dead)return;
+  if(age<p.tStart)return;
+  if(p.extra&&age>=p.tMerge){p.dead='merge';p.deadSec=sec;p.deadAge=age;const tg=sys.planets[p.target];if(!tg.dead)tg.molt=Math.max(tg.molt,age+2.5e7*sys.fT);ev(age,sec,'원시 행성이 {P}와 부딪쳐 하나로 합쳐졌습니다.',tg.id,'planet');return;}
+  const a=p.a0*sys.star.M0/s.M;
+  if(age>p.tStart+1e5&&s.cp<0.5&&s.R*RS_AU>=0.85*a){p.dead='engulf';p.deadSec=sec;p.deadAge=age;p.deadA=a;p.deadLook=p.prevLk;ev(age,sec,'{P}가 부풀어 오른 별에 삼켜졌습니다.',p.id,'bad');return;}
+  if(age>=p.tEj){p.dead='eject';p.deadSec=sec;p.deadAge=age;p.deadA=a;p.deadLook=p.prevLk;ev(age,sec,'옆을 지나가던 별 때문에 {P}가 행성계 밖으로 튕겨 나갔습니다.',p.id,'bad');return;}
+  p.alive[i]=1;
+  if(!p.extra&&!p.bornEv&&age>=p.tFull){p.bornEv=1;ev(age,sec,'{P}가 다 자랐습니다.',p.id,'planet');}
+  for(const mo of p.moons)if(mo.impact&&!mo.ev&&age>=mo.tForm){mo.ev=1;ev(age,sec,'부딪쳐 튀어나간 조각이 모여 {P}에 위성이 생겼습니다.',p.id,'planet');}
+  if(p.ring){if(!p.ring.e0&&age>=p.ring.t0){p.ring.e0=1;ev(age,sec,'위성 하나가 부서져 {P}에 고리가 생겼습니다.',p.id,'planet');}if(!p.ring.e1&&age>=p.ring.t1){p.ring.e1=1;ev(age,sec,'{P}의 고리가 흩어져 사라졌습니다.',p.id,'planet');}}
+  let Tk=278*Math.pow(s.L,0.25)/Math.sqrt(a),lk,Tc;
+  if(p.kind==='rock'){
+    let g=p.w>0?p.gh:1;if(p.w>0&&Tk*g>340)g*=1+Math.min(1.2,(Tk*g-340)/120);
+    Tk*=g;if(age<p.molt)Tk=Math.max(Tk,1500);Tc=Tk-273;
+    if(age<p.molt||Tc>1100)lk=age<p.tFull?LK.forming:LK.magma;
+    else if(p.w>0){
+      if(Tc>100){lk=LK.steam;p.w-=dA/1.5e9;if(p.w<=0){p.w=0;ev(age,sec,'{P}의 바다가 모두 끓어 우주로 날아갔습니다.',p.id,'bad');}}
+      else if(Tc>=0)lk=LK.ocean;else lk=LK.ice;
+    }else lk=Tc>350?LK.hot:Tc>-40?LK.desert:LK.barren;
+    const pl=p.prevLk;
+    if(!p.extra){
+      if(lk===LK.ocean&&pl!==undefined&&pl!==LK.ocean&&pl!==LK.life&&pl!==LK.green)ev(age,sec,pl===LK.ice?'{P}의 얼음이 녹아 바다가 생겼습니다.':'{P}에 비가 내려 바다가 생겼습니다.',p.id,'life');
+      if(lk===LK.ice&&(pl===LK.ocean||pl===LK.life||pl===LK.green))ev(age,sec,'{P}의 바다가 꽁꽁 얼었습니다.',p.id,'planet');
+      if(lk===LK.ocean){if(p.oceanSince==null)p.oceanSince=age;if(!p.life&&p.lifeOK&&age-p.oceanSince>p.lifeDelay){p.life=age;ev(age,sec,'{P}의 바다에서 생명이 나타났습니다.',p.id,'life');}}else p.oceanSince=null;
+      if(p.life){if(lk!==LK.ocean||Tc>60||Tc<-15){p.life=0;p.oceanSince=null;ev(age,sec,'{P}의 생명이 모두 사라졌습니다.',p.id,'bad');}else if(age-p.life>1.2e9){lk=LK.green;if(!p.greenEv){p.greenEv=1;ev(age,sec,'{P}의 땅이 식물로 덮였습니다.',p.id,'life');}}else lk=LK.life;}
+    }
+  }else{
+    Tk=Math.max(Tk,p.kind==='gas'?110:60,1200*Math.pow(Math.max(age,1e5)/1e6,-0.35));Tc=Tk-273;
+    lk=Tc>700?LK.hotgas:(p.kind==='gas'?LK.gas:LK.icegiant);
+  }
+  p.look[i]=lk;p.tcA[i]=Tc;p.prevLk=lk;
+}
+function buildSystem(key,variant,seed){
+  const R=RNG(seed),S=makeStar(key,variant),nodes=makeNodes(S);
+  const sys={key,variant,seed,T:TYPES[key],star:S,nodes,end:nodes[nodes.length-1][1],name:sysName(R,key),DT:1/30};
+  sys.fT=S.kind==='normal'?Math.min(1,S.tMS/1.5e9):1;
+  sys.tf2=S.kind==='normal'?Math.min(1e8,.1*S.tMS):S.kind==='massive'?1e6:1e8;
+  sys.tf3=S.kind==='normal'?Math.min(1e9,.25*S.tMS):S.kind==='massive'?3e6:1e9;
+  sys.planets=makePlanets(sys,R);
+  sys.Lref=S.kind==='bd'?S.at(1e9).L:S.kind==='massive'?S.L0:S.T.L0;
+  const NS=Math.ceil(sys.end/sys.DT)+2;sys.NS=NS;
+  for(const p of sys.planets){p.look=new Int8Array(NS);p.alive=new Uint8Array(NS);p.tcA=new Float32Array(NS);}
+  const evs=[],ev=(age,sec,txt,pid,kind)=>evs.push({age,sec,txt,pid,kind});
+  let prevPh=null,prevAge=0;
+  for(let i=0;i<NS;i++){
+    const sec=Math.min(sys.end,i*sys.DT),age=ageAt(nodes,sec),s=S.at(age);
+    if(s.ph!==prevPh){if(PH_EV[s.ph])ev(age,sec,PH_EV[s.ph],-1,'star');prevPh=s.ph;}
+    const dA=Math.max(0,age-prevAge);prevAge=age;
+    for(const p of sys.planets)stepPlanet(sys,p,i,age,sec,dA,s,ev);
+  }
+  for(const p of sys.planets)if(p.extra){p.mergeSec=secAt(nodes,p.tMerge);const h=sys.planets[p.target].mergeHist.find(q=>q[0]===p.tMerge);if(h)h[2]=Math.max(p.tMerge*1.0001,ageAt(nodes,p.mergeSec+0.9));}
+  if(S.kind==='massive'){const a=1.2e6;ev(a,secAt(nodes,a),'별빛이 너무 강해서 주위의 원반이 날아가 버렸습니다. 행성은 생기지 못했습니다.',-1,'planet');ev(S.tMS*0.4,secAt(nodes,S.tMS*0.4),'별빛이 가스 구름을 밀어내 큰 거품이 생겼습니다.',-1,'planet');}
+  evs.sort((a,b)=>a.sec-b.sec);sys.events=evs;
+  return sys;
+}
+
+/* ---------- 그림 도구 ---------- */
+const TEX=new Map();
+function paintBlobs(g,R,r,col,n,s0,s1,al){g.fillStyle=col;g.globalAlpha=al;for(let i=0;i<n;i++){const an=R()*6.283,dd=Math.sqrt(R())*r*0.95,x=Math.cos(an)*dd,y=Math.sin(an)*dd,sz=R.range(s0,s1)*r,k=3+(R()*4|0);for(let j=0;j<k;j++){g.beginPath();g.arc(x+R.range(-.6,.6)*sz,y+R.range(-.4,.4)*sz,sz*R.range(.4,.8),0,6.283);g.fill();}}g.globalAlpha=1;}
+function paintBands(g,R,r,cols,al,wav){let y=-r,k=0;while(y<r){const h=R.range(.07,.17)*r;g.fillStyle=cols[k%cols.length];g.globalAlpha=al;const ph=R()*6.28,amp=wav*r*R.range(.02,.06),fr=R.range(2,5)/r;g.beginPath();g.moveTo(-r,y);for(let x=-r;x<=r;x+=r/10)g.lineTo(x,y+Math.sin(x*fr+ph)*amp);for(let x=r;x>=-r;x-=r/10)g.lineTo(x,y+h+Math.sin(x*fr+ph+1)*amp);g.closePath();g.fill();y+=h;k++;}g.globalAlpha=1;}
+function paintClouds(g,R,r,n,al){g.strokeStyle='#fff';g.lineCap='round';for(let i=0;i<n;i++){g.globalAlpha=al*R.range(.5,1);g.lineWidth=Math.max(.8,r*R.range(.05,.12));const y=R.range(-.8,.8)*r,x=R.range(-.8,.5)*r,len=R.range(.3,.8)*r;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+len/2,y+R.range(-.15,.15)*r,x+len,y+R.range(-.1,.1)*r);g.stroke();}g.globalAlpha=1;}
+function paintCraters(g,R,r,n,dark,light){for(let i=0;i<n;i++){const an=R()*6.283,dd=Math.sqrt(R())*r*.9,x=Math.cos(an)*dd,y=Math.sin(an)*dd,s=R.range(.05,.16)*r;g.fillStyle=light;g.globalAlpha=.6;g.beginPath();g.arc(x+s*.15,y+s*.15,s,0,6.283);g.fill();g.fillStyle=dark;g.globalAlpha=.85;g.beginPath();g.arc(x,y,s*.85,0,6.283);g.fill();}g.globalAlpha=1;}
+function paintCracks(g,R,r,col,n,lw,al){g.strokeStyle=col;g.globalAlpha=al;g.lineWidth=Math.max(.6,lw*r);g.lineJoin='round';for(let i=0;i<n;i++){let x=R.range(-.9,.9)*r,y=R.range(-.9,.9)*r,a=R()*6.28;g.beginPath();g.moveTo(x,y);const m=3+(R()*4|0);for(let j=0;j<m;j++){a+=R.range(-1,1);x+=Math.cos(a)*r*.18;y+=Math.sin(a)*r*.18;g.lineTo(x,y);}g.stroke();}g.globalAlpha=1;}
+function paintCaps(g,r,col,s){g.fillStyle=col;g.beginPath();g.ellipse(0,-r,r*.7*s,r*.28*s,0,0,6.283);g.fill();g.beginPath();g.ellipse(0,r,r*.6*s,r*.22*s,0,0,6.283);g.fill();}
+function planetTex(p,lk,r){
+  r=Math.max(2,Math.round(r));const key=SIM.sys.seed+'|'+p.id+'|'+lk+'|'+r;let c=TEX.get(key);if(c)return c;
+  if(TEX.size>500)TEX.clear();
+  const s=r*2+2;c=document.createElement('canvas');c.width=c.height=Math.ceil(s*DPR);
+  const g=c.getContext('2d');g.scale(DPR,DPR);g.translate(r+1,r+1);g.beginPath();g.arc(0,0,r,0,6.283);g.clip();
+  const R=RNG(p.seed*7+lk*131),base=col=>{g.fillStyle=col;g.fillRect(-r-1,-r-1,2*r+2,2*r+2);};
+  switch(lk){
+    case LK.forming:base('#ffb547');paintBlobs(g,R,r,'#c2410c',6,.15,.35,.6);paintCracks(g,R,r,'#fff0a0',4,.05,.7);break;
+    case LK.magma:base('#ff7a14');paintBlobs(g,R,r,'#4a1d0b',8,.18,.42,.85);paintCracks(g,R,r,'#ffd34a',6,.045,.9);break;
+    case LK.steam:base('#e5d29a');paintBands(g,R,r,['#d5bd80','#f3e7c2','#cbb176'],.55,1.4);paintClouds(g,R,r,5,.35);break;
+    case LK.ocean:base(p.oc);paintBlobs(g,R,r,p.land,5,.12,.3,1);paintCaps(g,r,'#f2f6fa',.9);paintClouds(g,R,r,6,.55);break;
+    case LK.life:base(p.oc);paintBlobs(g,R,r,'#3b9a3e',5,.12,.3,1);paintBlobs(g,R,r,'#2c7a30',3,.06,.14,.9);paintCaps(g,r,'#f2f6fa',.8);paintClouds(g,R,r,6,.55);break;
+    case LK.green:base('#43b347');paintBlobs(g,R,r,'#2e8a35',7,.12,.3,.9);paintBlobs(g,R,r,p.oc,3,.06,.14,1);paintClouds(g,R,r,5,.5);break;
+    case LK.ice:base('#e8f0f6');paintBlobs(g,R,r,'#cddbe6',6,.12,.3,.8);paintCracks(g,R,r,'#a8bfd2',5,.025,.8);break;
+    case LK.desert:base(p.ds);paintBlobs(g,R,r,shade(p.ds,-.18),6,.12,.32,.8);paintBlobs(g,R,r,shade(p.ds,.15),4,.08,.2,.6);paintCraters(g,R,r,3,shade(p.ds,-.3),shade(p.ds,.2));break;
+    case LK.barren:base(p.br);paintBlobs(g,R,r,shade(p.br,-.12),5,.12,.3,.6);paintCraters(g,R,r,9,shade(p.br,-.25),shade(p.br,.18));break;
+    case LK.hot:base('#5a3427');paintBlobs(g,R,r,'#3a1f16',6,.15,.35,.8);paintCracks(g,R,r,'#e0602a',6,.035,.85);break;
+    case LK.gas:base(p.pal[0]);paintBands(g,R,r,[p.pal[1],p.pal[2],p.pal[0]],.75,1);g.fillStyle=p.pal[1];g.globalAlpha=.7;g.beginPath();g.ellipse(R.range(-.4,.4)*r,R.range(-.5,.5)*r,.18*r,.1*r,0,0,6.283);g.fill();g.globalAlpha=1;break;
+    case LK.hotgas:base('#7a2a18');paintBands(g,R,r,['#a8401e','#4f1a10','#8a3418'],.8,1);break;
+    case LK.icegiant:base(p.pal[0]);paintBands(g,R,r,[p.pal[1],p.pal[2]],.3,.6);break;
+  }
+  const sh=g.createRadialGradient(-r*.45,-r*.25,r*.1,0,0,r*1.05);sh.addColorStop(0,'rgba(255,255,255,0.18)');sh.addColorStop(.55,'rgba(0,0,0,0)');sh.addColorStop(1,'rgba(0,0,0,0.45)');g.fillStyle=sh;g.fillRect(-r-1,-r-1,2*r+2,2*r+2);
+  TEX.set(key,c);return c;
+}
+const SCOL=[[300,[40,12,8]],[1000,[110,22,10]],[2200,[190,30,10]],[3200,[255,52,18]],[4000,[255,118,30]],[4800,[255,168,45]],[5600,[255,222,85]],[6400,[255,244,185]],[7500,[248,251,255]],[9500,[205,236,255]],[13000,[155,215,255]],[22000,[120,172,255]],[40000,[95,140,255]],[2e5,[170,195,255]],[1e7,[200,215,255]]];
+function starRGB(T){let c;if(T<=SCOL[0][0])c=SCOL[0][1].slice();else{c=SCOL[SCOL.length-1][1].slice();for(let i=1;i<SCOL.length;i++)if(T<=SCOL[i][0]){const[t0,c0]=SCOL[i-1],[t1,c1]=SCOL[i];c=mixC(c0,c1,Math.log(T/t0)/Math.log(t1/t0));break;}}if(T<1500)c=mixC(c,[38,36,40],clamp((1500-T)/1200,0,1));return c;}
+const BCOL=[[100,[28,20,26]],[500,[80,35,70]],[1300,[160,52,110]],[2000,[205,62,40]],[2900,[235,85,40]]];
+function bdRGB(T){if(T<=BCOL[0][0])return BCOL[0][1].slice();for(let i=1;i<BCOL.length;i++)if(T<=BCOL[i][0]){const[t0,c0]=BCOL[i-1],[t1,c1]=BCOL[i];return mixC(c0,c1,(T-t0)/(t1-t0));}return BCOL[BCOL.length-1][1].slice();}
+
+let GRAN=null,GRANP=null;
+function makeGran(){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');const R=RNG(77);g.fillStyle='#808080';g.fillRect(0,0,256,256);for(let i=0;i<900;i++){const x=R()*256,y=R()*256,r=R.range(3,12),v=R()<0.5?255:0;for(const ox of[-256,0,256])for(const oy of[-256,0,256]){const gr=g.createRadialGradient(x+ox,y+oy,0,x+ox,y+oy,r);gr.addColorStop(0,`rgba(${v},${v},${v},0.22)`);gr.addColorStop(1,`rgba(${v},${v},${v},0)`);g.fillStyle=gr;g.fillRect(x+ox-r,y+oy-r,2*r,2*r);}}GRAN=c;GRANP=ctx.createPattern(c,'repeat');}
+
+/* ---------- 배경 ---------- */
+let BGSTARS=[],DUST=[],NEB=null,VEIL=null;
+function makeBG(){
+  const R=RNG(4242);BGSTARS=[];const n=Math.floor(W*H/900);for(let i=0;i<n;i++)BGSTARS.push([R()*W,R()*H,R.range(.2,.9),R()<.1?1.6:1]);
+  const nd=Math.floor(clamp(W*H/320,900,3400));
+  if(DUST.length!==nd){DUST=[];const D=RNG(99);for(let i=0;i<nd;i++)DUST.push({x:D(),y:D(),s:D()<.25?1.8:1.1,b:D.range(.35,.95),vx:D.range(.002,.008),vy:D.range(-.002,.002)});}
+}
+function stepDust(dt){for(const d of DUST){d.x+=d.vx*dt;d.y+=d.vy*dt;if(d.x>1)d.x-=1;if(d.y<0)d.y+=1;if(d.y>1)d.y-=1;}}
+function buildNebula(){
+  const sys=SIM.sys,R=RNG(sys.seed^0x5151),w=Math.ceil(W/2),h=Math.ceil(H/2);
+  NEB=document.createElement('canvas');NEB.width=w;NEB.height=h;let g=NEB.getContext('2d');const col=hexRGB(sys.T.neb);
+  const massive=sys.star.kind==='massive';
+  for(let i=0;i<90;i++){const x=massive?w/2+R.range(-.6,.6)*w:R()*w,y=massive?h/2+R.range(-.6,.6)*h:R()*h,rad=R.range(.08,.35)*h;const gr=g.createRadialGradient(x,y,0,x,y,rad);const c=mixC(col,[255,255,255],R.range(-.1,.25));gr.addColorStop(0,rgba(c,R.range(.05,.15)));gr.addColorStop(1,rgba(c,0));g.fillStyle=gr;g.fillRect(x-rad,y-rad,2*rad,2*rad);}
+  for(let i=0;i<22;i++){const x=R()*w,y=R()*h,rad=R.range(.05,.2)*h;const gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,'rgba(0,0,0,0.35)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,2*rad,2*rad);}
+  VEIL=document.createElement('canvas');VEIL.width=w;VEIL.height=h;g=VEIL.getContext('2d');
+  for(let i=0;i<46;i++){const t=R(),x=t*w,y=h*(0.15+0.7*t)+R.range(-.18,.18)*h,rad=R.range(.1,.26)*h;const gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,`rgba(200,200,210,${R.range(.04,.09)})`);gr.addColorStop(1,'rgba(200,200,210,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,2*rad,2*rad);}
+}
+function drawDust(dens,clearX,cx,cy,cr){
+  const n=Math.floor(DUST.length*dens*(SV.set.dust===2?1:SV.set.dust===1?.45:0));if(n<=0)return;
+  ctx.fillStyle='#fff';
+  for(let k=0;k<n;k++){const d=DUST[k],x=d.x*W,y=d.y*H;if(x<clearX)continue;if(cr&&(x-cx)**2+(y-cy)**2<cr*cr)continue;ctx.globalAlpha=d.b;ctx.fillRect(x,y,d.s,d.s);}
+  ctx.globalAlpha=1;
+}
+
+/* ---------- 타임라인 ---------- */
+let SIM=null;
+function pradBase(p,m){if(p.kind==='rock')return clamp(H*0.034*Math.pow(m,0.2),6,H*0.06);if(p.kind==='ice')return H*0.06*Math.pow(m/15,0.12);return H*0.085*Math.pow(m/318,0.07);}
+function massNow(p,age){let m=p.m;for(const[t,dm,t1]of p.mergeHist)if(age>=t)m+=dm*(t1?smooth((age-t)/(t1-t)):1);return m;}
+function pradNow(p,age){const g=clamp((age-p.tStart)/Math.max(1,p.tFull-p.tStart),0,1);return pradBase(p,massNow(p,age))*(0.18+0.82*Math.sqrt(g));}
+function layoutSim(){
+  const sys=SIM.sys,T=sys.T;SIM.edge=W*(T.edge||.08);SIM.cx=SIM.edge*0.45;SIM.rScale=1;
+  const main=sys.planets.filter(p=>!p.extra).sort((a,b)=>a.a0-b.a0);
+  if(!main.length){SIM.pts=[];SIM.k=W*0.3;return;}
+  const rs=main.map(p=>pradBase(p,massNow(p,1e18)));
+  const X0=SIM.edge+W*0.04+rs[0],X1=Math.min(W*0.94-rs[rs.length-1],X0+(W*0.94-X0)*0.68);
+  const la=main.map(p=>Math.log10(p.a0)),lmin=la[0],lmax=la[la.length-1];
+  let xs=main.map((p,i)=>main.length===1?X0+(X1-X0)*0.35:lerp(X0+(X1-X0)*(la[i]-lmin)/(lmax-lmin||1),X0+(X1-X0)*i/(main.length-1),0.4));
+  const gap=W*0.012;
+  for(let it=0;it<3;it++){for(let i=1;i<xs.length;i++){const need=xs[i-1]+rs[i-1]+rs[i]+gap;if(xs[i]<need)xs[i]=need;}const over=xs[xs.length-1]+rs[rs.length-1]-(W-8);if(over>0&&xs.length>1){const span=xs[xs.length-1]-xs[0],tgt=Math.max(10,span-over);for(let i=1;i<xs.length;i++)xs[i]=xs[0]+(xs[i]-xs[0])*tgt/span;}}
+  let minK=1;for(let i=1;i<xs.length;i++)minK=Math.min(minK,(xs[i]-xs[i-1]-gap*0.5)/(rs[i]+rs[i-1]));SIM.rScale=clamp(minK,0.45,1);
+  SIM.pts=main.map((p,i)=>[la[i],xs[i]]);SIM.k=main.length>1?(xs[xs.length-1]-xs[0])/Math.max(0.6,lmax-lmin):(X1-X0)/1.5;
+}
+function fx(a){const l=Math.log10(Math.max(1e-12,a)),P=SIM.pts;if(!P.length)return W*0.5+(l+1)*SIM.k;if(l<=P[0][0])return P[0][1]-(P[0][0]-l)*SIM.k;const L=P[P.length-1];if(l>=L[0])return L[1]+(l-L[0])*SIM.k;for(let i=1;i<P.length;i++)if(l<=P[i][0]){const t=(l-P[i-1][0])/(P[i][0]-P[i-1][0]||1);return lerp(P[i-1][1],P[i][1],t);}return L[1];}
+function envAt(age){const sys=SIM.sys,S=sys.star;let neb=age<sys.tf2?lerp(1,0.3,age/sys.tf2):age<sys.tf3?lerp(0.3,0,(age-sys.tf2)/(sys.tf3-sys.tf2)):0;let dust=age<sys.tf2?1:age<S.tEnd?0.6:clamp(1-Math.log10((age-S.tEnd)/1e9+1)/3,0,1)*0.5;return{neb,dust,veil:dust*0.8};}
+function lightF(s){const sys=SIM.sys;let lf=clamp(1+0.2*Math.log10(Math.max(1e-30,s.L/sys.Lref)),0.1,1);if(s.ph==='bk'||s.ph==='bdX')lf=Math.min(lf,0.08);return lf;}
+const sampleI=sec=>clamp(Math.round(sec/SIM.sys.DT),0,SIM.sys.NS-1);
+
+function drawSim(sec,now){
+  const sys=SIM.sys,S=sys.star,age=ageAt(sys.nodes,sec),s=S.at(age);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(S.kind==='massive'){drawMassive(sec,age,s,now);drawCounter(age);return;}
+  const env=envAt(age);
+  if(SV.set.neb&&env.neb>0.003){ctx.globalAlpha=env.neb;ctx.drawImage(NEB,Math.sin(now*4e-5)*W*0.015-W*0.02,0,W*1.04,H);ctx.globalAlpha=1;}
+  if(SV.set.neb&&env.veil>0.003){ctx.globalAlpha=env.veil;ctx.drawImage(VEIL,0,0,W,H);ctx.globalAlpha=1;}
+  const vw=Math.max(SIM.edge,fx(s.R*RS_AU));
+  if(SV.set.hz)drawHZ(s,vw);
+  drawDust(env.dust,s.cp<0.5&&vw>SIM.edge+2?vw+25:0);
+  drawPN(sec,age,s);
+  drawStar(s,vw,now);
+  drawPlanets(sec,age,s);
+  drawCounter(age);
+}
+function drawHZ(s,vw){const hzI=0.72*Math.sqrt(s.L),hzO=1.28*Math.sqrt(s.L);let x0=fx(hzI);const x1=fx(hzO),se=lerp(vw,SIM.cx+6,s.cp);x0=Math.max(x0,se);if(x1<=x0+2)return;const g=ctx.createLinearGradient(x0,0,x1,0),e=Math.min(0.2,10/(x1-x0));g.addColorStop(0,'rgba(40,160,55,0)');g.addColorStop(e,'rgba(40,160,55,.34)');g.addColorStop(1-e,'rgba(40,160,55,.34)');g.addColorStop(1,'rgba(40,160,55,0)');ctx.fillStyle=g;ctx.fillRect(x0,0,x1-x0,H);}
+function drawPN(sec,age,s){const S=SIM.sys.star;if(S.kind!=='normal'||age<S.tAGB)return;const N=SIM.sys.nodes,p0=secAt(N,S.tAGB),p1=secAt(N,S.tPN),t=(sec-p0)/(p1-p0+1.5);if(t>1||t<0)return;const x=SIM.cx,y=H/2,R=W*(0.05+0.5*smooth(t)),al=Math.sin(Math.PI*t)*0.6;for(const[k,c]of[[1,[230,80,70]],[0.7,[70,210,190]],[0.45,[120,160,255]]]){const g=ctx.createRadialGradient(x,y,R*k*0.75,x,y,R*k);g.addColorStop(0,rgba(c,0));g.addColorStop(0.7,rgba(c,al*0.6));g.addColorStop(1,rgba(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,R*k,0,6.283);ctx.fill();}}
+function drawStar(s,vw,now){
+  const sys=SIM.sys,bd=sys.star.kind==='bd',col=bd?bdRGB(s.T):starRGB(s.T);
+  const lumK=clamp(Math.log10(Math.max(1e-9,s.L/sys.Lref))/3,0,1),bigA=1-s.cp;
+  if(bigA>0.001){
+    const vwc=lerp(vw,SIM.cx,s.cp),Rp=Math.max(H*0.75,vwc*1.15),cx=vwc-Rp,cy=H/2;
+    ctx.save();ctx.globalAlpha=bigA;
+    const gw=H*(0.05+0.12*lumK)*(s.T<1500?0.3:1);
+    let g=ctx.createRadialGradient(cx,cy,Rp*0.97,cx,cy,Rp+gw);g.addColorStop(0,rgba(col,.5));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,Rp+gw,0,6.283);ctx.fill();
+    g=ctx.createRadialGradient(cx,cy,Rp*0.3,cx,cy,Rp);g.addColorStop(0,rgba(mixC(col,[255,255,255],.35),1));g.addColorStop(.82,rgba(col,1));g.addColorStop(1,rgba(mulC(col,.78),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,Rp,0,6.283);ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,Rp,0,6.283);ctx.clip();
+    if(bd){ctx.globalAlpha=bigA*0.09;for(let k=-10;k<=10;k++){ctx.fillStyle=k%2?'#000':'#fff';const y=cy+k*H*0.07+Math.sin(k*1.7+now*2e-4)*H*0.01;ctx.fillRect(0,y,vwc,H*0.035);}}
+    ctx.globalCompositeOperation='overlay';ctx.globalAlpha=bigA*(/rgb|agb|rsg/.test(s.ph)?0.75:0.45);ctx.fillStyle=GRANP;ctx.translate((now*0.003)%256,0);ctx.fillRect(-512,0,vwc+768,H);
+    ctx.restore();ctx.restore();
+  }
+  if(s.cp>0.001){const x=SIM.cx,y=H/2,rr=Math.max(3,H*0.0075),bright=s.T>2500;ctx.save();ctx.globalAlpha=s.cp;if(bright){const g=ctx.createRadialGradient(x,y,rr*0.5,x,y,rr*7);g.addColorStop(0,rgba(col,.6));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rr*7,0,6.283);ctx.fill();}ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,rr,0,6.283);ctx.fill();if(!bright){ctx.strokeStyle='rgba(120,120,130,.35)';ctx.lineWidth=1;ctx.stroke();}ctx.restore();}
+  SIM.starHitX=s.cp<0.5?vw:SIM.cx+14;
+}
+function drawRing(x,y,r,ring,half,lf){const c=hexRGB(ring.col);ctx.save();ctx.translate(x,y);ctx.rotate(-0.3);ctx.beginPath();if(half==='back')ctx.rect(-r*3,-r*3,r*6,r*3);else ctx.rect(-r*3,0,r*6,r*3);ctx.clip();ctx.scale(1,0.28);for(const[a,b,al]of[[1.35,1.6,.55],[1.62,1.95,.75],[1.98,2.15,.4]]){ctx.beginPath();ctx.arc(0,0,(a+b)/2*r,0,6.283);ctx.lineWidth=(b-a)*r;ctx.strokeStyle=rgba(mulC(c,Math.max(lf,.15)),al);ctx.stroke();}ctx.restore();}
+function drawMoon(x,y,r,col,lf){const c=mulC(hexRGB(col),Math.max(lf,.12));const g=ctx.createRadialGradient(x-r*.4,y-r*.3,r*.1,x,y,r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.2),1));g.addColorStop(1,rgba(mulC(c,.6),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();}
+function drawPlanetAt(p,lk,x,y,r,lf,age,showMoons){
+  ctx.save();
+  const hotLk=lk===LK.forming||lk===LK.magma||lk===LK.hot||lk===LK.hotgas;
+  if(hotLk){const g=ctx.createRadialGradient(x,y,r*.8,x,y,r*1.9);g.addColorStop(0,'rgba(255,120,30,.45)');g.addColorStop(1,'rgba(255,120,30,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*1.9,0,6.283);ctx.fill();}
+  const ring=p.ring&&age>=p.ring.t0&&age<p.ring.t1;
+  if(ring)drawRing(x,y,r,p.ring,'back',lf);
+  const rr=Math.max(2,Math.round(r));ctx.drawImage(planetTex(p,lk,rr),x-rr-1,y-rr-1,2*rr+2,2*rr+2);
+  if(lk===LK.ocean||lk===LK.life||lk===LK.green){ctx.strokeStyle=`rgba(150,200,255,${.35*lf})`;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(x,y,rr+.6,0,6.283);ctx.stroke();}
+  const dk=hotLk?Math.min(1,lf+0.5):lf;
+  if(dk<0.995){ctx.fillStyle=`rgba(0,0,0,${1-dk})`;ctx.beginPath();ctx.arc(x,y,rr+1,0,6.283);ctx.fill();}
+  if(ring)drawRing(x,y,r,p.ring,'front',lf);
+  if(showMoons){const ms=p.moons.filter(m=>age>=m.tForm);ms.forEach((m,k)=>{const mr=Math.max(2.2,H*0.0075*m.size+1.2);drawMoon(x+(k-(ms.length-1)/2)*mr*3.4+r*0.25,y-r-mr*2.6-(k%2)*mr*1.6-(ring?r*0.2:0),mr,m.col,lf);});}
+  if(SIM.sel&&SIM.sel.p===p){ctx.strokeStyle='rgba(255,255,255,.8)';ctx.setLineDash([4,4]);ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+6,0,6.283);ctx.stroke();ctx.setLineDash([]);}
+  ctx.restore();
+}
+function drawPlanets(sec,age,s){
+  const sys=SIM.sys,S=sys.star,i=sampleI(sec),lf=lightF(s),y=H/2;SIM.hits=[];
+  for(const p of sys.planets){
+    if(p.dead&&sec>=p.deadSec){
+      const t=sec-p.deadSec;
+      if(p.dead==='engulf'&&t<1){const x=fx(p.deadA),r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=1-t;ctx.strokeStyle='#ffb040';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r*(1+t*2.5),0,6.283);ctx.stroke();ctx.restore();}
+      else if(p.dead==='eject'&&t<1.6){const x=fx(p.deadA*S.M0/s.M*s.M/S.M0)+t*t*W*0.35,r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=clamp(1-t/1.6,0,1);drawPlanetAt(p,p.deadLook==null?LK.barren:p.deadLook,x,y,r,lf,p.deadAge,false);ctx.restore();}
+      else if(p.dead==='merge'&&t<1.2){const tg=sys.planets[p.target],x=fx(tg.a0*S.M0/s.M),r=pradNow(tg,age)*SIM.rScale*(1.4+t*1.2);const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(255,235,190,${0.55*Math.pow(1-t/1.2,1.5)})`);g.addColorStop(1,'rgba(255,160,60,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();}
+      continue;
+    }
+    if(age<p.tStart||!p.alive[i])continue;
+    let x=fx(p.a0*S.M0/s.M);const r=pradNow(p,age)*SIM.rScale;
+    let rr=r;if(p.extra){const D=2.5,t0=p.mergeSec-D;if(sec>t0){const tg=sys.planets[p.target],u=clamp((sec-t0)/D,0,1);x=lerp(x,fx(tg.a0*S.M0/s.M),u*u*(3-2*u));rr=r*(1-0.7*smooth((u-0.8)/0.2));}}
+    drawPlanetAt(p,p.look[i],x,y,rr,lf,age,true);
+    SIM.hits.push({p,x,y,r});
+  }
+}
+function drawMassive(sec,age,s,now){
+  const sys=SIM.sys,S=sys.star,cx=W/2,cy=H/2,tSNs=secAt(sys.nodes,S.tSN);
+  const bub=W*0.55*Math.pow(smooth(Math.min(1,age/S.tMS)),0.6);
+  if(SV.set.neb){ctx.globalAlpha=sec<tSNs?1:clamp(1-(sec-tSNs)/20,0.25,1);ctx.drawImage(NEB,0,0,W,H);ctx.globalAlpha=1;
+    if(bub>4){const g=ctx.createRadialGradient(cx,cy,0,cx,cy,bub);g.addColorStop(0,'rgba(0,0,0,0.92)');g.addColorStop(0.75,'rgba(0,0,0,0.6)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,bub,0,6.283);ctx.fill();}}
+  drawDust(sec<tSNs?0.8:0.5,0,cx,cy,bub*0.6);
+  SIM.hits=[];
+  if(age<S.tSN){
+    const col=starRGB(s.T),rr=H*(0.006+0.012*Math.log10(s.R+1)),vis=smooth(age/1e5);
+    let g=ctx.createRadialGradient(cx,cy,rr*.5,cx,cy,rr*6);g.addColorStop(0,rgba(col,.55*vis));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,rr*6,0,6.283);ctx.fill();
+    ctx.fillStyle=rgba(mixC(col,[255,255,255],.35),vis);ctx.beginPath();ctx.arc(cx,cy,rr,0,6.283);ctx.fill();
+    if(s.ph==='lbv'||s.ph==='rsg'||s.ph==='wr'){for(let k=0;k<3;k++){const f=((now/1000*0.35)+k/3)%1;ctx.strokeStyle=rgba(col,(1-f)*0.3);ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,rr*(1.5+f*7),0,6.283);ctx.stroke();}}
+  }
+  if(sec>=tSNs){
+    const t=sec-tSNs,R=W*(0.03+0.75*(1-Math.exp(-t/7))),al=clamp(1-t/30,0,1);
+    if(al>0){const Rg=RNG(sys.seed);for(const[k,c]of[[1,[255,150,70]],[0.82,[90,220,210]]]){const g=ctx.createRadialGradient(cx,cy,R*k*0.8,cx,cy,R*k);g.addColorStop(0,rgba(c,0));g.addColorStop(0.75,rgba(c,al*0.55));g.addColorStop(1,rgba(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R*k,0,6.283);ctx.fill();}
+      ctx.lineWidth=1.5;for(let i=0;i<40;i++){const a=Rg()*6.283,l=Rg.range(.7,1);ctx.strokeStyle=rgba(Rg()<.5?[255,120,80]:[120,230,220],al*0.5);ctx.beginPath();ctx.arc(cx,cy,R*l,a,a+Rg.range(.1,.4));ctx.stroke();}}
+    if(S.heavy){const rr=H*0.012;const ga=clamp(1-Math.log10((age-S.tSN)/1e4+1)/4,0.1,1);const g=ctx.createRadialGradient(cx,cy,rr,cx,cy,rr*3);g.addColorStop(0,`rgba(255,170,90,${0.7*ga})`);g.addColorStop(1,'rgba(255,170,90,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,rr*3,0,6.283);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(cx,cy,rr,0,6.283);ctx.fill();ctx.strokeStyle=`rgba(255,220,180,${0.6*ga})`;ctx.lineWidth=1;ctx.stroke();}
+    else{const ba=clamp(1-Math.log10((age-S.tSN)/1e4+1)/4,0,1);if(ba>0){const a=now/1000*1.3,L=W*0.32;for(const sg of[1,-1]){const g=ctx.createLinearGradient(cx,cy,cx+Math.cos(a)*L*sg,cy+Math.sin(a)*L*sg);g.addColorStop(0,`rgba(120,170,255,${ba})`);g.addColorStop(1,'rgba(120,170,255,0)');ctx.strokeStyle=g;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*L*sg,cy+Math.sin(a)*L*sg);ctx.stroke();}}ctx.fillStyle='#e8f0ff';ctx.beginPath();ctx.arc(cx,cy,2.6,0,6.283);ctx.fill();}
+    const fl=Math.exp(-t*1.1);if(fl>0.01){ctx.fillStyle=`rgba(255,255,255,${fl*0.9})`;ctx.fillRect(0,0,W,H);}
+  }
+  SIM.starHit={cx,cy};
+}
+function drawCounter(age){const[num,unit]=counterParts(age);const fs=Math.round(clamp(H*0.075,22,64));ctx.save();ctx.shadowColor='#000';ctx.shadowBlur=5;ctx.fillStyle='#fff';ctx.textAlign='right';ctx.textBaseline='alphabetic';ctx.font=`${Math.round(fs*0.38)}px Arial,'Malgun Gothic',sans-serif`;const uw=ctx.measureText(unit).width;ctx.fillText(unit,W-12,H-16);ctx.font=`${fs}px Arial,sans-serif`;ctx.fillText(num,W-12-uw-Math.max(14,fs*0.4),H-16);ctx.restore();}
+
+/* ---------- 시작 화면 · 로딩 · 별 고르기 ---------- */
+const WARP=[];const newWarp=init=>({a:Math.random()*6.283,d:init?Math.random():0.02+Math.random()*0.05,v:0.25+Math.random()*0.6,w:0.5+Math.random()*1.4});
+for(let i=0;i<520;i++)WARP.push(newWarp(true));
+function drawWarp(dt){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);const cx=W/2,cy=H/2,M=Math.hypot(cx,cy);ctx.lineCap='round';for(const s of WARP){s.d+=s.v*s.d*dt*1.2+dt*0.02;if(s.d>1.1)Object.assign(s,newWarp(false));const r1=s.d*M,r0=r1*(1-0.12-s.v*0.1),c=Math.cos(s.a),sn=Math.sin(s.a);ctx.strokeStyle=`rgba(230,230,235,${clamp(s.d*1.6,0,1)*0.9})`;ctx.lineWidth=s.w*(0.5+s.d*1.6);ctx.beginPath();ctx.moveTo(cx+c*r0,cy+sn*r0);ctx.lineTo(cx+c*r1,cy+sn*r1);ctx.stroke();}const g=ctx.createRadialGradient(cx,cy,0,cx,cy,M*0.35);g.addColorStop(0,'rgba(0,0,0,0.92)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
+let LOADT=0,ZOOMT=0;
+const loadDur=()=>SV.set.load?2.6:0.7;
+const LOADK=[[0,0],[.15,1],[.3,2],[.45,23],[.6,58],[.75,87],[.85,99],[.95,99],[1,100]];
+function drawLoading(now){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);const x=clamp(LOADT/loadDur(),0,1);let pc=100;for(let i=1;i<LOADK.length;i++)if(x<=LOADK[i][0]){pc=Math.round(lerp(LOADK[i-1][1],LOADK[i][1],(x-LOADK[i-1][0])/(LOADK[i][0]-LOADK[i-1][0])));break;}
+  const cx=W/2,cy=H*0.56,a=now/1000*5;ctx.strokeStyle='#3a3a3a';ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,16,a,a+4.6);ctx.stroke();
+  const x0=W*0.1,x1=W*0.9,y=H*0.7;ctx.fillStyle='#8a8a8a';ctx.fillRect(x0,y,x1-x0,3);ctx.fillStyle='#2fdc3a';ctx.fillRect(x0,y-0.5,(x1-x0)*pc/100,4);
+  ctx.fillStyle='#fff';ctx.font=`${Math.round(clamp(H*0.035,14,26))}px Arial,sans-serif`;ctx.textAlign='center';ctx.fillText(pc+'%',cx,y+H*0.05);}
+const SEL={page:0,hover:null,msg:'',msgT:0};
+function selItems(){
+  const pg=SEL.page;
+  if(pg===2)return[{k:'O',v:'heavy',x:W*0.36,y:H*0.5,r:H*0.11,lab:'Heavy',col:'#5b8fff'},{k:'O',v:'light',x:W*0.64,y:H*0.5,r:H*0.085,lab:'Light',col:'#6fb0ff'}];
+  const keys=pg===0?ORDER1:ORDER2;const rs=keys.map(k=>H*TYPES[k].sel);const D=rs.reduce((a,r)=>a+r*2,0);const avail=W*0.84;let sc=D>avail*0.9?avail*0.9/D:1;
+  const gapN=keys.length>1?(avail-D*sc)/(keys.length-1):0;let x=W*0.08+(keys.length===3?W*0.12:0);const g2=keys.length===3?(avail-W*0.24-D*sc)/2:gapN;
+  return keys.map((k,i)=>{const r=rs[i]*sc,it={k,x:x+r,y:H*0.5,r,lab:k,col:TYPES[k].col};x+=r*2+g2;return it;});
+}
+function drawFlare(x,y,r,t){ctx.save();ctx.translate(x,y);ctx.rotate(0.5+Math.sin(t*0.0008)*0.05);for(let k=0;k<4;k++){ctx.rotate(Math.PI/2);const L=r*(k%2?2.4:3.6);const g=ctx.createLinearGradient(0,0,L,0);g.addColorStop(0,'rgba(255,255,230,.9)');g.addColorStop(1,'rgba(255,255,230,0)');ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,-r*0.12);ctx.lineTo(L,0);ctx.lineTo(0,r*0.12);ctx.fill();}ctx.restore();}
+function drawSelect(now){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);for(const s of BGSTARS){ctx.globalAlpha=s[2];ctx.fillStyle='#fff';ctx.fillRect(s[0],s[1],s[3],s[3]);}ctx.globalAlpha=1;
+  const items=selItems(),locked=SEL.page===1&&!SV.owned.bd,maxR=Math.max(...items.map(i=>i.r));
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  for(const it of items){
+    const c=hexRGB(it.col),hov=SEL.hover===it;ctx.globalAlpha=locked?0.3:1;
+    let g=ctx.createRadialGradient(it.x,it.y,it.r*0.6,it.x,it.y,it.r*(hov?2.4:1.8));g.addColorStop(0,rgba(c,.55));g.addColorStop(1,rgba(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r*(hov?2.4:1.8),0,6.283);ctx.fill();
+    g=ctx.createRadialGradient(it.x-it.r*.3,it.y-it.r*.3,it.r*.1,it.x,it.y,it.r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.6),1));g.addColorStop(.7,rgba(c,1));g.addColorStop(1,rgba(mulC(c,.75),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r,0,6.283);ctx.fill();
+    ctx.font=`bold ${Math.round(clamp(H*(it.lab.length>1?0.06:0.075),18,60))}px Georgia,'Times New Roman',serif`;ctx.fillStyle=it.col==='#ffffff'?'#f0f0f0':it.col;ctx.fillText(it.lab,it.x,H*0.5-maxR-H*0.06);
+    if(hov&&!locked)drawFlare(it.x,it.y,it.r,now);
+    ctx.globalAlpha=1;
+  }
+  const ay=H*0.76,as=H*0.07;ctx.fillStyle='#fff';
+  const tri=(x,dir)=>{ctx.beginPath();ctx.moveTo(x+dir*as,ay-as*0.8);ctx.lineTo(x+dir*as,ay+as*0.8);ctx.lineTo(x-dir*as*0.1,ay);ctx.closePath();ctx.fill();};
+  ctx.globalAlpha=SEL.page===0?0.25:1;tri(W*0.06,1);ctx.globalAlpha=SEL.page===0?1:0.25;tri(W*0.94,-1);ctx.globalAlpha=1;
+  ctx.font=`${Math.round(clamp(H*0.026,12,18))}px 'Malgun Gothic',sans-serif`;ctx.fillStyle='#cfcfcf';
+  let info='';if(locked)info='갈색왜성은 구매 화면에서 "갈색왜성 L · T · Y"를 사면 고를 수 있습니다.';else if(SEL.hover){const h=SEL.hover;info=h.v?(h.v==='heavy'?'무거운 O형 주계열성 · 질량 태양의 60배 · 마지막에 블랙홀이 됩니다.':'가벼운 O형 주계열성 · 질량 태양의 25배 · 마지막에 중성자별이 됩니다.'):TYPES[h.k].name+' · '+TYPES[h.k].info;}
+  else info=SEL.page===0?'주계열성 (O · B · A · F · G · K · M)':SEL.page===1?'갈색왜성 (L · T · Y)':'O형 주계열성: 무거운 별과 가벼운 별 중 하나를 고르세요.';
+  ctx.fillText(info,W/2,H*0.9);
+  if(SEL.msgT>0){ctx.fillStyle='#ffd27a';ctx.fillText(SEL.msg,W/2,H*0.95);}
+}
+function selHit(x,y){for(const it of selItems())if(Math.hypot(x-it.x,y-it.y)<it.r*1.3+6)return it;return null;}
+function selClick(x,y){
+  const ay=H*0.76,as=H*0.07;
+  if(Math.abs(y-ay)<as*1.3){if(x<W*0.06+as*1.6){if(SEL.page!==0){SEL.page=0;SEL.hover=null;}return;}if(x>W*0.94-as*1.6){if(SEL.page===0){SEL.page=1;SEL.hover=null;}return;}}
+  const it=selHit(x,y);if(!it)return;
+  if(SEL.page===1&&!SV.owned.bd){SEL.msg='아직 열리지 않았습니다.';SEL.msgT=2;return;}
+  if(SEL.page===0&&it.k==='O'){SEL.page=2;SEL.hover=null;return;}
+  startSim(it.k,it.v||null,(Math.random()*2**31)|0);
+}
+
+/* ---------- 타임라인 시작 · 진행 ---------- */
+function startSim(key,variant,seed){
+  const sys=buildSystem(key,variant,seed);
+  SIM={sys,sec:0,playing:true,speed:SV.set.speed,sel:null,played:0,rewarded:false,idle:0,hits:[],pts:[],k:1,edge:0,cx:0,rScale:1};
+  layoutSim();buildNebula();
+  SV.recent=SV.recent.filter(r=>r.seed!==seed);SV.recent.unshift({seed,key,variant,name:sys.name,d:Date.now()});SV.recent=SV.recent.slice(0,6);save();
+  buildBar();$('#card').classList.add('hide');$('#endPanel').classList.add('hide');
+  ZOOMT=0;setScreen('zoom');
+}
+function updateSim(dt){
+  if(SIM.playing){SIM.sec+=dt*SIM.speed;SIM.played+=dt*SIM.speed;if(SIM.sec>=SIM.sys.end){SIM.sec=SIM.sys.end;SIM.playing=false;onEnd();}}
+  stepDust(dt);SIM.idle+=dt;
+  $('#topbar').classList.toggle('fade',SIM.idle>2.5&&SIM.playing&&!SIM.barHover);
+}
+function onEnd(){
+  const sys=SIM.sys;let msg='타임라인이 끝났습니다.';
+  if(!SIM.rewarded&&SIM.played>=0.3*sys.end){SIM.rewarded=true;const k=sys.key+(sys.variant?'_'+sys.variant:''),first=!SV.seen[k],gain=100+(first?200:0);SV.credits+=gain;SV.seen[k]=(SV.seen[k]||0)+1;SV.runs++;save();msg+=` 크레딧 +${gain}`+(first?' (처음 본 별 보너스 포함)':'');}
+  const ep=$('#endPanel');ep.innerHTML=`<div>${esc(msg)}</div><div class="bs"><button class="btn" data-e="again">다시 보기</button><button class="btn" data-e="new">같은 별 새 행성계</button><button class="btn" data-e="select">다른 별 고르기</button><button class="btn" data-e="menu">메뉴로</button></div>`;ep.classList.remove('hide');
+  updateHUD();
+}
+$('#endPanel').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b)return;const a=b.dataset.e,sys=SIM.sys;$('#endPanel').classList.add('hide');
+  if(a==='again'){SIM.sec=0;SIM.played=0;SIM.rewarded=false;SIM.playing=true;}
+  else if(a==='new')startSim(sys.key,sys.variant,(Math.random()*2**31)|0);
+  else if(a==='select'){SEL.page=0;SEL.hover=null;setScreen('select');}
+  else setScreen('title');});
+
+/* ---------- 위쪽 막대 · 글씨 ---------- */
+const ICON_PLAY='<svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff"/></svg>',ICON_PAUSE='<svg viewBox="0 0 24 24"><path d="M5 3h5v18H5zM14 3h5v18h-5z" fill="#fff"/></svg>';
+function speedList(){const l=[0.5,1,2,4,8];if(SV.owned.fast)l.push(16,32);return l;}
+function buildBar(){
+  $('#speeds').innerHTML=speedList().map(v=>`<button class="tb${SIM.speed===v?' on':''}" data-sp="${v}">x${v}</button>`).join('');
+  const sys=SIM.sys;$('#ticks').innerHTML=sys.events.filter(e=>e.kind==='star').map(e=>`<div class="tick" style="left:${(e.sec/sys.end*100).toFixed(2)}%"></div>`).join('');
+  SIM.hudKey='';
+}
+$('#speeds').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(!b)return;SIM.speed=+b.dataset.sp;buildBar();});
+$('#bPlay').addEventListener('click',togglePlay);
+function togglePlay(){if(!SIM)return;if(SIM.sec>=SIM.sys.end){SIM.sec=0;SIM.played=0;SIM.rewarded=false;$('#endPanel').classList.add('hide');}SIM.playing=!SIM.playing;SIM.idle=0;updateHUD();}
+$('#topbar').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
+  if(a==='restart'){SIM.sec=0;SIM.played=0;SIM.rewarded=false;SIM.playing=true;$('#endPanel').classList.add('hide');}
+  else if(a==='settings')openSettings();else if(a==='select'){SEL.page=0;SEL.hover=null;setScreen('select');}else if(a==='menu')setScreen('title');});
+$('#topbar').addEventListener('pointerenter',()=>{if(SIM)SIM.barHover=true;});$('#topbar').addEventListener('pointerleave',()=>{if(SIM)SIM.barHover=false;});
+let seeking=false;
+function seekTo(ev){const r=$('#prog').getBoundingClientRect();const f=clamp((ev.clientX-r.left)/r.width,0,1);SIM.sec=f*SIM.sys.end;if(SIM.sec<SIM.sys.end)$('#endPanel').classList.add('hide');updateHUD();}
+$('#prog').addEventListener('pointerdown',e=>{seeking=true;seekTo(e);e.preventDefault();});
+window.addEventListener('pointermove',e=>{if(seeking&&SIM)seekTo(e);if(SIM)SIM.idle=0;});
+window.addEventListener('pointerup',()=>{seeking=false;});
+const EVC={star:'#ffd27a',life:'#86dc7a',bad:'#ff9a7a',planet:'#cfd8e0'};
+function nameKey(p){return SIM.sys.seed+':'+p.id;}
+function pname(p){if(!p)return'';const n=SV.names[nameKey(p)];return n?n:(p.extra?'원시 행성':p.letter+' 행성');}
+function evText(e){return e.txt.replace('{P}',pname(SIM.sys.planets[e.pid]));}
+function lastEv(sec){const E=SIM.sys.events;let lo=0,hi=E.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(E[m].sec<=sec+1e-9){r=m;lo=m+1;}else hi=m-1;}return r;}
+function updateHUD(){
+  if(!SIM)return;const sys=SIM.sys,age=ageAt(sys.nodes,SIM.sec),s=sys.star.at(age);
+  $('#hud').classList.toggle('hide',!SV.set.info);
+  $('#bPlay').innerHTML=SIM.playing?ICON_PAUSE:ICON_PLAY;
+  $('#progFill').style.width=(SIM.sec/sys.end*100).toFixed(2)+'%';
+  const k=lastEv(SIM.sec),key=k+'|'+s.ph+'|'+SV.set.unit+'|'+Object.keys(SV.names).length;
+  if(key!==SIM.hudKey){SIM.hudKey=key;
+    $('#hName').textContent=sys.name+' · '+(sys.variant?(sys.variant==='heavy'?'무거운 ':'가벼운 '):'')+sys.T.name;
+    $('#hPhase').textContent='단계: '+PH_NAME[s.ph];
+    const list=[];for(let j=k;j>=0&&list.length<(H<500?3:5);j--)list.push(sys.events[j]);
+    $('#hLog').innerHTML=list.map((e,n)=>`<div style="color:${EVC[e.kind]};opacity:${(1-n*0.17).toFixed(2)}"><b>${esc(fmtAge(e.age))}</b> ${esc(evText(e))}</div>`).join('');}
+  if(SIM.sel)updateCard();
+}
+function zoneText(a,L){const c=Math.sqrt(L);return a<0.72*c?'생명 가능 지대보다 안쪽 (뜨거움)':a>1.28*c?'생명 가능 지대보다 바깥 (차가움)':'생명 가능 지대 안';}
+function updateCard(){
+  const card=$('#card'),sys=SIM.sys,S=sys.star,age=ageAt(sys.nodes,SIM.sec),s=S.at(age),sel=SIM.sel;let title='',rows=[],btn='';
+  if(sel.type==='star'){
+    title=sys.name;const diam=s.R<0.05?fmtN(s.R*696000*2)+' km':'태양의 '+fmtN(s.R,s.R<10?2:0)+'배';
+    rows=[['종류',(sys.variant?(sys.variant==='heavy'?'무거운 ':'가벼운 '):'')+sys.T.name],['지금 단계',PH_NAME[s.ph]],['나이',fmtAge(age)],['질량','태양의 '+fmtN(s.M,3)+'배'],['지름',diam],['밝기','태양의 '+(s.L<0.001?s.L.toExponential(1):fmtN(s.L,s.L<10?3:0))+'배'],['표면 온도',fmtN(Math.round(s.T-273))+' °C']];
+  }else{
+    const p=sel.p,i=sampleI(SIM.sec);title=pname(p);if(!p.extra)btn='<button class="btn" data-c="rename">이름 바꾸기</button>';
+    const kind=p.extra?'원시 행성':p.kind==='rock'?'암석 행성':p.kind==='gas'?'가스 행성':'얼음 거인';
+    if(p.dead&&SIM.sec>=p.deadSec){rows=[['종류',kind],['상태',p.dead==='merge'?'다른 행성과 합쳐짐':p.dead==='engulf'?'별에 삼켜짐':'행성계 밖으로 튕겨 나감'],['사라진 때',fmtAge(p.deadAge)]];}
+    else if(age<p.tStart){rows=[['종류',kind],['상태','아직 생기지 않음']];}
+    else{const m=massNow(p,age),a=p.a0*S.M0/s.M,Re=p.kind==='rock'?Math.pow(m,0.28):p.kind==='ice'?3.9*Math.pow(m/15,0.1):11.2*Math.pow(m/318,-0.04);
+      const nm=p.moons.filter(o=>age>=o.tForm).length,ring=p.ring&&age>=p.ring.t0&&age<p.ring.t1;
+      rows=[['종류',kind],['상태',LK_NAME[p.look[i]]],['질량','지구의 '+fmtN(m,m<1?2:1)+'배'],['지름',fmtN(Math.round(Re*12742))+' km'],['별까지 거리',fmtN(a,a<0.1?4:2)+' AU'],['위치',zoneText(a,s.L)],['표면 온도',fmtN(Math.round(p.tcA[i]))+' °C'],['위성',nm+'개'],['고리',ring?'있음':'없음']];}
+  }
+  const h=`<div class="ct"><span>${esc(title)}</span><button class="btn" data-c="close">닫기</button></div><table>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>${btn?`<div class="cb">${btn}</div>`:''}`;
+  if(card.dataset.h!==h){card.innerHTML=h;card.dataset.h=h;}card.classList.remove('hide');
+}
+$('#card').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;if(b.dataset.c==='close'){SIM.sel=null;$('#card').classList.add('hide');}else if(b.dataset.c==='rename'){const p=SIM.sel.p,v=prompt('행성 이름을 입력하세요',SV.names[nameKey(p)]||'');if(v!=null){const t=v.trim().slice(0,20);if(t)SV.names[nameKey(p)]=t;else delete SV.names[nameKey(p)];save();updateHUD();}}});
+function simClick(x,y){
+  if(SIM.sys.star.kind==='massive'){const h=SIM.starHit;if(h&&Math.hypot(x-h.cx,y-h.cy)<40){SIM.sel={type:'star'};updateCard();}else{SIM.sel=null;$('#card').classList.add('hide');}return;}
+  for(const h of SIM.hits)if(Math.hypot(x-h.x,y-h.y)<h.r+8){SIM.sel={type:'planet',p:h.p};updateCard();return;}
+  if(x<SIM.starHitX){SIM.sel={type:'star'};updateCard();return;}
+  SIM.sel=null;$('#card').classList.add('hide');
+}
+
+/* ---------- 설정 · 구매 · 계정 ---------- */
+function openModal(t,html){$('#mTitle').textContent=t;$('#mBody').innerHTML=html;$('#modal').classList.remove('hide');}
+$('#mClose').addEventListener('click',()=>$('#modal').classList.add('hide'));
+$('#modal').addEventListener('pointerdown',e=>{if(e.target.id==='modal')$('#modal').classList.add('hide');});
+const SET_ROWS=[['speed','처음 재생 속도',[[0.5,'x0.5'],[1,'x1'],[2,'x2'],[4,'x4'],[8,'x8']]],['hz','생명 가능 지대 (초록 띠)',[[1,'표시'],[0,'숨김']]],['dust','먼지',[[2,'많이'],[1,'조금'],[0,'없음']]],['neb','가스 구름',[[1,'표시'],[0,'숨김']]],['info','단계 · 기록 글씨',[[1,'표시'],[0,'숨김']]],['unit','시간 단위',[[0,'MY · BY · TY'],[1,'만 · 억 · 조 년']]],['load','로딩 화면',[[1,'보통'],[0,'짧게']]]];
+function openSettings(){
+  const rows=SET_ROWS.slice();if(SV.owned.many)rows.push(['many','행성 많은 행성계 (다음 행성계부터)',[[1,'켜기'],[0,'끄기']]]);
+  openModal('설정',rows.map(([k,l,opts])=>`<div class="row"><span class="lab">${esc(l)}</span><span class="seg">${opts.map(([v,t])=>`<button class="btn${SV.set[k]===v?' on':''}" data-set="${k}" data-v="${v}">${esc(t)}</button>`).join('')}</span></div>`).join('')+'<div class="muted" style="margin-top:8px">바꾼 설정은 바로 저장됩니다.</div>');
+}
+const SHOP=[{id:'bd',name:'갈색왜성 L · T · Y',desc:'별 고르기 화면의 두 번째 쪽에 갈색왜성 3종류가 생깁니다.',price:300},{id:'fast',name:'빠른 재생 x16 · x32',desc:'재생 속도 버튼에 x16, x32가 생깁니다.',price:200},{id:'many',name:'행성 많은 행성계',desc:'설정에서 켜면 행성이 1~2개 더 생깁니다.',price:500}];
+function openShop(){
+  openModal('구매',`<div class="row"><span class="lab">가진 크레딧</span><b>${fmtN(SV.credits)}</b></div>`+SHOP.map(it=>`<div class="item"><div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div></div>${SV.owned[it.id]?'<button class="btn" disabled>가지고 있음</button>':`<button class="btn" data-buy="${it.id}" ${SV.credits<it.price?'disabled':''}>${fmtN(it.price)} 크레딧</button>`}</div>`).join('')+'<div class="muted" style="margin-top:8px">타임라인을 끝까지 보면 크레딧 100을 받습니다. 처음 보는 별이면 200을 더 받습니다.</div>');
+}
+const SEEN_KEYS=[['O_heavy','무거운 O'],['O_light','가벼운 O'],['B','B'],['A','A'],['F','F'],['G','G'],['K','K'],['M','M'],['L','L'],['T','T'],['Y','Y']];
+function openAccount(){
+  openModal('계정',`<div class="row"><span class="lab">이름</span><span>${esc(SV.name)} <button class="btn" data-acc="name">이름 바꾸기</button></span></div><div class="row"><span class="lab">계정 번호</span><span>#${SV.id}</span></div><div class="row"><span class="lab">크레딧</span><span>${fmtN(SV.credits)}</span></div><div class="row"><span class="lab">끝까지 본 타임라인</span><span>${fmtN(SV.runs)}번</span></div>
+  <div style="margin-top:8px" class="lab">별마다 본 횟수</div><div class="grid">${SEEN_KEYS.map(([k,l])=>`<div>${esc(l)}: ${SV.seen[k]||0}번</div>`).join('')}</div>
+  <div style="margin-top:8px" class="lab">최근 본 행성계</div>${SV.recent.length?SV.recent.map((r,i)=>`<div class="item"><div><div class="nm">${esc(r.name)}</div><div class="ds">${esc((r.variant?(r.variant==='heavy'?'무거운 ':'가벼운 '):'')+TYPES[r.key].name)} · ${new Date(r.d).toLocaleDateString('ko-KR')}</div></div><button class="btn" data-acc="replay" data-i="${i}">다시 보기</button></div>`).join(''):'<div class="muted">아직 없습니다.</div>'}
+  <div style="margin-top:12px;text-align:right"><button class="btn" data-acc="reset">기록 모두 지우기</button></div>`);
+}
+$('#mBody').addEventListener('click',e=>{
+  const s=e.target.closest('[data-set]');if(s){const k=s.dataset.set;SV.set[k]=+s.dataset.v;save();openSettings();if(SIM){SIM.hudKey='';updateHUD();}return;}
+  const b=e.target.closest('[data-buy]');if(b){const it=SHOP.find(x=>x.id===b.dataset.buy);if(it&&SV.credits>=it.price&&!SV.owned[it.id]){SV.credits-=it.price;SV.owned[it.id]=true;if(it.id==='many')SV.set.many=1;save();if(SIM)buildBar();}openShop();return;}
+  const a=e.target.closest('[data-acc]');if(!a)return;const t=a.dataset.acc;
+  if(t==='name'){const v=prompt('이름을 입력하세요',SV.name);if(v!=null&&v.trim()){SV.name=v.trim().slice(0,16);save();}openAccount();}
+  else if(t==='replay'){const r=SV.recent[+a.dataset.i];if(r){if(r.key in{L:1,T:1,Y:1}&&!SV.owned.bd)return;$('#modal').classList.add('hide');startSim(r.key,r.variant,r.seed);}}
+  else if(t==='reset'){if(confirm('크레딧, 산 것, 기록을 모두 지울까요?')){const id=SV.id;SV=JSON.parse(JSON.stringify(DEF_SAVE));SV.id=id;save();openAccount();}}
+});
+
+/* ---------- 화면 전환 · 입력 ---------- */
+let SCREEN='title';
+function setScreen(s){SCREEN=s;$('#titleUI').classList.toggle('hide',s!=='title');$('#ver').classList.toggle('hide',!(s==='title'||s==='loading'||s==='select'));$('#selUI').classList.toggle('hide',s!=='select');$('#simUI').classList.toggle('hide',s!=='sim');$('#modal').classList.add('hide');if(s==='sim'){SIM.idle=0;updateHUD();}}
+$('#titleUI').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;if(a==='start'){LOADT=0;setScreen('loading');}else if(a==='settings')openSettings();else if(a==='shop')openShop();else if(a==='account')openAccount();});
+$('#selBack').addEventListener('click',()=>{if(SEL.page===2)SEL.page=0;else setScreen('title');});
+cv.addEventListener('pointerdown',e=>{if(SCREEN==='select')selClick(e.clientX,e.clientY);else if(SCREEN==='sim')simClick(e.clientX,e.clientY);});
+cv.addEventListener('pointermove',e=>{if(SCREEN==='select')SEL.hover=selHit(e.clientX,e.clientY);});
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){$('#modal').classList.add('hide');return;}
+  if(SCREEN!=='sim'||!$('#modal').classList.contains('hide'))return;
+  if(e.code==='Space'){e.preventDefault();togglePlay();}
+  else if(e.key==='ArrowRight'){SIM.sec=Math.min(SIM.sys.end,SIM.sec+3);updateHUD();}
+  else if(e.key==='ArrowLeft'){SIM.sec=Math.max(0,SIM.sec-3);$('#endPanel').classList.add('hide');updateHUD();}
+});
+(function(){let d='';const n=8;for(let i=0;i<n;i++){const b=i*6.2832/n;for(const[da,r]of[[-0.33,7.2],[-0.2,10],[0.2,10],[0.33,7.2]]){const a=b+da;d+=(d?'L':'M')+(Math.cos(a)*r).toFixed(2)+','+(Math.sin(a)*r).toFixed(2);}}d+='Z M3.4,0 A3.4,3.4 0 1,0 -3.4,0 A3.4,3.4 0 1,0 3.4,0Z';$('#gearIcon').innerHTML=`<circle r="11.6" fill="#fff"/><path d="${d}" fill="#8a8a8a" fill-rule="evenodd"/>`;})();
+
+/* ---------- 메인 루프 ---------- */
+let lastT=performance.now(),uiT=0;
+function frame(now,dt){
+  if(SCREEN==='title')drawWarp(dt);
+  else if(SCREEN==='loading'){LOADT+=dt;drawLoading(now);if(LOADT>=loadDur()+0.25){SEL.page=0;SEL.hover=null;setScreen('select');}}
+  else if(SCREEN==='select'){stepDust(dt);if(SEL.msgT>0)SEL.msgT-=dt;drawSelect(now);}
+  else if(SCREEN==='zoom'){ZOOMT+=dt;const z=clamp(ZOOMT/1.3,0,1),e=smooth(z),sc=1+(1-e)*0.8;ctx.save();ctx.translate(W*0.3,H/2);ctx.scale(sc,sc);ctx.translate(-W*0.3,-H/2);drawSim(0,now);ctx.restore();ctx.fillStyle=`rgba(0,0,0,${(1-e).toFixed(3)})`;ctx.fillRect(0,0,W,H);if(z>=1)setScreen('sim');}
+  else if(SCREEN==='sim'){updateSim(dt);drawSim(SIM.sec,now);uiT+=dt;if(uiT>0.12){uiT=0;updateHUD();}}
+}
+function loop(now){requestAnimationFrame(loop);try{const dt=Math.min(0.1,Math.max(0,(now-lastT)/1000));lastT=now;frame(now,dt);}catch(err){console.error(err);}}
+resize();makeGran();setScreen('title');requestAnimationFrame(loop);
+window.__dbg={get SIM(){return SIM;},startSim,frame,setScreen,buildSystem,get SV(){return SV;}};
+</script>
+<script src="../track.js" defer></script>
+</body>
+</html>
