@@ -864,8 +864,37 @@ function features(c, x, y, r, lk, sd) {
   }
 }
 
+// 플래닛볼 눈 (입 없음, 날카로운 눈) — 왼쪽 사진에만 (2026-11-06 아이가 "눈 추가해줘")
+function drawEyes(c, x, y, r, mood, base, dir) {
+  const ew = r * 0.19, eh = r * 0.24, ey = y - r * 0.1, sp = r * 0.3;
+  c.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    const ex = x + s * sp;
+    if (mood === 'dead') {
+      c.strokeStyle = INK; c.lineWidth = Math.max(1.2, r * 0.07);
+      c.beginPath(); c.moveTo(ex - ew * 0.8, ey - eh * 0.6); c.lineTo(ex + ew * 0.8, ey + eh * 0.6); c.moveTo(ex + ew * 0.8, ey - eh * 0.6); c.lineTo(ex - ew * 0.8, ey + eh * 0.6); c.stroke();
+      continue;
+    }
+    c.save();
+    c.beginPath(); c.ellipse(ex, ey, ew, eh, 0, 0, TAU); c.fillStyle = '#fbf8ef'; c.fill(); c.clip();
+    const pr = ew * 0.56, px = ex + Math.cos(dir) * ew * 0.34, py = ey + Math.sin(dir) * eh * 0.25 + eh * 0.12;
+    c.fillStyle = INK; c.beginPath(); c.arc(px, py, pr, 0, TAU); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(px - pr * 0.35, py - pr * 0.38, pr * 0.26, 0, TAU); c.fill();
+    // 눈꺼풀: 안쪽이 더 내려온 사선 (뜨거우면 반쯤 감김)
+    const outY = mood === 'hot' ? ey - eh * 0.15 : ey - eh * 0.8, inY = mood === 'hot' ? ey + eh * 0.12 : ey - eh * 0.32;
+    const xo = ex + s * ew * 1.15, xi = ex - s * ew * 1.15;
+    c.fillStyle = shadeHex(base, -0.28);
+    c.beginPath(); c.moveTo(xo, ey - eh * 1.3); c.lineTo(xo, outY); c.lineTo(xi, inY); c.lineTo(xi, ey - eh * 1.3); c.closePath(); c.fill();
+    c.strokeStyle = INK; c.lineWidth = Math.max(1.2, r * 0.065);
+    c.beginPath(); c.moveTo(xo, outY); c.lineTo(xi, inY); c.stroke();
+    c.restore();
+    c.strokeStyle = INK; c.lineWidth = Math.max(1, r * 0.05);
+    c.beginPath(); c.ellipse(ex, ey, ew, eh, 0, 0, TAU); c.stroke();
+  }
+}
+
 // 손그림 행성 한 개 (왼쪽 사진용)
-function drawHandPlanet(c, x, y, r, lk, sd, b) {
+function drawHandPlanet(c, x, y, r, lk, sd, b, eyes, dir) {
   wobblyPath(c, x, y, r, sd, b); c.fillStyle = lk.base; c.fill();
   c.save(); wobblyPath(c, x, y, r, sd, b); c.clip();
   features(c, x, y, r, lk, sd);
@@ -877,6 +906,7 @@ function drawHandPlanet(c, x, y, r, lk, sd, b) {
   wobblyPath(c, x, y, r, sd, b); c.stroke();
   c.globalAlpha = 0.45; c.lineWidth = Math.max(0.8, r * 0.04);
   wobblyPath(c, x + r * 0.025, y - r * 0.02, r * 1.015, sd + 7, b + 1); c.stroke(); c.globalAlpha = 1;
+  if (eyes) drawEyes(c, x, y, r, eyes, lk.base, dir || 0);
 }
 function drawRingHalf(c, x, y, pr, rings, front, f) {
   rings.forEach((rg, i) => {
@@ -902,6 +932,7 @@ function drawMoonPic(c, x, y, mr, m, b, dead) {
   c.fillStyle = 'rgba(12,8,24,0.28)'; c.beginPath(); c.arc(x + mr * 0.45, y + mr * 0.4, mr * 1.05, 0, TAU); c.fill();
   c.restore();
   c.strokeStyle = INK; c.lineWidth = Math.max(0.9, mr * 0.13); wobblyPath(c, x, y, mr, m.seed, b, amp, 12); c.stroke();
+  if (mr >= 6.5) drawEyes(c, x, y, mr, dead ? 'dead' : 'normal', col, 2.6);
 }
 function drawStarPic(c, x, y, r, st, b) {
   const col = bbColor(st.T), sd = SYS.seed * 7 + 3;
@@ -914,6 +945,7 @@ function drawStarPic(c, x, y, r, st, b) {
   if (GIANT_PH[st.ph]) for (let i = 0; i < 6; i++) { const a = hash(sd, i, 81) * TAU, d = hash(sd, i, 82) * r * 0.7; c.globalAlpha = 0.25; c.fillStyle = shadeHex(col, -0.3); c.beginPath(); c.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.18, 0, TAU); c.fill(); }
   c.globalAlpha = 1; c.restore();
   c.strokeStyle = shadeHex(col, -0.55); c.lineWidth = Math.max(1.4, r * 0.08); wobblyPath(c, x, y, r, sd, b, 0.04); c.stroke();
+  drawEyes(c, x, y, r, 'normal', shadeHex(col, -0.05), 0.6);
 }
 
 // ===== 화면 =====
@@ -1247,7 +1279,7 @@ function updCards(f, t, y, st, redraw) {
       if (redraw && !cd.drawn) {
         c.clearRect(0, 0, CW, CH);
         const ff = Math.max(0, p.deathF - 1), mf = logAt(p.mlog, ff), r = clamp(11 + 6.5 * Math.log(1 + radiusOf(p.comp, mf)), 8, 28) * 0.8;
-        drawHandPlanet(c, 40, CH / 2, r, DEAD_LOOK, p.seed, 0); cd.drawn = true;
+        drawHandPlanet(c, 40, CH / 2, r, DEAD_LOOK, p.seed, 0, 'dead', 0); cd.drawn = true;
       }
       cd.tx.innerHTML = `<div class="nm">${esc(pname(p))}</div><div class="ty">${typeName(p, logAt(p.mlog, Math.max(0, p.deathF - 1)), 0)}</div><div>${esc(fateText(p))}</div>`;
       if (cd.det) { cd.det.innerHTML = histHTML(p, true); cd.hist.innerHTML = ''; }
@@ -1260,7 +1292,8 @@ function updCards(f, t, y, st, redraw) {
       if (rg.length) pr = Math.min(pr, 22);
       const px = 8 + Math.max(pr, rg.length ? pr * 1.62 : pr) - (rg.length ? 4 : 0) + 2, py = CH / 2;
       if (rg.length) drawRingHalf(c, px, py, pr, rg, false, f);
-      drawHandPlanet(c, px, py, pr, n.lk, p.seed, BOIL);
+      const mood = n.T > 1050 && p.comp !== 'gas' ? 'hot' : 'normal';
+      drawHandPlanet(c, px, py, pr, n.lk, p.seed, BOIL, n.g > 0.35 ? mood : null, Math.PI * 1.15);
       if (rg.length) drawRingHalf(c, px, py, pr, rg, true, f);
       // 위성은 행성 옆에 조그맣게
       const msz = ms.slice().sort((a, b) => b.km - a.km), mx0 = px + Math.max(pr, rg.length ? pr * 1.62 : pr) + 7;
