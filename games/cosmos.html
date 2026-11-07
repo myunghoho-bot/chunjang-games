@@ -1,0 +1,2540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>우주 실험실</title>
+<style>
+:root{
+  --panel:rgba(12,16,26,.84); --panel2:rgba(20,26,40,.92); --line:rgba(150,175,220,.16); --line2:rgba(150,175,220,.30);
+  --text:#dde5f2; --dim:#8b97ab; --acc:#78b8ff; --acc2:#3d6fae; --warn:#ff9466; --good:#8fe0a8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:13px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+#gl,#ov{position:fixed;left:0;top:0;width:100%;height:100%;display:block}
+#ov{pointer-events:none}
+button{font:inherit;color:var(--text);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:5px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+button:hover{background:rgba(120,184,255,.12);border-color:var(--line2)}
+button.on{background:rgba(120,184,255,.20);border-color:var(--acc);color:#fff}
+button.big{background:rgba(120,184,255,.10);border-color:rgba(120,184,255,.35)}
+button.danger{border-color:rgba(255,120,90,.35)}
+button.danger:hover{background:rgba(255,120,90,.15)}
+button:disabled{opacity:.35;cursor:default;background:none}
+#top{position:fixed;left:0;right:0;top:0;height:42px;display:flex;align-items:center;gap:6px;padding:0 10px;background:linear-gradient(rgba(6,9,16,.92),rgba(6,9,16,.55));border-bottom:1px solid var(--line);z-index:5}
+#top .brand{font-weight:700;letter-spacing:.04em;margin-right:8px;font-size:14px;color:#fff}
+#top .brand small{font-weight:400;color:var(--dim);font-size:11px;margin-left:6px;letter-spacing:.12em}
+#top .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+#speed{min-width:86px;text-align:center;color:#fff}
+#speed.lag{color:var(--warn)}
+#simTime{margin-left:auto;color:var(--dim);font-variant-numeric:tabular-nums}
+#simTime b{color:#fff;font-weight:600}
+#tools{position:fixed;left:8px;top:52px;display:flex;flex-direction:column;gap:5px;z-index:5;width:112px}
+#tools button{text-align:left;padding:6px 9px;background:var(--panel)}
+#tools button.on{background:rgba(70,120,190,.45)}
+#tools .tsep{height:1px;background:var(--line);margin:4px 0}
+#tools .cap{color:var(--dim);font-size:11px;padding:2px 2px 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#palette{position:fixed;left:128px;top:52px;width:238px;padding:10px;z-index:5;max-height:calc(100% - 64px);overflow:auto}
+#palette .ptitle{font-weight:700;margin-bottom:8px;color:#fff}
+.pitem{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.pitem:hover{background:rgba(255,255,255,.05)}
+.pitem.on{background:rgba(120,184,255,.15);border-color:rgba(120,184,255,.4)}
+.pitem canvas{width:30px;height:30px;flex:none}
+.pitem .nm{color:#fff}
+.pitem .sub{color:var(--dim);font-size:11px}
+.pgroup{color:var(--dim);font-size:11px;margin:8px 0 3px;letter-spacing:.06em;border-top:1px solid var(--line);padding-top:6px}
+.pgroup:first-child{border-top:none;margin-top:0;padding-top:0}
+.row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.row input[type=range]{flex:1;accent-color:var(--acc)}
+.hint{color:var(--dim);font-size:11px;line-height:1.5;margin-top:8px}
+#info{position:fixed;right:8px;top:52px;width:262px;padding:10px 12px;z-index:5;max-height:calc(100% - 64px);overflow:auto}
+#info .iname{font-size:16px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px}
+#info .iname span.ed{font-size:11px;font-weight:400;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+#info .itype{color:var(--acc);margin:2px 0 6px}
+#info .idesc{color:var(--dim);font-size:12px;line-height:1.5;margin-bottom:8px}
+#info table{width:100%;border-collapse:collapse;font-size:12px}
+#info td{padding:2px 0;vertical-align:top}
+#info td:first-child{color:var(--dim);width:82px}
+#info td:last-child{color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+#info .btns{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+#info .btns button{flex:1 1 auto}
+#info .sect{color:var(--dim);font-size:11px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px;letter-spacing:.05em}
+#log{position:fixed;left:10px;bottom:10px;z-index:4;display:flex;flex-direction:column;gap:3px;max-width:min(560px,60vw);pointer-events:none}
+#log div{background:rgba(8,11,18,.72);border-left:2px solid var(--acc);padding:3px 8px;border-radius:3px;color:#e8eef8;font-size:12px;transition:opacity 1s}
+#log div.w{border-left-color:var(--warn)}
+#scale{position:fixed;right:10px;bottom:10px;z-index:4;color:var(--dim);font-size:11px;text-align:right;pointer-events:none;line-height:1.5}
+#scale b{color:#cfd8e6;font-weight:600}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:center;justify-content:center}
+.modal .box{width:min(560px,94vw);max-height:88vh;overflow:auto;padding:14px 16px}
+.modal h2{margin:0 0 4px;font-size:16px;color:#fff}
+.modal .msub{color:var(--dim);font-size:12px;margin-bottom:10px}
+.preset{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;margin-bottom:6px;padding:8px 10px;white-space:normal}
+.preset b{color:#fff}
+.preset span{color:var(--dim);font-size:12px}
+.hide{display:none!important}
+#hintbar{position:fixed;left:50%;transform:translateX(-50%);top:48px;z-index:4;color:var(--dim);font-size:11px;background:rgba(8,11,18,.6);padding:3px 10px;border-radius:4px;pointer-events:none;white-space:nowrap}
+#err{position:fixed;left:10px;top:60px;right:10px;z-index:30;color:#ffb4a0;background:rgba(40,10,10,.9);padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px}
+@media (max-height:520px){
+  #top{height:36px;gap:4px;padding:0 6px}
+  #top .brand small{display:none}
+  button{padding:4px 7px}
+  #tools{top:42px;width:96px;gap:3px}
+  #tools button{padding:4px 7px;font-size:12px}
+  #palette{left:110px;top:42px;width:214px;padding:8px;max-height:calc(100% - 50px)}
+  #info{top:42px;width:226px;padding:8px 10px;max-height:calc(100% - 50px)}
+  #hintbar{top:40px;left:calc(50% + 70px);max-width:calc(50vw - 80px);white-space:normal;text-align:center}
+  #info{max-height:calc(100% - 80px)}
+  #log{left:112px;bottom:6px;max-width:calc(100vw - 112px - 250px)}
+  #log div{font-size:11px;padding:2px 6px}
+  #log div:nth-last-child(n+4){display:none}
+  #scale{bottom:4px;font-size:10px}
+  .pitem canvas{width:24px;height:24px}
+}
+@media (max-width:760px){
+  #top .brand{display:none}
+  #simTime{font-size:11px}
+}
+</style>
+<script src="../mobile.js"></script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="ov"></canvas>
+
+<div id="top">
+  <div class="brand">우주 실험실<small>COSMOS LAB</small></div>
+  <button id="bNew">새 우주</button>
+  <button id="bLoad">불러오기</button>
+  <div class="sep"></div>
+  <button id="bPause">멈춤</button>
+  <button id="bSlow">느리게</button>
+  <div id="speed">1초에 30일</div>
+  <button id="bFast">빠르게</button>
+  <div id="simTime">흐른 시간 <b>0일</b></div>
+</div>
+
+<div id="tools">
+  <button data-tool="select" class="on">선택</button>
+  <button data-tool="all">추가</button>
+  <button data-tool="planet">행성 창조</button>
+  <button data-tool="star">별 창조</button>
+  <div class="tsep"></div>
+  <div class="cap">보기</div>
+  <button data-tog="com">질량중심 보기</button>
+  <button data-tog="roche">로슈 한계</button>
+  <button data-tog="hz">골디락스 존</button>
+  <button data-tog="trail" class="on">궤도 자국</button>
+  <button data-tog="label" class="on">이름 표시</button>
+  <button data-tog="grid">거리 눈금</button>
+</div>
+
+<div id="palette" class="panel hide">
+  <div class="ptitle" id="ptitle">행성 창조</div>
+  <div id="plist"></div>
+  <div class="row">질량 <input type="range" id="pmass" min="0" max="1000" value="500"></div>
+  <div class="row" style="margin-top:2px;justify-content:flex-end;color:#fff" id="pmassv"></div>
+  <label class="row"><input type="checkbox" id="pauto" checked> 자동 궤도 (가까운 천체 둘레를 돕니다)</label>
+  <div class="hint">우주를 누르면 그 자리에 놓습니다.<br>누른 채로 끌면 그 방향으로 던집니다.<br>놓는 높이는 지금 보고 있는 천체의 궤도면입니다.</div>
+</div>
+
+<div id="info" class="panel hide"></div>
+<div id="log"></div>
+<div id="scale"></div>
+<div id="hintbar" class="hide"></div>
+
+<div id="loadMenu" class="modal hide">
+  <div class="box panel">
+    <h2>불러오기</h2>
+    <div class="msub">지금 우주는 지워지고 고른 우주로 바뀝니다.</div>
+    <div id="presetList"></div>
+    <div style="text-align:right;margin-top:6px"><button id="bLoadClose">닫기</button></div>
+  </div>
+</div>
+<script>
+'use strict';
+// =====================================================================
+//  우주 실험실 — 단위: 거리 AU, 질량 태양 질량(M☉), 시간 년
+// =====================================================================
+const G = 4 * Math.PI * Math.PI;
+const AU_KM = 149597870.7;
+const RSUN = 696000 / AU_KM;
+const REARTH = 6371 / AU_KM;
+const RJUP = 69911 / AU_KM;
+const MEARTH = 3.003e-6;
+const MJUP = 9.546e-4;
+const DAY = 1 / 365.25;
+const KMS_PER_AUYR = 4.74047;
+const BD_MIN = 12 * MJUP;      // 갈색왜성 시작 (목성 12배)
+const STAR_MIN = 80 * MJUP;    // 별 시작 (목성 80배, 79.9배까지 갈색왜성)
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (t) => t * t * (3 - 2 * t);
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function gauss() { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+// ---------- 흑체 색 (온도 → RGB 0..1) ----------
+function bbColor(T) {
+  if (!(T > 0)) return [0, 0, 0];
+  const t = clamp(T, 800, 40000) / 100;
+  let r, g, b;
+  if (t <= 66) { r = 255; g = 99.4708025861 * Math.log(t) - 161.1195681661; b = t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307; }
+  else { r = 329.698727446 * Math.pow(t - 60, -0.1332047592); g = 288.1221695283 * Math.pow(t - 60, -0.0755148492); b = 255; }
+  let c = [clamp(r, 0, 255) / 255, clamp(g, 0, 255) / 255, clamp(b, 0, 255) / 255];
+  if (T < 1500) { const k = clamp((T - 500) / 1000, 0, 1); c = [c[0] * (0.55 + 0.45 * k), c[1] * (0.25 + 0.75 * k) * k, c[2] * k * 0.6]; }
+  return c;
+}
+
+// ---------- 벡터·행렬 (double, 배열) ----------
+function v3(x, y, z) { return [x, y, z]; }
+function vsub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+function vadd(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+function vmul(a, s) { return [a[0] * s, a[1] * s, a[2] * s]; }
+function vdot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+function vcross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function vlen(a) { return Math.hypot(a[0], a[1], a[2]); }
+function vnorm(a) { const l = vlen(a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+// 3x3 회전 (행 우선 배열 9개)
+function m3mul(a, b) { const r = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j]; return r; }
+function m3T(a) { return [a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]]; }
+function m3v(a, v) { return [a[0] * v[0] + a[1] * v[1] + a[2] * v[2], a[3] * v[0] + a[4] * v[1] + a[5] * v[2], a[6] * v[0] + a[7] * v[1] + a[8] * v[2]]; }
+function rotX(t) { const c = Math.cos(t), s = Math.sin(t); return [1, 0, 0, 0, c, -s, 0, s, c]; }
+function rotY(t) { const c = Math.cos(t), s = Math.sin(t); return [c, 0, s, 0, 1, 0, -s, 0, c]; }
+// GL용 열 우선 mat3 (행 우선 배열 → Float32Array 열 우선)
+function m3gl(a) { return new Float32Array([a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]]); }
+
+// =====================================================================
+//  WebGL
+// =====================================================================
+const cv = $('gl'), ov = $('ov'), octx = ov.getContext('2d');
+const gl = cv.getContext('webgl2', { antialias: true, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
+function showErr(msg) { let e = $('err'); if (!e) { e = document.createElement('div'); e.id = 'err'; document.body.appendChild(e); } e.textContent = msg; }
+if (!gl) showErr('이 브라우저는 WebGL2를 지원하지 않아 3D 화면을 그릴 수 없습니다.');
+
+let W = 1, H = 1, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.max(1, window.innerWidth); H = Math.max(1, window.innerHeight);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ov.width = Math.round(W * DPR); ov.height = Math.round(H * DPR);
+  octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+const LOGC = 1e8, LOGFAR = 1e8; // 깊이: log2(C*w+1)/log2(C*far+1)
+const LOGF = 1 / Math.log2(LOGC * LOGFAR + 1);
+
+const GLSL_HEAD = `#version 300 es
+precision highp float;
+precision highp int;
+`;
+const GLSL_DEPTH = `
+uniform float uLogC; uniform float uLogF;
+float logDepth(float w){ return log2(max(uLogC*w, 0.0) + 1.0) * uLogF; }
+`;
+const GLSL_NOISE = `
+uint hashu(uvec3 x){ x = ((x>>8U)^x.yzx)*1103515245U; x = ((x>>8U)^x.yzx)*1103515245U; x = ((x>>8U)^x.yzx)*1103515245U; return x.x; }
+float hash3(vec3 c){ ivec3 i = ivec3(floor(c)) + ivec3(1<<20); return float(hashu(uvec3(i)) >> 8U) / 16777215.0; }
+float vnoise(vec3 x){
+  vec3 i = floor(x); vec3 f = fract(x); f = f*f*(3.0-2.0*f);
+  return mix(mix(mix(hash3(i), hash3(i+vec3(1,0,0)), f.x), mix(hash3(i+vec3(0,1,0)), hash3(i+vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash3(i+vec3(0,0,1)), hash3(i+vec3(1,0,1)), f.x), mix(hash3(i+vec3(0,1,1)), hash3(i+vec3(1,1,1)), f.x), f.y), f.z);
+}
+float fbm(vec3 p, int oct){ float a = 0.5, s = 0.0, n = 0.0; for(int i=0;i<8;i++){ if(i>=oct) break; s += a*vnoise(p); n += a; p = p*2.02 + vec3(1.7,9.2,3.1); a *= 0.5; } return s/n; }
+`;
+
+function compile(vsSrc, fsSrc, name) {
+  const mk = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { const m = gl.getShaderInfoLog(s); showErr(name + ' 셰이더 오류\n' + m); throw new Error(name + ': ' + m); }
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, mk(gl.VERTEX_SHADER, vsSrc)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { const m = gl.getProgramInfoLog(p); showErr(name + ' 연결 오류\n' + m); throw new Error(m); }
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); const nm = info.name.replace(/\[0\]$/, ''); u[nm] = gl.getUniformLocation(p, info.name); }
+  return { p, u };
+}
+
+// ---------- 공 모양(임포스터) 정점 셰이더: 화면에 맞춘 사각형을 깔고 조각마다 광선으로 공을 맞춘다 ----------
+const VS_IMP = GLSL_HEAD + `
+layout(location=0) in vec2 aC;
+uniform vec3 uC; uniform float uR; uniform mat4 uP; uniform vec2 uTan; uniform float uFull;
+out vec3 vRay;
+void main(){
+  float d = length(uC);
+  if(uFull > 0.5){ vRay = vec3(aC.x*uTan.x, aC.y*uTan.y, -1.0); gl_Position = vec4(aC, 0.5, 1.0); return; }
+  vec3 dir = uC/d;
+  vec3 up0 = abs(dir.y) < 0.95 ? vec3(0.0,1.0,0.0) : vec3(1.0,0.0,0.0);
+  vec3 rt = normalize(cross(dir, up0)); vec3 up = cross(rt, dir);
+  float s = uR*d/sqrt(max(d*d - uR*uR, d*d*1e-6)) * 1.06;
+  vec3 p = uC + (rt*aC.x + up*aC.y)*s;
+  vRay = p; gl_Position = uP*vec4(p, 1.0);
+}`;
+const GLSL_HIT = `
+in vec3 vRay;
+uniform vec3 uC; uniform float uR;
+// 공과 광선이 만나는 점. 큰 수끼리 빼지 않도록 q(가장 가까운 점) 방식으로 계산.
+bool hitSphere(out vec3 p, out vec3 n, out vec3 rd, out bool inside){
+  rd = normalize(vRay);
+  float b = dot(rd, uC);
+  vec3 q = uC - rd*b;
+  float h = uR*uR - dot(q,q);
+  if(h < 0.0) return false;
+  h = sqrt(h);
+  inside = dot(uC,uC) < uR*uR;
+  float t = inside ? b + h : b - h;
+  if(t <= 0.0) return false;
+  p = rd*t;
+  n = inside ? (rd*h - q)/uR : (-rd*h - q)/uR;
+  return true;
+}`;
+
+// ---------- 천체 표면 ----------
+const FS_BODY = GLSL_HEAD + GLSL_DEPTH + GLSL_NOISE + GLSL_HIT + `
+uniform mat3 uLocal;
+uniform int uType;           // 0 암석 1 가스 2 얼음 3 위성/소행성 4 구름행성 5 갈색왜성 | 10 별 11 백색왜성 12 흑색왜성 13 중성자별 14 쿼시별 15 블랙홀
+uniform vec3 uCol1; uniform vec3 uCol2; uniform vec3 uCol3; uniform vec3 uAtm;
+uniform vec4 uPar;           // x 바다 높이, y 구름 양, z 대기 두께, w 얼음 극관
+uniform float uSeed; uniform float uTime; uniform float uHeat; uniform float uAlpha; uniform float uExpo;
+uniform vec3 uEmit;          // 별 표면 색(흑체)
+uniform float uEmitI;
+uniform int uNL; uniform vec3 uLP[4]; uniform vec3 uLC[4];
+out vec4 outC;
+vec3 lightAt(vec3 p, vec3 n){
+  vec3 s = vec3(0.0);
+  for(int i=0;i<4;i++){ if(i>=uNL) break; vec3 L = normalize(uLP[i]-p); float d = dot(n,L); s += uLC[i]*smoothstep(-0.06, 0.35, d)*max(d+0.06,0.0)/1.06; }
+  return s;
+}
+float lightTerm(vec3 p, vec3 n){ float s=0.0; for(int i=0;i<4;i++){ if(i>=uNL) break; s += max(dot(n, normalize(uLP[i]-p)),0.0)*length(uLC[i]); } return s; }
+void main(){
+  vec3 p, n, rd; bool inside;
+  if(!hitSphere(p, n, rd, inside)) discard;
+  vec3 nl = uLocal*n;               // 천체 자체 좌표의 법선 (자전 포함)
+  vec3 sp = nl*2.0 + vec3(uSeed);
+  float mu = clamp(dot(n, -rd), 0.0, 1.0);
+  vec3 col; float a = 1.0;
+  if(uType >= 10){
+    // ---- 스스로 빛나는 천체 ----
+    if(uType == 15){ col = vec3(0.0); }
+    else if(uType == 12){ // 흑색왜성: 거의 까맣고 다른 별빛만 받는다
+      vec3 base = vec3(0.07,0.065,0.07) * (0.8+0.4*fbm(sp*3.0,4));
+      col = base*lightAt(p,n) + uEmit*0.05*uEmitI;
+    } else {
+      float gscale = uType==14 ? 3.0 : (uType==11||uType==13 ? 4.0 : 9.0);
+      float gr = fbm(nl*gscale + vec3(0.0, uTime*0.03, uSeed), 5);
+      float gr2 = fbm(nl*gscale*3.1 - vec3(uTime*0.05, 0.0, uSeed), 4);
+      float limb = 0.35 + 0.65*pow(mu, 0.55);
+      float spots = (uType==10) ? smoothstep(0.72, 0.80, fbm(nl*2.2 + vec3(uSeed*3.0), 4))*0.55 : 0.0;
+      float gran = mix(0.78, 1.18, gr)*mix(0.9, 1.08, gr2);
+      col = uEmit * uEmitI * limb * gran * (1.0 - spots);
+      col += uEmit*uEmitI*0.25*pow(1.0-mu, 3.0);
+      if(uType==14){ a = uAlpha; if(inside){ col *= 0.6; } }
+    }
+  } else {
+    // ---- 행성 ----
+    vec3 base; float spec = 0.0; float cloud = 0.0; float rough = 1.0;
+    if(uType == 0 || uType == 4){
+      float h = fbm(sp*1.3, 7);
+      float hDet = fbm(sp*9.0, 4);
+      float sea = uPar.x;
+      if(h < sea){ base = mix(uCol1*0.6, uCol1, smoothstep(sea-0.25, sea, h)); spec = 1.0; }
+      else {
+        float e = (h - sea)/(1.0 - sea);
+        base = mix(uCol2, uCol3, smoothstep(0.05, 0.45, e + (hDet-0.5)*0.25));
+        base *= 0.85 + 0.3*hDet;
+      }
+      float lat = abs(nl.y) + (fbm(sp*4.0,3)-0.5)*0.25;
+      if(lat > uPar.w) base = mix(base, vec3(0.92,0.95,1.0), smoothstep(uPar.w, uPar.w+0.04, lat));
+      cloud = uPar.y > 0.0 ? smoothstep(1.0-uPar.y, 1.0-uPar.y+0.25, fbm(nl*3.0 + vec3(uTime*0.004, uSeed*2.0, 0.0), 6)) : 0.0;
+      if(uType == 4){ cloud = 1.0; base = mix(uCol1, uCol2, fbm(nl*vec3(2.0,7.0,2.0) + vec3(uSeed), 5)); }
+    } else if(uType == 1 || uType == 2 || uType == 5){
+      float turb = fbm(nl*vec3(3.0,1.5,3.0) + vec3(uSeed, 0.0, uTime*0.002), 5);
+      float bands = nl.y*(uType==2 ? 5.0 : 11.0) + (turb-0.5)*(uType==2 ? 1.2 : 3.2) + uSeed;
+      float bv = 0.5 + 0.5*sin(bands*3.14159);
+      float bv2 = 0.5 + 0.5*sin(bands*1.7 + 1.3);
+      base = mix(uCol1, uCol2, bv);
+      base = mix(base, uCol3, smoothstep(0.55, 0.95, bv2)*0.6);
+      float storm = smoothstep(0.82, 0.9, fbm(nl*6.0 + vec3(uSeed*5.0), 4));
+      base = mix(base, uCol3*0.9 + vec3(0.1,0.0,0.0), storm*0.5);
+      base *= 0.9 + 0.2*fbm(nl*14.0 + vec3(uSeed), 3);
+    } else {
+      float h = fbm(sp*2.0, 6);
+      float cr = fbm(sp*6.0, 4);
+      float crater = smoothstep(0.0, 0.08, abs(cr - 0.5) - 0.02);
+      base = mix(uCol1, uCol2, h) * mix(0.75, 1.0, crater);
+      base *= 0.85 + 0.3*fbm(sp*18.0, 3);
+    }
+    vec3 lit = lightAt(p, n);
+    col = base*lit;
+    // 바다 반짝임
+    if(spec > 0.0){
+      for(int i=0;i<4;i++){ if(i>=uNL) break; vec3 L = normalize(uLP[i]-p); vec3 hv = normalize(L - rd); col += uLC[i]*pow(max(dot(n,hv),0.0), 60.0)*0.35*(1.0-cloud); }
+    }
+    if(cloud > 0.0){ col = mix(col, vec3(0.95)*lit*(uType==4?1.0:0.95) * (uType==4 ? base*1.2 : vec3(1.0)), cloud*(uType==4?1.0:0.85)); }
+    // 대기 테두리
+    float rim = pow(1.0 - mu, 2.5);
+    col += uAtm * rim * uPar.z * (0.15 + 0.85*clamp(length(lit),0.0,1.5));
+    // 뜨거워서 녹은 표면 (별에 너무 가깝거나 부딪힌 뒤)
+    if(uHeat > 0.0){
+      float crack = smoothstep(0.35, 0.65, fbm(sp*5.0 + vec3(uTime*0.01), 5));
+      vec3 lava = mix(vec3(1.0,0.25,0.02), vec3(1.0,0.75,0.3), crack);
+      col = mix(col, lava*(0.5+1.2*crack), clamp(uHeat,0.0,1.0)*0.85);
+    }
+    // 갈색왜성은 스스로 붉게 빛난다
+    if(uType == 5){ col += uEmit*uEmitI*(0.35 + 0.65*pow(mu,0.6))*base*1.6; }
+    col += base*0.012;
+  }
+  col = vec3(1.0) - exp(-col*uExpo);
+  outC = vec4(col, a);
+  gl_FragDepth = logDepth(-p.z);
+}`;
+
+// ---------- 투명한 껍질 (펄스 물결, 충격파, 중력파) ----------
+const FS_SHELL = GLSL_HEAD + GLSL_DEPTH + GLSL_HIT + `
+uniform vec3 uCol; uniform float uA; uniform float uPow;
+out vec4 outC;
+void main(){
+  vec3 p, n, rd; bool inside;
+  if(!hitSphere(p, n, rd, inside)) discard;
+  float rim = 1.0 - abs(dot(n, rd));
+  float a = pow(rim, uPow)*uA;
+  outC = vec4(uCol*a, a);
+  gl_FragDepth = logDepth(-p.z);
+}`;
+
+// ---------- 빛 번짐 (별빛, 폭발, 작은 점) ----------
+const VS_SPR = GLSL_HEAD + `
+layout(location=0) in vec2 aC;
+uniform vec3 uC; uniform float uS; uniform mat4 uP;
+out vec2 vC; out float vW;
+void main(){ vC = aC; vec3 p = uC + vec3(aC*uS, 0.0); vec4 cp = uP*vec4(p,1.0); vW = cp.w; gl_Position = cp; }`;
+const FS_SPR = GLSL_HEAD + GLSL_DEPTH + `
+in vec2 vC; in float vW;
+uniform vec3 uCol; uniform float uA; uniform int uMode; uniform float uRing; uniform float uRot;
+out vec4 outC;
+void main(){
+  float r = length(vC);
+  if(r > 1.0) discard;
+  float I;
+  if(uMode == 0){ // 별빛: 가운데 밝고 바깥으로 길게 번짐
+    I = exp(-r*r*18.0)*1.3 + 0.22/(1.0 + r*r*120.0) + 0.06*exp(-r*r*3.0);
+    float ang = atan(vC.y, vC.x) + uRot;
+    I += 0.05*pow(abs(cos(ang*2.0)), 60.0)*exp(-r*2.5);
+    I *= smoothstep(1.0, 0.6, r);
+  } else if(uMode == 1){ // 작은 점 (멀리 있는 행성)
+    I = smoothstep(1.0, 0.45, r);
+  } else if(uMode == 2){ // 고리 (블랙홀 광자 고리)
+    I = exp(-pow((r - uRing)/0.05, 2.0)) + 0.35*exp(-pow((r - uRing)/0.16, 2.0));
+  } else { // 폭발 섬광
+    I = exp(-r*r*6.0) + 0.35/(1.0 + r*r*40.0);
+    I *= smoothstep(1.0, 0.5, r);
+  }
+  vec3 c = uCol*I*uA;
+  outC = uMode == 1 ? vec4(uCol, I*uA) : vec4(c, 1.0);
+  gl_FragDepth = logDepth(vW);
+}`;
+
+// ---------- 빛줄기 (펄서 빔, 블랙홀 감마선 제트) ----------
+const VS_BEAM = GLSL_HEAD + `
+layout(location=0) in vec2 aC; // x: -1..1 옆, y: 0..1 길이
+uniform vec3 uStart; uniform vec3 uAx; uniform float uLen; uniform float uWid; uniform mat4 uP;
+out vec2 vC; out float vW;
+void main(){
+  vec3 c = uStart + uAx*uLen*aC.y;
+  vec3 side = normalize(cross(uAx, normalize(c)));
+  float w = uWid*(0.15 + 0.85*aC.y);
+  vec3 p = c + side*w*aC.x;
+  vec4 cp = uP*vec4(p,1.0); vC = aC; vW = cp.w; gl_Position = cp;
+}`;
+const FS_BEAM = GLSL_HEAD + GLSL_DEPTH + `
+in vec2 vC; in float vW;
+uniform vec3 uCol; uniform vec3 uCol2; uniform float uA; uniform float uTime;
+out vec4 outC;
+void main(){
+  float side = 1.0 - abs(vC.x);
+  float along = vC.y;
+  float core = pow(side, 6.0);
+  float soft = pow(side, 1.6);
+  float fade = pow(1.0 - along, 1.4) * smoothstep(0.0, 0.04, along);
+  float knots = 0.8 + 0.2*sin(along*40.0 - uTime*12.0);
+  vec3 c = (uCol*core*1.4 + uCol2*soft*0.6) * fade * knots * uA;
+  outC = vec4(c, 1.0);
+  gl_FragDepth = logDepth(vW);
+}`;
+
+// ---------- 원반 (행성 고리, 블랙홀 강착 원반, 골디락스 존) ----------
+const VS_DISK = GLSL_HEAD + `
+layout(location=0) in vec3 aC; // cos, sin, 안/밖(0/1)
+uniform vec3 uC; uniform vec3 uA1; uniform vec3 uA2; uniform float uRin; uniform float uRout; uniform mat4 uP;
+out vec3 vC; out float vW;
+void main(){ float r = mix(uRin, uRout, aC.z); vec3 p = uC + (uA1*aC.x + uA2*aC.y)*r; vec4 cp = uP*vec4(p,1.0); vC = aC; vW = cp.w; gl_Position = cp; }`;
+const FS_DISK = GLSL_HEAD + GLSL_DEPTH + GLSL_NOISE + `
+in vec3 vC; in float vW;
+uniform int uMode; uniform vec3 uCol; uniform float uA; uniform float uTime; uniform float uSeed; uniform float uLight; uniform vec3 uView;
+out vec4 outC;
+void main(){
+  float t = vC.z;
+  float ang = atan(vC.y, vC.x);
+  if(uMode == 0){ // 행성 고리
+    float b = vnoise(vec3(t*38.0 + uSeed, 0.0, 0.0))*0.6 + vnoise(vec3(t*140.0, 3.0, uSeed))*0.4;
+    float gap = smoothstep(0.58, 0.62, t)*(1.0-smoothstep(0.64, 0.68, t));
+    float a = (0.25 + 0.75*b) * (1.0 - gap*0.9) * smoothstep(0.0, 0.05, t) * smoothstep(1.0, 0.93, t);
+    vec3 c = uCol*(0.6 + 0.6*b)*uLight;
+    outC = vec4(c, a*uA);
+  } else if(uMode == 1){ // 강착 원반: 안쪽은 희고 뜨겁게, 바깥은 주황
+    float rr = mix(1.0, 7.0, t);
+    float swirl = ang*3.0 + uTime*3.0/pow(rr, 1.5)*4.0 - log(rr)*6.0;
+    float n = fbm(vec3(cos(swirl), sin(swirl), rr*1.5) * 1.5, 4);
+    float heat = pow(1.0 - t, 1.6);
+    vec3 c = mix(vec3(1.0,0.35,0.05), vec3(1.0,0.85,0.6), heat);
+    c = mix(c, vec3(0.75,0.85,1.0), pow(heat, 4.0));
+    // 다가오는 쪽이 더 밝다 (도플러 빔)
+    float dop = 1.0 + 0.55*sin(ang + uSeed);
+    float I = (0.35 + 1.1*n) * (heat*1.6 + 0.15) * dop * smoothstep(0.0, 0.03, t) * smoothstep(1.0, 0.6, t);
+    outC = vec4(c*I*uA, 1.0);
+  } else { // 골디락스 존 띠
+    float edge = smoothstep(0.0, 0.08, t) * smoothstep(1.0, 0.92, t);
+    float mid = 0.55 + 0.45*(1.0 - abs(t - 0.5)*2.0);
+    outC = vec4(uCol*uA*edge*mid, 1.0);
+  }
+  gl_FragDepth = logDepth(vW);
+}`;
+
+// ---------- 선 (궤도 자국, 눈금, 미리보기) ----------
+const VS_LINE = GLSL_HEAD + `
+layout(location=0) in vec3 aP; layout(location=1) in float aA;
+uniform mat4 uP; out float vA; out float vW;
+void main(){ vec4 cp = uP*vec4(aP,1.0); vA = aA; vW = cp.w; gl_Position = cp; }`;
+const FS_LINE = GLSL_HEAD + GLSL_DEPTH + `
+in float vA; in float vW; uniform vec4 uCol; out vec4 outC;
+void main(){ outC = vec4(uCol.rgb, uCol.a*vA); gl_FragDepth = logDepth(vW); }`;
+
+// ---------- 알갱이 (부서진 조각, 가스) ----------
+const VS_PT = GLSL_HEAD + `
+layout(location=0) in vec3 aP; layout(location=1) in vec4 aCol; layout(location=2) in float aS;
+uniform mat4 uP; uniform float uPx; uniform float uMinPx; uniform float uMaxPx;
+out vec4 vCol; out float vW;
+void main(){
+  vec4 cp = uP*vec4(aP,1.0); gl_Position = cp; vW = cp.w;
+  float px = 2.0*aS*uPx/max(cp.w, 1e-20);
+  vCol = aCol;
+  if(px < uMinPx){ vCol.a *= max(px/uMinPx, 0.35); px = uMinPx; }
+  gl_PointSize = min(px, uMaxPx);
+}`;
+const FS_PT = GLSL_HEAD + GLSL_DEPTH + `
+in vec4 vCol; in float vW; uniform int uAdd; out vec4 outC;
+void main(){
+  vec2 c = gl_PointCoord*2.0 - 1.0; float r2 = dot(c,c); if(r2 > 1.0) discard;
+  float a = uAdd == 1 ? exp(-r2*2.5) : smoothstep(1.0, 0.55, r2);
+  outC = uAdd == 1 ? vec4(vCol.rgb*vCol.a*a*0.38, 1.0) : vec4(vCol.rgb, vCol.a*a);
+  gl_FragDepth = logDepth(vW);
+}`;
+
+// ---------- 하늘 (별 가득한 배경 + 블랙홀 중력 렌즈) ----------
+const VS_SKY = GLSL_HEAD + `
+layout(location=0) in vec2 aC; out vec2 vN;
+void main(){ vN = aC; gl_Position = vec4(aC, 0.999, 1.0); }`;
+const FS_SKY = GLSL_HEAD + GLSL_NOISE + `
+in vec2 vN;
+uniform mat3 uViewInv; uniform vec2 uTan; uniform vec2 uRes; uniform float uPix; uniform float uDim;
+uniform int uNB; uniform vec4 uBH[6];   // 화면 px 좌표 x,y, 그림자 반지름 px, 아인슈타인 반지름 px
+out vec4 outC;
+float starLayer(vec3 d, float sc, float th){
+  vec3 p = d*sc; vec3 c = floor(p);
+  float h = hash3(c);
+  if(h < th) return 0.0;
+  vec3 sp = c + 0.2 + 0.6*vec3(hash3(c+13.1), hash3(c+27.7), hash3(c+51.3));
+  vec3 sd = normalize(sp);
+  float ang = length(d - sd);
+  float b = (h - th)/(1.0 - th);
+  float pr = uPix*(0.7 + 1.1*b);
+  return (0.12 + 1.1*b*b) * exp(-ang*ang/(pr*pr));
+}
+void main(){
+  vec2 fc = gl_FragCoord.xy;
+  float shadow = 0.0, ring = 0.0;
+  for(int i=0;i<6;i++){
+    if(i>=uNB) break;
+    vec2 d = fc - uBH[i].xy; float r = length(d);
+    float re = uBH[i].w;
+    if(r < uBH[i].z){ shadow = 1.0; }
+    else { fc = uBH[i].xy + d*(1.0 - re*re/(r*r)); ring += exp(-pow((r - uBH[i].z*1.08)/max(uBH[i].z*0.10,1.0), 2.0)); }
+  }
+  vec2 ndc = fc/uRes*2.0 - 1.0;
+  vec3 dir = normalize(uViewInv*vec3(ndc.x*uTan.x, ndc.y*uTan.y, -1.0));
+  vec3 col = vec3(0.0);
+  float s1 = starLayer(dir, 160.0, 0.9935);
+  float s2 = starLayer(dir.zxy, 330.0, 0.9975);
+  float tint = hash3(floor(dir*160.0)+7.0);
+  col += s1*mix(vec3(0.75,0.85,1.0), vec3(1.0,0.86,0.72), tint);
+  col += s2*vec3(0.85,0.88,1.0)*0.8;
+  vec3 gN = normalize(vec3(0.0, 0.48, 0.877));
+  float gb = dot(dir, gN);
+  float band = exp(-gb*gb/0.022);
+  float haze = fbm(dir*5.0, 5);
+  float dust = smoothstep(0.5, 0.7, fbm(dir*11.0 + 3.0, 5));
+  vec3 gc = normalize(vec3(0.82, -0.25, -0.5));
+  float core = pow(max(dot(dir, gc), 0.0), 6.0);
+  col += band*(0.018 + 0.05*haze + 0.06*core)*(1.0 - 0.75*dust)*mix(vec3(0.55,0.62,0.8), vec3(0.9,0.75,0.55), core);
+  col *= uDim;
+  col *= 1.0 - shadow;
+  col += vec3(1.0,0.75,0.45)*ring*0.0;
+  outC = vec4(col, 1.0);
+}`;
+
+let P = {};
+let VAO = {};
+function initGL() {
+  P.body = compile(VS_IMP, FS_BODY, 'body');
+  P.shell = compile(VS_IMP, FS_SHELL, 'shell');
+  P.spr = compile(VS_SPR, FS_SPR, 'sprite');
+  P.beam = compile(VS_BEAM, FS_BEAM, 'beam');
+  P.disk = compile(VS_DISK, FS_DISK, 'disk');
+  P.line = compile(VS_LINE, FS_LINE, 'line');
+  P.pt = compile(VS_PT, FS_PT, 'points');
+  P.sky = compile(VS_SKY, FS_SKY, 'sky');
+  // 사각형
+  const mkVAO = (data, comps) => {
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, comps, gl.FLOAT, false, 0, 0);
+    gl.bindVertexArray(null); return { vao, n: data.length / comps };
+  };
+  VAO.quad = mkVAO([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1], 2);
+  VAO.beam = mkVAO([-1, 0, 1, 0, -1, 1, -1, 1, 1, 0, 1, 1], 2);
+  const seg = 160, d = [];
+  for (let i = 0; i < seg; i++) {
+    const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+    const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+    d.push(c0, s0, 0, c1, s1, 0, c0, s0, 1, c0, s0, 1, c1, s1, 0, c1, s1, 1);
+  }
+  VAO.disk = mkVAO(d, 3);
+  // 선 버퍼
+  VAO.line = { vao: gl.createVertexArray(), buf: gl.createBuffer() };
+  gl.bindVertexArray(VAO.line.vao); gl.bindBuffer(gl.ARRAY_BUFFER, VAO.line.buf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 16, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 16, 12);
+  gl.bindVertexArray(null);
+  // 알갱이 버퍼
+  VAO.pt = { vao: gl.createVertexArray(), buf: gl.createBuffer() };
+  gl.bindVertexArray(VAO.pt.vao); gl.bindBuffer(gl.ARRAY_BUFFER, VAO.pt.buf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 32, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 12);
+  gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 32, 28);
+  gl.bindVertexArray(null);
+}
+
+// =====================================================================
+//  천체
+// =====================================================================
+let bodies = [];
+let nextId = 1;
+let simTime = 0;
+let accDirty = true;
+const STAGE_NAME = { ms: '주계열성', rg: '적색거성', agb: '점근거성가지 별', rsg: '적색초거성', wd: '백색왜성', blk: '흑색왜성', ns: '중성자별 (펄서)', bh: '블랙홀', qs: '쿼시별', brown: '갈색왜성' };
+const SUB_NAME = { earth: '암석 행성 (지구형)', desert: '암석 행성 (사막형)', venus: '암석 행성 (두꺼운 구름)', gas: '가스 행성 (목성형)', ice: '얼음 거인 (해왕성형)', moon: '위성', asteroid: '소행성', dwarf: '왜소행성' };
+
+const PAL = {
+  earth: { c1: [0.04, 0.13, 0.32], c2: [0.22, 0.33, 0.13], c3: [0.55, 0.47, 0.33], atm: [0.35, 0.6, 1.0], par: [0.52, 0.45, 0.9, 0.80] },
+  desert: { c1: [0.45, 0.2, 0.1], c2: [0.62, 0.32, 0.16], c3: [0.42, 0.22, 0.13], atm: [0.9, 0.55, 0.35], par: [0.0, 0.04, 0.25, 0.88] },
+  venus: { c1: [0.80, 0.66, 0.42], c2: [0.95, 0.87, 0.66], c3: [0.9, 0.8, 0.6], atm: [1.0, 0.85, 0.5], par: [0, 1, 0.8, 2] },
+  gas: { c1: [0.86, 0.75, 0.60], c2: [0.62, 0.43, 0.29], c3: [0.94, 0.91, 0.86], atm: [0.9, 0.8, 0.6], par: [0, 0, 0.35, 2] },
+  ice: { c1: [0.33, 0.55, 0.95], c2: [0.22, 0.40, 0.85], c3: [0.6, 0.78, 1.0], atm: [0.5, 0.7, 1.0], par: [0, 0, 0.6, 2] },
+  moon: { c1: [0.40, 0.39, 0.38], c2: [0.68, 0.67, 0.65], c3: [0.6, 0.6, 0.6], atm: [0, 0, 0], par: [0, 0, 0, 2] },
+  asteroid: { c1: [0.28, 0.25, 0.22], c2: [0.50, 0.46, 0.40], c3: [0.5, 0.5, 0.5], atm: [0, 0, 0], par: [0, 0, 0, 2] },
+  dwarf: { c1: [0.62, 0.52, 0.42], c2: [0.85, 0.80, 0.72], c3: [0.6, 0.6, 0.6], atm: [0, 0, 0], par: [0, 0, 0, 2] },
+  brown: { c1: [0.36, 0.13, 0.11], c2: [0.20, 0.06, 0.08], c3: [0.52, 0.22, 0.16], atm: [0.6, 0.2, 0.2], par: [0, 0, 0.3, 2] },
+};
+function jitterPal(p, k) {
+  const j = (c) => c.map(v => clamp(v * (1 + (Math.random() - 0.5) * k), 0, 1));
+  const h = Math.random();
+  const q = JSON.parse(JSON.stringify(p));
+  q.c1 = j(q.c1); q.c2 = j(q.c2); q.c3 = j(q.c3);
+  if (h < 0.3 && p === PAL.gas) { q.c1 = [0.80, 0.62, 0.52]; q.c2 = [0.55, 0.30, 0.22]; } // 붉은 줄무늬
+  if (p.par) { q.par = p.par.slice(); if (p === PAL.earth) { q.par[0] = clamp(p.par[0] + rnd(-0.12, 0.12), 0.3, 0.68); q.par[1] = rnd(0.25, 0.6); } }
+  return q;
+}
+function shaderType(b) {
+  if (b.kind === 'planet') return { earth: 0, desert: 0, venus: 4, gas: 1, ice: 2, moon: 3, asteroid: 3, dwarf: 3 }[b.sub] ?? 0;
+  return { ms: 10, rg: 10, agb: 10, rsg: 10, wd: 11, blk: 12, ns: 13, qs: 14, bh: 15, brown: 5 }[b.stage] ?? 10;
+}
+const isBH = (b) => b.kind === 'star' && b.stage === 'bh';
+const isNS = (b) => b.kind === 'star' && b.stage === 'ns';
+const isCompact = (b) => isBH(b) || isNS(b);
+const isLum = (b) => b.kind === 'star' && b.stage !== 'bh';
+
+function planetRadius(sub, m) {
+  const me = m / MEARTH;
+  switch (sub) {
+    case 'gas': { const mj = m / MJUP; return RJUP * (mj < 1 ? Math.pow(mj, 0.15) : Math.pow(mj, -0.04)); }
+    case 'ice': return 3.9 * REARTH * Math.pow(me / 17, 0.3);
+    case 'moon': return 1737 / AU_KM * Math.pow(me / 0.0123, 0.3);
+    case 'dwarf': return 1188 / AU_KM * Math.pow(me / 0.00218, 0.3);
+    case 'asteroid': return 473 / AU_KM * Math.pow(me / 1.6e-4, 1 / 3);
+    default: return REARTH * Math.pow(me, me < 1 ? 0.3 : 0.27);
+  }
+}
+function msRadius(m) { return m < 1 ? Math.pow(m, 0.8) : Math.pow(m, 0.57); }
+function msLum(m) { if (m < 0.43) return 0.23 * Math.pow(m, 2.3); if (m < 2) return Math.pow(m, 4); if (m < 55) return 1.4 * Math.pow(m, 3.5); return 32000 * m; }
+function wdRadius(m) { const x = Math.min(m, 1.43) / 1.44; return 0.0126 * RSUN * Math.pow(m / 0.6, -1 / 3) * Math.max(0.15, Math.sqrt(1 - Math.pow(x, 4 / 3)) / 0.875); }
+function brownRT(m) { const k = clamp((m / MJUP - 12) / 68, 0, 1); return [RJUP * (1.05 - 0.2 * k), 500 + 1900 * k]; }
+function stageRT(stage, m) {
+  switch (stage) {
+    case 'ms': { const R = msRadius(m), L = msLum(m); return [R * RSUN, 5778 * Math.pow(L / (R * R), 0.25)]; }
+    case 'rg': return [60 * Math.pow(m, 0.5) * RSUN, 4500];
+    case 'agb': return [250 * Math.pow(m, 0.45) * RSUN, 3300];
+    case 'rsg': return [Math.min(1600, 700 * Math.pow(m / 16, 0.5)) * RSUN, 3600];
+    case 'wd': return [wdRadius(m), 24000];
+    case 'blk': return [wdRadius(m), 900];
+    case 'ns': return [12 / AU_KM, 600000];
+    case 'bh': return [2.953 * m / AU_KM, 0];
+    case 'qs': return [9000 * Math.pow(m / 1000, 0.5) * RSUN, 4200];
+    case 'brown': return brownRT(m);
+  }
+  return [RSUN, 5778];
+}
+function updLum(b) {
+  if (b.kind !== 'star') { b.L = 0; return; }
+  if (b.stage === 'bh') { b.L = 0; return; }
+  const Rs = b.R / RSUN;
+  b.L = Rs * Rs * Math.pow(b.T / 5778, 4);
+}
+function updStar(b) {
+  if (b.kind !== 'star' || b.anim) return;
+  const T0 = b.T;
+  const [R, T] = stageRT(b.stage, b.m);
+  b.R = R;
+  if (b.stage === 'wd' && b.T > 0 && b.wdT) b.T = b.wdT; else b.T = T;
+  updLum(b);
+}
+function newBody(o) {
+  const b = Object.assign({
+    id: nextId++, name: '', kind: 'planet', sub: 'earth', stage: null, m: MEARTH, mi: 0, R: REARTH, T: 0, L: 0,
+    x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, ax: 0, ay: 0, az: 0,
+    spin: Math.random() * 6.28, spinRate: 2 * Math.PI / DAY, tilt: rnd(0, 0.45), tiltDir: rnd(0, 6.28), seed: rnd(0, 50),
+    pal: null, heat: 0, anim: null, trail: [], dead: false, activity: 0, jetOn: false, jetBurst: 0, ring: null, core: 0,
+    beam: 0, prim: null, soi: Infinity, qsFade: 0, wdT: 0,
+  }, o);
+  if (b.kind === 'planet') { if (!b.pal) b.pal = jitterPal(PAL[b.sub] || PAL.earth, 0.18); if (!o.R) b.R = planetRadius(b.sub, b.m); }
+  else {
+    if (!b.pal) b.pal = b.stage === 'brown' ? jitterPal(PAL.brown, 0.15) : null;
+    if (!b.mi) b.mi = b.m;
+    if (!o.R) { const [R, T] = stageRT(b.stage, b.m); b.R = R; b.T = T; }
+    else if (!o.T) b.T = stageRT(b.stage, b.m)[1];
+    if (b.stage === 'wd' && !b.wdT) b.wdT = b.T;
+    if (b.stage === 'qs' && !b.core) b.core = Math.max(10, b.m * 0.02);
+    if (b.stage === 'ns') b.spinRate = 0;
+    updLum(b);
+  }
+  return b;
+}
+function addBody(b) { bodies.push(b); accDirty = true; return b; }
+function byId(id) { for (const b of bodies) if (b.id === id) return b; return null; }
+
+let nameCount = {};
+function autoName(prefix) { nameCount[prefix] = (nameCount[prefix] || 0) + 1; return prefix + ' ' + nameCount[prefix]; }
+
+// 질량이 바뀌면 행성 ↔ 갈색왜성 ↔ 별 사이를 오간다
+function renameAuto(b, prefix) { // '행성 3'처럼 저절로 붙은 이름이면 새 종류 이름으로 바꾼다
+  if (/^(행성|갈색왜성|별|소행성|위성) \d+$/.test(b.name) && !b.name.startsWith(prefix + ' ')) b.name = autoName(prefix);
+}
+function reclassify(b) {
+  if (b.dead) return;
+  const k0 = b.kind, s0 = b.stage;
+  reclassify0(b);
+  if (b.kind !== k0 || b.stage !== s0) renameAuto(b, b.kind === 'planet' ? '행성' : b.stage === 'brown' ? '갈색왜성' : '별');
+}
+function reclassify0(b) {
+  if (b.kind === 'planet' && b.m >= BD_MIN) {
+    b.kind = 'star'; b.stage = 'brown'; b.pal = jitterPal(PAL.brown, 0.1); b.mi = b.m; b.ring = null;
+    updStar(b); log(`${b.name}의 질량이 목성의 12배를 넘어서 갈색왜성이 되었습니다.`);
+  }
+  if (b.kind === 'star' && b.stage === 'brown') {
+    if (b.m >= STAR_MIN) { b.stage = 'ms'; b.mi = b.m; b.seed = rnd(0, 50); updStar(b); log(`${b.name}의 질량이 목성의 80배를 넘어서 수소 핵융합이 시작되었습니다. 이제 별입니다.`); }
+    else if (b.m < BD_MIN) { b.kind = 'planet'; b.stage = null; b.sub = 'gas'; b.pal = jitterPal(PAL.gas, 0.15); b.R = planetRadius('gas', b.m); b.T = 0; b.L = 0; log(`${b.name}의 질량이 목성의 12배보다 작아져서 가스 행성이 되었습니다.`); }
+    else updStar(b);
+  } else if (b.kind === 'star' && b.stage === 'ms' && b.m < STAR_MIN) {
+    b.stage = 'brown'; b.pal = jitterPal(PAL.brown, 0.1); updStar(b); log(`${b.name}의 질량이 목성의 80배보다 작아져서 핵융합이 멈추고 갈색왜성이 되었습니다.`);
+  } else if (b.kind === 'star' && b.stage === 'ms') { b.mi = b.m; updStar(b); }
+  else if (b.kind === 'planet') { b.R = planetRadius(b.sub, b.m); }
+  else if (b.kind === 'star') {
+    if (b.stage === 'wd' && b.m >= 1.44 && !b.anim) { startIa(b, true); }
+    else if (b.stage === 'ns' && b.m >= 2.3) { collapseNS(b); }
+    else updStar(b);
+  }
+}
+
+// 별의 분광형
+function spectral(T) { return T >= 30000 ? 'O' : T >= 10000 ? 'B' : T >= 7500 ? 'A' : T >= 6000 ? 'F' : T >= 5200 ? 'G' : T >= 3700 ? 'K' : 'M'; }
+function typeName(b) {
+  if (b.kind === 'planet') return SUB_NAME[b.sub] || '행성';
+  if (b.stage === 'ms') return (b.m < 0.5 ? '적색왜성 · ' : '') + '주계열성 ' + spectral(b.T) + '형';
+  return STAGE_NAME[b.stage] || '별';
+}
+function stageDesc(b) {
+  if (b.kind === 'planet') {
+    if (b.sub === 'gas') return '수소와 헬륨으로 된 큰 행성입니다. 목성 질량의 12배가 넘으면 갈색왜성이 됩니다.';
+    if (b.sub === 'ice') return '물·메테인·암모니아 얼음이 많은 행성입니다.';
+    if (b.sub === 'moon') return '행성 둘레를 도는 위성입니다. 행성에 너무 가까이 가면 로슈 한계 안에서 부서집니다.';
+    if (b.sub === 'asteroid') return '작은 바위 덩어리입니다.';
+    if (b.sub === 'dwarf') return '둥글지만 궤도 근처를 다 치우지 못한 왜소행성입니다.';
+    return '단단한 암석 표면이 있는 행성입니다.';
+  }
+  switch (b.stage) {
+    case 'ms': return b.m < 0.5 ? '수소를 아주 천천히 태웁니다. 적색왜성은 부풀지 않고 수조 년 뒤 바로 백색왜성이 됩니다.' : b.m < 8 ? '중심에서 수소를 태우고 있습니다. 나중에 부풀어서 적색거성이 됩니다.' : '무거운 별입니다. 크게 부푼 뒤 초신성으로 터집니다.';
+    case 'rg': return '중심의 수소가 다 타서 바깥이 크게 부풀었습니다.';
+    case 'agb': return '헬륨까지 다 타고 가장 크게 부푼 단계입니다. 바깥 껍질을 날려 행성상 성운을 만듭니다.';
+    case 'rsg': return b.mi >= 20 ? '아주 무거운 별이 부푼 모습입니다. 터지면 블랙홀이 남습니다.' : '무거운 별이 부푼 모습입니다. 터지면 중성자별이 남습니다.';
+    case 'wd': return '별의 중심만 남은 뜨거운 공입니다. 질량이 1.44 태양 질량(찬드라세카르 한계)을 넘으면 Ia형 초신성으로 터집니다.';
+    case 'blk': return '백색왜성이 다 식어서 빛이 거의 없습니다. 실제로는 우주의 나이보다 오래 걸립니다.';
+    case 'ns': return '지름 약 24km에 태양보다 무거운 별입니다. 빠르게 돌면서 전파를 등대처럼 내보냅니다. 2.3 태양 질량을 넘으면 블랙홀이 됩니다.';
+    case 'bh': return '빛도 빠져나오지 못하는 천체입니다. 무언가를 삼키면 원반이 빛나고 감마선 제트를 내뿜습니다.';
+    case 'qs': return '초기 우주의 거대한 별입니다. 가운데에 블랙홀이 있습니다. 확대해서 안으로 들어가면 보입니다.';
+    case 'brown': return '목성의 12~79.9배 질량입니다. 수소 핵융합을 못 해서 천천히 식으며 어둡게 빛납니다.';
+  }
+  return '';
+}
+
+// 다음 단계 계산
+function nextStage(b) {
+  if (b.kind !== 'star' || b.anim) return null;
+  switch (b.stage) {
+    case 'ms': if (b.m < 0.5) return { to: 'wd', label: '백색왜성' }; if (b.m < 8) return { to: 'rg', label: '적색거성' }; return { to: 'rsg', label: '적색초거성' };
+    case 'rg': return { to: 'agb', label: '점근거성가지' };
+    case 'agb': return { to: 'wd', label: '행성상 성운 + 백색왜성' };
+    case 'rsg': return b.mi >= 20 ? { to: 'bh', label: '초신성 → 블랙홀' } : { to: 'ns', label: '초신성 → 중성자별' };
+    case 'wd': return { to: 'blk', label: '흑색왜성' };
+    case 'qs': return { to: 'bh', label: '블랙홀' };
+  }
+  return null;
+}
+function expandTarget(b) {
+  if (b.kind !== 'star' || b.anim) return null;
+  if (b.stage === 'ms') { if (b.m < 0.5) return null; return b.m < 8 ? 'agb' : 'rsg'; }
+  if (b.stage === 'rg') return 'agb';
+  return null;
+}
+function wdMassFrom(mi) { return Math.min(1.35, 0.47 + 0.1 * mi); }
+
+function startStage(b, to, auto) {
+  if (b.anim || b.dead) return;
+  const from = b.stage;
+  b.pending = null;
+  if (to === 'rg' || to === 'agb' || to === 'rsg') {
+    const mTo = to === 'rsg' ? b.m * 0.9 : to === 'agb' ? b.m * (from === 'rg' ? 0.85 : 0.8) : b.m * 0.95;
+    const [R1, T1] = stageRT(to, b.m);
+    b.anim = { type: 'grow', t: 0, dur: to === 'rg' ? 4 : 5.5, R0: b.R, R1, T0: b.T, T1, m0: b.m, m1: mTo, to, auto: !!auto };
+    log(`${b.name}이(가) 부풀기 시작했습니다. (${STAGE_NAME[to]})`);
+  } else if (to === 'wd' && from === 'agb') {
+    const mw = wdMassFrom(b.mi);
+    b.anim = { type: 'pn', t: 0, dur: 4.5, R0: b.R, R1: wdRadius(mw), T0: b.T, m0: b.m, m1: mw, spawned: 0 };
+    spawnNebula(b);
+    log(`${b.name}이(가) 바깥 껍질을 날려 보냈습니다. 행성상 성운이 퍼지고 가운데에 백색왜성이 남습니다.`);
+  } else if (to === 'wd' && from === 'ms') {
+    b.anim = { type: 'shrink', t: 0, dur: 4, R0: b.R, R1: wdRadius(b.m), T0: b.T, m0: b.m };
+    log(`${b.name}이(가) 수조 년 동안 수소를 다 태우고 백색왜성이 됩니다.`);
+  } else if ((to === 'ns' || to === 'bh') && from === 'rsg') {
+    b.anim = { type: 'sn', t: 0, dur: 1.1, R0: b.R, T0: b.T, to, boom: false };
+    log(`${b.name}의 중심이 무너지고 있습니다!`, 1);
+  } else if (to === 'blk') {
+    b.anim = { type: 'cool', t: 0, dur: 3.5, T0: b.T };
+  } else if (to === 'bh' && from === 'qs') {
+    b.anim = { type: 'qsend', t: 0, dur: 4.5, R0: b.R, m0: b.m };
+    log(`${b.name}의 겉껍질이 흩어지고 있습니다. 가운데의 블랙홀이 드러납니다.`, 1);
+  }
+}
+
+// Ia형 초신성: 백색왜성이 동반성의 물질을 빨아들여 1.44 태양 질량을 넘으면 터진다
+function startIa(b, auto) {
+  if (b.anim || b.dead || b.stage !== 'wd') return;
+  let comp = null, best = Infinity;
+  for (const o of bodies) {
+    if (o === b || o.dead || o.kind !== 'star' || isCompact(o) || o.stage === 'brown') continue;
+    const d = Math.hypot(o.x - b.x, o.y - b.y, o.z - b.z);
+    if (d < best && d < 60) { best = d; comp = o; }
+  }
+  b.anim = { type: 'ia', t: 0, dur: auto ? 0.8 : 3.0, m0: b.m, m1: Math.max(1.44, b.m), comp: comp ? comp.id : null, take: comp ? Math.min(Math.max(0, 1.44 - b.m), comp.m * 0.6) : 0, spawnAcc: 0 };
+  if (!auto) log(comp ? `${b.name}이(가) ${comp.name}의 물질을 빨아들이고 있습니다. 1.44 태양 질량이 되면 터집니다.` : `${b.name}에 물질이 쌓이고 있습니다. 1.44 태양 질량이 되면 터집니다.`, 1);
+}
+
+function collapseNS(b) {
+  b.stage = 'bh'; b.m *= 0.97; updStar(b);
+  flash(b.x, b.y, b.z, b, 2.2, [0.8, 0.85, 1.0], 2.5, 2.5);
+  b.jetBurst = 4; b.activity = 1;
+  gwRipple(b, 4);
+  log(`${b.name}의 질량이 2.3 태양 질량을 넘어서 블랙홀로 무너졌습니다! 감마선이 뿜어져 나옵니다.`, 1);
+}
+
+// =====================================================================
+//  효과 (섬광, 껍질, 물결)
+// =====================================================================
+let effects = [];
+function camDistTo(x, y, z) { return Math.hypot(x - eye[0], y - eye[1], z - eye[2]); }
+function flash(x, y, z, body, sizeRel, col, dur, I) {
+  // sizeRel: 카메라 거리에 대한 비율이 아니라, 천체 반지름/카메라 거리 중 큰 것 기준
+  const d = camDistTo(x, y, z);
+  effects.push({ type: 'flash', x, y, z, body: body ? body.id : null, t: 0, dur, size: Math.max(d * 0.12 * sizeRel, body ? body.R * 4 : 0), col, I });
+}
+function shell(b, r0, r1, dur, col, a, pw) {
+  effects.push({ type: 'shell', x: b.x, y: b.y, z: b.z, body: b.id, t: 0, dur, r0, r1, col, a, pw: pw || 3 });
+}
+function relShell(b, k1, dur, col, a, pw) { // 카메라 거리에 맞춰 커지는 물결 (펄서, 중력파)
+  effects.push({ type: 'shell', rel: true, x: b.x, y: b.y, z: b.z, body: b.id, t: 0, dur, r0: 0, r1: k1, col, a, pw: pw || 2 });
+}
+function gwRipple(b, n) {
+  for (let i = 0; i < n; i++) effects.push({ type: 'shell', rel: true, delay: i * 0.35, x: b.x, y: b.y, z: b.z, body: b.id, t: 0, dur: 2.6, r0: 0, r1: 0.9, col: [0.75, 0.8, 1.0], a: 0.35, pw: 6 });
+}
+function stepEffects(rdt) {
+  for (const e of effects) {
+    if (e.delay > 0) { e.delay -= rdt; continue; }
+    e.t += rdt;
+    if (e.body != null) { const b = byId(e.body); if (b) { e.x = b.x; e.y = b.y; e.z = b.z; } else e.body = null; }
+  }
+  effects = effects.filter(e => e.t < e.dur);
+}
+
+// =====================================================================
+//  알갱이 (부서진 조각 = 중력 받음 / 가스 = 효과)
+// =====================================================================
+const MAXP = 14000;
+const F_GRAV = 1, F_ADD = 2, F_REL = 4, F_SINK = 8;
+const PX = new Float64Array(MAXP * 3), PV = new Float64Array(MAXP * 3);
+const PC = new Float32Array(MAXP * 4), PS = new Float32Array(MAXP), PL = new Float32Array(MAXP), PL0 = new Float32Array(MAXP);
+const PF = new Uint8Array(MAXP), PM = new Float64Array(MAXP), PB = new Int32Array(MAXP), PGR = new Float32Array(MAXP);
+let NP = 0;
+function addP(x, y, z, vx, vy, vz, c, size, life, flag, mass, bodyId, grow) {
+  if (NP >= MAXP) return -1;
+  const i = NP++;
+  PX[i * 3] = x; PX[i * 3 + 1] = y; PX[i * 3 + 2] = z;
+  PV[i * 3] = vx; PV[i * 3 + 1] = vy; PV[i * 3 + 2] = vz;
+  PC[i * 4] = c[0]; PC[i * 4 + 1] = c[1]; PC[i * 4 + 2] = c[2]; PC[i * 4 + 3] = c[3] ?? 1;
+  PS[i] = size; PL[i] = life; PL0[i] = life; PF[i] = flag; PM[i] = mass || 0; PB[i] = bodyId ?? -1; PGR[i] = grow || 0;
+  return i;
+}
+function killP(i) {
+  const j = --NP;
+  if (i === j) return;
+  PX[i * 3] = PX[j * 3]; PX[i * 3 + 1] = PX[j * 3 + 1]; PX[i * 3 + 2] = PX[j * 3 + 2];
+  PV[i * 3] = PV[j * 3]; PV[i * 3 + 1] = PV[j * 3 + 1]; PV[i * 3 + 2] = PV[j * 3 + 2];
+  PC[i * 4] = PC[j * 4]; PC[i * 4 + 1] = PC[j * 4 + 1]; PC[i * 4 + 2] = PC[j * 4 + 2]; PC[i * 4 + 3] = PC[j * 4 + 3];
+  PS[i] = PS[j]; PL[i] = PL[j]; PL0[i] = PL0[j]; PF[i] = PF[j]; PM[i] = PM[j]; PB[i] = PB[j]; PGR[i] = PGR[j];
+}
+// 천체가 사라지면 거기 붙어 있던 가스를 제자리에 풀어 놓는다
+function detachParticles(b) {
+  for (let i = 0; i < NP; i++) if (PB[i] === b.id && (PF[i] & F_REL)) {
+    PX[i * 3] += b.x; PX[i * 3 + 1] += b.y; PX[i * 3 + 2] += b.z; PF[i] &= ~F_REL; PB[i] = -1;
+  }
+}
+function randDir() { const u = rnd(-1, 1), t = rnd(0, 6.2832), s = Math.sqrt(1 - u * u); return [s * Math.cos(t), u, s * Math.sin(t)]; }
+function pickCol(list) { return list[(Math.random() * list.length) | 0]; }
+
+// 폭발 가스 (천체 기준 상대 위치로 퍼짐, 실제 시간 기준)
+function spawnBlast(b, n, rMax, dur, cols, sizeK, opts = {}) {
+  const rel = opts.rel !== false;
+  for (let k = 0; k < n; k++) {
+    const d = randDir();
+    let sp = rMax / dur * Math.pow(Math.random(), 0.35) * (opts.shellLike ? rnd(0.85, 1.0) : 1);
+    if (opts.bipolar) { const pol = Math.abs(d[1]); sp *= 0.55 + 0.75 * pol * pol; }
+    const r0 = b.R * rnd(0.6, 1.0);
+    const c = pickCol(cols).slice(); c[3] = rnd(0.5, 0.95);
+    const px = d[0] * r0, py = d[1] * r0, pz = d[2] * r0;
+    addP(rel ? px : b.x + px, rel ? py : b.y + py, rel ? pz : b.z + pz, d[0] * sp, d[1] * sp, d[2] * sp, c, rMax * sizeK * rnd(0.5, 1.4), dur * rnd(0.75, 1.25), F_ADD | (rel ? F_REL : 0), 0, rel ? b.id : -1, rMax * sizeK * 0.6 / dur);
+  }
+}
+// 행성상 성운: 안쪽은 청록, 바깥은 빨강. 고리처럼 두껍게 퍼진다.
+function spawnNebula(b) {
+  const R = b.R, rMax = Math.max(R * 9, camDistTo(b.x, b.y, b.z) * 0.55);
+  const ax = [Math.sin(b.tilt) * Math.cos(b.tiltDir), Math.cos(b.tilt), Math.sin(b.tilt) * Math.sin(b.tiltDir)];
+  for (let k = 0; k < 4800; k++) {
+    let d = randDir();
+    // 띠(적도) 쪽으로 몰린 고리 모양 + 양쪽 극으로 조금 길쭉한 모양
+    const pol = vdot(d, ax);
+    const ringy = Math.random() < 0.6;
+    if (ringy) { d = vnorm(vsub(d, vmul(ax, pol * 0.75))); }
+    const f = Math.pow(Math.random(), 0.25);
+    const sp = rMax / 9 * f * (ringy ? 1 : 0.6 + 0.9 * Math.abs(pol));
+    const outer = f > 0.82;
+    const c = outer ? [1.0, rnd(0.25, 0.4), rnd(0.25, 0.35), rnd(0.5, 0.85)] : (f > 0.6 ? [rnd(0.5, 0.8), 0.9, 0.75, 0.6] : [0.35, rnd(0.75, 0.95), rnd(0.85, 1.0), 0.55]);
+    const r0 = R * rnd(0.5, 0.95);
+    addP(d[0] * r0, d[1] * r0, d[2] * r0, d[0] * sp, d[1] * sp, d[2] * sp, c, rMax * 0.0085 * rnd(0.6, 1.4), rnd(14, 20), F_ADD | F_REL, 0, b.id, rMax * 0.007 / 10);
+  }
+}
+// 부서진 조각 (중력을 받는 진짜 알갱이)
+function spawnDebris(src, n, cols, massEach, opts = {}) {
+  const add = opts.add ? F_ADD : 0;
+  const vesc = Math.sqrt(2 * G * Math.max(src.m, 1e-12) / Math.max(src.R, 1e-12));
+  for (let k = 0; k < n; k++) {
+    const d = randDir(); const r = src.R * Math.cbrt(Math.random()) * (opts.rk || 0.9);
+    const x = (opts.cx ?? src.x) + d[0] * r, y = (opts.cy ?? src.y) + d[1] * r, z = (opts.cz ?? src.z) + d[2] * r;
+    const kick = (opts.kick || 0.05) * vesc;
+    const kd = opts.kick > 0.3 ? d : randDir();
+    const c = pickCol(cols).slice(); c[3] = opts.alpha || 1;
+    addP(x, y, z, (opts.vx ?? src.vx) + kd[0] * kick * rnd(0.3, 1), (opts.vy ?? src.vy) + kd[1] * kick * rnd(0.3, 1), (opts.vz ?? src.vz) + kd[2] * kick * rnd(0.3, 1), c, src.R * (opts.sizeK || 0.05) * rnd(0.5, 1.5), Infinity, F_GRAV | add, massEach, -1, 0);
+  }
+}
+function debrisColors(b) {
+  if (b.kind === 'star') { const c = bbColor(b.T || 4000); return [c.map(v => v * 1.0).concat(1), [1, 0.7, 0.4, 1], c.map(v => v * 0.8).concat(1)]; }
+  const p = b.pal || PAL.moon;
+  if (b.sub === 'gas' || b.sub === 'ice') return [p.c1, p.c2, p.c3];
+  return [p.c2, p.c3, p.c1, [0.45, 0.4, 0.36]];
+}
+
+// =====================================================================
+//  물리: 뉴턴 중력 + 리프프로그 적분
+// =====================================================================
+let events = [];
+const ETA = 0.018;
+function computeAcc() {
+  const n = bodies.length; let minTs = Infinity;
+  for (let i = 0; i < n; i++) { const b = bodies[i]; b.ax = 0; b.ay = 0; b.az = 0; }
+  for (let i = 0; i < n; i++) {
+    const a = bodies[i];
+    for (let j = i + 1; j < n; j++) {
+      const b = bodies[j];
+      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+      const d2 = dx * dx + dy * dy + dz * dz + 1e-30, d = Math.sqrt(d2);
+      const f = G / (d2 * d);
+      a.ax += dx * f * b.m; a.ay += dy * f * b.m; a.az += dz * f * b.m;
+      b.ax -= dx * f * a.m; b.ay -= dy * f * a.m; b.az -= dz * f * a.m;
+      const msum = a.m + b.m;
+      let ts = Math.sqrt(d2 * d / (G * msum));
+      const vc = -(dx * (b.vx - a.vx) + dy * (b.vy - a.vy) + dz * (b.vz - a.vz)) / d;
+      const rr = a.R + b.R;
+      if (vc > 0) { const tv = Math.max(d - rr, rr * 0.3) / vc; if (tv < ts) ts = tv; }
+      if (ts < minTs) minTs = ts;
+      if (d < rr) events.push(0, a, b);
+      else {
+        const s = a.m < b.m ? a : b, p = s === a ? b : a;
+        if (s.m < 0.5 * p.m && canTear(s)) { const rd = 2.44 * s.R * Math.cbrt(p.m / s.m); if (d < rd) events.push(1, s, p); }
+      }
+    }
+  }
+  accDirty = false;
+  return minTs;
+}
+function canTear(s) { return s.kind === 'planet' || (s.kind === 'star' && s.stage !== 'ns' && s.stage !== 'bh' && !s.anim); }
+
+let lastMinTs = Infinity, minPts = Infinity;
+function stepBodies(dt) {
+  const h = dt * 0.5;
+  for (const b of bodies) { b.vx += b.ax * h; b.vy += b.ay * h; b.vz += b.az * h; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; }
+  lastMinTs = computeAcc();
+  for (const b of bodies) { b.vx += b.ax * h; b.vy += b.ay * h; b.vz += b.az * h; }
+}
+function absorbR(b) {
+  if (b.stage === 'bh') { const rt = 2.44 * RSUN * Math.cbrt(b.m); return Math.max(3 * b.R, 0.04 * rt); }
+  if (b.stage === 'ns') return Math.max(b.R, 1e-6);
+  return b.R;
+}
+// 중력을 받는 알갱이: 천체는 이 순간 멈춰 있다고 보고 알갱이마다 잘게 쪼개 계산
+function stepParticlesGrav(dt) {
+  const nb = bodies.length; let mp = Infinity;
+  if (nb === 0) { for (let i = 0; i < NP; i++) if (PF[i] & F_GRAV) { PX[i * 3] += PV[i * 3] * dt; PX[i * 3 + 1] += PV[i * 3 + 1] * dt; PX[i * 3 + 2] += PV[i * 3 + 2] * dt; } return; }
+  const bx = new Float64Array(nb), by = new Float64Array(nb), bz = new Float64Array(nb), bm = new Float64Array(nb), br = new Float64Array(nb), bdr = new Float64Array(nb);
+  for (let j = 0; j < nb; j++) { const b = bodies[j]; bx[j] = b.x; by[j] = b.y; bz[j] = b.z; bm[j] = G * b.m; br[j] = absorbR(b); bdr[j] = isBH(b) ? 3 * 2.44 * RSUN * Math.cbrt(b.m) : 0; }
+  for (let i = 0; i < NP; i++) {
+    if (!(PF[i] & F_GRAV)) continue;
+    let x = PX[i * 3], y = PX[i * 3 + 1], z = PX[i * 3 + 2], vx = PV[i * 3], vy = PV[i * 3 + 1], vz = PV[i * 3 + 2];
+    // 시간 크기 정하기
+    let ts = Infinity;
+    for (let j = 0; j < nb; j++) { const dx = bx[j] - x, dy = by[j] - y, dz = bz[j] - z; const d2 = dx * dx + dy * dy + dz * dz; const t = Math.sqrt(d2 * Math.sqrt(d2) / bm[j]); if (t < ts) ts = t; }
+    if (ts < mp) mp = ts;
+    const nsub = Math.min(24, Math.max(1, Math.ceil(dt / (0.04 * ts))));
+    const sdt = dt / nsub;
+    let absorbed = -1;
+    for (let s = 0; s < nsub && absorbed < 0; s++) {
+      let ax = 0, ay = 0, az = 0;
+      for (let j = 0; j < nb; j++) {
+        const dx = bx[j] - x, dy = by[j] - y, dz = bz[j] - z; const d2 = dx * dx + dy * dy + dz * dz; const d = Math.sqrt(d2);
+        if (d < br[j]) { absorbed = j; break; }
+        const f = bm[j] / (d2 * d); ax += dx * f; ay += dy * f; az += dz * f;
+        if (bdr[j] > 0 && d < bdr[j]) { // 블랙홀 둘레: 원반처럼 빙빙 돌며 안으로 들어간다
+          const b = bodies[j]; const rvx = vx - b.vx, rvy = vy - b.vy, rvz = vz - b.vz;
+          if (rvx * rvx + rvy * rvy + rvz * rvz < 2 * bm[j] / d) { const k = Math.exp(-0.006 * Math.sqrt(bm[j] / (d2 * d)) * sdt); vx = b.vx + rvx * k; vy = b.vy + rvy * k; vz = b.vz + rvz * k; }
+        }
+      }
+      if (absorbed >= 0) break;
+      vx += ax * sdt; vy += ay * sdt; vz += az * sdt;
+      x += vx * sdt; y += vy * sdt; z += vz * sdt;
+    }
+    if (absorbed >= 0) {
+      const b = bodies[absorbed]; b.m += PM[i]; accDirty = true;
+      if (isCompact(b)) { b.activity = Math.min(1, b.activity + 0.025); b.feed = (b.feed || 0) + 1; }
+      killP(i); i--; continue;
+    }
+    PX[i * 3] = x; PX[i * 3 + 1] = y; PX[i * 3 + 2] = z; PV[i * 3] = vx; PV[i * 3 + 1] = vy; PV[i * 3 + 2] = vz;
+  }
+  minPts = mp;
+}
+// 효과 가스 (실제 시간으로 움직임)
+function stepParticlesFx(rdt) {
+  for (let i = 0; i < NP; i++) {
+    const f = PF[i];
+    if (f & F_GRAV) continue;
+    PL[i] -= rdt;
+    if (PL[i] <= 0) { killP(i); i--; continue; }
+    if (f & F_SINK) {
+      const k = Math.exp(-2.6 * rdt);
+      let x = PX[i * 3] * k, y = PX[i * 3 + 1] * k, z = PX[i * 3 + 2] * k;
+      const a = 2.2 * rdt, c = Math.cos(a), s = Math.sin(a);
+      const nx = x * c - z * s, nz = x * s + z * c;
+      PX[i * 3] = nx; PX[i * 3 + 1] = y * k; PX[i * 3 + 2] = nz;
+      const b = byId(PB[i]);
+      if (!b || nx * nx + y * y + nz * nz < Math.pow(b.R * 4, 2)) { killP(i); i--; }
+      continue;
+    }
+    PX[i * 3] += PV[i * 3] * rdt; PX[i * 3 + 1] += PV[i * 3 + 1] * rdt; PX[i * 3 + 2] += PV[i * 3 + 2] * rdt;
+    PS[i] += PGR[i] * rdt;
+  }
+}
+function cleanupFar() {
+  if (NP === 0) return;
+  let cx = 0, cy = 0, cz = 0, M = 0;
+  for (const b of bodies) { cx += b.x * b.m; cy += b.y * b.m; cz += b.z * b.m; M += b.m; }
+  if (M > 0) { cx /= M; cy /= M; cz /= M; }
+  const lim = 3e4 * 3e4;
+  for (let i = 0; i < NP; i++) {
+    if (!(PF[i] & F_GRAV)) continue;
+    const dx = PX[i * 3] - cx, dy = PX[i * 3 + 1] - cy, dz = PX[i * 3 + 2] - cz;
+    if (dx * dx + dy * dy + dz * dz > lim) { killP(i); i--; }
+  }
+}
+
+// =====================================================================
+//  사건: 충돌, 로슈 한계
+// =====================================================================
+function killBody(b, heir) {
+  b.dead = true; detachParticles(b);
+  if (cam.follow === b.id) { cam.follow = heir ? heir.id : null; if (!heir) cam.target = [b.x, b.y, b.z]; }
+  if (selId === b.id) selId = heir ? heir.id : null;
+  accDirty = true;
+}
+function processEvents() {
+  if (!events.length) return;
+  for (let k = 0; k < events.length; k += 3) {
+    const type = events[k], a = events[k + 1], b = events[k + 2];
+    if (a.dead || b.dead) continue;
+    if (type === 0) collide(a, b); else disrupt(a, b);
+  }
+  events.length = 0;
+  if (bodies.some(b => b.dead)) bodies = bodies.filter(b => !b.dead);
+}
+function contactPoint(big, small) {
+  const dx = small.x - big.x, dy = small.y - big.y, dz = small.z - big.z, d = Math.hypot(dx, dy, dz) || 1;
+  return [big.x + dx / d * big.R, big.y + dy / d * big.R, big.z + dz / d * big.R];
+}
+function collide(a, b) {
+  let big = a.m >= b.m ? a : b, small = big === a ? b : a;
+  if (isBH(small) && !isBH(big)) { const t = big; big = small; small = t; }       // 블랙홀이 늘 삼킨다
+  else if (isNS(small) && big.kind === 'star' && !isCompact(big) && big.stage !== 'qs') { const t = big; big = small; small = t; }
+  const M = big.m + small.m;
+  const vrel = Math.hypot(a.vx - b.vx, a.vy - b.vy, a.vz - b.vz);
+  const cp = contactPoint(big, small);
+  const cx = (big.x * big.m + small.x * small.m) / M, cy = (big.y * big.m + small.y * small.m) / M, cz = (big.z * big.m + small.z * small.m) / M;
+  const vx = (big.vx * big.m + small.vx * small.m) / M, vy = (big.vy * big.m + small.vy * small.m) / M, vz = (big.vz * big.m + small.vz * small.m) / M;
+  const moveTo = () => { big.x = cx; big.y = cy; big.z = cz; big.vx = vx; big.vy = vy; big.vz = vz; };
+  if (isBH(big)) {
+    moveTo();
+    if (isBH(small)) { big.m = M * 0.95; gwRipple(big, 5); flash(cx, cy, cz, big, 1.5, [0.8, 0.85, 1], 2, 1.5); log(`블랙홀 두 개가 합쳐졌습니다! 중력파가 퍼져 나갑니다.`, 1); }
+    else {
+      big.m = M; big.activity = 1; big.jetBurst = Math.max(big.jetBurst, small.kind === 'star' ? 5 : 2.5);
+      flash(cp[0], cp[1], cp[2], big, small.kind === 'star' ? 1.4 : 0.6, [0.85, 0.8, 1.0], 2.5, 2);
+      if (isNS(small)) gwRipple(big, 4);
+      log(`${small.name}이(가) 블랙홀에 빨려 들어갔습니다. 감마선이 뿜어져 나옵니다.`, 1);
+    }
+    updStar(big); killBody(small, big); return;
+  }
+  if (isNS(big)) {
+    moveTo();
+    if (isNS(small)) {
+      flash(cx, cy, cz, big, 2.0, [1, 0.75, 0.45], 3, 2.5); gwRipple(big, 5);
+      spawnBlast(big, 1200, Math.max(camDistTo(cx, cy, cz) * 0.5, 0.05), 6, [[1, 0.55, 0.2], [1, 0.8, 0.4], [0.9, 0.3, 0.2]], 0.02);
+      big.m = M * 0.95;
+      if (big.m >= 2.3) { big.stage = 'bh'; big.jetBurst = 5; big.activity = 1; log('중성자별 두 개가 부딪혀 킬로노바가 일어나고 블랙홀이 생겼습니다! 중력파와 감마선이 퍼집니다.', 1); }
+      else log('중성자별 두 개가 부딪혀 킬로노바가 일어났습니다! 중력파가 퍼집니다.', 1);
+      updStar(big); killBody(small, big); return;
+    }
+    big.m = M; flash(cp[0], cp[1], cp[2], big, 0.6, [0.7, 0.8, 1], 1.5, 1.5);
+    log(`${small.name}이(가) 중성자별에 떨어졌습니다.`);
+    killBody(small, big);
+    if (big.m >= 2.3) collapseNS(big); else updStar(big);
+    return;
+  }
+  if (big.kind === 'star') {
+    if (small.kind === 'planet') {
+      big.m = M; if (big.stage === 'ms') big.mi = M;
+      flash(cp[0], cp[1], cp[2], null, 0.25, [1, 0.6, 0.3], 1.5, 1.2);
+      log(`${small.name}이(가) ${big.name}에 삼켜졌습니다.`);
+      killBody(small, big); reclassify(big); return;
+    }
+    // 별 + 별
+    moveTo();
+    const wdInvolved = big.stage === 'wd' || small.stage === 'wd';
+    if (big.stage === 'wd' && (small.stage === 'wd' || small.stage === 'blk' || M >= 1.44)) {
+      big.m = M; killBody(small, big);
+      if (big.m >= 1.44) { log('백색왜성에 물질이 더해져 1.44 태양 질량을 넘었습니다!', 1); startIa(big, true); }
+      else updStar(big);
+      return;
+    }
+    big.m = M; if (big.stage === 'ms' || big.stage === 'brown') big.mi = M;
+    flash(cp[0], cp[1], cp[2], big, 0.8, bbColor(big.T || 5000), 2, 1.5);
+    spawnBlast(big, 400, big.R * 3, 4, [bbColor(small.T || 4000), [1, 0.7, 0.4]], 0.04);
+    log(wdInvolved ? `${small.name}이(가) ${big.name}에 합쳐졌습니다.` : `${big.name}와(과) ${small.name}이(가) 부딪혀 하나의 별이 되었습니다.`);
+    killBody(small, big); reclassify(big); return;
+  }
+  // 행성 + 행성: 합쳐지면서 조각이 튄다
+  const vesc = Math.sqrt(2 * G * M / (big.R + small.R));
+  const ratio = vrel / Math.max(vesc, 1e-12);
+  const n = Math.round(clamp(80 + ratio * 260 * Math.sqrt(small.R / big.R), 40, 900));
+  const lost = small.m * clamp(0.08 + 0.12 * ratio, 0.05, 0.35);
+  moveTo();
+  spawnDebris(small, n, debrisColors(small).concat(debrisColors(big)), lost / n, { cx: cp[0], cy: cp[1], cz: cp[2], vx, vy, vz, kick: clamp(0.5 + ratio * 0.3, 0.5, 1.3), rk: 0.6, sizeK: 0.06 });
+  big.m = M - lost; big.heat = 1;
+  big.R = planetRadius(big.sub, big.m);
+  flash(cp[0], cp[1], cp[2], null, 0.3 + 0.2 * Math.min(ratio, 3), [1, 0.65, 0.35], 1.8, 1.4);
+  log(`${big.name}와(과) ${small.name}이(가) 부딪혀 하나가 되었습니다. 표면이 녹아 버렸습니다.`);
+  killBody(small, big); reclassify(big);
+}
+// 로슈 한계: 큰 천체의 조석력이 작은 천체를 찢어 버린다
+function disrupt(s, p) {
+  let n;
+  if (s.kind === 'star') n = 1600; else n = Math.round(clamp(Math.sqrt(s.R / REARTH) * 450, 300, 1100));
+  spawnDebris(s, n, debrisColors(s), s.m / n, { add: s.kind === 'star' && !isBH(p), kick: 0.04, sizeK: s.kind === 'star' ? 0.4 : 0.05, alpha: 1 });
+  if (isBH(p)) { // 조석 파괴: 블랙홀 쪽 절반은 묶여서 돌아오고, 바깥쪽 절반은 날아가는 긴 꼬리가 된다
+    const i0 = NP - n, rv = [s.vx - p.vx, s.vy - p.vy, s.vz - p.vz];
+    for (let i = Math.max(0, i0); i < NP; i++) {
+      const f = 1 + 0.09 * (Math.random() * 2 - 1);
+      PV[i * 3] = p.vx + rv[0] * f; PV[i * 3 + 1] = p.vy + rv[1] * f; PV[i * 3 + 2] = p.vz + rv[2] * f;
+    }
+  }
+  flash(s.x, s.y, s.z, null, 0.3, s.kind === 'star' ? bbColor(s.T) : [1, 0.75, 0.5], 1.5, 1.0);
+  if (isBH(p)) { p.activity = Math.max(p.activity, 0.5); log(`${s.name}이(가) ${p.name}의 로슈 한계 안에 들어가서 갈가리 찢어졌습니다! (조석 파괴)`, 1); }
+  else log(`${s.name}이(가) ${p.name}의 로슈 한계 안에 들어가서 부서졌습니다!`, 1);
+  killBody(s, null);
+  if (cam.follow == null && selId == null) cam.follow = p.id;
+}
+
+// =====================================================================
+//  별의 변화 (실제 시간으로 몇 초 동안)
+// =====================================================================
+function stepAnims(rdt) {
+  for (const b of bodies) {
+    // 팽창 버튼으로 다 부푼 뒤 저절로 다음 일 (행성상 성운 / 초신성)
+    if (b.pending && !b.anim && !b.dead) { b.pending.t -= rdt; if (b.pending.t <= 0) { const to = b.pending.to; b.pending = null; startStage(b, to); } }
+    const a = b.anim; if (!a || b.dead) continue;
+    a.t += rdt; const k = Math.min(1, a.t / a.dur), e = smooth(k);
+    if (a.type === 'grow') {
+      b.R = a.R0 * Math.pow(a.R1 / a.R0, e); b.T = lerp(a.T0, a.T1, e); b.m = lerp(a.m0, a.m1, e); accDirty = true;
+      if (Math.random() < rdt * 40) { // 별바람
+        const d = randDir(); const c = bbColor(b.T).concat(0.35);
+        addP(d[0] * b.R, d[1] * b.R, d[2] * b.R, d[0] * b.R * 0.25, d[1] * b.R * 0.25, d[2] * b.R * 0.25, c, b.R * 0.15, 4, F_ADD | F_REL, 0, b.id, b.R * 0.05);
+      }
+      if (k >= 1) {
+        b.stage = a.to; b.anim = null; updStar(b); log(`${b.name}이(가) ${STAGE_NAME[a.to]}이(가) 되었습니다. 반지름 ${fmtR(b.R)}`);
+        if (a.auto && a.to === 'agb') b.pending = { to: 'wd', t: 1.2 };
+        if (a.auto && a.to === 'rsg') b.pending = { to: b.mi >= 20 ? 'bh' : 'ns', t: 2.0 };
+      }
+    } else if (a.type === 'pn') {
+      b.m = lerp(a.m0, a.m1, Math.min(1, k * 3)); accDirty = true;
+      b.R = a.R0 * Math.pow(a.R1 / a.R0, smooth(Math.min(1, k * 1.3)));
+      b.T = k < 0.7 ? lerp(a.T0, 90000, smooth(k / 0.7)) : lerp(90000, 30000, (k - 0.7) / 0.3);
+      if (k >= 1) { b.stage = 'wd'; b.wdT = 30000; b.anim = null; b.m = a.m1; updStar(b); b.T = 30000; updLum(b); log(`${b.name}이(가) 백색왜성이 되었습니다. 질량 ${b.m.toFixed(2)} 태양 질량`); }
+    } else if (a.type === 'shrink') {
+      b.T = k < 0.5 ? lerp(a.T0, 9000, smooth(k * 2)) : lerp(9000, 12000, (k - 0.5) * 2);
+      b.R = k < 0.5 ? a.R0 : a.R0 * Math.pow(a.R1 / a.R0, smooth((k - 0.5) * 2));
+      if (k >= 1) { b.stage = 'wd'; b.wdT = 12000; b.anim = null; updStar(b); b.T = 12000; updLum(b); log(`${b.name}이(가) 헬륨 백색왜성이 되었습니다.`); }
+    } else if (a.type === 'sn') {
+      b.R = a.R0 * (1 - 0.45 * e); b.T = lerp(a.T0, 12000, e);
+      if (k >= 1) { b.anim = null; explodeSN(b, a.to); }
+    } else if (a.type === 'cool') {
+      b.T = lerp(a.T0, 900, e); b.wdT = b.T;
+      if (k >= 1) { b.stage = 'blk'; b.anim = null; updStar(b); log(`${b.name}이(가) 다 식어서 흑색왜성이 되었습니다.`); }
+    } else if (a.type === 'qsend') {
+      b.qsFade = e; b.R = a.R0 * (1 + 0.6 * e);
+      if (Math.random() < rdt * 60) spawnBlast(b, 25, b.R * 2.5, 6, [[1, 0.6, 0.3], [1, 0.45, 0.2], [1, 0.8, 0.5]], 0.03);
+      if (k >= 1) {
+        b.anim = null; b.stage = 'bh'; b.m = a.m0 * 0.7; b.qsFade = 0; b.core = 0; updStar(b);
+        b.jetBurst = 6; b.activity = 1; gwRipple(b, 3);
+        flash(b.x, b.y, b.z, b, 1.5, [1, 0.85, 0.7], 3, 2);
+        log(`${b.name}이(가) 사라지고 ${fmtMass(b)}짜리 블랙홀이 남았습니다!`, 1);
+      }
+    } else if (a.type === 'ia') {
+      const comp = a.comp != null ? byId(a.comp) : null;
+      b.m = lerp(a.m0, a.m1, e); accDirty = true;
+      if (comp && a.take > 0) {
+        const want = a.take * e, given = a.given || 0, dm = want - given;
+        if (dm > 0) { comp.m = Math.max(comp.m - dm, 0.05); a.given = want; }
+        a.spawnAcc += rdt * 260;
+        while (a.spawnAcc > 1) {
+          a.spawnAcc--;
+          const d = randDir(); const ox = comp.x - b.x + d[0] * comp.R * 0.6, oy = comp.y - b.y + d[1] * comp.R * 0.6, oz = comp.z - b.z + d[2] * comp.R * 0.6;
+          addP(ox, oy, oz, 0, 0, 0, bbColor(comp.T || 5000).concat(0.7), Math.max(comp.R * 0.12, b.R * 3), 3, F_ADD | F_REL | F_SINK, 0, b.id, 0);
+        }
+      }
+      b.T = lerp(b.wdT || 24000, 40000, e);
+      if (k >= 1) { b.anim = null; explodeIa(b); }
+    }
+    updLum(b);
+  }
+}
+function explodeSN(b, rem) {
+  const R0 = b.R, d = camDistTo(b.x, b.y, b.z);
+  const r1 = clamp(Math.max(d * 0.85, R0 * 6), R0 * 3, 600);
+  flash(b.x, b.y, b.z, b, 2.6, [1, 0.95, 0.88], 4, 3);
+  shell(b, R0, r1, 6, [0.65, 0.8, 1.0], 0.7, 3);
+  spawnBlast(b, 2400, r1, 6.5, [[1, 0.35, 0.25], [0.35, 0.9, 0.8], [1, 0.9, 0.7], [1, 0.55, 0.3]], 0.014, { shellLike: true });
+  const mi = b.mi || b.m;
+  if (rem === 'ns') { b.m = clamp(1.35 + 0.03 * (mi - 8), 1.3, 2.0); b.stage = 'ns'; b.spinRate = 0; }
+  else { b.m = Math.max(3, 0.35 * mi); b.stage = 'bh'; b.jetBurst = 6; b.activity = 1; }
+  updStar(b); accDirty = true;
+  const kd = randDir(), kick = 20 / KMS_PER_AUYR;
+  b.vx += kd[0] * kick; b.vy += kd[1] * kick * 0.3; b.vz += kd[2] * kick;
+  log(rem === 'ns' ? `초신성 폭발! ${b.name}의 중심이 중성자별로 남았습니다.` : `초신성 폭발! ${b.name}의 중심이 블랙홀이 되었습니다. 감마선 폭발이 일어납니다!`, 1);
+}
+function explodeIa(b) {
+  const d = camDistTo(b.x, b.y, b.z);
+  const r1 = clamp(d * 0.9, b.R * 200, 600);
+  flash(b.x, b.y, b.z, null, 3.2, [1, 0.95, 0.8], 4.5, 3.5);
+  effects.push({ type: 'shell', x: b.x, y: b.y, z: b.z, body: null, t: 0, dur: 6, r0: b.R, r1, col: [1, 0.9, 0.7], a: 0.8, pw: 3 });
+  spawnBlast(b, 2400, r1, 6.5, [[1, 0.85, 0.5], [1, 0.62, 0.3], [0.85, 0.88, 1.0], [1, 0.95, 0.8]], 0.014, { rel: false, shellLike: true });
+  log(`Ia형 초신성! ${b.name}이(가) 아무것도 남기지 않고 완전히 날아갔습니다.`, 1);
+  killBody(b, null);
+  bodies = bodies.filter(x => !x.dead);
+}
+
+// 질량 보여 주기
+function fmtNum(v, d = 2) {
+  if (!isFinite(v)) return '-';
+  const a = Math.abs(v);
+  if (a >= 1e6 || (a > 0 && a < 1e-3)) { const e = Math.floor(Math.log10(a)); return (v / Math.pow(10, e)).toFixed(2) + '×10^' + e; }
+  if (a >= 1000) return Math.round(v).toLocaleString('ko-KR');
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10) return v.toFixed(1);
+  return v.toFixed(d);
+}
+function fmtMass(b) {
+  const m = b.m;
+  if (b.kind === 'star' && b.stage !== 'brown') return fmtNum(m) + ' 태양 질량';
+  if (m >= 0.3 * MJUP) return fmtNum(m / MJUP) + ' 목성 질량';
+  return fmtNum(m / MEARTH, 3) + ' 지구 질량';
+}
+function fmtR(R) {
+  const km = R * AU_KM;
+  if (R > 0.05) return fmtNum(R) + ' AU';
+  if (km > 2e5) return fmtNum(R / RSUN) + ' 태양 반지름';
+  return fmtNum(km, 1) + ' km';
+}
+function fmtDist(d) { const km = d * AU_KM; if (d >= 63241 * 0.5) return fmtNum(d / 63241.1) + ' 광년'; if (d >= 0.01) return fmtNum(d, 3) + ' AU'; return fmtNum(km, 0) + ' km'; }
+function fmtTime(y) {
+  if (y < DAY) return fmtNum(y / DAY * 24, 1) + '시간';
+  if (y < 1) return fmtNum(y / DAY, 1) + '일';
+  if (y < 1000) { const yy = Math.floor(y), dd = Math.floor((y - yy) / DAY); return yy + '년 ' + dd + '일'; }
+  return fmtNum(y, 0) + '년';
+}
+
+// =====================================================================
+//  카메라
+// =====================================================================
+const FOV = 50 * Math.PI / 180;
+const cam = { yaw: 0.7, pitch: 0.55, dist: 6, tdist: 6, target: [0, 0, 0], follow: null, off: [0, 0, 0] };
+let eye = [0, 0, 6];
+let VR = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+let PROJ = new Float32Array(16), tanY = Math.tan(FOV / 2), tanX = tanY;
+let PPU = 1;            // CSS px / (월드 단위 ÷ 거리)
+let selId = null, hoverId = null;
+const show = { com: false, roche: false, hz: false, trail: true, label: true, grid: false };
+
+function systemCOM() {
+  let x = 0, y = 0, z = 0, M = 0;
+  for (const b of bodies) { x += b.x * b.m; y += b.y * b.m; z += b.z * b.m; M += b.m; }
+  return M > 0 ? [x / M, y / M, z / M] : [0, 0, 0];
+}
+function minCamDist() {
+  if (cam.follow != null && cam.follow !== 'com') {
+    const b = byId(cam.follow);
+    if (b) { if (b.stage === 'qs') return Math.max(b.R * 0.002, 1e-7); if (isCompact(b)) return Math.max(b.R * 4, 2e-7); return b.R * 1.12; }
+  }
+  return 1e-8;
+}
+function niceDist(b) {
+  if (isCompact(b)) return Math.max(b.R * 40, 0.01 * Math.cbrt(b.m));
+  if (b.stage === 'qs') return b.R * 3.5;
+  return b.R * (b.kind === 'star' ? 7 : 6);
+}
+function setFollow(id, zoom) {
+  if (id === 'com') { const c = systemCOM(); cam.off = vsub(cam.target, c); cam.follow = 'com'; return; }
+  const b = byId(id); if (!b) return;
+  cam.off = vsub(cam.target, [b.x, b.y, b.z]);
+  cam.follow = id;
+  if (zoom) cam.tdist = niceDist(b);
+  clearTrails();
+}
+function updateCamera(rdt) {
+  let base = null;
+  if (cam.follow === 'com') base = systemCOM();
+  else if (cam.follow != null) { const b = byId(cam.follow); if (b) base = [b.x, b.y, b.z]; else cam.follow = null; }
+  if (base) { const k = Math.exp(-5 * rdt); cam.off = vmul(cam.off, k); if (vlen(cam.off) < cam.dist * 1e-6) cam.off = [0, 0, 0]; cam.target = vadd(base, cam.off); }
+  const mn = minCamDist();
+  cam.tdist = clamp(cam.tdist, mn, 2e5);
+  cam.dist = Math.exp(lerp(Math.log(cam.dist), Math.log(cam.tdist), 1 - Math.exp(-9 * rdt)));
+  if (cam.dist < mn) cam.dist = mn;
+  cam.pitch = clamp(cam.pitch, -1.53, 1.53);
+  const cp = Math.cos(cam.pitch);
+  eye = [cam.target[0] + cam.dist * cp * Math.sin(cam.yaw), cam.target[1] + cam.dist * Math.sin(cam.pitch), cam.target[2] + cam.dist * cp * Math.cos(cam.yaw)];
+  const f = vnorm(vsub(cam.target, eye)); const r = vnorm(vcross(f, [0, 1, 0])); const u = vcross(r, f);
+  VR = [r[0], r[1], r[2], u[0], u[1], u[2], -f[0], -f[1], -f[2]];
+  const asp = W / H; tanY = Math.tan(FOV / 2); tanX = tanY * asp;
+  const n = 1e-10, fa = 1e9, t = 1 / tanY;
+  PROJ = new Float32Array([t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0]);
+  PPU = H / (2 * tanY);
+}
+function toView(x, y, z) { const dx = x - eye[0], dy = y - eye[1], dz = z - eye[2]; return [VR[0] * dx + VR[1] * dy + VR[2] * dz, VR[3] * dx + VR[4] * dy + VR[5] * dz, VR[6] * dx + VR[7] * dy + VR[8] * dz]; }
+function toViewDir(v) { return m3v(VR, v); }
+function project(x, y, z) {
+  const v = toView(x, y, z); const w = -v[2];
+  if (w <= 0) return null;
+  return { x: (v[0] / w / tanX * 0.5 + 0.5) * W, y: (0.5 - v[1] / w / tanY * 0.5) * H, w };
+}
+function screenRay(sx, sy) {
+  const nx = (sx / W) * 2 - 1, ny = 1 - (sy / H) * 2;
+  const dv = [nx * tanX, ny * tanY, -1];
+  return vnorm(m3v(m3T(VR), dv));
+}
+function bodyRot(b) { return m3mul(m3mul(rotY(b.tiltDir), rotX(b.tilt)), rotY(b.spin)); }
+function spinAxis(b) { const R = m3mul(rotY(b.tiltDir), rotX(b.tilt)); return [R[1], R[4], R[7]]; }
+
+// 블랙홀 같은 아주 작은 천체는 화면에서 보이도록 크기를 키워 그린다
+function bhVisR(b, w) { return Math.max(2.6 * b.R, w * 0.0055); }
+function visR(b, w) { if (isBH(b)) return bhVisR(b, w); return b.R; }
+
+// =====================================================================
+//  궤도 자국
+// =====================================================================
+const TRAIL_N = 520;
+let trailRef = null;
+function clearTrails() { for (const b of bodies) b.trail = []; trailRef = cam.follow; }
+function refPos() {
+  if (trailRef === 'com') return systemCOM();
+  if (trailRef != null) { const r = byId(trailRef); if (r) return [r.x, r.y, r.z]; }
+  return [0, 0, 0];
+}
+function recordTrails() {
+  if (trailRef !== cam.follow) clearTrails();
+  const rp = refPos();
+  for (const b of bodies) {
+    if (b.id === trailRef) { b.trail.length = 0; continue; }
+    const x = b.x - rp[0], y = b.y - rp[1], z = b.z - rp[2];
+    const t = b.trail, n = t.length;
+    let dRef = Math.hypot(x, y, z);
+    if (b.prim && b.prim.id !== trailRef) { dRef = Math.min(dRef, Math.hypot(b.x - b.prim.x, b.y - b.prim.y, b.z - b.prim.z)); }
+    const th = Math.max(dRef * 0.012, b.R * 0.3);
+    if (n === 0 || Math.hypot(x - t[n - 3], y - t[n - 2], z - t[n - 1]) > th) {
+      t.push(x, y, z);
+      if (t.length > TRAIL_N * 3) t.splice(0, t.length - TRAIL_N * 3);
+    }
+  }
+}
+
+// 중심 천체(어느 천체 둘레를 도는지) 찾기 — 영향권(SOI)이 가장 작은 것
+function computePrimaries() {
+  const arr = bodies.slice().sort((a, b) => b.m - a.m);
+  for (const b of arr) { b.prim = null; b.soi = Infinity; }
+  for (let i = 0; i < arr.length; i++) {
+    const b = arr[i]; let best = null, bestS = Infinity;
+    for (let j = 0; j < i; j++) {
+      const p = arr[j]; const d = Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z);
+      if (d < p.soi && p.soi <= bestS) { if (p.soi < bestS || !best || p.m > best.m) { best = p; bestS = p.soi; } }
+    }
+    b.prim = best;
+    if (best) { const d = Math.hypot(b.x - best.x, b.y - best.y, b.z - best.z); b.soi = d * Math.pow(b.m / best.m, 0.4); }
+  }
+}
+function dominantAt(x, y, z, exclude) {
+  let best = null, bestS = Infinity;
+  for (const p of bodies) {
+    if (p === exclude) continue;
+    const d = Math.hypot(x - p.x, y - p.y, z - p.z);
+    if (d < p.soi && (p.soi < bestS || (p.soi === bestS && best && p.m > best.m))) { best = p; bestS = p.soi; }
+  }
+  return best;
+}
+
+// =====================================================================
+//  그리기
+// =====================================================================
+let gTime = 0;
+function lightsFor(x, y, z, self) {
+  const L = [];
+  for (const s of bodies) {
+    if (s === self || !isLum(s) || s.L <= 0) continue;
+    const d2 = (s.x - x) ** 2 + (s.y - y) ** 2 + (s.z - z) ** 2;
+    L.push({ s, f: s.L / Math.max(d2, 1e-30) });
+  }
+  L.sort((a, b) => b.f - a.f);
+  return L.slice(0, 4);
+}
+function lightI(f) { return clamp(0.25 * Math.log10(f) + 1.0, 0, 1.6); }
+function starTint(T) { const c = bbColor(T); const m = Math.max(c[0], c[1], c[2], 1e-6); return [c[0] / m, c[1] / m, c[2] / m]; }
+
+function setDepthU(u) { gl.uniform1f(u.uLogC, LOGC); gl.uniform1f(u.uLogF, LOGF); }
+
+function drawSky(bhList) {
+  const p = P.sky; gl.useProgram(p.p);
+  gl.uniformMatrix3fv(p.u.uViewInv, false, m3gl(m3T(VR)));
+  gl.uniform2f(p.u.uTan, tanX, tanY);
+  gl.uniform2f(p.u.uRes, cv.width, cv.height);
+  gl.uniform1f(p.u.uPix, (2 * tanY) / cv.height * 1.15);
+  gl.uniform1f(p.u.uDim, 1.0);
+  const arr = new Float32Array(24);
+  const n = Math.min(6, bhList.length);
+  for (let i = 0; i < n; i++) arr.set(bhList[i], i * 4);
+  gl.uniform1i(p.u.uNB, n);
+  gl.uniform4fv(p.u.uBH, arr);
+  gl.bindVertexArray(VAO.quad.vao); gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function drawImpostor(prog, vc, R) {
+  const d = Math.hypot(vc[0], vc[1], vc[2]);
+  gl.uniform3f(prog.u.uC, vc[0], vc[1], vc[2]);
+  gl.uniform1f(prog.u.uR, R);
+  gl.uniform1f(prog.u.uFull, d < R * 1.6 ? 1 : 0);
+  gl.bindVertexArray(VAO.quad.vao); gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+function useImp(prog) {
+  gl.useProgram(prog.p); setDepthU(prog.u);
+  gl.uniformMatrix4fv(prog.u.uP, false, PROJ); gl.uniform2f(prog.u.uTan, tanX, tanY);
+}
+function drawBodySurface(b, vc, R, alpha) {
+  const p = P.body; const u = p.u;
+  const rot = bodyRot(b);
+  gl.uniformMatrix3fv(u.uLocal, false, m3gl(m3mul(m3T(rot), m3T(VR))));
+  gl.uniform1i(u.uType, shaderType(b));
+  const pal = b.pal || PAL.moon;
+  gl.uniform3fv(u.uCol1, pal.c1); gl.uniform3fv(u.uCol2, pal.c2); gl.uniform3fv(u.uCol3, pal.c3); gl.uniform3fv(u.uAtm, pal.atm || [0, 0, 0]);
+  gl.uniform4fv(u.uPar, pal.par || [0, 0, 0, 2]);
+  gl.uniform1f(u.uSeed, b.seed % 37); gl.uniform1f(u.uTime, gTime);
+  gl.uniform1f(u.uHeat, Math.max(b.heat, b.fluxHeat || 0));
+  gl.uniform1f(u.uAlpha, alpha);
+  gl.uniform1f(u.uExpo, 1.0);
+  const em = b.kind === 'star' ? starTint(b.T) : [0, 0, 0];
+  gl.uniform3fv(u.uEmit, em);
+  let ei = b.kind === 'star' ? 1.15 + 1.05 * clamp((b.T - 3000) / 4000, 0, 1) : 2.2;
+  if (b.stage === 'brown') ei = 0.35 + 0.9 * clamp((b.T - 500) / 1900, 0, 1);
+  if (b.stage === 'blk') ei = 0.3;
+  if (b.stage === 'qs') ei = 1.6;
+  gl.uniform1f(u.uEmitI, ei);
+  // 빛
+  const ls = lightsFor(b.x, b.y, b.z, b);
+  const lp = new Float32Array(12), lc = new Float32Array(12);
+  for (let i = 0; i < ls.length; i++) {
+    const v = toView(ls[i].s.x, ls[i].s.y, ls[i].s.z); lp.set(v, i * 3);
+    const c = starTint(ls[i].s.T), I = lightI(ls[i].f); lc.set([c[0] * I, c[1] * I, c[2] * I], i * 3);
+  }
+  gl.uniform1i(u.uNL, ls.length); gl.uniform3fv(u.uLP, lp); gl.uniform3fv(u.uLC, lc);
+  drawImpostor(p, vc, R);
+  return ls;
+}
+
+function glowPx(b) {
+  if (b.stage === 'ns') return 4.5;
+  if (b.stage === 'brown') return 2.2 + 1.2 * clamp((b.T - 500) / 1900, 0, 1);
+  if (b.stage === 'blk') return 0;
+  return clamp(4 + 2.6 * Math.log10(b.L + 0.3), 2.4, 26);
+}
+
+const lineBuf = { data: new Float32Array(4 * 200000), n: 0 };
+function lineStart() { lineBuf.n = 0; lineBuf.draws = []; }
+function linePush(vx, vy, vz, a) { const i = lineBuf.n * 4; if (i + 4 > lineBuf.data.length) return; lineBuf.data[i] = vx; lineBuf.data[i + 1] = vy; lineBuf.data[i + 2] = vz; lineBuf.data[i + 3] = a; lineBuf.n++; }
+function lineDraw(mode, col, startN) { lineBuf.draws.push({ mode, col, s: startN, c: lineBuf.n - startN }); }
+function lineFlush() {
+  if (!lineBuf.n) return;
+  const p = P.line; gl.useProgram(p.p); setDepthU(p.u); gl.uniformMatrix4fv(p.u.uP, false, PROJ);
+  gl.bindVertexArray(VAO.line.vao); gl.bindBuffer(gl.ARRAY_BUFFER, VAO.line.buf);
+  gl.bufferData(gl.ARRAY_BUFFER, lineBuf.data.subarray(0, lineBuf.n * 4), gl.STREAM_DRAW);
+  for (const d of lineBuf.draws) { if (d.c < 2) continue; gl.uniform4fv(p.u.uCol, d.col); gl.drawArrays(d.mode, d.s, d.c); }
+}
+function circleLines(cx, cy, cz, r, col, a, dashed, ax1, ax2) {
+  const s = lineBuf.n, N = 180;
+  const A1 = ax1 || [1, 0, 0], A2 = ax2 || [0, 0, 1];
+  const pt = (i) => { const t = i / N * Math.PI * 2, c = Math.cos(t) * r, sn = Math.sin(t) * r; return toView(cx + A1[0] * c + A2[0] * sn, cy + A1[1] * c + A2[1] * sn, cz + A1[2] * c + A2[2] * sn); };
+  if (dashed) { for (let i = 0; i < N; i += 2) { const v0 = pt(i), v1 = pt(i + 1); linePush(v0[0], v0[1], v0[2], a); linePush(v1[0], v1[1], v1[2], a); } }
+  else for (let i = 0; i <= N; i++) { const v = pt(i); linePush(v[0], v[1], v[2], a); }
+  lineDraw(dashed ? gl.LINES : gl.LINE_STRIP, col, s);
+}
+
+let ptData = new Float32Array(MAXP * 8);
+function drawParticles(bmap) {
+  if (!NP) return;
+  let nA = 0, nB = 0; // 앞: 보통 섞기, 뒤: 더하기 — 두 구역으로 나눠 채운다
+  const tmpAdd = [];
+  const fill = (k, i, x, y, z, a) => {
+    const v = toView(x, y, z); const o = k * 8;
+    ptData[o] = v[0]; ptData[o + 1] = v[1]; ptData[o + 2] = v[2];
+    ptData[o + 3] = PC[i * 4]; ptData[o + 4] = PC[i * 4 + 1]; ptData[o + 5] = PC[i * 4 + 2]; ptData[o + 6] = a; ptData[o + 7] = PS[i];
+  };
+  for (let i = 0; i < NP; i++) {
+    let x = PX[i * 3], y = PX[i * 3 + 1], z = PX[i * 3 + 2];
+    if (PF[i] & F_REL) { const b = bmap.get(PB[i]); if (!b) continue; x += b.x; y += b.y; z += b.z; }
+    let a = PC[i * 4 + 3];
+    if (!(PF[i] & F_GRAV)) { const fr = PL[i] / PL0[i]; a *= Math.min(1, fr * 2.2) * Math.min(1, (PL0[i] - PL[i]) * 5 + 0.2); }
+    if (PF[i] & F_ADD) tmpAdd.push(i, x, y, z, a);
+    else { fill(nA, i, x, y, z, a); nA++; }
+  }
+  for (let k = 0; k < tmpAdd.length; k += 5) { fill(nA + nB, tmpAdd[k], tmpAdd[k + 1], tmpAdd[k + 2], tmpAdd[k + 3], tmpAdd[k + 4]); nB++; }
+  const p = P.pt; gl.useProgram(p.p); setDepthU(p.u);
+  gl.uniformMatrix4fv(p.u.uP, false, PROJ); gl.uniform1f(p.u.uPx, PPU * DPR); gl.uniform1f(p.u.uMinPx, 1.6 * DPR); gl.uniform1f(p.u.uMaxPx, 40 * DPR);
+  gl.bindVertexArray(VAO.pt.vao); gl.bindBuffer(gl.ARRAY_BUFFER, VAO.pt.buf);
+  gl.bufferData(gl.ARRAY_BUFFER, ptData.subarray(0, (nA + nB) * 8), gl.STREAM_DRAW);
+  if (nA) { gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.uniform1i(p.u.uAdd, 0); gl.drawArrays(gl.POINTS, 0, nA); }
+  if (nB) { gl.blendFunc(gl.ONE, gl.ONE); gl.uniform1i(p.u.uAdd, 1); gl.drawArrays(gl.POINTS, nA, nB); }
+}
+
+function sprite(vc, S, col, a, mode, ring, rot) {
+  const p = P.spr;
+  gl.uniform3f(p.u.uC, vc[0], vc[1], vc[2]); gl.uniform1f(p.u.uS, S);
+  gl.uniform3fv(p.u.uCol, col); gl.uniform1f(p.u.uA, a); gl.uniform1i(p.u.uMode, mode); gl.uniform1f(p.u.uRing, ring || 0.5); gl.uniform1f(p.u.uRot, rot || 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+function useSprite() { const p = P.spr; gl.useProgram(p.p); setDepthU(p.u); gl.uniformMatrix4fv(p.u.uP, false, PROJ); gl.bindVertexArray(VAO.quad.vao); }
+// 빛 번짐 사각형을 천체 앞쪽으로 당겨서 자기 표면에 가리지 않게 한다
+function pullFront(vc, R) { const d = Math.hypot(vc[0], vc[1], vc[2]) || 1; const k = Math.max(0.5, (d - R * 1.02) / d); return [vc[0] * k, vc[1] * k, vc[2] * k]; }
+
+function beam(startV, axV, len, wid, col, col2, a) {
+  const p = P.beam;
+  gl.uniform3f(p.u.uStart, startV[0], startV[1], startV[2]); gl.uniform3f(p.u.uAx, axV[0], axV[1], axV[2]);
+  gl.uniform1f(p.u.uLen, len); gl.uniform1f(p.u.uWid, wid); gl.uniform3fv(p.u.uCol, col); gl.uniform3fv(p.u.uCol2, col2); gl.uniform1f(p.u.uA, a);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+function disk(vc, a1, a2, rin, rout, mode, col, a, light, seed) {
+  const p = P.disk;
+  gl.uniform3f(p.u.uC, vc[0], vc[1], vc[2]); gl.uniform3fv(p.u.uA1, a1); gl.uniform3fv(p.u.uA2, a2);
+  gl.uniform1f(p.u.uRin, rin); gl.uniform1f(p.u.uRout, rout); gl.uniform1i(p.u.uMode, mode); gl.uniform3fv(p.u.uCol, col);
+  gl.uniform1f(p.u.uA, a); gl.uniform1f(p.u.uLight, light ?? 1); gl.uniform1f(p.u.uSeed, seed || 0); gl.uniform1f(p.u.uTime, gTime);
+  gl.drawArrays(gl.TRIANGLES, 0, VAO.disk.n);
+}
+function useDisk() { const p = P.disk; gl.useProgram(p.p); setDepthU(p.u); gl.uniformMatrix4fv(p.u.uP, false, PROJ); gl.bindVertexArray(VAO.disk.vao); }
+
+let frameInfo = { drawn: [] };
+function render() {
+  gl.viewport(0, 0, cv.width, cv.height);
+  gl.clearColor(0, 0, 0, 1); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  const bmap = new Map(); for (const b of bodies) bmap.set(b.id, b);
+  // ---- 화면 위치 계산 ----
+  const items = [];
+  const bhLens = [];
+  for (const b of bodies) {
+    const vc = toView(b.x, b.y, b.z); const w = -vc[2]; const dc = Math.hypot(vc[0], vc[1], vc[2]);
+    const vr = visR(b, dc);
+    const it = { b, vc, w, dc, vr, rpx: w > 0 ? vr / w * PPU : 0 };
+    items.push(it);
+    if (isBH(b) && w > 0) {
+      const sx = (vc[0] / w / tanX * 0.5 + 0.5) * cv.width, sy = (vc[1] / w / tanY * 0.5 + 0.5) * cv.height;
+      const sh = vr / w * PPU * DPR;
+      if (sx > -sh * 4 && sx < cv.width + sh * 4 && sy > -sh * 4 && sy < cv.height + sh * 4) bhLens.push([sx, sy, sh, sh * 2.2]);
+    }
+    if (b.stage === 'qs' && b.core > 0 && w > -b.R) { // 쿼시별 속 블랙홀도 렌즈
+      const cr = Math.max(2.6 * 2.953 * b.core / AU_KM, dc * 0.014);
+      if (w > 0 && dc < b.R * 3) { const sx = (vc[0] / w / tanX * 0.5 + 0.5) * cv.width, sy = (vc[1] / w / tanY * 0.5 + 0.5) * cv.height; const sh = cr / w * PPU * DPR; bhLens.push([sx, sy, sh, sh * 2.0]); }
+    }
+  }
+  frameInfo.items = items;
+  // ---- 하늘 ----
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND);
+  drawSky(bhLens);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
+  // ---- 단단한 천체 ----
+  useImp(P.body);
+  for (const it of items) {
+    const b = it.b;
+    if (b.stage === 'qs' || b.stage === 'ns') continue;
+    if (it.w < -it.vr) continue;
+    if (it.rpx < 0.9 && it.dc > it.vr * 2) continue;
+    if (isBH(b)) { gl.uniform1i(P.body.u.uType, 15); gl.uniform1f(P.body.u.uExpo, 1); drawImpostor(P.body, it.vc, it.vr); continue; }
+    it.lights = drawBodySurface(b, it.vc, it.vr, 1);
+  }
+  // 쿼시별 속 블랙홀
+  for (const it of items) {
+    const b = it.b; if (b.stage !== 'qs' || !b.core) continue;
+    if (it.dc > b.R * 3.2) continue;
+    const cr = Math.max(2.6 * 2.953 * b.core / AU_KM, it.dc * 0.014);
+    gl.uniform1i(P.body.u.uType, 15); drawImpostor(P.body, it.vc, cr); it.coreR = cr;
+  }
+  // ---- 투명한 것들 ----
+  gl.enable(gl.BLEND); gl.depthMask(false);
+  // 골디락스 존
+  if (show.hz) {
+    useDisk(); gl.blendFunc(gl.ONE, gl.ONE);
+    for (const it of items) {
+      const b = it.b; if (!isLum(b) || b.stage === 'ns' || b.L < 1e-9) continue;
+      const rin = Math.sqrt(b.L / 1.1), rout = Math.sqrt(b.L / 0.53);
+      disk(it.vc, toViewDir([1, 0, 0]), toViewDir([0, 0, 1]), rin, rout, 2, [0.18, 0.75, 0.32], 0.16);
+    }
+  }
+  // 행성 고리
+  useDisk();
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  for (const it of items) {
+    const b = it.b; if (!b.ring || it.w <= 0) continue;
+    const ro = b.R * b.ring.out; if (ro / it.w * PPU < 1.5) continue;
+    const R = m3mul(rotY(b.tiltDir), rotX(b.tilt));
+    const li = it.lights && it.lights.length ? lightI(it.lights[0].f) : 0.05;
+    disk(it.vc, toViewDir([R[0], R[3], R[6]]), toViewDir([R[2], R[5], R[8]]), b.R * b.ring.in, ro, 0, b.ring.col || [0.82, 0.74, 0.6], 0.85, li, b.seed);
+  }
+  // 강착 원반
+  gl.blendFunc(gl.ONE, gl.ONE);
+  for (const it of items) {
+    const b = it.b;
+    let act = 0, vr = it.vr, ax = null;
+    if (isBH(b)) act = Math.max(b.activity, b.jetBurst > 0 ? 0.6 : 0);
+    if (b.stage === 'qs' && it.coreR) { act = 1; vr = it.coreR; }
+    if (act < 0.02 || it.w <= -vr * 8) continue;
+    const R = m3mul(rotY(b.tiltDir), rotX(b.tilt));
+    disk(it.vc, toViewDir([R[0], R[3], R[6]]), toViewDir([R[2], R[5], R[8]]), vr * 1.25, vr * 7.5, 1, [1, 1, 1], Math.pow(act, 0.6) * 1.3, 1, b.seed);
+  }
+  // 쿼시별 겉껍질 (가까이 가면 투명해져서 속의 블랙홀이 보인다)
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  useImp(P.body);
+  for (const it of items) {
+    const b = it.b; if (b.stage !== 'qs') continue;
+    if (it.w < -b.R) continue;
+    let a = clamp((it.dc - b.R) / (1.8 * b.R), 0, 1) * 0.82 + 0.18;
+    a *= 1 - b.qsFade;
+    if (a < 0.01) continue;
+    drawBodySurface(b, it.vc, b.R, a);
+  }
+  // 선
+  lineStart();
+  drawTrailsLines(); drawGridLines(); drawRocheLines(); drawPlaceLines();
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  lineFlush();
+  // 알갱이
+  drawParticles(bmap);
+  // 먼 행성 점
+  useSprite();
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  for (const it of items) {
+    const b = it.b; if (b.kind !== 'planet' && b.stage !== 'brown' && b.stage !== 'blk') continue;
+    if (it.w <= 0 || it.rpx >= 1.6) continue;
+    const pal = b.pal || PAL.moon;
+    const ls = lightsFor(b.x, b.y, b.z, b);
+    const li = ls.length ? lightI(ls[0].f) : 0;
+    let c = b.sub === 'gas' || b.sub === 'ice' ? pal.c1 : b.sub === 'earth' ? [0.35, 0.5, 0.75] : pal.c2;
+    if (b.stage === 'brown') c = [0.75, 0.3, 0.2];
+    const k = clamp(0.35 + li * 0.8, 0.35, 1.2);
+    const px = b.id === selId ? 3.2 : 2.3;
+    sprite(it.vc, px * it.w / PPU, [Math.min(1, c[0] * k), Math.min(1, c[1] * k), Math.min(1, c[2] * k)], 1, 1);
+  }
+  // 별빛
+  gl.blendFunc(gl.ONE, gl.ONE);
+  for (const it of items) {
+    const b = it.b; if (b.kind !== 'star' || it.w <= 0) continue;
+    if (isBH(b)) {
+      // 광자 고리
+      sprite(pullFront(it.vc, it.vr), it.vr * 2.4, [1.0, 0.8, 0.55], 0.35 + 0.6 * Math.min(1, b.activity), 2, 0.48);
+      continue;
+    }
+    const gpx = glowPx(b); if (gpx <= 0) continue;
+    if (b.stage === 'qs' && it.dc < b.R * 1.6) continue;
+    let S = Math.max(b.R * 2.8, gpx * 4 * it.w / PPU);
+    if (b.stage === 'qs') S = b.R * 2.2;
+    const c = starTint(b.T);
+    let I = b.stage === 'brown' ? 0.55 : 1.0;
+    if (b.stage === 'qs') I = 0.6 * (1 - b.qsFade);
+    if (b.anim && b.anim.type === 'sn') I = 1 + 3 * b.anim.t;
+    if (b.anim && b.anim.type === 'ia') I = 1 + 2 * smooth(Math.min(1, b.anim.t / b.anim.dur));
+    sprite(pullFront(it.vc, b.R), S, c, I, 0, 0, gTime * 0.02);
+    if (b.stage === 'ns') sprite(pullFront(it.vc, b.R), gpx * 3.5 * it.w / PPU, [0.55, 0.7, 1.0], 0.45, 0);
+  }
+  // 펄서 빔과 블랙홀 감마선 제트
+  { const p = P.beam; gl.useProgram(p.p); setDepthU(p.u); gl.uniformMatrix4fv(p.u.uP, false, PROJ); gl.uniform1f(p.u.uTime, gTime); gl.bindVertexArray(VAO.beam.vao); }
+  for (const it of items) {
+    const b = it.b; if (it.w <= -it.dc) continue;
+    if (isNS(b)) {
+      const ax = spinAxis(b); const e1 = vnorm(vcross(ax, Math.abs(ax[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])); const e2 = vcross(ax, e1);
+      const al = 0.45, ph = b.beam;
+      const m = vadd(vmul(ax, Math.cos(al)), vmul(vadd(vmul(e1, Math.cos(ph)), vmul(e2, Math.sin(ph))), Math.sin(al)));
+      const mv = toViewDir(m), len = it.dc * 0.32;
+      beam(it.vc, mv, len, len * 0.05, [0.7, 0.85, 1.0], [0.35, 0.55, 1.0], 0.9);
+      beam(it.vc, vmul(mv, -1), len, len * 0.05, [0.7, 0.85, 1.0], [0.35, 0.55, 1.0], 0.9);
+    }
+    if (isBH(b)) {
+      const j = Math.max(b.jetOn ? 0.85 : 0, b.jetBurst > 0 ? Math.min(1.4, b.jetBurst / 2 + 0.4) : 0, b.activity > 0.15 ? b.activity * 0.7 : 0);
+      if (j > 0.02) {
+        const av = toViewDir(spinAxis(b)), len = it.dc * (0.35 + 0.25 * Math.min(j, 1));
+        beam(it.vc, av, len, len * 0.035, [0.8, 0.85, 1.0], [0.55, 0.35, 1.0], j);
+        beam(it.vc, vmul(av, -1), len, len * 0.035, [0.8, 0.85, 1.0], [0.55, 0.35, 1.0], j);
+      }
+    }
+  }
+  // 섬광
+  useSprite(); gl.blendFunc(gl.ONE, gl.ONE);
+  for (const e of effects) {
+    if (e.type !== 'flash' || e.delay > 0) continue;
+    const vc = toView(e.x, e.y, e.z); if (-vc[2] <= 0) continue;
+    const k = e.t / e.dur;
+    const a = e.I * Math.pow(1 - k, 2) * Math.min(1, e.t * 12);
+    sprite(vc, e.size * (0.5 + 0.8 * Math.sqrt(k)), e.col, a, 3);
+  }
+  // 껍질 (충격파, 펄서 물결, 중력파)
+  useImp(P.shell); gl.blendFunc(gl.ONE, gl.ONE);
+  for (const e of effects) {
+    if (e.type !== 'shell' || e.delay > 0) continue;
+    const vc = toView(e.x, e.y, e.z); const dc = Math.hypot(vc[0], vc[1], vc[2]);
+    const k = e.t / e.dur, ek = 1 - Math.pow(1 - k, 2);
+    let r = lerp(e.r0, e.r1, ek); if (e.rel) r *= dc;
+    if (r <= 0) continue;
+    const p = P.shell; gl.uniform3fv(p.u.uCol, e.col); gl.uniform1f(p.u.uA, e.a * (1 - k) * Math.min(1, e.t * 8)); gl.uniform1f(p.u.uPow, e.pw);
+    drawImpostor(p, vc, r);
+  }
+  gl.depthMask(true); gl.disable(gl.BLEND);
+}
+
+function trailColor(b) {
+  if (b.kind === 'star') { const c = starTint(b.T || 5000); return [c[0] * 0.9, c[1] * 0.9, c[2] * 0.9, 0.55]; }
+  const p = b.pal || PAL.moon; const c = b.sub === 'gas' || b.sub === 'ice' ? p.c1 : b.sub === 'earth' ? [0.4, 0.6, 1.0] : p.c2;
+  const m = Math.max(c[0], c[1], c[2], 0.01); return [c[0] / m * 0.85, c[1] / m * 0.85, c[2] / m * 0.85, 0.5];
+}
+function drawTrailsLines() {
+  if (!show.trail) return;
+  const rp = refPos();
+  for (const b of bodies) {
+    const t = b.trail; const n = t.length / 3; if (n < 2) continue;
+    const s = lineBuf.n;
+    for (let i = 0; i < n; i++) { const v = toView(t[i * 3] + rp[0], t[i * 3 + 1] + rp[1], t[i * 3 + 2] + rp[2]); linePush(v[0], v[1], v[2], Math.pow(i / n, 1.3)); }
+    const v = toView(b.x, b.y, b.z); linePush(v[0], v[1], v[2], 1);
+    const c = trailColor(b); if (b.id === selId) c[3] = 0.9;
+    lineDraw(gl.LINE_STRIP, c, s);
+  }
+}
+let gridInfo = [];
+function drawGridLines() {
+  gridInfo = [];
+  if (!show.grid) return;
+  const c = cam.target; const k0 = Math.floor(Math.log10(cam.dist));
+  for (let k = k0 - 2; k <= k0 + 1; k++) {
+    const r = Math.pow(10, k);
+    const px = r / cam.dist * PPU; if (px < 25 || px > W * 3) continue;
+    const a = clamp((px - 25) / 60, 0, 1) * 0.35;
+    circleLines(c[0], c[1], c[2], r, [0.55, 0.7, 1.0, 1], a, false);
+    gridInfo.push({ r, a });
+  }
+}
+function drawRocheLines() {
+  if (!show.roche) return;
+  const s = byId(selId);
+  const list = [];
+  if (s && s.prim && canTear(s) && s.m < 0.5 * s.prim.m) list.push([s, s.prim]);
+  else if (s) { for (const o of bodies) if (o.prim === s && canTear(o) && o.m < 0.5 * s.m) list.push([o, s]); }
+  else { for (const o of bodies) if (o.prim && canTear(o) && o.m < 0.5 * o.prim.m) list.push([o, o.prim]); }
+  for (const [sm, p] of list.slice(0, 30)) {
+    const rd = 2.44 * sm.R * Math.cbrt(p.m / sm.m);
+    if (rd < p.R * 1.001) continue;
+    // 작은 천체의 궤도면에 맞춘 원
+    const r = [sm.x - p.x, sm.y - p.y, sm.z - p.z], v = [sm.vx - p.vx, sm.vy - p.vy, sm.vz - p.vz];
+    let nrm = vcross(r, v); if (vlen(nrm) === 0) nrm = [0, 1, 0]; nrm = vnorm(nrm);
+    const a1 = vnorm(vcross(nrm, Math.abs(nrm[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1])), a2 = vcross(nrm, a1);
+    circleLines(p.x, p.y, p.z, rd, [1.0, 0.35, 0.3, 1], 0.75, true, a1, a2);
+  }
+}
+
+// =====================================================================
+//  기록 줄
+// =====================================================================
+function log(msg, warn) {
+  const box = $('log'); const d = document.createElement('div');
+  if (warn) d.className = 'w';
+  d.textContent = fmtTime(simTime) + ' · ' + msg;
+  box.appendChild(d);
+  while (box.children.length > 5) box.removeChild(box.firstChild);
+  setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 1100); }, 9000);
+}
+
+// =====================================================================
+//  추가할 수 있는 천체
+// =====================================================================
+const ME = MEARTH;
+const ADD_TYPES = [
+  { grp: '행성', key: 'earth', name: '지구형 행성', note: '바다와 대륙이 있는 암석 행성', kind: 'planet', sub: 'earth', m: ME, min: 0.05 * ME, max: 15 * ME, prefix: '행성' },
+  { key: 'desert', name: '사막 행성', note: '화성처럼 붉고 메마른 행성', kind: 'planet', sub: 'desert', m: 0.107 * ME, min: 0.01 * ME, max: 10 * ME, prefix: '행성' },
+  { key: 'venus', name: '구름 행성', note: '금성처럼 두꺼운 구름', kind: 'planet', sub: 'venus', m: 0.815 * ME, min: 0.05 * ME, max: 10 * ME, prefix: '행성' },
+  { key: 'gas', name: '가스 행성', note: '목성처럼 큰 행성 (목성 12배 미만)', kind: 'planet', sub: 'gas', m: MJUP, min: 0.05 * MJUP, max: 11.99 * MJUP, prefix: '행성' },
+  { key: 'ice', name: '얼음 거인', note: '해왕성 같은 푸른 행성', kind: 'planet', sub: 'ice', m: 17 * ME, min: 3 * ME, max: 60 * ME, prefix: '행성' },
+  { key: 'moon', name: '위성', note: '달 같은 작은 천체', kind: 'planet', sub: 'moon', m: 0.0123 * ME, min: 1e-4 * ME, max: 0.1 * ME, prefix: '위성' },
+  { key: 'asteroid', name: '소행성', note: '작은 바위 덩어리', kind: 'planet', sub: 'asteroid', m: 1.6e-4 * ME, min: 1e-8 * ME, max: 2e-3 * ME, prefix: '소행성' },
+  { grp: '갈색왜성', key: 'brown', name: '갈색왜성', note: '목성 질량 12~79.9배', kind: 'star', stage: 'brown', m: 40 * MJUP, min: 12 * MJUP, max: 79.9 * MJUP, prefix: '갈색왜성' },
+  { grp: '별', key: 'rd', name: '적색왜성', note: '작고 어두운 별 (목성 80배부터)', kind: 'star', stage: 'ms', m: 0.2, min: STAR_MIN, max: 0.499, prefix: '별' },
+  { key: 'sun', name: '태양 같은 별', note: '노란 주계열성', kind: 'star', stage: 'ms', m: 1, min: 0.5, max: 2.5, prefix: '별' },
+  { key: 'big', name: '무거운 별', note: '부풀었다 터지면 중성자별', kind: 'star', stage: 'ms', m: 15, min: 8, max: 19.9, prefix: '별' },
+  { key: 'huge', name: '아주 무거운 별', note: '부풀었다 터지면 블랙홀', kind: 'star', stage: 'ms', m: 40, min: 20, max: 150, prefix: '별' },
+  { key: 'wd', name: '백색왜성', note: '별의 중심만 남은 것', kind: 'star', stage: 'wd', m: 0.6, min: 0.2, max: 1.43, prefix: '백색왜성' },
+  { grp: '특수 천체', key: 'ns', name: '중성자별', note: '빠르게 도는 펄서', kind: 'star', stage: 'ns', m: 1.4, min: 1.1, max: 2.29, prefix: '중성자별' },
+  { key: 'bh', name: '블랙홀', note: '빛도 못 빠져나옴', kind: 'star', stage: 'bh', m: 10, min: 3, max: 1e7, prefix: '블랙홀' },
+  { key: 'qs', name: '쿼시별', note: '속에 블랙홀이 있는 거대한 별', kind: 'star', stage: 'qs', m: 1000, min: 300, max: 10000, prefix: '쿼시별' },
+];
+let tool = 'select', curTypeKey = 'earth', curMassFrac = 0.5;
+const typeByKey = (k) => ADD_TYPES.find(t => t.key === k);
+function curType() { return typeByKey(curTypeKey); }
+function curMass() { const t = curType(); return t.min * Math.pow(t.max / t.min, curMassFrac); }
+function fracOf(t, m) { return clamp(Math.log(m / t.min) / Math.log(t.max / t.min), 0, 1); }
+
+function drawSwatch(c, t) {
+  const x = c.getContext('2d'); const s = c.width; x.clearRect(0, 0, s, s);
+  const cx = s / 2, r = s * 0.36;
+  const ball = (c1, c2, rr) => { const g = x.createRadialGradient(cx - rr * 0.35, cx - rr * 0.35, rr * 0.1, cx, cx, rr); g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.beginPath(); x.arc(cx, cx, rr, 0, 7); x.fill(); };
+  const glow = (col, rr) => { const g = x.createRadialGradient(cx, cx, 0, cx, cx, rr); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.beginPath(); x.arc(cx, cx, rr, 0, 7); x.fill(); };
+  const rgb = (a, k = 1) => `rgb(${a.map(v => Math.round(clamp(v * k, 0, 1) * 255)).join(',')})`;
+  if (t.kind === 'planet') {
+    const p = PAL[t.sub];
+    if (t.sub === 'earth') { ball('#4d7fc4', '#0b2348', r); x.fillStyle = 'rgba(70,110,50,.9)'; x.beginPath(); x.ellipse(cx - r * 0.2, cx - r * 0.1, r * 0.35, r * 0.22, 0.6, 0, 7); x.fill(); x.beginPath(); x.ellipse(cx + r * 0.35, cx + r * 0.3, r * 0.2, r * 0.15, -0.4, 0, 7); x.fill(); }
+    else if (t.sub === 'gas' || t.sub === 'ice') { ball(rgb(p.c3), rgb(p.c2, 0.6), r); x.save(); x.beginPath(); x.arc(cx, cx, r, 0, 7); x.clip(); for (let i = -3; i <= 3; i++) { x.fillStyle = i % 2 ? rgb(p.c2, 0.9) : rgb(p.c1); x.globalAlpha = 0.55; x.fillRect(0, cx + i * r * 0.28, s, r * 0.14); } x.restore(); x.globalAlpha = 1; }
+    else ball(rgb(p.c2, 1.15), rgb(p.c1, 0.5), t.sub === 'asteroid' ? r * 0.6 : t.sub === 'moon' ? r * 0.75 : r);
+    return;
+  }
+  switch (t.stage) {
+    case 'brown': ball('#b2493a', '#2a0b10', r * 0.9); break;
+    case 'ms': { const c2 = bbColor(stageRT('ms', t.m)[1]); glow(rgb(c2), r * 1.4); ball('#fff', rgb(c2), r * (t.m < 0.5 ? 0.55 : t.m < 3 ? 0.75 : 0.95)); break; }
+    case 'wd': glow('rgba(190,215,255,.9)', r * 0.9); ball('#fff', '#bcd2ff', r * 0.3); break;
+    case 'ns': x.strokeStyle = 'rgba(150,190,255,.8)'; x.lineWidth = 2; x.beginPath(); x.moveTo(cx - r * 0.6, cx + r * 1.1); x.lineTo(cx + r * 0.6, cx - r * 1.1); x.stroke(); glow('rgba(170,200,255,1)', r * 0.7); ball('#fff', '#9fc0ff', r * 0.2); break;
+    case 'bh': { const g = x.createRadialGradient(cx, cx, r * 0.35, cx, cx, r * 1.2); g.addColorStop(0, 'rgba(255,170,80,0)'); g.addColorStop(0.35, 'rgba(255,190,110,.95)'); g.addColorStop(1, 'rgba(255,120,40,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(cx, cx, r * 1.25, r * 0.45, -0.2, 0, 7); x.fill(); x.fillStyle = '#000'; x.beginPath(); x.arc(cx, cx, r * 0.42, 0, 7); x.fill(); break; }
+    case 'qs': glow('rgba(255,150,70,.6)', r * 1.4); ball('#ffc58a', '#a33a10', r * 1.05); x.fillStyle = '#000'; x.beginPath(); x.arc(cx, cx, r * 0.2, 0, 7); x.fill(); break;
+  }
+}
+{ let g = ''; for (const t of ADD_TYPES) { if (t.grp) g = t.grp; t.g = g; } }
+function buildPalette() {
+  const list = $('plist'); list.innerHTML = '';
+  const groups = tool === 'planet' ? ['행성'] : tool === 'star' ? ['갈색왜성', '별', '특수 천체'] : null;
+  const types = ADD_TYPES.filter(t => !groups || groups.includes(t.g));
+  if (!types.includes(curType())) { curTypeKey = types[0].key; curMassFrac = fracOf(types[0], types[0].m); }
+  let grp = '';
+  for (const t of types) {
+    if (t.g !== grp) { grp = t.g; const g = document.createElement('div'); g.className = 'pgroup'; g.textContent = grp; list.appendChild(g); }
+    const d = document.createElement('div'); d.className = 'pitem' + (t.key === curTypeKey ? ' on' : '');
+    const c = document.createElement('canvas'); c.width = 60; c.height = 60; drawSwatch(c, t);
+    const tx = document.createElement('div'); tx.innerHTML = `<div class="nm">${t.name}</div><div class="sub">${t.note}</div>`;
+    d.appendChild(c); d.appendChild(tx);
+    d.onclick = () => { curTypeKey = t.key; curMassFrac = fracOf(t, t.m); $('pmass').value = Math.round(curMassFrac * 1000); buildPalette(); updMassLabel(); };
+    list.appendChild(d);
+  }
+  $('ptitle').textContent = tool === 'planet' ? '행성 창조' : tool === 'star' ? '별 창조' : '추가';
+  $('pmass').value = Math.round(curMassFrac * 1000); updMassLabel();
+}
+function massText(kind, stage, m) { return fmtMass({ kind, stage, m }); }
+function updMassLabel() { const t = curType(); $('pmassv').textContent = massText(t.kind, t.stage, curMass()); }
+$('pmass').addEventListener('input', () => { curMassFrac = $('pmass').value / 1000; updMassLabel(); });
+
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll('#tools [data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  $('palette').classList.toggle('hide', t === 'select');
+  if (t !== 'select') buildPalette();
+  place = null;
+}
+document.querySelectorAll('#tools [data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool === tool && tool !== 'select' ? 'select' : b.dataset.tool));
+document.querySelectorAll('#tools [data-tog]').forEach(b => b.onclick = () => { const k = b.dataset.tog; show[k] = !show[k]; b.classList.toggle('on', show[k]); if (k === 'trail' && show.trail) clearTrails(); saveSoon(); });
+
+// =====================================================================
+//  천체 만들기
+// =====================================================================
+function createBody(t, m, pos, vel) {
+  let b;
+  if (t.kind === 'planet') {
+    b = newBody({ kind: 'planet', sub: t.sub, m, name: autoName(t.prefix) });
+    b.spinRate = 2 * Math.PI / ((t.sub === 'gas' || t.sub === 'ice') ? 0.42 * DAY : t.sub === 'moon' ? 27 * DAY : rnd(0.6, 1.4) * DAY);
+    if (t.sub === 'gas' && Math.random() < 0.35) b.ring = { in: 1.25, out: rnd(1.9, 2.4), col: [0.82, 0.74, 0.6] };
+  } else {
+    b = newBody({ kind: 'star', stage: t.stage, m, name: autoName(t.prefix) });
+    b.spinRate = 2 * Math.PI / (25 * DAY);
+  }
+  b.x = pos[0]; b.y = pos[1]; b.z = pos[2]; b.vx = vel[0]; b.vy = vel[1]; b.vz = vel[2];
+  addBody(b); reclassify(b);
+  computePrimaries();
+  return b;
+}
+function placeVelocity(p, drag, mNew) {
+  const dom = dominantAt(p[0], p[1], p[2]);
+  let v = dom ? [dom.vx, dom.vy, dom.vz] : [0, 0, 0];
+  const auto = $('pauto').checked;
+  if (dom) {
+    const rv = vsub(p, [dom.x, dom.y, dom.z]); const r = vlen(rv) || 1e-9;
+    const vc = Math.sqrt(G * (dom.m + mNew) / r);
+    if (drag) { const k = vc / (0.25 * cam.dist); v = vadd(v, vmul(drag, k)); }
+    else if (auto) { let dir = vcross([0, 1, 0], rv); if (vlen(dir) < 1e-9 * r) dir = [0, 0, -1]; v = vadd(v, vmul(vnorm(dir), vc)); }
+  } else if (drag) { const k = 2 * Math.PI * 0.5 / 0.25; v = vadd(v, vmul(drag, k)); }
+  return { v, dom };
+}
+function planePoint(sx, sy) {
+  const d = screenRay(sx, sy); const py = cam.target[1];
+  if (Math.abs(d[1]) < 1e-4) return null;
+  const t = (py - eye[1]) / d[1];
+  if (t <= 0 || t > cam.dist * 60) return null;
+  return [eye[0] + d[0] * t, py, eye[2] + d[2] * t];
+}
+function newRadius(t, m) { return t.kind === 'planet' ? planetRadius(t.sub, m) : stageRT(t.stage, m)[0]; }
+function tryPlace(p, drag) {
+  const t = curType(), m = curMass(), R = newRadius(t, m);
+  for (const o of bodies) if (Math.hypot(o.x - p[0], o.y - p[1], o.z - p[2]) < (o.R + R) * 1.02) { log('다른 천체와 겹치는 곳에는 놓을 수 없습니다.', 1); return null; }
+  const { v } = placeVelocity(p, drag, m);
+  const b = createBody(t, m, p, v);
+  log(`${b.name}(${t.name})을(를) 추가했습니다.`);
+  if (bodies.length === 1) { setFollow(b.id, false); }
+  selId = b.id; saveSoon();
+  return b;
+}
+// 던질 때 궤도 미리보기 (다른 천체는 멈춰 있다고 보고 계산)
+function predictPath(p, v, mNew) {
+  const pts = [p.slice()]; let x = p[0], y = p[1], z = p[2], vx = v[0], vy = v[1], vz = v[2];
+  let T = 0; const Tmax = (() => { const dom = dominantAt(x, y, z); if (!dom) return 5; const r = Math.hypot(x - dom.x, y - dom.y, z - dom.z); return 2.2 * 2 * Math.PI * Math.sqrt(r * r * r / (G * (dom.m + mNew))); })();
+  for (let i = 0; i < 1600 && T < Tmax; i++) {
+    let ax = 0, ay = 0, az = 0, ts = Infinity, hit = false;
+    for (const b of bodies) { const dx = b.x - x, dy = b.y - y, dz = b.z - z, d2 = dx * dx + dy * dy + dz * dz, d = Math.sqrt(d2); if (d < b.R) { hit = true; break; } const f = G * b.m / (d2 * d); ax += dx * f; ay += dy * f; az += dz * f; ts = Math.min(ts, Math.sqrt(d2 * d / (G * b.m))); }
+    if (hit) break;
+    const dt = isFinite(ts) ? Math.min(0.03 * ts, Tmax / 300) : Tmax / 300;
+    vx += ax * dt; vy += ay * dt; vz += az * dt; x += vx * dt; y += vy * dt; z += vz * dt; T += dt;
+    if (i % 2 === 0) pts.push([x, y, z]);
+  }
+  return pts;
+}
+let place = null, hoverPlane = null, hoverScreen = null;
+function drawPlaceLines() {
+  if (tool === 'select' || !hoverScreen) return;
+  const t = curType(), m = curMass();
+  const p = place ? place.p0 : hoverPlane; if (!p) return;
+  if (place && place.moved && place.cur) {
+    const drag = vsub(place.cur, place.p0); const { v } = placeVelocity(p, drag, m);
+    const path = predictPath(p, v, m); const s = lineBuf.n;
+    path.forEach((q, i) => { const vv = toView(q[0], q[1], q[2]); linePush(vv[0], vv[1], vv[2], 1 - i / path.length * 0.8); });
+    lineDraw(gl.LINE_STRIP, [1.0, 0.85, 0.4, 0.9], s);
+  } else if ($('pauto').checked) {
+    const dom = dominantAt(p[0], p[1], p[2]);
+    if (dom) { const r = Math.hypot(p[0] - dom.x, p[2] - dom.z); circleLines(dom.x, p[1], dom.z, r, [0.6, 0.85, 1.0, 1], 0.55, true); }
+  }
+}
+
+// =====================================================================
+//  오른쪽 정보 창
+// =====================================================================
+let panelKey = '', selMass0 = 0;
+function rocheOf(s, p) { return 2.44 * s.R * Math.cbrt(p.m / s.m); }
+function panelButtons(b) {
+  const out = [];
+  if (b.anim) { out.push(`<button disabled>변하는 중입니다</button>`); return out.join(''); }
+  if (b.pending) { out.push(`<button disabled>곧 ${b.pending.to === 'wd' ? '행성상 성운을 내뿜습니다' : '초신성으로 터집니다'}</button>`); return out.join(''); }
+  if (b.kind !== 'star') return '';
+  const ex = expandTarget(b);
+  if (b.stage === 'ms' && b.m < 0.5) out.push(`<button disabled>적색왜성은 팽창하지 않습니다</button>`);
+  if (ex) out.push(`<button class="big" data-act="expand">팽창 (${ex === 'agb' ? '점근거성가지' : '적색초거성'})</button>`);
+  if (b.stage === 'agb') out.push(`<button class="big" data-act="pn">행성상 성운 방출</button>`);
+  if (b.stage === 'wd') out.push(`<button class="big danger" data-act="ia">Ia형 초신성</button>`);
+  if (isBH(b)) out.push(`<button class="big${b.jetOn ? ' on' : ''}" data-act="jet">감마선 방출 ${b.jetOn ? '끄기' : '켜기'}</button>`);
+  const nx = nextStage(b);
+  if (nx && b.stage !== 'agb') out.push(`<button data-act="next">다음 단계: ${nx.label}</button>`);
+  return out.join('');
+}
+function buildPanel(b) {
+  const el = $('info');
+  if (!b) { el.classList.add('hide'); panelKey = ''; return; }
+  el.classList.remove('hide');
+  el.innerHTML = `
+    <div class="iname" id="iName" title="이름 바꾸기"><span id="iNameT"></span><span class="ed">이름 바꾸기</span></div>
+    <div class="itype" id="iType"></div>
+    <div class="idesc" id="iDesc"></div>
+    <table id="iTab"></table>
+    <div class="btns"><button data-act="follow">따라가기</button><button data-act="del" class="danger">삭제</button></div>
+    <div class="row">질량 바꾸기 <input type="range" id="iMass" min="-1000" max="1000" value="0"></div>
+    <div id="iStageWrap"><div class="sect">별의 변화</div><div class="btns" id="iBtns"></div></div>`;
+  selMass0 = b.m;
+  $('iName').onclick = () => { const nb = byId(selId); if (!nb) return; const n = prompt('새 이름', nb.name); if (n && n.trim()) { nb.name = n.trim().slice(0, 24); saveSoon(); } };
+  $('iMass').addEventListener('input', (e) => {
+    const nb = byId(selId); if (!nb || nb.anim) return;
+    nb.m = selMass0 * Math.pow(10, e.target.value / 500);
+    if (nb.kind === 'star' && nb.stage === 'ms') nb.mi = nb.m;
+    reclassify(nb); accDirty = true;
+  });
+  $('iMass').addEventListener('change', () => saveSoon());
+  el.onclick = (e) => {
+    const a = e.target.closest('[data-act]'); if (!a || a.disabled) return;
+    const nb = byId(selId); if (!nb) return;
+    switch (a.dataset.act) {
+      case 'follow': setFollow(nb.id, true); break;
+      case 'del': log(`${nb.name}을(를) 삭제했습니다.`); killBody(nb, null); bodies = bodies.filter(x => !x.dead); selId = null; break;
+      case 'expand': startStage(nb, expandTarget(nb), true); break;
+      case 'pn': startStage(nb, 'wd'); break;
+      case 'ia': startIa(nb, false); break;
+      case 'jet': nb.jetOn = !nb.jetOn; log(nb.jetOn ? `${nb.name}이(가) 감마선 제트를 내뿜기 시작했습니다.` : `${nb.name}의 감마선 제트를 멈췄습니다.`); break;
+      case 'next': { const nx = nextStage(nb); if (nx) startStage(nb, nx.to); break; }
+    }
+    panelKey = ''; saveSoon();
+  };
+  panelKey = '';
+}
+function updatePanel() {
+  const b = byId(selId);
+  if (!b) { if (!$('info').classList.contains('hide')) buildPanel(null); return; }
+  if ($('info').classList.contains('hide') || !$('iTab') || $('info').dataset.id != b.id) { buildPanel(b); $('info').dataset.id = b.id; }
+  $('iNameT').textContent = b.name;
+  $('iType').textContent = typeName(b);
+  $('iDesc').textContent = stageDesc(b);
+  const key = [b.id, b.kind, b.stage, !!b.anim, !!b.pending, b.jetOn, b.m < 0.5].join('|');
+  if (key !== panelKey) { panelKey = key; const h = panelButtons(b); $('iBtns').innerHTML = h; $('iStageWrap').style.display = h ? '' : 'none'; }
+  const rows = [];
+  rows.push(['질량', fmtMass(b)]);
+  if (b.kind === 'star' && b.stage !== 'brown' && b.m < 0.1) rows.push(['', fmtNum(b.m / MJUP) + ' 목성 질량']);
+  rows.push([isBH(b) ? '지평선 반지름' : '반지름', fmtR(b.R)]);
+  if (b.kind === 'star' && !isBH(b)) { rows.push(['표면 온도', fmtNum(b.T, 0) + ' K']); rows.push(['밝기', fmtNum(b.L, 3) + ' 태양 밝기']); }
+  if (b.kind === 'planet' && b.teq) rows.push(['평형 온도', fmtNum(b.teq, 0) + ' K (' + fmtNum(b.teq - 273, 0) + '℃)']);
+  if (b.stage === 'qs') rows.push(['중심 블랙홀', fmtNum(b.core) + ' 태양 질량']);
+  if (isNS(b)) rows.push(['자전', '1초에 약 30바퀴']);
+  if (isBH(b)) rows.push(['원반 밝기', Math.round(b.activity * 100) + '%']);
+  if (isLum(b) && b.stage !== 'ns' && b.L > 1e-9) rows.push(['골디락스 존', fmtDist(Math.sqrt(b.L / 1.1)) + ' ~ ' + fmtDist(Math.sqrt(b.L / 0.53))]);
+  if (b.prim) {
+    const p = b.prim; const dx = b.x - p.x, dy = b.y - p.y, dz = b.z - p.z, r = Math.hypot(dx, dy, dz);
+    const vx = b.vx - p.vx, vy = b.vy - p.vy, vz = b.vz - p.vz, v2 = vx * vx + vy * vy + vz * vz;
+    rows.push(['중심 천체', p.name]);
+    rows.push(['거리', fmtDist(r)]);
+    rows.push(['속도', fmtNum(Math.sqrt(v2) * KMS_PER_AUYR, 2) + ' km/s']);
+    const mu = G * (b.m + p.m); const a = 1 / (2 / r - v2 / mu);
+    if (a > 0) { rows.push(['공전 주기', fmtTime(Math.sqrt(a * a * a / (b.m + p.m)))]); const hv = vcross([dx, dy, dz], [vx, vy, vz]); const e = Math.sqrt(Math.max(0, 1 - vdot(hv, hv) / (mu * a))); rows.push(['이심률', e.toFixed(3)]); }
+    else rows.push(['궤도', '묶이지 않음 (날아감)']);
+    if (canTear(b) && b.m < 0.5 * p.m) { const rd = rocheOf(b, p); rows.push(['로슈 한계', rd < p.R ? '중심 천체 안쪽' : fmtDist(rd)]); }
+  }
+  $('iTab').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+
+// =====================================================================
+//  시간
+// =====================================================================
+const SPEEDS = [[1 / 365.25 / 24 / 60, '1분'], [1 / 365.25 / 24, '1시간'], [6 / 365.25 / 24, '6시간'], [1 / 365.25, '1일'], [7 / 365.25, '1주'], [30 / 365.25, '30일'], [0.25, '3개월'], [1, '1년'], [10, '10년'], [100, '100년'], [1000, '1000년']];
+let speedIdx = 5, paused = false, lagging = false;
+function updSpeed() { $('speed').textContent = '1초에 ' + SPEEDS[speedIdx][1]; $('speed').classList.toggle('lag', lagging && !paused); $('bPause').textContent = paused ? '재생' : '멈춤'; $('bPause').classList.toggle('on', paused); }
+$('bPause').onclick = () => { paused = !paused; updSpeed(); };
+$('bSlow').onclick = () => { speedIdx = Math.max(0, speedIdx - 1); updSpeed(); saveSoon(); };
+$('bFast').onclick = () => { speedIdx = Math.min(SPEEDS.length - 1, speedIdx + 1); updSpeed(); saveSoon(); };
+
+function simulate(rdt) {
+  const target = SPEEDS[speedIdx][0] * rdt;
+  let t = 0, steps = 0;
+  let ngrav = 0; for (let i = 0; i < NP; i++) if (PF[i] & F_GRAV) ngrav++;
+  const nb = bodies.length;
+  const maxSteps = clamp(Math.floor(450000 / (nb * nb + ngrav * Math.max(nb, 1) * 3 + 1)), 2, 700);
+  while (t < target * 0.9999 && steps < maxSteps) {
+    if (accDirty) lastMinTs = computeAcc();
+    if (events.length) { processEvents(); if (accDirty) lastMinTs = computeAcc(); }
+    let dt = ETA * lastMinTs;
+    if (ngrav > 0 && isFinite(minPts)) dt = Math.min(dt, Math.max(minPts * 0.6, target / 3000));
+    dt = Math.min(dt, target - t);
+    if (!(dt > 0)) dt = target - t;
+    stepBodies(dt);
+    if (ngrav) stepParticlesGrav(dt);
+    t += dt; steps++;
+  }
+  if (events.length) processEvents();
+  simTime += t;
+  lagging = t < target * 0.9;
+  for (const b of bodies) b.spin += clamp(b.spinRate * t, -0.05, 0.05);
+}
+// 멈춰 있을 때나 별이 부풀 때도 겹치면 삼킨다
+function overlapCheck() {
+  const n = bodies.length;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = bodies[i], b = bodies[j];
+    const d = Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    if (d < a.R + b.R) events.push(0, a, b);
+  }
+  processEvents();
+}
+let pulseCount = new Map();
+function stepSpecial(rdt, frame) {
+  for (const b of bodies) {
+    b.heat *= Math.exp(-rdt / 30);
+    if (isNS(b)) {
+      const prev = Math.floor(b.beam / Math.PI);
+      b.beam += rdt * 2 * Math.PI * 0.85;
+      if (Math.floor(b.beam / Math.PI) !== prev) relShell(b, 0.34, 1.7, [0.5, 0.72, 1.0], 0.5, 2.0);
+    }
+    if (isBH(b)) { b.jetBurst = Math.max(0, b.jetBurst - rdt); b.activity *= Math.exp(-rdt / 9); }
+    if (b.stage === 'qs' && !b.anim && !paused) b.core = Math.min(b.m * 0.5, b.core * (1 + 0.0 * rdt));
+  }
+  if (frame % 15 === 0) {
+    for (const b of bodies) {
+      if (b.kind !== 'planet') { b.fluxHeat = 0; continue; }
+      let F = 0; for (const s of bodies) if (s !== b && isLum(s) && s.L > 0) F += s.L / Math.max((s.x - b.x) ** 2 + (s.y - b.y) ** 2 + (s.z - b.z) ** 2, 1e-30);
+      b.teq = F > 0 ? 278 * Math.pow(F, 0.25) : 3;
+      b.fluxHeat = clamp((b.teq - 1000) / 1200, 0, 1);
+    }
+  }
+}
+
+// =====================================================================
+//  화면 위 글씨 (이름, 질량중심, 놓을 곳)
+// =====================================================================
+function drawOverlay() {
+  const c = octx; c.clearRect(0, 0, W, H);
+  c.font = '12px "Malgun Gothic", sans-serif'; c.textBaseline = 'middle';
+  const items = frameInfo.items || [];
+  const taken = [];
+  const free = (x, y, w) => { for (const t of taken) if (Math.abs(t[0] - x) < (t[2] + w) / 2 + 4 && Math.abs(t[1] - y) < 13) return false; return true; };
+  const order = items.slice().sort((a, b) => (b.b.id === selId) - (a.b.id === selId) || b.b.m - a.b.m);
+  for (const it of order) {
+    const b = it.b; if (it.w <= 0) continue;
+    const sx = (it.vc[0] / it.w / tanX * 0.5 + 0.5) * W, sy = (0.5 - it.vc[1] / it.w / tanY * 0.5) * H;
+    if (sx < -50 || sx > W + 50 || sy < -50 || sy > H + 50) continue;
+    it.sx = sx; it.sy = sy;
+    const rp = Math.max(it.rpx, 3);
+    if (b.id === selId) {
+      const r = Math.max(rp + 7, 11), l = Math.min(r * 0.5, 9);
+      c.strokeStyle = 'rgba(140,200,255,.95)'; c.lineWidth = 1.5; c.beginPath();
+      for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { c.moveTo(sx + dx * r, sy + dy * (r - l)); c.lineTo(sx + dx * r, sy + dy * r); c.lineTo(sx + dx * (r - l), sy + dy * r); }
+      c.stroke();
+    } else if (b.id === hoverId) { c.strokeStyle = 'rgba(200,220,255,.5)'; c.lineWidth = 1; c.beginPath(); c.arc(sx, sy, Math.max(rp + 6, 9), 0, 7); c.stroke(); }
+    const wantLabel = b.id === selId || b.id === hoverId || (show.label && (bodies.length < 60 || b.kind === 'star'));
+    if (wantLabel && rp < W * 0.25) {
+      const tw = c.measureText(b.name).width;
+      const lx = sx + rp + 6, ly = sy - Math.min(rp, 8) * 0.3;
+      if (b.id === selId || free(lx + tw / 2, ly, tw)) {
+        taken.push([lx + tw / 2, ly, tw]);
+        c.fillStyle = 'rgba(0,0,0,.55)'; c.fillText(b.name, lx + 1, ly + 1);
+        c.fillStyle = b.id === selId ? '#fff' : 'rgba(215,226,242,.85)'; c.fillText(b.name, lx, ly);
+      }
+    }
+  }
+  // 질량중심
+  if (show.com && bodies.length > 1) {
+    const cm = systemCOM(); const p = project(cm[0], cm[1], cm[2]);
+    if (p) { c.strokeStyle = 'rgba(255,220,120,.95)'; c.lineWidth = 1.5; c.beginPath(); c.arc(p.x, p.y, 6, 0, 7); c.moveTo(p.x - 11, p.y); c.lineTo(p.x + 11, p.y); c.moveTo(p.x, p.y - 11); c.lineTo(p.x, p.y + 11); c.stroke(); c.fillStyle = 'rgba(255,225,140,.95)'; c.fillText('전체 질량중심', p.x + 13, p.y + 10); comScreen = p; }
+    const s = byId(selId);
+    const pairs = [];
+    if (s && s.prim) pairs.push([s, s.prim]);
+    else for (const o of bodies) if (o.prim && o.prim.kind === 'star' && o.m > o.prim.m * 1e-4) pairs.push([o, o.prim]);
+    for (const [a, b] of pairs.slice(0, 8)) {
+      const M = a.m + b.m; const q = project((a.x * a.m + b.x * b.m) / M, (a.y * a.m + b.y * b.m) / M, (a.z * a.m + b.z * b.m) / M);
+      const pa = project(a.x, a.y, a.z), pb = project(b.x, b.y, b.z);
+      if (!q || !pa || !pb) continue;
+      c.strokeStyle = 'rgba(255,200,110,.35)'; c.lineWidth = 1; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(pa.x, pa.y); c.lineTo(pb.x, pb.y); c.stroke(); c.setLineDash([]);
+      c.fillStyle = 'rgba(255,205,120,.95)'; c.beginPath(); c.moveTo(q.x, q.y - 5); c.lineTo(q.x + 5, q.y); c.lineTo(q.x, q.y + 5); c.lineTo(q.x - 5, q.y); c.closePath(); c.fill();
+      if (a === s || pairs.length === 1) c.fillText(`${a.name}·${b.name} 질량중심`, q.x + 8, q.y - 9);
+    }
+  } else comScreen = null;
+  // 골디락스 존 이름 (고른 별)
+  if (show.hz) {
+    const s = byId(selId) || bodies.find(b => isLum(b) && b.L > 1e-9 && b.stage !== 'ns');
+    if (s && isLum(s) && s.L > 1e-9) { const r = Math.sqrt(s.L / 0.53); const p = project(s.x + r, s.y, s.z); if (p) { c.fillStyle = 'rgba(120,230,150,.9)'; c.fillText('골디락스 존', p.x + 4, p.y); } }
+  }
+  // 거리 눈금 글씨
+  for (const g of gridInfo) { const p = project(cam.target[0] + g.r, cam.target[1], cam.target[2]); if (p) { c.fillStyle = `rgba(150,180,230,${g.a * 2})`; c.fillText(fmtDist(g.r), p.x + 4, p.y - 7); } }
+  // 놓을 곳
+  if (tool !== 'select' && hoverScreen) {
+    const t = curType(), m = curMass();
+    const p0 = place ? place.p0 : hoverPlane;
+    if (p0) {
+      const p = project(p0[0], p0[1], p0[2]);
+      if (p) {
+        const rr = Math.max(newRadius(t, m) / p.w * PPU, 5);
+        c.strokeStyle = 'rgba(255,220,140,.9)'; c.lineWidth = 1.2; c.setLineDash([4, 3]); c.beginPath(); c.arc(p.x, p.y, Math.min(rr, 400), 0, 7); c.stroke(); c.setLineDash([]);
+        c.fillStyle = 'rgba(255,225,160,.95)'; c.fillText(t.name + ' · ' + massText(t.kind, t.stage, m), p.x + Math.min(rr, 400) + 6, p.y);
+        if (place && place.moved && place.cur) { const q = project(place.cur[0], place.cur[1], place.cur[2]); if (q) { c.strokeStyle = 'rgba(255,200,100,.9)'; c.lineWidth = 2; c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.stroke(); const ang = Math.atan2(q.y - p.y, q.x - p.x); c.beginPath(); c.moveTo(q.x, q.y); c.lineTo(q.x - 9 * Math.cos(ang - 0.4), q.y - 9 * Math.sin(ang - 0.4)); c.moveTo(q.x, q.y); c.lineTo(q.x - 9 * Math.cos(ang + 0.4), q.y - 9 * Math.sin(ang + 0.4)); c.stroke(); } }
+      }
+    }
+  }
+  // 아래 오른쪽 크기 표시
+  const fb = cam.follow === 'com' ? '전체 질량중심' : (byId(cam.follow)?.name || '빈 곳');
+  $('scale').innerHTML = `화면 가로 약 <b>${fmtDist(2 * tanX * cam.dist)}</b><br>보는 곳: <b>${fb}</b> · 천체 ${bodies.length}개`;
+}
+let comScreen = null;
+
+// =====================================================================
+//  마우스·손가락
+// =====================================================================
+const ptrs = new Map();
+let drag = null, lastClick = { t: 0, id: null }, pinch = null;
+function pickAt(sx, sy) {
+  let best = null, bw = Infinity;
+  for (const it of frameInfo.items || []) {
+    if (it.w <= 0 || it.sx == null) continue;
+    const r = Math.max(it.rpx, 7) + 5;
+    const d = Math.hypot(it.sx - sx, it.sy - sy);
+    if (d < r && (it.w < bw || (d < 8 && it.rpx < 3))) { best = it.b; bw = it.w; }
+  }
+  return best;
+}
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('pointerdown', (e) => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    place = null; drag = null; return;
+  }
+  const mode = e.button === 2 ? 'rotate' : e.button === 1 ? 'pan' : (tool === 'select' ? 'rotate' : 'place');
+  drag = { mode, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, t: performance.now(), button: e.button };
+  if (mode === 'place') { const p = planePoint(e.clientX, e.clientY); if (p) place = { p0: p, cur: p, moved: false }; else { place = null; log('궤도면이 보이게 화면을 조금 기울여 주세요.', 1); } }
+});
+cv.addEventListener('pointermove', (e) => {
+  const pr = ptrs.get(e.pointerId); if (pr) { pr.x = e.clientX; pr.y = e.clientY; }
+  hoverScreen = [e.clientX, e.clientY];
+  if (tool !== 'select') hoverPlane = planePoint(e.clientX, e.clientY);
+  if (pinch && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    if (d > 0 && pinch.d > 0) cam.tdist *= pinch.d / d;
+    cam.yaw -= (mx - pinch.mx) * 0.006; cam.pitch += (my - pinch.my) * 0.006;
+    pinch.d = d; pinch.mx = mx; pinch.my = my; return;
+  }
+  if (!drag) { if (e.pointerType === 'mouse') { const h = pickAt(e.clientX, e.clientY); hoverId = h ? h.id : null; } return; }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
+  if (drag.mode === 'rotate') { cam.yaw -= dx * 0.006; cam.pitch += dy * 0.006; }
+  else if (drag.mode === 'pan') {
+    const s = cam.dist * 2 * tanY / H; const r = [VR[0], VR[1], VR[2]], u = [VR[3], VR[4], VR[5]];
+    if (cam.follow != null) { cam.target = cam.target.slice(); cam.follow = null; }
+    cam.target = vadd(cam.target, vadd(vmul(r, -dx * s), vmul(u, dy * s)));
+  } else if (drag.mode === 'place' && place) {
+    const p = planePoint(e.clientX, e.clientY); if (p) place.cur = p;
+    place.moved = drag.moved;
+  }
+});
+function endPtr(e) {
+  ptrs.delete(e.pointerId);
+  if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.mode === 'place' && place) {
+    const drv = place.moved ? vsub(place.cur, place.p0) : null;
+    tryPlace(place.p0, drv); place = null; return;
+  }
+  if (d.mode === 'rotate' && !d.moved && d.button !== 2 && performance.now() - d.t < 500) {
+    // 누르기 = 고르기, 두 번 누르기 = 따라가기
+    if (comScreen && Math.hypot(comScreen.x - e.clientX, comScreen.y - e.clientY) < 10) { setFollow('com'); log('전체 질량중심을 따라갑니다.'); return; }
+    const b = pickAt(e.clientX, e.clientY);
+    const now = performance.now();
+    if (b && lastClick.id === b.id && now - lastClick.t < 380) setFollow(b.id, true);
+    lastClick = { t: now, id: b ? b.id : null };
+    selId = b ? b.id : null;
+  }
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('pointerleave', () => { hoverScreen = null; hoverId = null; });
+cv.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const k = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
+  cam.tdist *= Math.exp(clamp(e.deltaY * k, -400, 400) * 0.0013);
+}, { passive: false });
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { paused = !paused; updSpeed(); e.preventDefault(); }
+  else if (e.key === 'Delete') { const b = byId(selId); if (b) { log(`${b.name}을(를) 삭제했습니다.`); killBody(b, null); bodies = bodies.filter(x => !x.dead); } }
+  else if (e.key === 'f' || e.key === 'F' || e.key === 'ㄹ') { if (selId) setFollow(selId, true); }
+  else if (e.key === 'Escape') { if (tool !== 'select') setTool('select'); else selId = null; }
+  else if (e.key === '=' || e.key === '+' || e.key === '.') { $('bFast').onclick(); }
+  else if (e.key === '-' || e.key === ',') { $('bSlow').onclick(); }
+});
+
+// =====================================================================
+//  불러오기 (실제 자료로 만든 우주)
+// =====================================================================
+function kepler(prim, a, e, iD, OD, wD, MD, m) {
+  const d2r = Math.PI / 180, mu = G * (prim.m + m);
+  const i = iD * d2r, O = OD * d2r, w = wD * d2r, M = MD * d2r;
+  let E = M; for (let k = 0; k < 40; k++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  const cE = Math.cos(E), sE = Math.sin(E), r = a * (1 - e * cE);
+  const xp = a * (cE - e), yp = a * Math.sqrt(1 - e * e) * sE;
+  const f = Math.sqrt(mu * a) / r, vxp = -f * sE, vyp = f * Math.sqrt(1 - e * e) * cE;
+  const cO = Math.cos(O), sO = Math.sin(O), cw = Math.cos(w), sw = Math.sin(w), ci = Math.cos(i), si = Math.sin(i);
+  const R11 = cO * cw - sO * sw * ci, R12 = -cO * sw - sO * cw * ci, R21 = sO * cw + cO * sw * ci, R22 = -sO * sw + cO * cw * ci, R31 = sw * si, R32 = cw * si;
+  const X = R11 * xp + R12 * yp, Y = R21 * xp + R22 * yp, Z = R31 * xp + R32 * yp;
+  const VX = R11 * vxp + R12 * vyp, VY = R21 * vxp + R22 * vyp, VZ = R31 * vxp + R32 * vyp;
+  // 황도 좌표(X,Y,Z) → 화면 좌표(X, Z, -Y): 위(+y)가 북쪽
+  return { x: prim.x + X, y: prim.y + Z, z: prim.z - Y, vx: prim.vx + VX, vy: prim.vy + VZ, vz: prim.vz - VY };
+}
+function orbitAdd(prim, o, el) { const b = newBody(o); Object.assign(b, kepler(prim, el[0], el[1], el[2] || 0, el[3] || 0, el[4] || 0, el[5] ?? rnd(0, 360), b.m)); addBody(b); return b; }
+function toCOMFrame() {
+  let M = 0, px = 0, py = 0, pz = 0, x = 0, y = 0, z = 0;
+  for (const b of bodies) { M += b.m; px += b.vx * b.m; py += b.vy * b.m; pz += b.vz * b.m; x += b.x * b.m; y += b.y * b.m; z += b.z * b.m; }
+  if (!M) return;
+  for (const b of bodies) { b.vx -= px / M; b.vy -= py / M; b.vz -= pz / M; b.x -= x / M; b.y -= y / M; b.z -= z / M; }
+}
+const D = Math.PI / 180;
+const spinD = (days) => 2 * Math.PI / (days * DAY);
+const PRESETS = [
+  { name: '빈 우주', desc: '아무것도 없는 우주입니다. 추가 버튼으로 천체를 넣습니다.', build() { return { dist: 6, speed: 5 }; } },
+  { name: '태양계', desc: '태양, 행성 8개, 달, 명왕성. 실제 궤도 자료로 배치했습니다.', build() {
+    const S = addBody(newBody({ kind: 'star', stage: 'ms', m: 1, name: '태양', seed: 3 })); S.spinRate = spinD(25.4); S.tilt = 7.25 * D;
+    const P = (name, sub, m, Rkm, el, tilt, spinDays, pal) => { const b = orbitAdd(S, { kind: 'planet', sub, m, R: Rkm / AU_KM, name, tilt: tilt * D, tiltDir: 0, pal }, el); b.spinRate = spinD(spinDays); return b; };
+    P('수성', 'moon', 1.660e-7, 2440, [0.387, 0.2056, 7.0, 48.3, 29.1, 174.8], 0.03, 58.6, { c1: [0.35, 0.33, 0.31], c2: [0.62, 0.58, 0.54], c3: [0.6, 0.6, 0.6], atm: [0, 0, 0], par: [0, 0, 0, 2] });
+    P('금성', 'venus', 2.448e-6, 6052, [0.723, 0.0068, 3.39, 76.7, 54.9, 50.5], 177.4, -243, PAL.venus);
+    const E = P('지구', 'earth', 3.003e-6, 6371, [1.000, 0.0167, 0.0, 0, 102.9, 357.5], 23.44, 1, PAL.earth);
+    P('화성', 'desert', 3.227e-7, 3390, [1.524, 0.0934, 1.85, 49.6, 286.5, 19.4], 25.2, 1.03, PAL.desert);
+    P('목성', 'gas', 9.546e-4, 69911, [5.203, 0.0484, 1.30, 100.5, 274.3, 19.65], 3.1, 0.41, PAL.gas);
+    const Sa = P('토성', 'gas', 2.858e-4, 58232, [9.537, 0.0539, 2.49, 113.7, 338.9, 317.35], 26.7, 0.44, { c1: [0.88, 0.80, 0.60], c2: [0.74, 0.64, 0.45], c3: [0.95, 0.90, 0.75], atm: [0.9, 0.8, 0.6], par: [0, 0, 0.3, 2] });
+    Sa.ring = { in: 1.24, out: 2.27, col: [0.85, 0.77, 0.62] };
+    P('천왕성', 'ice', 4.366e-5, 25362, [19.19, 0.0473, 0.77, 74.0, 96.9, 142.25], 97.8, -0.72, { c1: [0.62, 0.86, 0.90], c2: [0.55, 0.80, 0.86], c3: [0.75, 0.92, 0.95], atm: [0.6, 0.9, 0.95], par: [0, 0, 0.5, 2] });
+    P('해왕성', 'ice', 5.151e-5, 24622, [30.07, 0.0086, 1.77, 131.8, 273.2, 259.9], 28.3, 0.67, PAL.ice);
+    P('명왕성', 'dwarf', 6.55e-9, 1188, [39.48, 0.2488, 17.14, 110.3, 113.8, 14.86], 122.5, -6.39, PAL.dwarf);
+    const Mo = orbitAdd(E, { kind: 'planet', sub: 'moon', m: 3.694e-8, R: 1737 / AU_KM, name: '달', tilt: 6.7 * D, tiltDir: 0 }, [0.002570, 0.0549, 5.145, 125, 318, 135]); Mo.spinRate = spinD(27.3);
+    toCOMFrame();
+    return { dist: 4.2, speed: 5, follow: S.id, pitch: 0.5 };
+  } },
+  { name: '지구와 달', desc: '지구와 달만 있습니다. 달을 지구에 가까이 보내면 로슈 한계 안에서 부서집니다.', build() {
+    const E = addBody(newBody({ kind: 'planet', sub: 'earth', m: 3.003e-6, R: 6371 / AU_KM, name: '지구', tilt: 23.44 * D, pal: PAL.earth })); E.spinRate = spinD(1);
+    const Mo = orbitAdd(E, { kind: 'planet', sub: 'moon', m: 3.694e-8, R: 1737 / AU_KM, name: '달', tilt: 6.7 * D }, [0.002570, 0.0549, 5.1, 0, 0, 0]); Mo.spinRate = spinD(27.3);
+    toCOMFrame();
+    return { dist: 0.0075, speed: 3, follow: E.id, pitch: 0.45 };
+  } },
+  { name: '트라피스트-1', desc: '작은 적색왜성 둘레의 지구만 한 행성 7개. 골디락스 존 안에 행성이 여러 개 있습니다.', build() {
+    const S = addBody(newBody({ kind: 'star', stage: 'ms', m: 0.0898, R: 0.1192 * RSUN, T: 2566, name: '트라피스트-1' }));
+    const data = [['b', 1.374, 0.01154, 1.116], ['c', 1.308, 0.01580, 1.097], ['d', 0.388, 0.02227, 0.788], ['e', 0.692, 0.02925, 0.920], ['f', 1.039, 0.03849, 1.045], ['g', 1.321, 0.04683, 1.129], ['h', 0.326, 0.06189, 0.755]];
+    data.forEach(([n, me, a, rr], i) => { const sub = i < 2 ? 'venus' : i < 6 ? 'earth' : 'desert'; const b = orbitAdd(S, { kind: 'planet', sub, m: me * MEARTH, R: rr * REARTH, name: '트라피스트-1' + n }, [a, 0.005, 0.1 * i, 0, 0, i * 51]); b.spinRate = 0.0001; });
+    show.hz = true; syncToggles();
+    return { dist: 0.11, speed: 3, follow: S.id, pitch: 0.7 };
+  } },
+  { name: '시리우스 A·B', desc: '밤하늘에서 가장 밝은 별과 그 짝 백색왜성. 시리우스 B에 Ia형 초신성 버튼이 있습니다.', build() {
+    const A = addBody(newBody({ kind: 'star', stage: 'ms', m: 2.06, R: 1.711 * RSUN, T: 9940, name: '시리우스 A' }));
+    const B = orbitAdd(A, { kind: 'star', stage: 'wd', m: 1.018, R: 0.0084 * RSUN, T: 25000, wdT: 25000, name: '시리우스 B' }, [19.8, 0.59, 0, 0, 0, 180]);
+    return { dist: 55, speed: 7, follow: 'com', pitch: 0.8 };
+  } },
+  { name: '케플러-16 쌍성계', desc: '두 별의 둘레를 함께 도는 행성이 있습니다. 질량중심 보기를 켜 보세요.', build() {
+    const A = addBody(newBody({ kind: 'star', stage: 'ms', m: 0.6897, R: 0.6489 * RSUN, T: 4450, name: '케플러-16 A' }));
+    const B = orbitAdd(A, { kind: 'star', stage: 'ms', m: 0.20255, R: 0.2262 * RSUN, T: 3311, name: '케플러-16 B' }, [0.22431, 0.15944, 0, 0, 263.5, 0]);
+    toCOMFrame();
+    const C = { m: A.m + B.m, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
+    const pl = orbitAdd(C, { kind: 'planet', sub: 'gas', m: 0.333 * MJUP, name: '케플러-16 b', pal: { c1: [0.72, 0.66, 0.6], c2: [0.5, 0.45, 0.42], c3: [0.85, 0.82, 0.78], atm: [0.7, 0.7, 0.7], par: [0, 0, 0.3, 2] } }, [0.7048, 0.0069, 0.3, 0, 318, 90]);
+    show.com = true; syncToggles();
+    return { dist: 2.4, speed: 4, follow: 'com', pitch: 0.75 };
+  } },
+  { name: '루만 16 (갈색왜성 쌍성)', desc: '태양계에서 가장 가까운 갈색왜성 둘이 서로 돕니다. 목성 질량의 34배와 28배입니다.', build() {
+    const A = addBody(newBody({ kind: 'star', stage: 'brown', m: 34.2 * MJUP, name: '루만 16 A' }));
+    const B = orbitAdd(A, { kind: 'star', stage: 'brown', m: 27.9 * MJUP, name: '루만 16 B' }, [3.56, 0.34, 0, 0, 0, 180]);
+    show.hz = true; syncToggles();
+    return { dist: 9, speed: 7, follow: 'com', pitch: 0.7 };
+  } },
+  { name: 'PSR B1257+12 펄서 행성', desc: '처음 발견된 외계 행성들은 중성자별(펄서) 둘레를 돌고 있었습니다.', build() {
+    const N = addBody(newBody({ kind: 'star', stage: 'ns', m: 1.4, name: 'PSR B1257+12', tilt: 0.5 }));
+    const dk = { c1: [0.25, 0.22, 0.24], c2: [0.42, 0.38, 0.40], c3: [0.5, 0.48, 0.5], atm: [0, 0, 0], par: [0, 0, 0, 2] };
+    orbitAdd(N, { kind: 'planet', sub: 'moon', m: 0.020 * MEARTH, name: '드라우그', pal: dk }, [0.19, 0, 0, 0, 0, 0]);
+    orbitAdd(N, { kind: 'planet', sub: 'desert', m: 4.3 * MEARTH, name: '포에트게이스트', pal: jitterPal(PAL.desert, 0.3) }, [0.36, 0.0186, 0, 0, 0, 120]);
+    orbitAdd(N, { kind: 'planet', sub: 'desert', m: 3.9 * MEARTH, name: '포빌로르', pal: jitterPal(PAL.moon, 0.3) }, [0.46, 0.0252, 0, 0, 0, 240]);
+    return { dist: 1.3, speed: 4, follow: N.id, pitch: 0.6 };
+  } },
+  { name: '베텔게우스', desc: '오리온자리의 적색초거성. 다음 단계를 누르면 초신성으로 터지고 중성자별이 남습니다.', build() {
+    const B = addBody(newBody({ kind: 'star', stage: 'rsg', m: 16.5, mi: 18, name: '베텔게우스' }));
+    return { dist: 18, speed: 7, follow: B.id, pitch: 0.35 };
+  } },
+  { name: '블랙홀이 별을 찢음 (조석 파괴)', desc: '태양 질량 100만 배 블랙홀 쪽으로 태양 같은 별이 떨어집니다. 로슈 한계 안에서 갈가리 찢어집니다.', build() {
+    const H = addBody(newBody({ kind: 'star', stage: 'bh', m: 1e6, name: '블랙홀', tilt: 0.3 }));
+    const s = newBody({ kind: 'star', stage: 'ms', m: 1, name: '별' });
+    const r = 6, q = 0.5, mu = G * (H.m + 1), v = Math.sqrt(2 * mu / r), vt = Math.sqrt(2 * mu * q) / r, vr = -Math.sqrt(Math.max(0, v * v - vt * vt));
+    s.x = r; s.y = 0; s.z = 0; s.vx = vr; s.vy = 0; s.vz = -vt; addBody(s);
+    show.roche = true; syncToggles(); selId = s.id;
+    return { dist: 9, speed: 2, follow: H.id, pitch: 0.75 };
+  } },
+  { name: '쿼시별', desc: '태양 질량 1000배의 거대한 별. 확대해서 안으로 들어가면 가운데 블랙홀이 보입니다.', build() {
+    const Q = addBody(newBody({ kind: 'star', stage: 'qs', m: 1000, name: '쿼시별', core: 20, tilt: 0.4 }));
+    return { dist: 160, speed: 7, follow: Q.id, pitch: 0.3 };
+  } },
+];
+function clearWorld() {
+  bodies = []; NP = 0; effects = []; events.length = 0; nameCount = {}; selId = null; hoverId = null; simTime = 0; accDirty = true;
+  cam.follow = null; cam.target = [0, 0, 0]; cam.off = [0, 0, 0];
+}
+function syncToggles() { document.querySelectorAll('#tools [data-tog]').forEach(b => b.classList.toggle('on', !!show[b.dataset.tog])); }
+function loadPreset(i) {
+  clearWorld();
+  const r = PRESETS[i].build() || {};
+  cam.tdist = cam.dist = r.dist || 6; cam.pitch = r.pitch ?? 0.55; speedIdx = r.speed ?? 5; paused = false;
+  if (r.follow != null) { cam.follow = r.follow; const b = byId(r.follow); cam.target = b ? [b.x, b.y, b.z] : systemCOM(); }
+  computePrimaries(); clearTrails(); updSpeed();
+  $('loadMenu').classList.add('hide');
+  if (i > 0) log(`'${PRESETS[i].name}'을(를) 불러왔습니다.`);
+  saveSoon();
+}
+(function buildPresets() {
+  const box = $('presetList');
+  PRESETS.forEach((p, i) => { const b = document.createElement('button'); b.className = 'preset'; b.innerHTML = `<b>${p.name}</b><span>${p.desc}</span>`; b.onclick = () => loadPreset(i); box.appendChild(b); });
+})();
+$('bLoad').onclick = () => $('loadMenu').classList.remove('hide');
+$('bLoadClose').onclick = () => $('loadMenu').classList.add('hide');
+$('loadMenu').onclick = (e) => { if (e.target.id === 'loadMenu') $('loadMenu').classList.add('hide'); };
+$('bNew').onclick = () => { if (bodies.length === 0 || confirm('지금 우주를 지우고 빈 우주로 시작합니까?')) { loadPreset(0); } };
+
+// =====================================================================
+//  저장
+// =====================================================================
+const SAVE_KEY = 'cosmosLab_v1';
+const SAVE_FIELDS = ['id', 'name', 'kind', 'sub', 'stage', 'm', 'mi', 'R', 'T', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'spin', 'spinRate', 'tilt', 'tiltDir', 'seed', 'pal', 'ring', 'core', 'jetOn', 'wdT'];
+let saveTimer = null;
+function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 600); }
+function saveNow() {
+  try {
+    const data = { v: 1, simTime, speedIdx, nextId, nameCount, show, cam: { yaw: cam.yaw, pitch: cam.pitch, dist: cam.tdist, follow: cam.follow, target: cam.target },
+      bodies: bodies.filter(b => !b.dead).map(b => { const o = {}; for (const k of SAVE_FIELDS) o[k] = b[k]; if (b.anim) { o.R = b.R; } return o; }) };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) { }
+}
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!s || s.v !== 1) return false;
+    clearWorld();
+    for (const o of s.bodies) { const b = newBody(o); b.id = o.id; b.R = o.R; b.T = o.T; updLum(b); bodies.push(b); }
+    nextId = Math.max(s.nextId || 1, ...bodies.map(b => b.id + 1), 1);
+    nameCount = s.nameCount || {}; simTime = s.simTime || 0; speedIdx = s.speedIdx ?? 5;
+    Object.assign(show, s.show || {}); syncToggles();
+    cam.yaw = s.cam.yaw; cam.pitch = s.cam.pitch; cam.dist = cam.tdist = s.cam.dist; cam.follow = s.cam.follow; cam.target = s.cam.target || [0, 0, 0];
+    if (cam.follow != null && cam.follow !== 'com' && !byId(cam.follow)) cam.follow = null;
+    accDirty = true; computePrimaries(); clearTrails();
+    return true;
+  } catch (e) { return false; }
+}
+setInterval(saveNow, 15000);
+window.addEventListener('pagehide', saveNow);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+
+// =====================================================================
+//  시작
+// =====================================================================
+let frame = 0, lastT = performance.now(), errShown = false;
+function hintText() {
+  const s = byId(selId);
+  if (tool !== 'select') return matchMedia('(pointer: coarse)').matches ? '누르면 놓고, 누른 채로 끌면 던집니다. 두 손가락으로 끌면 화면이 돌아갑니다.' : '누르면 놓고, 누른 채로 끌면 던집니다. 오른쪽 버튼으로 끌면 화면이 돌아갑니다.';
+  if (s && s.stage === 'qs' && camDistTo(s.x, s.y, s.z) > s.R * 1.6) return '쿼시별을 더 확대해서 안으로 들어가면 가운데 블랙홀이 보입니다.';
+  if (!bodies.length) return '추가 버튼으로 천체를 넣거나, 불러오기에서 태양계 같은 우주를 고릅니다.';
+  return '';
+}
+function loop(now) {
+  requestAnimationFrame(loop);
+  try {
+    const rdt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now; gTime += rdt; frame++;
+    if (!paused) simulate(rdt);
+    stepAnims(rdt); stepEffects(rdt); stepParticlesFx(rdt); stepSpecial(rdt, frame);
+    if (paused || bodies.some(b => b.anim)) overlapCheck();
+    if (frame % 10 === 0) computePrimaries();
+    if (frame % 120 === 0) cleanupFar();
+    updateCamera(rdt);
+    if (!paused) recordTrails();
+    render();
+    drawOverlay();
+    if (frame % 8 === 0) { updatePanel(); updSpeed(); $('simTime').innerHTML = '흐른 시간 <b>' + fmtTime(simTime) + '</b>'; const h = hintText(); $('hintbar').textContent = h; $('hintbar').classList.toggle('hide', !h); }
+  } catch (e) {
+    console.error(e);
+    if (!errShown) { errShown = true; showErr('오류가 났습니다: ' + (e && e.message) + '\n(게임은 계속 돌아갑니다)'); setTimeout(() => { const el = $('err'); if (el) el.remove(); errShown = false; }, 6000); }
+  }
+}
+function boot() {
+  resize();
+  if (!gl) return;
+  initGL();
+  if (!loadSave()) loadPreset(0);
+  updSpeed(); syncToggles();
+  requestAnimationFrame((t) => { lastT = t; loop(t); });
+}
+window.__dbg = { PX, PS, get bodies() { return bodies; }, cam, loadPreset, PRESETS, setFollow, startStage, startIa, render: () => { updateCamera(0.016); render(); drawOverlay(); }, sim: (s) => { for (let i = 0; i < s; i++) simulate(1 / 60); }, get NP() { return NP; }, show, setSel: (id) => { selId = id; }, byId, setTool, tryPlace, setSpeed: (i) => { speedIdx = i; updSpeed(); }, pause: (p) => { paused = p; }, effects: () => effects };
+boot();
+</script>
+<script src="../track.js" defer></script>
+</body>
+</html>

@@ -67,6 +67,7 @@
     'ssuksu': { pinch: 0 },
     'random-system': { mouse: 1 },
     'stellar': { mouse: 1 },
+    'cosmos': { pinch: 0 },
     'random-life': {
       pinch: 0, show: () => g(() => MODE) === 'live' && !g(() => modalOpen),
       dpad: 1, R: [{ t: '행동', k: 'KeyE', big: 1 }], css: LIFT(),
