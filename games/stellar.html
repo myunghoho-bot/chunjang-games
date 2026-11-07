@@ -513,35 +513,71 @@ function drawStar(s,vw,now){
     if(bd){ctx.globalAlpha=bigA*0.09;for(let k=-10;k<=10;k++){ctx.fillStyle=k%2?'#000':'#fff';const y=cy+k*H*0.07+Math.sin(k*1.7+now*2e-4)*H*0.01;ctx.fillRect(0,y,vwc,H*0.035);}}
     ctx.globalCompositeOperation='overlay';ctx.globalAlpha=bigA*(/rgb|agb|rsg/.test(s.ph)?0.75:0.45);ctx.fillStyle=GRANP;ctx.translate((now*0.003)%256,0);ctx.fillRect(-512,0,vwc+768,H);
     ctx.restore();
-    {const e=Math.min(H*0.022,vwc*0.11);const mode=/^(rgb|agb|hb|sg)$/.test(s.ph)?'flat':s.ph==='pn'?'open':s.ph==='pre'?'squint':(s.T<700?'sleep':'arc');drawEyes(Math.min(vwc*0.55,vwc-e*3.2),cy-e*0.3,e,mode,0.6,bigA,7,now);}
+    {const big=s.ph==='agb'?1.25+0.5*smooth((s.R/sys.star.T.Ragb-0.4)/0.6):s.ph==='rgb'?1+0.3*smooth(s.R/(sys.star.T.Rtip||1)):1;const e=Math.min(H*0.022*big,vwc*0.11);const mode=s.ph==='sg'||s.ph==='hb'?'cup':s.ph==='rgb'||s.ph==='agb'?'angry':s.ph==='pn'?'open':s.ph==='pre'?'squint':(s.T<700?'sleep':'arc');drawEyes(Math.min(vwc*0.55,vwc-e*3.4),cy-e*0.3,e,mode,bigA,'star',now);}
     ctx.restore();
   }
-  if(s.cp>0.001){const x=SIM.cx,y=H/2,rr=Math.max(3,H*0.0075),bright=s.T>2500;ctx.save();ctx.globalAlpha=s.cp;if(bright){const g=ctx.createRadialGradient(x,y,rr*0.5,x,y,rr*7);g.addColorStop(0,rgba(col,.6));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rr*7,0,6.283);ctx.fill();}ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,rr,0,6.283);ctx.fill();if(!bright){ctx.strokeStyle='rgba(120,120,130,.35)';ctx.lineWidth=1;ctx.stroke();}if(SV.set.eyes&&s.cp>0.9){const big=Math.max(rr,H*0.016);ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,big,0,6.283);ctx.fill();drawEyes(x,y-big*0.05,big*0.27,s.T<350?'sleep':s.T<2000?'flat':'arc',0.5,1,11,now);}ctx.restore();}
+  if(s.cp>0.001){const x=SIM.cx,y=H/2,rr=Math.max(3,H*0.0075),bright=s.T>2500;ctx.save();ctx.globalAlpha=s.cp;if(bright){const g=ctx.createRadialGradient(x,y,rr*0.5,x,y,rr*7);g.addColorStop(0,rgba(col,.6));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rr*7,0,6.283);ctx.fill();}ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,rr,0,6.283);ctx.fill();if(!bright){ctx.strokeStyle='rgba(120,120,130,.35)';ctx.lineWidth=1;ctx.stroke();}if(SV.set.eyes&&s.cp>0.9){const big=Math.max(rr,H*0.016);ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,big,0,6.283);ctx.fill();drawEyes(x,y-big*0.05,big*0.27,s.T<350?'sleep':s.T<2000?'flat':'arc',1,'wd',now);}ctx.restore();}
   SIM.starHitX=s.cp<0.5?vw:SIM.cx+14;
 }
 function drawRing(x,y,r,ring,half,lf){const c=hexRGB(ring.col);ctx.save();ctx.translate(x,y);ctx.rotate(-0.3);ctx.beginPath();if(half==='back')ctx.rect(-r*3,-r*3,r*6,r*3);else ctx.rect(-r*3,0,r*6,r*3);ctx.clip();ctx.scale(1,0.28);for(const[a,b,al]of[[1.35,1.6,.55],[1.62,1.95,.75],[1.98,2.15,.4]]){ctx.beginPath();ctx.arc(0,0,(a+b)/2*r,0,6.283);ctx.lineWidth=(b-a)*r;ctx.strokeStyle=rgba(mulC(c,Math.max(lf,.15)),al);ctx.stroke();}ctx.restore();}
 function drawMoon(x,y,r,col,lf){const c=mulC(hexRGB(col),Math.max(lf,.12));const g=ctx.createRadialGradient(x-r*.4,y-r*.3,r*.1,x,y,r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.2),1));g.addColorStop(1,rgba(mulC(c,.6),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();}
-/* 플래닛볼 눈 (잡채TV 시리즈 3·4): 입 없음.
-   arc = ∩ (기분 좋음)  sleep = ◡ (조는 눈)  flat = — (덤덤)  squint = > < (뜨거움)  open = 눈동자 없는 흐리멍텅한 흰 눈, 살짝 길쭉 (적색거성 때) */
-function drawEyes(x,y,e,mode,look,al,seed,now){
+/* 플래닛볼 눈 (잡채TV 시리즈 3·4, 입 없음). 2026-11-07 아이가 영상을 다시 보라고 해서:
+   ① 얼굴이 돌아감(눈이 보는 쪽 끝으로 가고, 옆을 보면 눈이 세로로 섬) ② 모양이 스르륵 바뀜 ③ 단계마다 표정.
+   모양: arc ∩ · sleep ◡ · flat — · squint > < · open(눈동자 없는 흰 타원) · round(작은 흰 동그라미)
+        cup(위가 잘린 반달 흰 눈) · angry(안쪽이 내려간 흰 눈) · worry(바깥이 내려간 흰 눈) · sadline(/ \) */
+const EYE_ST=new Map(),FACE=new Map();
+function eyeShape(mode,e,sx,al){
+  const ink=`rgba(10,10,12,${0.92*al})`,lw=Math.max(1.2,e*0.38),wht=`rgba(255,255,255,${0.97*al})`;
+  ctx.strokeStyle=ink;ctx.lineWidth=lw;ctx.lineCap='round';ctx.lineJoin='round';
+  if(mode==='arc'){ctx.beginPath();ctx.arc(0,e*0.35,e*0.8,Math.PI*1.08,Math.PI*1.92);ctx.stroke();return;}
+  if(mode==='sleep'){ctx.beginPath();ctx.arc(0,-e*0.35,e*0.8,Math.PI*0.08,Math.PI*0.92);ctx.stroke();return;}
+  if(mode==='flat'){ctx.beginPath();ctx.moveTo(-e*0.8,0);ctx.lineTo(e*0.8,0);ctx.stroke();return;}
+  if(mode==='squint'){ctx.beginPath();ctx.moveTo(-sx*e*0.8,-e*0.55);ctx.lineTo(sx*e*0.55,0);ctx.lineTo(-sx*e*0.8,e*0.55);ctx.stroke();return;}
+  if(mode==='sadline'){ctx.beginPath();ctx.moveTo(-sx*e*0.2,-e*0.75);ctx.lineTo(sx*e*0.35,e*0.75);ctx.stroke();return;}
+  const w=e*0.74,h=e*1.05;ctx.beginPath();
+  if(mode==='round')ctx.arc(0,0,e*0.62,0,6.283);
+  else if(mode==='cup'){ctx.moveTo(-w,-h*0.2);ctx.lineTo(w,-h*0.2);ctx.ellipse(0,-h*0.2,w,h*0.95,0,0,Math.PI);ctx.closePath();}
+  else if(mode==='angry'||mode==='worry'){const inn=mode==='angry'?0.15:-0.55,out=mode==='angry'?-0.55:0.15;ctx.moveTo(sx*w,h*out);ctx.lineTo(-sx*w,h*inn);ctx.ellipse(0,h*0.05,w,h*0.8,0,Math.PI,0,true);ctx.closePath();}
+  else ctx.ellipse(0,0,w,h,0,0,6.283);
+  ctx.fillStyle=wht;ctx.fill();ctx.lineWidth=Math.max(1.2,e*0.3);ctx.stroke();
+}
+function drawEyes(x,y,e,mode,al,key,now,face){
   if(!SV.set.eyes||e<1.6)return;
-  const gap=e*1.6,ink=`rgba(10,10,12,${0.92*al})`,lw=Math.max(1.2,e*0.38);ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
-  let blink=mode==='open'&&((now/1000+(seed%97)*0.37)%5.2)<0.12;
-  for(const sx of[-1,1]){const ex=x+sx*gap,ey=y;ctx.strokeStyle=ink;ctx.lineWidth=lw;
-    if(mode==='arc'){ctx.beginPath();ctx.arc(ex,ey+e*0.35,e*0.8,Math.PI*1.08,Math.PI*1.92);ctx.stroke();continue;}
-    if(mode==='sleep'){ctx.beginPath();ctx.arc(ex,ey-e*0.35,e*0.8,Math.PI*0.08,Math.PI*0.92);ctx.stroke();continue;}
-    if(mode==='flat'||blink){ctx.beginPath();ctx.moveTo(ex-e*0.8,ey);ctx.lineTo(ex+e*0.8,ey);ctx.stroke();continue;}
-    if(mode==='squint'){ctx.beginPath();ctx.moveTo(ex-sx*e*0.8,ey-e*0.55);ctx.lineTo(ex+sx*e*0.55,ey);ctx.lineTo(ex-sx*e*0.8,ey+e*0.55);ctx.stroke();continue;}
-    const w=e*0.72,h=e*1.05;
-    ctx.fillStyle=`rgba(255,255,255,${0.97*al})`;ctx.beginPath();ctx.ellipse(ex,ey,w,h,0,0,6.283);ctx.fill();
-    ctx.lineWidth=Math.max(1.2,e*0.3);ctx.stroke();
-  }
+  let st=EYE_ST.get(key);if(!st){st={cur:mode,prev:null,t0:-1e9};EYE_ST.set(key,st);}
+  if(st.cur!==mode){st.prev=st.cur;st.cur=mode;st.t0=now;}
+  const t=clamp((now-st.t0)/380,0,1);
+  let cx=x,cy=y,rot=0;
+  if(face){cx=x+Math.cos(face.ang)*face.f*face.r*0.46;cy=y-face.r*0.06+Math.sin(face.ang)*face.f*face.r*0.46;let w=face.ang+Math.PI/2;w=((w+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;rot=w*smooth(face.f/0.7);}
+  const blink=(st.cur==='open'||st.cur==='round')&&((now/1000+((key.length*7+key.charCodeAt(key.length-1))%13)*0.41)%5.2)<0.12;
+  ctx.save();
+  if(face){ctx.beginPath();ctx.arc(x,y,face.r-0.5,0,6.283);ctx.clip();}
+  ctx.translate(cx,cy);ctx.rotate(rot);
+  const pair=(m,a)=>{if(a<=0.01)return;for(const sx of[-1,1]){ctx.save();ctx.translate(sx*e*1.6,0);eyeShape(m,e,sx,a);ctx.restore();}};
+  if(t<1&&st.prev)pair(st.prev,al*(1-t));
+  pair(blink?'flat':st.cur,al*(st.prev?t:1));
   ctx.restore();
 }
 const GIANT_PH=/^(sg|rgb|hb|agb|rsg|ysg|yhg|lbv)$/;
-function planetEye(lk,lf,near){if(near)return'open';if(SIM&&GIANT_PH.test(SIM.curPh||''))return'open';if(lf<0.22)return'sleep';
+function planetEye(lk,lf,near){
+  if(near)return'open';
+  const ph=SIM&&SIM.curPh||'';
+  if(ph==='sg'||ph==='ysg'||ph==='lbv')return'open';
+  if(ph==='rgb'||ph==='rsg')return'worry';
+  if(ph==='hb'||ph==='yhg')return'round';
+  if(ph==='agb')return'sadline';
+  if(lf<0.22)return'sleep';
   if(lk===LK.forming||lk===LK.magma||lk===LK.hot||lk===LK.hotgas||lk===LK.steam||lk===LK.cloud)return'squint';
   if(lk===LK.ocean||lk===LK.life||lk===LK.green)return'arc';if(lk===LK.gas||lk===LK.icegiant)return'sleep';return'flat';}
+function faceOf(p,now){
+  let F=FACE.get(p.id);if(!F){F={ang:Math.PI,f:0,ta:Math.PI,tf:0,next:now+1500+(p.seed%4000),lt:now};FACE.set(p.id,F);}
+  const giant=SIM&&GIANT_PH.test(SIM.curPh||'');
+  if(giant){F.ta=Math.PI;F.tf=p.kind==='rock'?0.55:0.78;}
+  else if(now>F.next){const r=(((p.seed%9973)*9301+Math.floor(now/997)*49297)%233280)/233280,k=Math.floor(r*5);
+    if(k===0){F.ta=Math.PI;F.tf=0.65;}else if(k===1){F.ta=0;F.tf=0.5;}else if(k===2){F.ta=Math.PI*(0.75+r*0.5);F.tf=0.35;}else if(k===3){F.ta=-Math.PI/2;F.tf=0.3;}else F.tf=0;
+    F.next=now+2500+r*5500;}
+  else if(!giant&&F.tf>0.7)F.tf=0;
+  const dt=Math.min(0.1,Math.max(0,(now-F.lt)/1000));F.lt=now;const k=1-Math.exp(-dt*2.6);
+  const da=((F.ta-F.ang+Math.PI*3)%(Math.PI*2))-Math.PI;F.ang+=da*k;F.f+=(F.tf-F.f)*k;return F;}
 function drawPlanetAt(p,lk,x,y,r,lf,age,showMoons,eye){
   ctx.save();
   const hotLk=lk===LK.forming||lk===LK.magma||lk===LK.hot||lk===LK.hotgas;
@@ -553,7 +589,7 @@ function drawPlanetAt(p,lk,x,y,r,lf,age,showMoons,eye){
   const dk=hotLk?Math.min(1,lf+0.5):lf;
   if(dk<0.995){ctx.fillStyle=`rgba(0,0,0,${1-dk})`;ctx.beginPath();ctx.arc(x,y,rr+1,0,6.283);ctx.fill();}
   if(ring)drawRing(x,y,r,p.ring,'front',lf);
-  if(r>=7){const now=performance.now(),look=-0.55+Math.sin(now/2300+p.seed%7)*0.35;drawEyes(x,y-r*0.06,r*0.27,eye||planetEye(lk,lf,false),look,Math.max(0.35,lf),p.seed,now);}
+  if(r>=7){const now=performance.now(),fc=faceOf(p,now);drawEyes(x,y,r*0.27,eye||planetEye(lk,lf,false),Math.max(0.35,lf),'p'+p.id,now,{ang:fc.ang,f:fc.f,r});}
   if(showMoons){const ms=shownMoons(p,age);ms.forEach((m,k)=>{const mr=Math.max(2.2,H*0.0075*m.size+1.2);drawMoon(x+(k-(ms.length-1)/2)*mr*3.4+r*0.25,y-r-mr*2.6-(k%2)*mr*1.6-(ring?r*0.2:0),mr,m.col,lf);});}
   if(SIM.sel&&SIM.sel.p===p){ctx.strokeStyle='rgba(255,255,255,.8)';ctx.setLineDash([4,4]);ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+6,0,6.283);ctx.stroke();ctx.setLineDash([]);}
   ctx.restore();
@@ -590,7 +626,7 @@ function drawMassive(sec,age,s,now){
     const col=starRGB(s.T),rr=H*(0.006+0.012*Math.log10(s.R+1)),vis=smooth(age/1e5);
     let g=ctx.createRadialGradient(cx,cy,rr*.5,cx,cy,rr*6);g.addColorStop(0,rgba(col,.55*vis));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,rr*6,0,6.283);ctx.fill();
     ctx.fillStyle=rgba(mixC(col,[255,255,255],.35),vis);ctx.beginPath();ctx.arc(cx,cy,rr,0,6.283);ctx.fill();
-    if(rr>=7)drawEyes(cx,cy-rr*0.05,rr*0.27,s.ph==='pre'?'sleep':s.ph==='lbv'||s.ph==='wr'?'squint':/sg|hg/.test(s.ph)?'flat':'arc',0.3,vis,5,now);
+    if(rr>=7)drawEyes(cx,cy-rr*0.05,rr*0.27,s.ph==='pre'?'sleep':s.ph==='lbv'||s.ph==='wr'?'squint':s.ph==='rsg'?'angry':/sg|hg/.test(s.ph)?'cup':'arc',vis,'ostar',now);
     if(s.ph==='lbv'||s.ph==='rsg'||s.ph==='wr'){for(let k=0;k<3;k++){const f=((now/1000*0.35)+k/3)%1;ctx.strokeStyle=rgba(col,(1-f)*0.3);ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,rr*(1.5+f*7),0,6.283);ctx.stroke();}}
   }
   if(sec>=tSNs){
@@ -725,7 +761,7 @@ function drawSelect(now){
     let g=ctx.createRadialGradient(it.x,it.y,it.r*0.6,it.x,it.y,it.r*(hov?2.4:1.8));g.addColorStop(0,rgba(c,.55));g.addColorStop(1,rgba(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r*(hov?2.4:1.8),0,6.283);ctx.fill();
     g=ctx.createRadialGradient(it.x-it.r*.3,it.y-it.r*.3,it.r*.1,it.x,it.y,it.r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.6),1));g.addColorStop(.7,rgba(c,1));g.addColorStop(1,rgba(mulC(c,.75),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r,0,6.283);ctx.fill();
     ctx.font=`bold ${Math.round(clamp(H*(it.lab.length>1?0.06:0.075),18,60))}px Georgia,'Times New Roman',serif`;ctx.fillStyle=it.col==='#ffffff'?'#f0f0f0':it.col;ctx.fillText(it.lab,it.x,H*0.5-maxR-H*0.06);
-    drawEyes(it.x,it.y-it.r*0.05,it.r*0.27,hov?'open':'arc',0,lk?0.4:1,it.k.charCodeAt(0),now);
+    drawEyes(it.x,it.y-it.r*0.05,it.r*0.27,hov?'open':'arc',lk?0.4:1,'sel'+it.k+(it.v||''),now);
     if(hov&&!lk)drawFlare(it.x,it.y,it.r,now);
     ctx.globalAlpha=1;
   }
@@ -751,6 +787,7 @@ function selClick(x,y){
 /* ---------- 타임라인 시작 · 진행 ---------- */
 function startSim(key,variant,seed){
   const sys=buildSystem(key,variant,seed);
+  EYE_ST.clear();FACE.clear();
   SIM={sys,sec:0,playing:true,speed:SV.set.speed,sel:null,played:0,rewarded:false,idle:0,hits:[],pts:[],k:1,edge:0,cx:0,rScale:1};
   layoutSim();buildNebula();if(sys.star.kind==='universe')buildUni(sys);
   SV.recent=SV.recent.filter(r=>r.seed!==seed);SV.recent.unshift({seed,key,variant,name:sys.name,d:Date.now()});SV.recent=SV.recent.slice(0,6);save();
