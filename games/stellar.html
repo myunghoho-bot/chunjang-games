@@ -50,7 +50,8 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Malg
 .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:#ffd27a;opacity:.75;pointer-events:none}
 #hud{position:fixed;left:12px;top:50px;z-index:4;pointer-events:none;max-width:min(46vw,430px);font-size:13px;text-shadow:0 1px 2px #000,0 0 4px #000}
 #hName{font-weight:700;font-size:14px;color:#fff}
-#hPhase{color:#ffd27a;margin-bottom:6px}
+#hPhase{color:#ffd27a}
+#hStat{color:#e8e8e8;font:12px Arial,sans-serif;line-height:1.35;margin-bottom:6px;white-space:pre}
 #hLog div{margin:2px 0}
 #card{position:fixed;right:12px;top:50px;width:min(310px,46vw);z-index:7;background:rgba(26,26,30,.93);border:2px solid;border-color:#9a9a9a #3a3a3a #3a3a3a #9a9a9a;font-size:13px}
 #card .ct{background:linear-gradient(#8f8f8f,#626262);padding:5px 8px;font-weight:700;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:6px}
@@ -91,7 +92,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Malg
     <button class="tb" data-a="select">별 고르기</button>
     <button class="tb" data-a="menu">메뉴</button>
   </div>
-  <div id="hud"><div id="hName"></div><div id="hPhase"></div><div id="hLog"></div></div>
+  <div id="hud"><div id="hName"></div><div id="hPhase"></div><div id="hStat"></div><div id="hLog"></div></div>
   <div id="card" class="hide"></div>
   <div id="endPanel" class="hide"></div>
 </div>
@@ -482,7 +483,7 @@ const shownMoons=(p,age)=>p.moons.filter(m=>age>=m.tForm&&!(m.tEnd&&age>=m.tEnd)
 const sampleI=sec=>clamp(Math.round(sec/SIM.sys.DT),0,SIM.sys.NS-1);
 
 function drawSim(sec,now){
-  const sys=SIM.sys,S=sys.star,age=ageAt(sys.nodes,sec),s=S.at(age);
+  const sys=SIM.sys,S=sys.star,age=ageAt(sys.nodes,sec),s=S.at(age);SIM.curPh=s.ph;
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   if(S.kind==='massive'){drawMassive(sec,age,s,now);drawCounter(age);return;}
   if(S.kind==='universe'){drawUniverse(sec,age,now);drawCounter(age);return;}
@@ -512,31 +513,36 @@ function drawStar(s,vw,now){
     if(bd){ctx.globalAlpha=bigA*0.09;for(let k=-10;k<=10;k++){ctx.fillStyle=k%2?'#000':'#fff';const y=cy+k*H*0.07+Math.sin(k*1.7+now*2e-4)*H*0.01;ctx.fillRect(0,y,vwc,H*0.035);}}
     ctx.globalCompositeOperation='overlay';ctx.globalAlpha=bigA*(/rgb|agb|rsg/.test(s.ph)?0.75:0.45);ctx.fillStyle=GRANP;ctx.translate((now*0.003)%256,0);ctx.fillRect(-512,0,vwc+768,H);
     ctx.restore();
-    {const e=Math.min(H*0.022,vwc*0.11);const mode=/^(rgb|agb|hb|sg)$/.test(s.ph)?'half':s.ph==='pn'?'wide':s.ph==='pre'?'squint':(s.T<700?'closed':'open');drawEyes(Math.min(vwc*0.55,vwc-e*3.2),cy-e*0.3,e,mode,0.6,bigA,7,now);}
+    {const e=Math.min(H*0.022,vwc*0.11);const mode=/^(rgb|agb|hb|sg)$/.test(s.ph)?'flat':s.ph==='pn'?'open':s.ph==='pre'?'squint':(s.T<700?'sleep':'arc');drawEyes(Math.min(vwc*0.55,vwc-e*3.2),cy-e*0.3,e,mode,0.6,bigA,7,now);}
     ctx.restore();
   }
-  if(s.cp>0.001){const x=SIM.cx,y=H/2,rr=Math.max(3,H*0.0075),bright=s.T>2500;ctx.save();ctx.globalAlpha=s.cp;if(bright){const g=ctx.createRadialGradient(x,y,rr*0.5,x,y,rr*7);g.addColorStop(0,rgba(col,.6));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rr*7,0,6.283);ctx.fill();}ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,rr,0,6.283);ctx.fill();if(!bright){ctx.strokeStyle='rgba(120,120,130,.35)';ctx.lineWidth=1;ctx.stroke();}if(SV.set.eyes&&s.cp>0.9){const big=Math.max(rr,H*0.016);ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,big,0,6.283);ctx.fill();drawEyes(x,y-big*0.05,big*0.27,s.T<350?'closed':s.T<2000?'half':'open',0.5,1,11,now);}ctx.restore();}
+  if(s.cp>0.001){const x=SIM.cx,y=H/2,rr=Math.max(3,H*0.0075),bright=s.T>2500;ctx.save();ctx.globalAlpha=s.cp;if(bright){const g=ctx.createRadialGradient(x,y,rr*0.5,x,y,rr*7);g.addColorStop(0,rgba(col,.6));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rr*7,0,6.283);ctx.fill();}ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,rr,0,6.283);ctx.fill();if(!bright){ctx.strokeStyle='rgba(120,120,130,.35)';ctx.lineWidth=1;ctx.stroke();}if(SV.set.eyes&&s.cp>0.9){const big=Math.max(rr,H*0.016);ctx.fillStyle=rgba(mixC(col,[255,255,255],bright?.5:0),1);ctx.beginPath();ctx.arc(x,y,big,0,6.283);ctx.fill();drawEyes(x,y-big*0.05,big*0.27,s.T<350?'sleep':s.T<2000?'flat':'arc',0.5,1,11,now);}ctx.restore();}
   SIM.starHitX=s.cp<0.5?vw:SIM.cx+14;
 }
 function drawRing(x,y,r,ring,half,lf){const c=hexRGB(ring.col);ctx.save();ctx.translate(x,y);ctx.rotate(-0.3);ctx.beginPath();if(half==='back')ctx.rect(-r*3,-r*3,r*6,r*3);else ctx.rect(-r*3,0,r*6,r*3);ctx.clip();ctx.scale(1,0.28);for(const[a,b,al]of[[1.35,1.6,.55],[1.62,1.95,.75],[1.98,2.15,.4]]){ctx.beginPath();ctx.arc(0,0,(a+b)/2*r,0,6.283);ctx.lineWidth=(b-a)*r;ctx.strokeStyle=rgba(mulC(c,Math.max(lf,.15)),al);ctx.stroke();}ctx.restore();}
 function drawMoon(x,y,r,col,lf){const c=mulC(hexRGB(col),Math.max(lf,.12));const g=ctx.createRadialGradient(x-r*.4,y-r*.3,r*.1,x,y,r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.2),1));g.addColorStop(1,rgba(mulC(c,.6),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();}
-/* 플래닛볼 눈: 입 없음. mode = open | half | squint | closed | wide */
+/* 플래닛볼 눈 (잡채TV 시리즈 3·4): 입 없음.
+   arc = ∩ (기분 좋음)  sleep = ◡ (조는 눈)  flat = — (덤덤)  squint = > < (뜨거움)  open = 살짝 길쭉한 동그란 눈 (놀람, 적색거성 때) */
 function drawEyes(x,y,e,mode,look,al,seed,now){
   if(!SV.set.eyes||e<1.6)return;
-  const blink=((now/1000+(seed%97)*0.37)%5.2)<0.13;if(blink&&(mode==='open'||mode==='half'||mode==='wide'))mode='closed';
-  const gap=e*1.25,ink=`rgba(18,16,20,${0.9*al})`;ctx.save();ctx.lineCap='round';
-  for(const sx of[-1,1]){const ex=x+sx*gap,ey=y;
-    if(mode==='closed'){ctx.strokeStyle=ink;ctx.lineWidth=Math.max(1,e*0.32);ctx.beginPath();ctx.moveTo(ex-e*0.85,ey);ctx.lineTo(ex+e*0.85,ey);ctx.stroke();continue;}
-    if(mode==='squint'){ctx.strokeStyle=ink;ctx.lineWidth=Math.max(1,e*0.32);ctx.beginPath();ctx.moveTo(ex-sx*e*0.85,ey-e*0.55);ctx.lineTo(ex+sx*e*0.6,ey);ctx.lineTo(ex-sx*e*0.85,ey+e*0.55);ctx.stroke();continue;}
-    const w=mode==='wide'?e*1.05:e*0.85,h=mode==='wide'?e*1.25:e*1.05;
-    ctx.fillStyle=`rgba(255,255,255,${0.96*al})`;ctx.beginPath();ctx.ellipse(ex,ey,w,h,0,0,6.283);ctx.fill();
-    ctx.strokeStyle=ink;ctx.lineWidth=Math.max(0.8,e*0.14);ctx.stroke();
-    const pr=mode==='wide'?w*0.34:w*0.55;ctx.fillStyle=ink;ctx.beginPath();ctx.arc(ex+look*(w-pr)*0.8,ey+h*0.08,pr,0,6.283);ctx.fill();
-    if(mode==='half'){ctx.save();ctx.beginPath();ctx.ellipse(ex,ey,w+0.5,h+0.5,0,0,6.283);ctx.clip();ctx.fillStyle=`rgba(40,36,44,${0.92*al})`;ctx.fillRect(ex-w-1,ey-h-1,2*w+2,h*1.05);ctx.restore();ctx.strokeStyle=ink;ctx.lineWidth=Math.max(1,e*0.22);ctx.beginPath();ctx.moveTo(ex-w,ey+h*0.02);ctx.lineTo(ex+w,ey+h*0.02);ctx.stroke();}
+  const gap=e*1.6,ink=`rgba(10,10,12,${0.92*al})`,lw=Math.max(1.2,e*0.38);ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+  let blink=mode==='open'&&((now/1000+(seed%97)*0.37)%5.2)<0.12;
+  for(const sx of[-1,1]){const ex=x+sx*gap,ey=y;ctx.strokeStyle=ink;ctx.lineWidth=lw;
+    if(mode==='arc'){ctx.beginPath();ctx.arc(ex,ey+e*0.35,e*0.8,Math.PI*1.08,Math.PI*1.92);ctx.stroke();continue;}
+    if(mode==='sleep'){ctx.beginPath();ctx.arc(ex,ey-e*0.35,e*0.8,Math.PI*0.08,Math.PI*0.92);ctx.stroke();continue;}
+    if(mode==='flat'||blink){ctx.beginPath();ctx.moveTo(ex-e*0.8,ey);ctx.lineTo(ex+e*0.8,ey);ctx.stroke();continue;}
+    if(mode==='squint'){ctx.beginPath();ctx.moveTo(ex-sx*e*0.8,ey-e*0.55);ctx.lineTo(ex+sx*e*0.55,ey);ctx.lineTo(ex-sx*e*0.8,ey+e*0.55);ctx.stroke();continue;}
+    const w=e*0.72,h=e*1.05;
+    ctx.fillStyle=`rgba(255,255,255,${0.97*al})`;ctx.beginPath();ctx.ellipse(ex,ey,w,h,0,0,6.283);ctx.fill();
+    ctx.lineWidth=Math.max(1,e*0.2);ctx.stroke();
+    const pr=w*0.5;ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(ex+look*(w-pr)*0.7,ey+h*0.1,pr,pr*1.15,0,0,6.283);ctx.fill();
   }
   ctx.restore();
 }
-function planetEye(lk,lf,near){if(near)return'wide';if(lf<0.22)return'closed';if(lk===LK.forming||lk===LK.magma||lk===LK.hot||lk===LK.hotgas||lk===LK.steam||lk===LK.cloud)return'squint';if(lk===LK.ice||lk===LK.barren)return'half';return'open';}
+const GIANT_PH=/^(sg|rgb|hb|agb|rsg|ysg|yhg|lbv)$/;
+function planetEye(lk,lf,near){if(near)return'open';if(SIM&&GIANT_PH.test(SIM.curPh||''))return'open';if(lf<0.22)return'sleep';
+  if(lk===LK.forming||lk===LK.magma||lk===LK.hot||lk===LK.hotgas||lk===LK.steam||lk===LK.cloud)return'squint';
+  if(lk===LK.ocean||lk===LK.life||lk===LK.green)return'arc';if(lk===LK.gas||lk===LK.icegiant)return'sleep';return'flat';}
 function drawPlanetAt(p,lk,x,y,r,lf,age,showMoons,eye){
   ctx.save();
   const hotLk=lk===LK.forming||lk===LK.magma||lk===LK.hot||lk===LK.hotgas;
@@ -560,15 +566,15 @@ function drawPlanets(sec,age,s){
     if(p.dead&&sec>=p.deadSec){
       const t=sec-p.deadSec;
       if(p.dead==='engulf'&&t<1){const x=fx(p.deadA),r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=1-t;ctx.strokeStyle='#ffb040';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r*(1+t*2.5),0,6.283);ctx.stroke();ctx.restore();}
-      else if((p.dead==='eject'||p.dead==='plunge')&&t<1.6){const x=fx(p.deadA)+(p.dead==='plunge'?-1:1)*t*t*W*0.35,r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=clamp(1-t/1.6,0,1);drawPlanetAt(p,p.deadLook==null?LK.barren:p.deadLook,x,y,r,lf,p.deadAge,false,'wide');ctx.restore();}
+      else if((p.dead==='eject'||p.dead==='plunge')&&t<1.6){const x=fx(p.deadA)+(p.dead==='plunge'?-1:1)*t*t*W*0.35,r=pradNow(p,p.deadAge)*SIM.rScale;ctx.save();ctx.globalAlpha=clamp(1-t/1.6,0,1);drawPlanetAt(p,p.deadLook==null?LK.barren:p.deadLook,x,y,r,lf,p.deadAge,false,'open');ctx.restore();}
       else if(p.dead==='merge'&&t<1.2){const tg=sys.planets[p.target],x=fx(tg.a0*S.M0/s.M),r=pradNow(tg,age)*SIM.rScale*(1.4+t*1.2);const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(255,235,190,${0.55*Math.pow(1-t/1.2,1.5)})`);g.addColorStop(1,'rgba(255,160,60,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();}
       continue;
     }
     if(age<p.tStart||!p.alive[i])continue;
     let x=fx(p.a0*S.M0/s.M);const r=pradNow(p,age)*SIM.rScale;
     let rr=r;if(p.extra){const D=2.5,t0=p.mergeSec-D;if(sec>t0){const tg=sys.planets[p.target],u=clamp((sec-t0)/D,0,1);x=lerp(x,fx(tg.a0*S.M0/s.M),u*u*(3-2*u));rr=r*(1-0.7*smooth((u-0.8)/0.2));}}
-    let eye=null;const sEdge=s.cp<0.5?Math.max(SIM.edge,fx(s.R*RS_AU)):0;if(sEdge&&x-sEdge<rr*3.5&&!/^(pre|ms)$/.test(s.ph))eye='wide';
-    if(p.extra&&sec>p.mergeSec-2.5)eye='wide';for(const q of sys.planets)if(q.extra&&q.target===p.id&&!q.dead&&sec>q.mergeSec-1.2&&sec<q.mergeSec)eye='wide';
+    let eye=null;const sEdge=s.cp<0.5?Math.max(SIM.edge,fx(s.R*RS_AU)):0;if(sEdge&&x-sEdge<rr*3.5&&!/^(pre|ms)$/.test(s.ph))eye='open';
+    if(p.extra&&sec>p.mergeSec-2.5)eye='open';for(const q of sys.planets)if(q.extra&&q.target===p.id&&!q.dead&&sec>q.mergeSec-1.2&&sec<q.mergeSec)eye='open';
     drawPlanetAt(p,p.look[i],x,y,rr,lf,age,true,eye);
     if(SV.set.labels&&(!p.extra||p.nameFixed)){ctx.save();ctx.font=`${Math.round(clamp(H*0.019,10,14))}px 'Malgun Gothic',sans-serif`;ctx.textAlign='center';ctx.fillStyle=`rgba(200,205,212,${0.35+0.5*lf})`;ctx.fillText(pname(p).replace(/ 행성$/,''),x,y+rr+(p.ring&&age>=p.ring.t0&&age<p.ring.t1?rr*0.7:0)+Math.max(13,H*0.026));ctx.restore();}
     SIM.hits.push({p,x,y,r});
@@ -585,7 +591,7 @@ function drawMassive(sec,age,s,now){
     const col=starRGB(s.T),rr=H*(0.006+0.012*Math.log10(s.R+1)),vis=smooth(age/1e5);
     let g=ctx.createRadialGradient(cx,cy,rr*.5,cx,cy,rr*6);g.addColorStop(0,rgba(col,.55*vis));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,rr*6,0,6.283);ctx.fill();
     ctx.fillStyle=rgba(mixC(col,[255,255,255],.35),vis);ctx.beginPath();ctx.arc(cx,cy,rr,0,6.283);ctx.fill();
-    if(rr>=7)drawEyes(cx,cy-rr*0.05,rr*0.27,s.ph==='pre'?'closed':s.ph==='lbv'||s.ph==='wr'?'squint':/sg|hg/.test(s.ph)?'half':'open',0.3,vis,5,now);
+    if(rr>=7)drawEyes(cx,cy-rr*0.05,rr*0.27,s.ph==='pre'?'sleep':s.ph==='lbv'||s.ph==='wr'?'squint':/sg|hg/.test(s.ph)?'flat':'arc',0.3,vis,5,now);
     if(s.ph==='lbv'||s.ph==='rsg'||s.ph==='wr'){for(let k=0;k<3;k++){const f=((now/1000*0.35)+k/3)%1;ctx.strokeStyle=rgba(col,(1-f)*0.3);ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,rr*(1.5+f*7),0,6.283);ctx.stroke();}}
   }
   if(sec>=tSNs){
@@ -720,7 +726,7 @@ function drawSelect(now){
     let g=ctx.createRadialGradient(it.x,it.y,it.r*0.6,it.x,it.y,it.r*(hov?2.4:1.8));g.addColorStop(0,rgba(c,.55));g.addColorStop(1,rgba(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r*(hov?2.4:1.8),0,6.283);ctx.fill();
     g=ctx.createRadialGradient(it.x-it.r*.3,it.y-it.r*.3,it.r*.1,it.x,it.y,it.r);g.addColorStop(0,rgba(mixC(c,[255,255,255],.6),1));g.addColorStop(.7,rgba(c,1));g.addColorStop(1,rgba(mulC(c,.75),1));ctx.fillStyle=g;ctx.beginPath();ctx.arc(it.x,it.y,it.r,0,6.283);ctx.fill();
     ctx.font=`bold ${Math.round(clamp(H*(it.lab.length>1?0.06:0.075),18,60))}px Georgia,'Times New Roman',serif`;ctx.fillStyle=it.col==='#ffffff'?'#f0f0f0':it.col;ctx.fillText(it.lab,it.x,H*0.5-maxR-H*0.06);
-    drawEyes(it.x,it.y-it.r*0.05,it.r*0.27,'open',hov?0:-0.3,lk?0.4:1,it.k.charCodeAt(0),now);
+    drawEyes(it.x,it.y-it.r*0.05,it.r*0.27,hov?'open':'arc',0,lk?0.4:1,it.k.charCodeAt(0),now);
     if(hov&&!lk)drawFlare(it.x,it.y,it.r,now);
     ctx.globalAlpha=1;
   }
@@ -800,10 +806,11 @@ function updateHUD(){
   $('#hud').classList.toggle('hide',!SV.set.info);
   $('#bPlay').innerHTML=SIM.playing?ICON_PAUSE:ICON_PLAY;
   $('#progFill').style.width=(SIM.sec/sys.end*100).toFixed(2)+'%';
-  const k=lastEv(SIM.sec),key=k+'|'+s.ph+'|'+SV.set.unit+'|'+Object.keys(SV.names).length;
+  const k=lastEv(SIM.sec),key=k+'|'+s.ph+'|'+SV.set.unit+'|'+Object.keys(SV.names).length+'|'+Math.round(s.T)+'|'+s.L.toPrecision(3);
   if(key!==SIM.hudKey){SIM.hudKey=key;
     $('#hName').textContent=sys.name+' · '+(sys.variant?(sys.variant==='heavy'?'무거운 ':'가벼운 '):'')+sys.T.name;
     $('#hPhase').textContent='단계: '+PH_NAME[s.ph];
+    $('#hStat').textContent=sys.star.kind==='universe'?'':`${fmtN(Math.round(s.T))}K\n${s.L<0.001?s.L.toExponential(2):s.L.toFixed(s.L<10?3:0)}L☉\n${s.R<0.01?s.R.toExponential(2):s.R.toFixed(s.R<10?2:0)}R☉\n${s.M.toFixed(3)}M☉`;
     const list=[];for(let j=k;j>=0&&list.length<(H<500?3:5);j--)list.push(sys.events[j]);
     $('#hLog').innerHTML=list.map((e,n)=>`<div style="color:${EVC[e.kind]};opacity:${(1-n*0.17).toFixed(2)}"><b>${esc(fmtAge(e.age))}</b> ${esc(evText(e))}</div>`).join('');}
   if(SIM.sel)updateCard();
