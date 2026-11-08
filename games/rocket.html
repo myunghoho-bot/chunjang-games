@@ -362,7 +362,9 @@ const ENGINES = {
     info: '새턴 V 1단에 5개 들어갔어요. 노즐 하나짜리 엔진 중에 지금까지 날아 본 것 가운데 제일 힘이 세요.' },
 };
 const ENGINE_ORDER = ['rutherford', 'kre007', 'rl10', 'merlin', 'mvac', 'kre075', 'j2', 'rs25', 'raptor', 'rvac', 'rd180', 'f1'];
-const FUELS = { kero: { name: '케로신', dens: 1020 }, meth: { name: '메탄', dens: 830 }, hydro: { name: '수소', dens: 360 } };
+const FUELS = { kero: { name: '케로신', dens: 1020 }, meth: { name: '메탄', dens: 830 }, hydro: { name: '수소', dens: 360 }, mmh: { name: '추진기 연료', dens: 1 } };
+// 크루 드래곤 윗부분의 드라코 추진기 16개(400 N씩). 12종 엔진 목록에는 안 들어간다
+ENGINES.draco = { name: '드라코 추진기 16개', rocket: '크루 드래곤', fuel: 'mmh', tVac: 6400, ispVac: 300, ispSL: 230, mass: 0, w: 0.4, h: 0.5, info: '' };
 function engMdot(E) { return E.tVac / (E.ispVac * G0); }          // 1초에 쓰는 연료(kg)
 function engIsp(E, pr) { return E.ispVac + (E.ispSL - E.ispVac) * clamp(pr, 0, 1); }
 function engThrust(E, pr) { return engMdot(E) * engIsp(E, pr) * G0; }
@@ -375,12 +377,13 @@ const COLORS = { white: ['흰색', '#e9edf2'], black: ['검정', '#2b2f36'], ora
 const CATS = [['ctrl', '조종'], ['tank', '연료 탱크'], ['eng', '엔진'], ['struct', '연결·분리'], ['stat', '정거장·위성']];
 const DEFS = {};
 function def(key, o) { DEFS[key] = Object.assign({ key, col: 'white' }, o); }
-def('dragon', { cat: 'ctrl', kind: 'capsule', style: 'dragon', name: '크루 드래곤', note: '사람 4명 · 스페이스X', w: 4, h: 4.5, mass: 9500, crew: 4,
-  info: '국제 우주 정거장에 사람을 실어 나르는 캡슐이에요. 지구로 돌아오려면 밑에 열 보호막, 위에 낙하산을 붙여요.' });
+def('dragon', { cat: 'ctrl', kind: 'capsule', style: 'dragon', name: '크루 드래곤', note: '사람 4명 · 추진기·도킹 포트 있음', w: 4, h: 4.5, mass: 9500, crew: 4,
+  eng: 'draco', ownFuel: 2500, chute: 1800, dockTop: true,
+  info: '국제 우주 정거장에 사람을 실어 나르는 캡슐이에요. 윗부분에 드라코 추진기 16개와 연료 2.5톤이 있어서 혼자 궤도를 바꿀 수 있고, 진짜처럼 정거장까지 스스로 날아가 도킹해요. 머리 덮개 밑에 도킹 포트, 안에 낙하산 4개가 들어 있어요. 지구로 돌아오려면 밑에 열 보호막을 붙여요.' });
 def('soyuz', { cat: 'ctrl', kind: 'capsule', style: 'soyuz', name: '소유스 귀환선', note: '사람 3명 · 러시아', w: 2.5, h: 2.5, mass: 2950, crew: 3,
-  info: '1967년부터 지금까지 쓰는 러시아 우주선의 귀환 캡슐이에요.' });
+  chute: 900, info: '1967년부터 지금까지 쓰는 러시아 우주선의 귀환 캡슐이에요. 안에 낙하산이 들어 있어요.' });
 def('apollo', { cat: 'ctrl', kind: 'capsule', style: 'apollo', name: '아폴로 사령선', note: '사람 3명 · 미국', w: 4, h: 3.5, mass: 5800, crew: 3,
-  info: '사람을 달까지 데려갔다가 지구로 데려온 캡슐이에요.' });
+  chute: 1300, dockTop: true, info: '사람을 달까지 데려갔다가 지구로 데려온 캡슐이에요. 머리에 도킹 장치, 안에 낙하산 3개가 있어요.' });
 def('probe', { cat: 'ctrl', kind: 'probe', name: '위성 컴퓨터', note: '사람 없이 조종', w: 1.5, h: 0.5, mass: 100, rw: [0.5, 12], col: 'gold',
   info: '사람이 안 타도 로켓과 위성을 조종하는 컴퓨터예요. 폭을 바꿀 수 있어요.' });
 def('bus', { cat: 'ctrl', kind: 'bus', name: '위성 본체', note: '컴퓨터·배터리 들어 있음', w: 2, h: 2.5, rw: [0.5, 8], rh: [0.5, 8], col: 'gold',
@@ -430,7 +433,12 @@ def('claw', { cat: 'stat', kind: 'claw', name: '집게', note: '소행성을 잡
   info: '소행성에 천천히 다가가 닿으면 꽉 잡아요. 잡은 채로 엔진을 켜서 소행성을 끌고 갈 수 있어요. 누르고 "놓기"를 하면 놓아요.' });
 def('rock', { cat: null, kind: 'rock', name: '소행성', note: '', w: 4, h: 4, info: '' });
 
-function isEngine(p) { return DEFS[p.t].kind === 'engine'; }
+function isEngine(p) { const d = DEFS[p.t]; return d.kind === 'engine' || !!(d.eng && d.ownFuel); }
+function isMainEngine(p) { return DEFS[p.t].kind === 'engine'; }
+function isChute(p) { const d = DEFS[p.t]; return d.kind === 'chute' || !!d.chute; }
+function chuteArea(p) { const d = DEFS[p.t]; return d.kind === 'chute' ? 1500 : (d.chute || 0); }
+function isPort(p) { const d = DEFS[p.t]; return d.kind === 'dock' || !!d.dockTop; }
+function fuelMax(p) { const d = DEFS[p.t]; return d.ownFuel ? d.ownFuel : d.kind === 'tank' ? tankVol(p) * FUELS[p.ft || 'kero'].dens : 0; }
 function isDecoupler(p) { const k = DEFS[p.t].kind; return k === 'decoupler' || k === 'rdecoupler'; }
 function isControl(p) { const k = DEFS[p.t].kind; return k === 'capsule' || k === 'probe' || k === 'bus' || k === 'scope'; }
 function engAcross(n) { return Math.ceil(Math.sqrt(Math.max(1, n))); }
@@ -611,7 +619,7 @@ function computeStages(parts, adj) {
     }
     children.set(s, ch);
   }
-  const engOf = s => parts.filter(p => isEngine(p) && sec.get(p.id) === s).map(p => p.id);
+  const engOf = s => parts.filter(p => isMainEngine(p) && sec.get(p.id) === s).map(p => p.id);
   const fairOf = s => parts.filter(p => DEFS[p.t].kind === 'fairing' && sec.get(p.id) === s).map(p => p.id);
   const merge = lists => { const out = []; for (const L of lists) L.forEach((ev, i) => { out[i] = (out[i] || []).concat(ev); }); return out; };
   function seq(s, depth) {
@@ -635,7 +643,7 @@ function computeStages(parts, adj) {
   // 연결이 안 된(나무에 없는) 칸의 분리기는 맨 끝에
   const loose = links.filter(L => !ev.some(e => e.includes(L.dec.id))).map(L => L.dec.id);
   if (loose.length) ev.push(loose);
-  const chutes = parts.filter(p => DEFS[p.t].kind === 'chute').map(p => p.id);
+  const chutes = parts.filter(isChute).map(p => p.id);
   if (chutes.length) ev.push(chutes);
   return ev;
 }
@@ -730,6 +738,14 @@ function drawPart(ctx, p, mode, lw, extra) {
       ctx.fillRect(-w * 0.2 - ww / 2, wy, ww, ww * 1.1); ctx.fillRect(w * 0.2 - ww / 2, wy, ww, ww * 1.1);
       if (d.style === 'dragon' && !bp) { ctx.fillStyle = '#2b2f36'; ctx.fillRect(-s.wt / 2, h / 2 - h * 0.12, s.wt, h * 0.12); }
       if (!bp) { ctx.strokeStyle = edge; trap(ctx, s.wb, s.wt, h); if (d.style !== 'soyuz') ctx.stroke(); }
+      if (d.style === 'dragon') {   // 윗부분 드라코 추진기 뭉치 (양옆)
+        const yc = h * 0.22, xs = s.wb / 2 + (s.wt / 2 - s.wb / 2) * ((yc + h / 2) / h);
+        for (const sd of [-1, 1]) {
+          ctx.beginPath(); ctx.rect(sd * xs - 0.2 + sd * 0.06, yc - 0.32, 0.4, 0.64);
+          if (bp) { ctx.strokeStyle = BP_LINE; ctx.stroke(); } else { ctx.fillStyle = '#3a3f47'; ctx.fill(); ctx.fillStyle = '#9aa3ad'; ctx.fillRect(sd * xs - 0.08 + sd * 0.06, yc - 0.36, 0.16, 0.08); ctx.fillRect(sd * xs - 0.08 + sd * 0.06, yc + 0.28, 0.16, 0.08); }
+        }
+      }
+      if (p.ch === 2 && !bp && d.chute) drawCanopy(ctx, p.chOpen || 1, h / 2, lw, Math.sqrt(d.chute / 1500));
       break;
     }
     case 'probe': case 'bus': {
@@ -817,16 +833,7 @@ function drawPart(ctx, p, mode, lw, extra) {
       const open = p.ch === 2 ? (p.chOpen || 1) : 0;
       ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, -h / 2); ctx.quadraticCurveTo(w / 2, h / 2, 0, h / 2); ctx.quadraticCurveTo(-w / 2, h / 2, -w / 2, -h / 2); ctx.closePath();
       if (bp) { ctx.fillStyle = BP_FILL; ctx.fill(); ctx.strokeStyle = BP_LINE; ctx.stroke(); } else { ctx.fillStyle = open ? '#555' : '#e8e2d6'; ctx.fill(); ctx.strokeStyle = edge; ctx.stroke(); }
-      if (open > 0 && !bp) {
-        const R = 12 * open, H = 26 * open + 3;
-        ctx.strokeStyle = 'rgba(230,230,230,0.7)'; ctx.lineWidth = Math.max(lw, 0.06);
-        for (const sx of [-1, -0.5, 0, 0.5, 1]) pLine(ctx, 0, h / 2, sx * R, H);
-        ctx.beginPath(); ctx.moveTo(-R, H); ctx.quadraticCurveTo(0, H + R * 0.9, R, H);
-        ctx.quadraticCurveTo(0, H + R * 0.35, -R, H); ctx.closePath();
-        ctx.fillStyle = '#e8732a'; ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-R * 0.5, H + R * 0.32); ctx.quadraticCurveTo(0, H + R * 0.82, R * 0.5, H + R * 0.32); ctx.strokeStyle = '#f5f0e8'; ctx.lineWidth = R * 0.12; ctx.stroke();
-        ctx.lineWidth = lw;
-      }
+      if (open > 0 && !bp) drawCanopy(ctx, open, h / 2, lw, 1);
       break;
     }
     case 'dock': {
@@ -898,6 +905,16 @@ function drawPart(ctx, p, mode, lw, extra) {
     default: { ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h); bodyFill(ctx, bp, w, hex); }
   }
 }
+// 펴진 낙하산 천 (부품 위쪽 topY에서 줄이 나간다)
+function drawCanopy(ctx, open, topY, lw, k) {
+  const R = 12 * open * k, Hh = topY + (26 * open + 3) * k;
+  ctx.strokeStyle = 'rgba(230,230,230,0.7)'; ctx.lineWidth = Math.max(lw, 0.06);
+  for (const sx of [-1, -0.5, 0, 0.5, 1]) pLine(ctx, 0, topY, sx * R, Hh);
+  ctx.beginPath(); ctx.moveTo(-R, Hh); ctx.quadraticCurveTo(0, Hh + R * 0.9, R, Hh); ctx.quadraticCurveTo(0, Hh + R * 0.35, -R, Hh); ctx.closePath();
+  ctx.fillStyle = '#e8732a'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-R * 0.5, Hh + R * 0.32); ctx.quadraticCurveTo(0, Hh + R * 0.82, R * 0.5, Hh + R * 0.32); ctx.strokeStyle = '#f5f0e8'; ctx.lineWidth = R * 0.12; ctx.stroke();
+  ctx.lineWidth = lw;
+}
 // 부품 하나를 자리(x,y)·돌림(r)·뒤집기(f)까지 맞춰 그리기
 function drawPlaced(ctx, p, mode, lw) {
   ctx.save(); ctx.translate(p.x, p.y); ctx.rotate((p.r || 0) * Math.PI / 2); if (p.f) ctx.scale(-1, 1);
@@ -952,8 +969,9 @@ function fillFuel(parts, adj, full = true) {
     if (sec.has(p.id) || isDecoupler(p)) continue;
     const s = ns++, st = [p.id], mem = [p]; sec.set(p.id, s);
     while (st.length) { const id = st.pop(); for (const n of adj.get(id) || []) { const q = byId.get(n); if (!q || sec.has(n) || isDecoupler(q)) continue; sec.set(n, s); st.push(n); mem.push(q); } }
-    const eng = mem.find(isEngine), ft = eng ? ENGINES[DEFS[eng.t].eng].fuel : 'kero';
+    const eng = mem.find(isMainEngine), ft = eng ? ENGINES[DEFS[eng.t].eng].fuel : 'kero';
     for (const q of mem) if (DEFS[q.t].kind === 'tank') { q.ft = ft; if (full) q.fuel = tankVol(q) * FUELS[ft].dens; }
+    for (const q of mem) if (DEFS[q.t].ownFuel) { q.ft = 'mmh'; if (full) q.fuel = DEFS[q.t].ownFuel; }
   }
 }
 
@@ -1182,7 +1200,7 @@ function stageStats(parts) {
     if (pools.length) firstBurn = false;
     const engs = {}; for (const s of pools) for (const e of s.engs) { const nm = ENGINES[DEFS[e.t].eng].name; engs[nm] = (engs[nm] || 0) + (e.n || 1); }
     const kinds = ev.map(id => byId.get(id) && DEFS[byId.get(id).t].kind);
-    const lab = kinds.includes('fairing') ? '페어링 열기' : kinds.includes('decoupler') || kinds.includes('rdecoupler') ? '분리' : kinds.includes('chute') ? '낙하산 준비' : '분리';
+    const lab = kinds.includes('fairing') ? '페어링 열기' : kinds.includes('decoupler') || kinds.includes('rdecoupler') ? '분리' : ev.some(id => byId.get(id) && isChute(byId.get(id))) ? '낙하산 준비' : '분리';
     out.push({ dv, twr, tb, m0, engs, drops: drop.size, lab, burn: pools.length > 0 && dv > 1 });
   }
   const total = out.reduce((a, s) => a + s.dv, 0);
@@ -1220,6 +1238,9 @@ function refreshRight() {
       } else {
         h += `<div class="row"><span class="k">무게</span><span class="num">${fMass(partDry(p))}</span></div>`;
         const cr = partCrew(p); if (cr) h += `<div class="row"><span class="k">사람</span><span class="num">${cr}명</span></div>`;
+        if (d.ownFuel) h += `<div class="row"><span class="k">추진기 연료</span><span class="num">${fMass(d.ownFuel)}</span></div>`;
+        if (d.chute) h += `<div class="row"><span class="k">낙하산</span><span>안에 들어 있음</span></div>`;
+        if (d.dockTop) h += `<div class="row"><span class="k">도킹 포트</span><span>머리에 있음</span></div>`;
         if (d.kw) h += `<div class="row"><span class="k">전기</span><span class="num">${d.kw} kW</span></div>`;
       }
       if (d.rw) h += slider('w', d.kind === 'adapter' ? '아래 폭 (m)' : '폭 (m)', p.w, d.rw[0], d.rw[1], 0.5);
@@ -1677,7 +1698,7 @@ function retopo(v) {
     const st = [p.id]; sec.set(p.id, s);
     while (st.length) { const id = st.pop(); for (const n of v._adj.get(id)) { const q = byId.get(n); if (!q || sec.has(n) || isDecoupler(q)) continue; sec.set(n, s); st.push(n); } }
   }
-  for (const p of P) { const s = sec.get(p.id); p._sec = s; if (s == null) continue; const k = DEFS[p.t].kind; if (k === 'tank') pools[s].tanks.push(p); if (k === 'engine') pools[s].engs.push(p); }
+  for (const p of P) { const s = sec.get(p.id); p._sec = s; if (s == null) continue; const k = DEFS[p.t].kind; if (k === 'tank' || DEFS[p.t].ownFuel) pools[s].tanks.push(p); if (isEngine(p)) pools[s].engs.push(p); }
   v._pools = pools; v._engines = P.filter(isEngine);
   const c = bestControl(P); v._ctrlId = c ? c.id : null; v._ctrl = !!c;
   let crew = 0, cap = 0, habs = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, top = null;
@@ -1694,7 +1715,7 @@ function retopo(v) {
   const tk = top ? DEFS[top.t].kind : '';
   v._noseCd = ['nose', 'fairing', 'capsule', 'scope'].includes(tk) ? 0.35 : 0.9;
   v._W = Math.max(0.5, maxX - minX); v._Hh = Math.max(0.5, maxY - minY);
-  v._has = { legs: P.some(p => DEFS[p.t].kind === 'legs'), solar: P.some(p => DEFS[p.t].kind === 'solar'), chute: P.some(p => DEFS[p.t].kind === 'chute'), fairing: P.some(p => DEFS[p.t].kind === 'fairing' && !p.half), dock: P.some(p => DEFS[p.t].kind === 'dock') };
+  v._has = { legs: P.some(p => DEFS[p.t].kind === 'legs'), solar: P.some(p => DEFS[p.t].kind === 'solar'), chute: P.some(isChute), fairing: P.some(p => DEFS[p.t].kind === 'fairing' && !p.half), dock: P.some(p => DEFS[p.t].kind === 'dock') };
   recalc(v);
 }
 function recalc(v) {
@@ -1714,11 +1735,11 @@ function recalc(v) {
   v._rad = Math.hypot(Math.max(Math.abs(b.minX - com.x), Math.abs(b.maxX - com.x)), Math.max(Math.abs(b.minY - com.y), Math.abs(b.maxY - com.y)));
   let kw = 0; for (const p of v.parts) if (DEFS[p.t].kind === 'solar' && p.dep) kw += DEFS[p.t].kw; v._kw = kw;
 }
-function fuelOf(v) { let f = 0, mx = 0; for (const p of v.parts) if (DEFS[p.t].kind === 'tank') { f += p.fuel || 0; mx += tankVol(p) * FUELS[p.ft || 'kero'].dens; } return { f, mx }; }
+function fuelOf(v) { let f = 0, mx = 0; for (const p of v.parts) { const m = fuelMax(p); if (m > 0) { f += p.fuel || 0; mx += m; } } return { f, mx }; }
 // 지금 켜진 엔진이 쓰는 연료
 function stageFuel(v) {
   let f = 0, mx = 0;
-  for (const pool of v._pools) { if (!pool.engs.some(e => e.on)) continue; for (const t of pool.tanks) { f += t.fuel || 0; mx += tankVol(t) * FUELS[t.ft || 'kero'].dens; } }
+  for (const pool of v._pools) { if (!pool.engs.some(e => e.on)) continue; for (const t of pool.tanks) { f += t.fuel || 0; mx += fuelMax(t); } }
   return { f, mx };
 }
 function localToWorld(v, lx, ly, ab) { const c = Math.cos(v.ang), s = Math.sin(v.ang), dx = lx - v._com.x, dy = ly - v._com.y; return { x: ab.x + dx * c - dy * s, y: ab.y + dx * s + dy * c }; }
@@ -1862,7 +1883,7 @@ function physStep(v, dt, ctl) {
     const cosA = (v.vx * ux + v.vy * uy) / sp, sinA2 = Math.max(0, 1 - cosA * cosA);
     const Aax = Math.PI * (v._W / 2) ** 2, Aside = v._W * v._Hh;
     let cda = (cosA > 0 ? v._noseCd : 1.0) * Aax * Math.abs(cosA) + 0.9 * Aside * sinA2 * 0.6;
-    for (const p of v.parts) if (DEFS[p.t].kind === 'chute' && p.ch === 2) cda += 1500 * (p.chOpen || 0) ** 2;
+    for (const p of v.parts) if (p.ch === 2 && isChute(p)) cda += chuteArea(p) * (p.chOpen || 0) ** 2;
     const Fd = 0.5 * rho * sp2 * cda;
     fx -= Fd * v.vx / sp; fy -= Fd * v.vy / sp;
     v._heat = rho * sp2 * sp;
@@ -1896,7 +1917,7 @@ function physStep(v, dt, ctl) {
   v.ang += v.av * dt;
   // 낙하산 펴기
   for (const p of v.parts) {
-    if (DEFS[p.t].kind !== 'chute' || !p.ch) continue;
+    if (!p.ch || !isChute(p)) continue;
     if (p.ch === 1 && rho > 0.02 && Math.sqrt(sp2) < 260) { p.ch = 2; p.chOpen = 0.05; if (v.id === world.activeId) { toast('낙하산이 펴졌어요', true); Juice.noiseHit(0.3, 0.12, 900); } }
     if (p.ch === 2 && p.chOpen < 1) p.chOpen = Math.min(1, p.chOpen + dt * 0.4);
   }
@@ -1969,7 +1990,7 @@ function doStage(v) {
       if (k === 'engine') { if (!p.on) ign++; p.on = true; S.used[DEFS[p.t].eng] = true; }
       else if (k === 'decoupler' || k === 'rdecoupler') decs.push(p);
       else if (k === 'fairing') fairs.push(p);
-      else if (k === 'chute') p.ch = p.ch || 1;
+      else if (isChute(p)) p.ch = p.ch || 1;
     }
     if (!any) continue;
     if (ign && v.throttle === 0) v.throttle = 1;
@@ -1989,9 +2010,18 @@ function doStage(v) {
 }
 
 // ---------- 도킹 ----------
+function dockedNeighbor(v, p) {
+  const nbs = (v._adj.get(p.id) || []).map(id => v._by.get(id)).filter(Boolean);
+  return nbs.find(q => q.id === p.dockedTo || q.dockedTo === p.id) || (DEFS[p.t].kind === 'dock' ? nbs.find(q => DEFS[q.t].kind === 'dock') : null) || null;
+}
 function portInfo(v, p) {
   const nbs = (v._adj.get(p.id) || []).map(id => v._by.get(id)).filter(Boolean);
-  if (nbs.some(q => DEFS[q.t].kind === 'dock')) return null;   // 이미 도킹됨
+  if (DEFS[p.t].dockTop) {   // 캡슐 머리의 문: 위에 아무것도 없어야 비어 있다
+    const a = DIRS[p.r || 0];
+    if (nbs.some(q => (q.x - p.x) * a[0] + (q.y - p.y) * a[1] > p.h / 2 - 0.1)) return null;
+    return { p, lx: p.x + a[0] * p.h / 2, ly: p.y + a[1] * p.h / 2, nx: a[0], ny: a[1] };
+  }
+  if (dockedNeighbor(v, p)) return null;   // 이미 도킹됨
   if (nbs.length > 1) return null;
   const a = DIRS[p.r || 0];
   let n = a;
@@ -2001,7 +2031,7 @@ function portInfo(v, p) {
 function worldPorts(v) {
   const out = [], ab = vAbs(v), c = Math.cos(v.ang), s = Math.sin(v.ang);
   for (const p of v.parts) {
-    if (DEFS[p.t].kind !== 'dock') continue;
+    if (!isPort(p)) continue;
     const pi = portInfo(v, p); if (!pi) continue;
     const w = localToWorld(v, pi.lx, pi.ly, ab);
     out.push(Object.assign(pi, { wx: w.x, wy: w.y, wnx: pi.nx * c - pi.ny * s, wny: pi.nx * s + pi.ny * c }));
@@ -2029,13 +2059,14 @@ function mergeDock(v1, v2, p1, p2) {
     q.x = ck * qx - sk * qy + offx; q.y = sk * qx + ck * qy + offy; q.r = ((q.r || 0) + k) % 4;
     A.parts.push(q);
   }
+  pa.p.dockedTo = pb.p.id; pb.p.dockedTo = pa.p.id;
   A.vx = vx; A.vy = vy; A.av = 0;
   A.docks = (A.docks || 0) + (Bv.docks || 0) + 1;
   A.stages = (A.stages || []).concat(Bv.stages || []);
   world.vessels = world.vessels.filter(o => o !== Bv);
   if (world.activeId === Bv.id || world.activeId === A.id) world.activeId = A.id;
   if (world.targetId === A.id || world.targetId === Bv.id) world.targetId = null;
-  F.autoDock = false; F.match = false;
+  F.autoDock = false; F.match = false; F.warpIdx = 0;
   retopo(A);
   Juice.beep(90, 0.18, 'square', 0.12, 0.02); Juice.noiseHit(0.12, 0.14, 700); Juice.addShake(0.18); Juice.hitstop(60);
   toast('도킹 완료! ' + A.name + ' 모듈 ' + A.parts.length + '개 부품', true);
@@ -2043,9 +2074,10 @@ function mergeDock(v1, v2, p1, p2) {
   saveSoon();
 }
 function undock(v, p) {
-  const nb = (v._adj.get(p.id) || []).map(id => v._by.get(id)).find(q => q && DEFS[q.t].kind === 'dock');
+  const nb = dockedNeighbor(v, p);
   if (!nb) return;
   const cut = new Set([p.id + '|' + nb.id]);
+  delete p.dockedTo; delete nb.dockedTo;
   const a = DIRS[p.r || 0], dot = (nb.x - p.x) * a[0] + (nb.y - p.y) * a[1];
   const res = splitVessel(v, [], cut, { x: (p.x + nb.x) / 2, y: (p.y + nb.y) / 2, speed: 0.6 });
   for (const nv of res) if (nv !== v && nv._ctrl) nv.name = v.name + ' 모듈';
@@ -2083,9 +2115,10 @@ function dockAssist(A) {
   const aligned = dot < -0.97;
   let gx = b.wx + b.wnx * (aligned ? 0 : 4), gy = b.wy + b.wny * (aligned ? 0 : 4);
   const ex = gx - a.wx, ey = gy - a.wy, dist = Math.hypot(ex, ey);
-  const vmax = auto ? clamp(dist * 0.12, 0.2, 4) : clamp(dist * 0.15, 0.15, 0.8);
+  const vmax = auto ? clamp(dist * 0.1, 0.2, 12) : clamp(dist * 0.15, 0.15, 0.8);
   const dvx = (dist > 0.01 ? ex / dist * Math.min(vmax, dist) : 0) - relvx, dvy = (dist > 0.01 ? ey / dist * Math.min(vmax, dist) : 0) - relvy;
-  const amax = auto ? 0.6 : 0.25, dl = Math.hypot(dvx, dvy), s = dl > amax ? amax / dl : 1;
+  const amax = auto ? (dist > 60 ? 1.2 : 0.6) : 0.25, dl = Math.hypot(dvx, dvy), s = dl > amax ? amax / dl : 1;
+  if (auto && dist > 30 && WARPS[F.warpIdx] < 4) F.warpIdx = 2;
   return { rotTo, ax: dvx * s * 1.5, ay: dvy * s * 1.5, d, T };
 }
 
@@ -2138,7 +2171,7 @@ function mergeGrab(A, T, ci, rk) {
   A.parts.push(rk); A.vx = vx; A.vy = vy; A.av *= A._m / M;
   world.vessels = world.vessels.filter(o => o !== T);
   if (world.targetId === T.id) world.targetId = null;
-  F.autoDock = false; F.match = false;
+  F.autoDock = false; F.match = false; F.warpIdx = 0;
   retopo(A);
   Juice.beep(70, 0.25, 'square', 0.12, 0.02); Juice.noiseHit(0.2, 0.16, 500); Juice.addShake(0.3); Juice.hitstop(80);
   toast('소행성을 잡았어요! 무게 ' + fMass(partMass(rk)), true);
@@ -2151,6 +2184,156 @@ function release(v, claw) {
   const res = splitVessel(v, [], cut, { x: claw.x, y: claw.y, speed: 0.5 });
   for (const nv of res) if (rockOf(nv)) { nv.name = rk.name || '소행성'; nv.astro = true; }
   toast('소행성을 놓았어요'); saveSoon();
+}
+
+// =====================================================================
+//  자동 비행 (2026-11-08 아이 요청 "크루 드래곤으로 정거장에 갈 수 있음")
+//  진짜 크루 드래곤도 정거장까지 스스로 날아가 도킹한다. 순서:
+//  1) 목표보다 조금 낮은 둥근 궤도 만들기 → 2) 따라잡을 때까지 기다리기 → 3) 옮겨 가는 불(호만 전이)
+//  4) 만나는 곳까지 날아가기 → 5) 속도 맞추기 → 6) 다가가기 → 자동 도킹
+// =====================================================================
+const AP_TXT = { shape: '궤도 맞추는 중', phase: '따라잡기 기다리는 중', transfer: '옮겨 가는 불 붙이는 중', coast: '목표 쪽으로 가는 중', match: '속도 맞추는 중', approach: '다가가는 중' };
+function apThrust(A) {
+  let f = 0;
+  for (const e of A._engines) { if (!e.on) continue; const pool = A._pools[e._sec]; if (!pool || !pool.tanks.some(t => (t.fuel || 0) > 0)) continue; f += ENGINES[DEFS[e.t].eng].tVac * (e.n || 1); }
+  return f;
+}
+function apStart() {
+  const A = active(), T = Vs(world.targetId);
+  if (!A || !T || T === A) { toast('먼저 목표를 정하세요'); return; }
+  if (!A._ctrl) return;
+  if (A.body !== T.body) { toast('목표와 같은 천체를 돌고 있어야 해요'); return; }
+  const b = BODY[A.body]; if (b.mu <= 0) return;
+  const oA = orbEl(A.x, A.y, A.vx, A.vy, b.mu), oT = orbEl(T.x, T.y, T.vx, T.vy, b.mu);
+  if (A.landed || oA.e >= 1 || oA.pe < b.R + floorOf(b)) { toast('먼저 궤도에 올라가야 해요'); return; }
+  if (T.landed || oT.e > 0.08 || oT.pe < b.R + floorOf(b)) { toast('목표가 둥근 궤도를 돌고 있을 때만 할 수 있어요'); return; }
+  if (apThrust(A) <= 0) for (const p of A.parts) if (DEFS[p.t].ownFuel && (p.fuel || 0) > 0) p.on = true;
+  if (apThrust(A) <= 0) { toast('켜진 엔진이나 추진기가 없어요. 다음 단계를 눌러 엔진을 켜 보세요'); return; }
+  const rT = oT.a, minR = b.R + floorOf(b) + Math.max(3000, rT * 0.004), dR = clamp(rT * 0.03, 4000, 60000);
+  let rP = rT - dR; if (rP < minR) rP = rT + dR;
+  F.ap = { phase: 'shape', T: T.id, rc: rP, rT, burn: 0, t0: world.time };
+  F.autoDock = false; F.match = false; A.sas = true;
+  toast('자동 비행 시작: ' + T.name + '까지 가요'); refreshFlightUI();
+}
+function apStop(msg) {
+  if (!F.ap) return;
+  const A = active(); F.ap = null; F.apRot = null;
+  if (A) A.throttle = 0; if (WARPS[F.warpIdx] > 1) F.warpIdx = 0;
+  if (msg) toast(msg); refreshFlightUI();
+}
+function apTimeToNu(o, x, y, nu1, mu) {
+  if (o.e >= 1) return Infinity;
+  const nu0 = wrapA(o.s * (Math.atan2(y, x) - o.w));
+  const M = nu => { const E = Math.atan2(Math.sqrt(1 - o.e * o.e) * Math.sin(nu), o.e + Math.cos(nu)); return E - o.e * Math.sin(E); };
+  let dM = M(nu1) - M(nu0); dM = ((dM % TAU) + TAU) % TAU;
+  return dM / Math.sqrt(mu / (o.a ** 3));
+}
+// r0에서 불을 붙여 반대쪽 끝을 rOther로 만들 때 필요한 속도 변화(+ 앞으로, - 뒤로)
+function apDv(r0, rOther, mu, a) { return Math.sqrt(Math.max(0, mu * (2 / r0 - 2 / (r0 + rOther)))) - Math.sqrt(Math.max(0, mu * (2 / r0 - 1 / a))); }
+function apWarpFor(tLeft) { let i = 0; while (i + 1 < WARPS.length && WARPS[i + 1] <= 10000 && WARPS[i + 1] / 60 < tLeft / 6) i++; return i; }
+function apStep(A, real) {
+  const ap = F.ap; if (!ap) return;
+  const T = Vs(ap.T);
+  if (!A || !T || A.body !== T.body || !A._ctrl) { apStop('목표를 놓쳐서 자동 비행을 멈췄어요'); return; }
+  const b = BODY[A.body], mu = b.mu;
+  const Fv = apThrust(A); if (Fv <= 0) { apStop('연료가 떨어져서 자동 비행을 멈췄어요'); return; }
+  const acc = Fv / A._m, oA = orbEl(A.x, A.y, A.vx, A.vy, mu), r = Math.hypot(A.x, A.y);
+  const pro = Math.atan2(A.vy, A.vx) - Math.PI / 2;
+  const aligned = want => Math.abs(wrapA(want - A.ang)) < 4 * DEG && Math.abs(A.av) < 0.06;
+  let rot = null, thr = 0, warp = 0;
+  const burnAt = (nuB, rTo) => {   // 끝점(nuB)에서 불을 붙여 반대쪽 끝을 rTo로. 다 되면 true
+    if (ap.burn) {
+      const dvRem = apDv(r, rTo, mu, oA.a);
+      if (Math.sign(dvRem) !== ap.burn || Math.abs(dvRem) < 0.03) { ap.burn = 0; return true; }
+      rot = ap.burn > 0 ? pro : pro + Math.PI;
+      thr = aligned(rot) ? clamp(Math.abs(dvRem) / (acc * 1.5), 0.02, 1) : 0;
+      return false;
+    }
+    const r0 = nuB === 0 ? oA.pe : oA.ap, dv = apDv(r0, rTo, mu, oA.a), bt = Math.abs(dv) / acc;
+    if (Math.abs(dv) < 0.03) return true;
+    const tLeft = oA.e < 0.002 ? 0 : apTimeToNu(oA, A.x, A.y, nuB, mu);
+    if (tLeft < bt / 2 + 1 || tLeft > oA.period - 2) { ap.burn = Math.sign(dv); return false; }
+    if (tLeft < bt / 2 + 60) rot = dv > 0 ? pro : pro + Math.PI;
+    if (tLeft > bt / 2 + 90) warp = apWarpFor(tLeft - bt / 2 - 60);
+    return false;
+  };
+  const tol = Math.max(150, ap.rc * 2e-4);
+  switch (ap.phase) {
+    case 'shape': {
+      if (!ap.burn && Math.abs(oA.ap - ap.rc) < tol && Math.abs(oA.pe - ap.rc) < tol) { ap.phase = 'phase'; break; }
+      if (!ap.burn) {
+        if (ap.rc > oA.ap + tol) ap.plan = 0;                     // 근지점에서 원지점을 올린다
+        else if (ap.rc < oA.pe - tol) ap.plan = Math.PI;          // 원지점에서 근지점을 내린다
+        else if (Math.abs(oA.ap - ap.rc) <= tol) ap.plan = Math.PI; // 원지점이 맞으면 거기서 근지점을 맞춘다
+        else ap.plan = 0;                                         // 근지점에서 원지점을 맞춘다
+      }
+      burnAt(ap.plan, ap.rc);
+      break;
+    }
+    case 'phase': {
+      const oT = orbEl(T.x, T.y, T.vx, T.vy, mu), nA = TAU / oA.period, nT = TAU / oT.period;
+      const at = (ap.rc + ap.rT) / 2, tTr = Math.PI * Math.sqrt(at ** 3 / mu);
+      const need = (((Math.PI - nT * tTr) % TAU) + TAU) % TAU;
+      const ahead = (((oA.s * (Math.atan2(T.y, T.x) - Math.atan2(A.y, A.x))) % TAU) + TAU) % TAU;
+      const rate = nA - nT;
+      const tLeft = rate > 0 ? ((((ahead - need) % TAU) + TAU) % TAU) / rate : ((((need - ahead) % TAU) + TAU) % TAU) / -rate;
+      const dv = apDv(ap.rc, ap.rT, mu, ap.rc), bt = Math.abs(dv) / acc;
+      ap.wait = tLeft;
+      if (tLeft < bt / 2 + 1 || tLeft > Math.abs(TAU / rate) - 2) { ap.phase = 'transfer'; ap.burn = Math.sign(dv); break; }
+      if (tLeft < bt / 2 + 60) rot = dv > 0 ? pro : pro + Math.PI;
+      if (tLeft > bt / 2 + 90) warp = apWarpFor(tLeft - bt / 2 - 60);
+      break;
+    }
+    case 'transfer': { if (burnAt(0, ap.rT)) ap.phase = 'coast'; break; }
+    case 'coast': {
+      const nuB = ap.rT > ap.rc ? Math.PI : 0, tLeft = apTimeToNu(oA, A.x, A.y, nuB, mu);
+      if (tLeft < 2 || tLeft > oA.period - 2 || Math.hypot(T.x - A.x, T.y - A.y) < 2500) { ap.phase = 'match'; break; }
+      if (tLeft > 60) warp = apWarpFor(tLeft - 30);
+      break;
+    }
+    case 'match': {
+      const rvx = A.vx - T.vx, rvy = A.vy - T.vy, rv = Math.hypot(rvx, rvy);
+      if (rv < 0.4) { ap.phase = 'approach'; break; }
+      rot = Math.atan2(-rvy, -rvx) - Math.PI / 2;
+      thr = aligned(rot) ? clamp(rv / (acc * 1.5), 0.02, 1) : 0;
+      break;
+    }
+    case 'approach': {
+      const dx = T.x - A.x, dy = T.y - A.y, d = Math.hypot(dx, dy);
+      const hasPort = A.parts.some(p => (isPort(p) && portInfo(A, p)) || (DEFS[p.t].kind === 'claw' && !p.link));
+      if (d < 1200) {
+        F.ap = null; F.apRot = null; A.throttle = 0; F.warpIdx = 0;
+        if (hasPort) { F.autoDock = true; toast('거의 다 왔어요. 자동 도킹을 시작해요', true); } else { F.match = true; toast(T.name + ' 옆에 왔어요', true); }
+        refreshFlightUI(); return;
+      }
+      if (d > 60000) { ap.phase = 'shape'; ap.burn = 0; toast('목표를 지나쳐서 궤도를 다시 맞춰요'); break; }
+      const vc = clamp(d / 90, 2, 40), wx = dx / d * vc, wy = dy / d * vc;
+      const ex = wx - (A.vx - T.vx), ey = wy - (A.vy - T.vy), e = Math.hypot(ex, ey);
+      if (e > 0.8 || ap.burnApp) {
+        ap.burnApp = e > 0.25;
+        rot = Math.atan2(ey, ex) - Math.PI / 2;
+        thr = aligned(rot) ? clamp(e / (acc * 1.5), 0.02, 1) : 0;
+      } else warp = d > 5000 ? 3 : 2;
+      break;
+    }
+  }
+  if (world.time - ap.t0 > 86400 * 60) { apStop('너무 오래 걸려서 자동 비행을 멈췄어요'); return; }
+  A.throttle = thr; F.apRot = rot;
+  F.warpIdx = (thr > 0 || (rot != null && !aligned(rot))) ? 2 : Math.max(2, warp);
+}
+
+// ---------- 처음부터 떠 있는 국제 우주 정거장 (2026-11-08 아이 요청 "우주정거장은 우주에 떠있음") ----------
+function makeStation() {
+  const P = (t, x, yb, o) => { const p = newPart(t); Object.assign(p, o || {}); p.x = x; p.y = yb + p.h / 2; return p; };
+  const truss = newPart('truss'); truss.w = 1.5; truss.h = 60; truss.r = 1; truss.x = 0; truss.y = 16.5 + 0.75;
+  const parts = [P('dock', 0, 0), P('hab', 0, 0.5, { w: 4.5, h: 7 }), P('hab', 0, 7.5, { w: 4.5, h: 8.5 }), P('probe', 0, 16, { w: 4.5 }), truss,
+    P('hab', 0, 18, { w: 4.5, h: 13 }), P('dock', 0, 31)];
+  for (const sx of [-27, -14, 14, 27]) { parts.push(P('solarL', sx, 18, { dep: true })); parts.push(P('solarL', sx, 12, { dep: true, r: 2 })); }
+  const b = BODY.earth, alt = world.scale === 'real' ? 420000 : 120000, r = b.R + alt, a = Math.PI / 2 + 2.3, sp = Math.sqrt(b.mu / r);
+  const v = { id: 'iss' + Math.random().toString(36).slice(2, 6), name: '국제 우주 정거장', parts, x: r * Math.cos(a), y: r * Math.sin(a), vx: sp * Math.sin(a), vy: -sp * Math.cos(a),
+    ang: a - Math.PI / 2, av: 0, body: 'earth', landed: false, throttle: 0, sas: true, stages: [], docks: 0, born: 0, iss: true, flags: { space: true } };
+  retopo(v); world.vessels.push(v);
+  return v;
 }
 
 // ---------- 부서짐 ----------
@@ -2203,6 +2386,7 @@ function buildCtl(A, assist) {
   let rot = 0; if (k.KeyA || k.ArrowLeft || hd.rotL) rot -= 1; if (k.KeyD || k.ArrowRight || hd.rotR) rot += 1;
   let rx = 0, ry = 0; if (k.KeyJ || hd.rcsL) rx -= 1; if (k.KeyL || hd.rcsR) rx += 1; if (k.KeyI || hd.rcsF) ry += 1; if (k.KeyK || hd.rcsB) ry -= 1;
   const ctl = { rot, rx, ry };
+  if (!assist && F.ap && F.apRot != null && !rot) ctl.rotTo = F.apRot;
   if (assist && !rot) ctl.rotTo = assist.rotTo;
   if (assist && !rx && !ry) { ctl.ax = assist.ax; ctl.ay = assist.ay; }
   const T = Vs(world.targetId);
@@ -2284,6 +2468,11 @@ function updateParticles(simDt, real) {
 
 function stepFlight(dt, real) {
   const A = active();
+  if (F.ap) {
+    const k = F.keys;
+    if (k.KeyW || k.KeyS || k.KeyA || k.KeyD || k.ArrowLeft || k.ArrowRight || k.ArrowUp || k.ArrowDown || F.hold.rotL || F.hold.rotR) apStop('직접 조종해서 자동 비행을 멈췄어요');
+    else apStep(A, real);
+  }
   if (A && A._ctrl) {
     const k = F.keys;
     if (k.KeyW || k.ShiftLeft || k.ShiftRight || k.ArrowUp) setThrottle(A.throttle + real * 0.8);
@@ -2418,6 +2607,7 @@ function drawPad(bs) {
   ctx.restore();
 }
 const FLAME = {
+  mmh: ['rgba(255,248,230,0.95)', 'rgba(255,205,140,0.6)', 'rgba(255,170,90,0)'],
   kero: ['rgba(255,250,225,0.95)', 'rgba(255,175,70,0.8)', 'rgba(255,95,25,0)'],
   hydro: ['rgba(235,245,255,0.9)', 'rgba(150,190,255,0.45)', 'rgba(120,160,255,0)'],
   meth: ['rgba(240,232,255,0.95)', 'rgba(150,125,255,0.6)', 'rgba(110,90,255,0)'],
@@ -2427,6 +2617,16 @@ function drawFlames(v, pr) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (const e of v._engines) {
     if (!e._fl) continue;
+    if (DEFS[e.t].kind === 'capsule') {   // 드라코 추진기: 윗부분 양옆에서 작게
+      const sh = shapeOf(e), yc = e.h * 0.22, xs = sh.wb / 2 + (sh.wt / 2 - sh.wb / 2) * ((yc + e.h / 2) / e.h);
+      ctx.save(); ctx.translate(e.x, e.y); ctx.rotate((e.r || 0) * Math.PI / 2); if (e.f) ctx.scale(-1, 1);
+      for (const sd of [-1, 1]) {
+        const x = sd * (xs + 0.06), y0 = yc - 0.36, L = (1.2 + 1.6 * e._fl) * (0.85 + Math.random() * 0.3);
+        const g = ctx.createLinearGradient(0, y0, 0, y0 - L); g.addColorStop(0, FLAME.mmh[0]); g.addColorStop(0.4, FLAME.mmh[1]); g.addColorStop(1, FLAME.mmh[2]);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 0.12, y0); ctx.quadraticCurveTo(x - 0.3 + sd * 0.2, y0 - L * 0.5, x + sd * 0.35, y0 - L); ctx.quadraticCurveTo(x + 0.3 + sd * 0.2, y0 - L * 0.5, x + 0.12, y0); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore(); continue;
+    }
     const E = ENGINES[DEFS[e.t].eng], ac = engAcross(e.n || 1), ew = E.w, col = FLAME[E.fuel];
     ctx.save(); ctx.translate(e.x, e.y); ctx.rotate((e.r || 0) * Math.PI / 2);
     for (let i = 0; i < ac; i++) {
@@ -2963,8 +3163,11 @@ function updateHUD() {
       txt += `<div class="row"><span class="k">거리</span><span class="v">${fDist(Math.hypot(tb.x - ab.x, tb.y - ab.y))}</span></div>`;
       txt += `<div class="row"><span class="k">상대 속도</span><span class="v">${fSpd(Math.hypot(tb.vx - ab.vx, tb.vy - ab.vy))}</span></div>`;
     }
-    txt += `<div class="btns" style="margin:4px 0 0"><button id="tgtOff">목표 풀기</button></div>`;
-    tg.innerHTML = txt; tg.classList.remove('hide'); $('tgtOff').onclick = () => { world.targetId = null; F.autoDock = false; F.match = false; refreshFlightUI(); updateHUD(); };
+    if (F.ap) txt += `<div class="row"><span class="k">자동 비행</span><span class="good">${AP_TXT[F.ap.phase] || ''}</span></div>`;
+    const canAp = A._ctrl && !A.landed && T.body === A.body && !F.autoDock;
+    txt += `<div class="btns" style="margin:4px 0 0">${F.ap ? '<button id="apBtn" class="on">자동 비행 멈추기</button>' : canAp ? '<button id="apBtn">자동으로 가기</button>' : ''}<button id="tgtOff">목표 풀기</button></div>`;
+    tg.innerHTML = txt; tg.classList.remove('hide'); $('tgtOff').onclick = () => { apStop(); world.targetId = null; F.autoDock = false; F.match = false; refreshFlightUI(); updateHUD(); };
+    if ($('apBtn')) $('apBtn').onclick = () => { if (F.ap) apStop('자동 비행을 멈췄어요'); else apStart(); updateHUD(); };
   } else tg.classList.add('hide');
   refreshFlightUI(true);
 }
@@ -2983,7 +3186,7 @@ function refreshFlightUI(soft) {
   if (A) {
     (A.stages || []).forEach((ev, i) => {
       const byId = A._by, names = {}; let dec = 0, fair = 0, chute = 0;
-      for (const id of ev) { const p = byId.get(id); if (!p) continue; const k = DEFS[p.t].kind; if (k === 'engine') { const nm = ENGINES[DEFS[p.t].eng].name; names[nm] = (names[nm] || 0) + (p.n || 1); } else if (k === 'decoupler' || k === 'rdecoupler') dec++; else if (k === 'fairing') fair++; else if (k === 'chute') chute++; }
+      for (const id of ev) { const p = byId.get(id); if (!p) continue; const k = DEFS[p.t].kind; if (k === 'engine') { const nm = ENGINES[DEFS[p.t].eng].name; names[nm] = (names[nm] || 0) + (p.n || 1); } else if (k === 'decoupler' || k === 'rdecoupler') dec++; else if (k === 'fairing') fair++; else if (isChute(p)) chute++; }
       const bits = []; if (dec) bits.push('분리'); if (fair) bits.push('페어링 열기'); if (chute) bits.push('낙하산 준비');
       const en = Object.entries(names).map(([k, v]) => k + (v > 1 ? '×' + v : '')).join(', '); if (en) bits.push('엔진 ' + en);
       if (!bits.length) return;
@@ -2998,7 +3201,9 @@ function refreshFlightUI(soft) {
   if (A && A._ctrl) {
     if (A._has.legs) { const dep = A.parts.some(p => DEFS[p.t].kind === 'legs' && p.dep); add(dep ? '다리 접기 (G)' : '다리 펴기 (G)', () => toggleKind(A, 'legs'), dep); }
     if (A._has.solar) { const dep = A.parts.some(p => DEFS[p.t].kind === 'solar' && p.dep); add(dep ? '태양전지판 접기 (U)' : '태양전지판 펴기 (U)', () => toggleKind(A, 'solar'), dep); }
-    if (A._has.chute && A.parts.some(p => DEFS[p.t].kind === 'chute' && !p.ch)) add('낙하산 준비 (P)', () => armChutes(A));
+    if (A._has.chute && A.parts.some(p => isChute(p) && !p.ch)) add('낙하산 준비 (P)', () => armChutes(A));
+    const thr = A.parts.filter(p => DEFS[p.t].kind === 'capsule' && DEFS[p.t].eng);
+    if (thr.length) { const on = thr.some(p => p.on); add(on ? '추진기 끄기' : '드래곤 추진기 켜기', () => { for (const p of thr) p.on = !on; toast(on ? '드라코 추진기를 껐어요' : '드라코 추진기를 켰어요. 엔진 세기(W)로 불을 붙여요'); }, on); }
     const claw = A.parts.find(p => DEFS[p.t].kind === 'claw' && p.link); if (claw) add('소행성 놓기', () => release(A, claw));
   }
   // 자세 제어 분사
@@ -3014,7 +3219,7 @@ function toggleKind(A, kind) {
   Juice.beep(dep ? 300 : 500, 0.08, 'triangle', 0.07);
   if (kind === 'solar' && !dep) { toast('태양전지판을 펼쳤어요: ' + nf(A._kw, 1) + ' kW', true); }
 }
-function armChutes(A) { for (const p of A.parts) if (DEFS[p.t].kind === 'chute' && !p.ch) p.ch = 1; toast('낙하산 준비: 공기가 있고 느려지면 저절로 펴져요'); }
+function armChutes(A) { for (const p of A.parts) if (isChute(p) && !p.ch) p.ch = 1; toast('낙하산 준비: 공기가 있고 느려지면 저절로 펴져요'); }
 
 // ---------- 누르기 (비행) ----------
 function hitVessel(sx, sy) {
@@ -3060,10 +3265,15 @@ function partPop(x, y, v, p) {
   else if (k === 'fairing' && !p.half) { h += `<button id="ppA">페어링 열기</button>`; bi.ppA = () => { v.stages = v.stages.map(e => e.filter(id => id !== p.id)).filter(e => e.length); openFairing(v, p); splitVessel(v, [p.id], null, null); retopo(v); toast('페어링이 열렸어요'); }; }
   else if (k === 'legs' || k === 'solar') { h += `<button id="ppA">${p.dep ? '접기' : '펴기'}</button>`; bi.ppA = () => { p.dep = !p.dep; retopo(v); }; if (k === 'solar') s = d.kw + ' kW'; }
   else if (k === 'chute') { s = p.ch === 2 ? '펴져 있어요' : p.ch === 1 ? '준비됨: 공기가 있고 느려지면 펴져요' : ''; if (!p.ch) { h += `<button id="ppA">낙하산 준비</button>`; bi.ppA = () => { p.ch = 1; }; } }
-  else if (k === 'dock') { const nb = (v._adj.get(p.id) || []).some(id => DEFS[v._by.get(id).t].kind === 'dock'); s = nb ? '다른 모듈과 도킹되어 있어요' : '비어 있는 도킹 포트예요'; if (nb) { h += `<button id="ppA">도킹 풀기</button>`; bi.ppA = () => undock(v, p); } }
+  else if (k === 'dock') { const nb = dockedNeighbor(v, p); s = nb ? '다른 모듈과 도킹되어 있어요' : '비어 있는 도킹 포트예요'; if (nb) { h += `<button id="ppA">도킹 풀기</button>`; bi.ppA = () => undock(v, p); } }
   else if (k === 'claw') { s = p.link ? '소행성을 잡고 있어요' : '소행성에 천천히 닿으면 잡아요'; if (p.link) { h += `<button id="ppA">놓기</button>`; bi.ppA = () => release(v, p); } }
   else if (k === 'rock') s = '잡은 소행성 · ' + fMass(partMass(p));
-  else if (isControl(p)) s = vKind(v) + (v._crew ? ' · 사람 ' + v._crew + '명' : '');
+  else if (isControl(p)) {
+    s = vKind(v) + (v._crew ? ' · 사람 ' + v._crew + '명' : '');
+    if (d.eng) { s += ' · 추진기 연료 ' + fMass(p.fuel || 0); h += `<button id="ppA">${p.on ? '추진기 끄기' : '드라코 추진기 켜기'}</button>`; bi.ppA = () => { p.on = !p.on; }; }
+    if (d.dockTop && dockedNeighbor(v, p)) { h += `<button id="ppB">도킹 풀기</button>`; bi.ppB = () => undock(v, p); }
+    if (d.chute && !p.ch) { h += `<button id="ppC">낙하산 준비</button>`; bi.ppC = () => { p.ch = 1; }; }
+  }
   h = h.replace('</div>', '</div>' + (s ? `<div class="s">${s}</div>` : ''));
   showPop(x, y, h, bi);
 }
@@ -3138,7 +3348,7 @@ function toggleMap() { F.map = !F.map; if (F.map) mapInit(); hidePop(); refreshF
 function switchTo(id) {
   const v = Vs(id); if (!v || !v._ctrl) return;
   world.activeId = id; if (world.targetId === id) world.targetId = null;
-  F.zoom = clamp(0.4 * H / Math.max(v._Hh, v._W, 2), 1e-6, 40); F.warpIdx = 0; F.autoDock = false; F.match = false; F.crashed = false;
+  F.zoom = clamp(0.4 * H / Math.max(v._Hh, v._W, 2), 1e-6, 40); F.warpIdx = 0; F.autoDock = false; F.match = false; F.crashed = false; F.ap = null; F.apRot = null;
   F.lastCam = null; if (F.map) mapInit(); refreshFlightUI(); updateHUD();
 }
 // 손가락·마우스로 누르고 있기
@@ -3284,7 +3494,7 @@ function enterFlight() {
   $('build').classList.add('hide'); $('fly').classList.remove('hide'); hidePop();
   const A = active();
   F.zoom = A ? clamp(0.42 * (H - 44) / Math.max(A._Hh, A._W * 0.7, 3), 1e-6, 40) : 1;
-  F.map = false; F.warpIdx = 0; F.crashed = false; F.autoDock = false; F.match = false; F.smoke = []; F.booms = []; F.pov = false; F.pen = null;
+  F.map = false; F.warpIdx = 0; F.crashed = false; F.autoDock = false; F.match = false; F.smoke = []; F.booms = []; F.pov = false; F.pen = null; F.ap = null; F.apRot = null;
   if (A) { const ab = vAbs(A); cam.x = ab.x; cam.y = ab.y; cam.body = A.body; cam.sys = vSys(A); const bs = bodyState(A.body, world.time); cam.phi = Math.atan2(cam.y - bs.y, cam.x - bs.x) - Math.PI / 2; }
   Juice.clear(); uiKey = ''; refreshFlightUI(); updateHUD(); saveAll();
 }
@@ -3357,7 +3567,7 @@ function setModal() {
 }
 function newWorld(scale) {
   world = { scale, time: 0, vessels: [], activeId: null, targetId: null };
-  setupBodies(); makeAsteroids(); world.astro = true; saveAll();
+  setupBodies(); makeAsteroids(); world.astro = true; makeStation(); world.iss = true; saveAll();
   if (screen === 'fly') exitToBuild();
 }
 function loadModal() {
@@ -3379,7 +3589,7 @@ function afterLoad() { closeModal(); B.sel = null; $('dName').textContent = D().
 // ---------- 예시 로켓 ----------
 const EXAMPLES = [
   ['falcon', '팰컨 9 + 인공위성', '스페이스X 로켓을 닮은 2단 로켓이에요. 페어링 안에 위성이 들어 있어요.'],
-  ['crew', '팰컨 9 + 크루 드래곤', '사람 4명이 탄 캡슐이에요. 밑에 열 보호막, 위에 낙하산이 있어서 지구로 돌아올 수 있어요.'],
+  ['crew', '팰컨 9 + 크루 드래곤', '사람 4명이 탄 캡슐이에요. 궤도에 오르면 1단계 남은 걸 떼고, 목표를 국제 우주 정거장으로 정한 다음 "자동으로 가기"를 눌러 보세요.'],
   ['station', '정거장 모듈 로켓', '거주 모듈과 도킹 포트 2개를 싣고 가요. 여러 번 쏘아서 도킹하면 정거장이 돼요.'],
   ['nuri', '누리호', '한국 로켓을 닮은 3단 로켓이에요. KRE-075 엔진 4개로 떠요.'],
   ['saturn', '새턴 V + 아폴로', '폭 10 m짜리 큰 3단 로켓이에요. 달까지 갈 수 있어요.'],
@@ -3393,7 +3603,7 @@ function makeExample(id) {
   const f9low = () => [P('e_merlin', 0, 0, { n: 9 }), P('tank', 0, 2, { w: 3.5, h: 40 }), P('dec', 0, 42, { w: 3.5, h: 5 }), P('e_mvac', 0, 42.5), P('tank', 0, 47, { w: 3.5, h: 11 })];
   if (id === 'crew') {
     name = '크루 드래곤';
-    parts = f9low().concat([P('dec', 0, 58, { w: 3.5, h: 0.5 }), P('shield', 0, 58.5, { w: 4 }), P('dragon', 0, 59), P('chute', 0, 63.5)]);
+    parts = f9low().concat([P('dec', 0, 58, { w: 3.5, h: 0.5 }), P('shield', 0, 58.5, { w: 4 }), P('dragon', 0, 59)]);
   } else if (id === 'falcon') {
     name = '팰컨 9';
     parts = f9low().concat([P('dec', 0, 58, { w: 1.5, h: 0.5 }), P('bus', 0, 58.5, { w: 2, h: 2.5 }), P('antenna', 0, 61)], side('solarS', 59.75, 1), [P('fairing', 0, 58, { w: 5, h: 11 })]);
@@ -3408,7 +3618,7 @@ function makeExample(id) {
     name = '새턴 V';
     parts = [P('e_f1', 0, 0, { n: 5 }), P('tank', 0, 5.5, { w: 10, h: 26 }), P('dec', 0, 31.5, { w: 10, h: 4 }), P('e_j2', 0, 32, { n: 5 }), P('tank', 0, 35.5, { w: 10, h: 22 }),
       P('adapter', 0, 57.5, { w: 10, w2: 6.5, h: 5 }), P('dec', 0, 62.5, { w: 6.5, h: 0.5 }), P('e_j2', 0, 59.5), P('tank', 0, 63, { w: 6.5, h: 11 }),
-      P('adapter', 0, 74, { w: 6.5, w2: 4, h: 6 }), P('dec', 0, 80, { w: 4, h: 0.5 }), P('shield', 0, 80.5, { w: 4 }), P('apollo', 0, 81), P('chute', 0, 84.5)];
+      P('adapter', 0, 74, { w: 6.5, w2: 4, h: 6 }), P('dec', 0, 80, { w: 4, h: 0.5 }), P('shield', 0, 80.5, { w: 4 }), P('apollo', 0, 81)];
   } else if (id === 'electron') {
     name = '일렉트론';
     parts = [P('e_rutherford', 0, 0, { n: 9 }), P('tank', 0, 1, { w: 1.5, h: 7.5 }), P('dec', 0, 8.5, { w: 1.5, h: 1.2 }), P('e_rutherford', 0, 8.7), P('tank', 0, 9.7, { w: 1.5, h: 2.2 }),
@@ -3489,7 +3699,7 @@ function bindUI() {
   $('matchBtn').onclick = () => { F.match = !F.match; F.autoDock = false; refreshFlightUI(); };
   $('autoDock').onclick = () => {
     const A = active(), T = Vs(world.targetId);
-    if (!F.autoDock && A && T && !A.parts.some(p => (DEFS[p.t].kind === 'dock' && portInfo(A, p)) || (DEFS[p.t].kind === 'claw' && !p.link))) { toast('빈 도킹 포트나 집게가 있어야 해요'); return; }
+    if (!F.autoDock && A && T && !A.parts.some(p => (isPort(p) && portInfo(A, p)) || (DEFS[p.t].kind === 'claw' && !p.link))) { toast('빈 도킹 포트나 집게가 있어야 해요'); return; }
     if (!F.autoDock && A && T && Math.hypot(vAbs(A).x - vAbs(T).x, vAbs(A).y - vAbs(T).y) > 3000) { toast('목표가 3 km 안에 있을 때 쓸 수 있어요'); return; }
     F.autoDock = !F.autoDock; F.match = false; refreshFlightUI();
   };
@@ -3509,6 +3719,7 @@ function init() {
   setupBodies();
   for (const v of world.vessels.slice()) { try { v._com = null; retopo(v); } catch (e) { console.warn(e); world.vessels = world.vessels.filter(o => o !== v); } }
   if (!world.astro) { makeAsteroids(); world.astro = true; }
+  if (!world.iss) { makeStation(); world.iss = true; }
   Juice.setMuted(!S.set.sound);
   B.symOn = true;
   $('dName').textContent = D().name;
