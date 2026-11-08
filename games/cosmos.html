@@ -1009,12 +1009,19 @@ function computeAcc() {
       if (d < rr) events.push(0, a, b);
       else {
         const s = a.m < b.m ? a : b, p = s === a ? b : a;
-        if (s.m < 0.5 * p.m && canTear(s)) { const rd = 2.44 * s.R * Math.cbrt(p.m / s.m); if (d < rd) events.push(1, s, p); }
+        if (s.m < 0.5 * p.m && canTear(s)) { const rd = 2.44 * s.R * Math.cbrt(p.m / s.m); if (d < rd && !headOn(s, p, d)) events.push(1, s, p); }
       }
     }
   }
   accDirty = false;
   return minTs;
+}
+// 거의 똑바로(직각으로) 떨어지는 중인가: 다가오는 속도가 전체 속도의 70%를 넘으면 그대로 부딪힌다
+function headOn(s, p, d) {
+  const rx = s.x - p.x, ry = s.y - p.y, rz = s.z - p.z, vx = s.vx - p.vx, vy = s.vy - p.vy, vz = s.vz - p.vz;
+  const v = Math.hypot(vx, vy, vz); if (v === 0) return false;
+  const vr = (rx * vx + ry * vy + rz * vz) / d;
+  return vr < -0.7 * v;
 }
 function canTear(s) { return s.kind === 'planet' || (s.kind === 'star' && s.stage !== 'ns' && s.stage !== 'bh' && !s.anim); }
 
@@ -1954,17 +1961,74 @@ function createBody(t, m, pos, vel) {
   computePrimaries();
   return b;
 }
+// ---- 쌍성: 두 천체의 질량이 비슷하면(작은 쪽이 큰 쪽의 5% 이상) 짝으로 본다 ----
+function partnerOf(dom) {
+  let best = null;
+  for (const o of bodies) {
+    if (o === dom || o.dead) continue;
+    if (o.prim !== dom && dom.prim !== o) continue;
+    if (Math.min(o.m, dom.m) / Math.max(o.m, dom.m) < 0.05) continue;
+    if (!best || o.m > best.m) best = o;
+  }
+  return best;
+}
+function pairInfo(a, q) {
+  const M = a.m + q.m;
+  const C = { m: M, x: (a.x * a.m + q.x * q.m) / M, y: (a.y * a.m + q.y * q.m) / M, z: (a.z * a.m + q.z * q.m) / M, vx: (a.vx * a.m + q.vx * q.m) / M, vy: (a.vy * a.m + q.vy * q.m) / M, vz: (a.vz * a.m + q.vz * q.m) / M };
+  let n = vcross([q.x - a.x, q.y - a.y, q.z - a.z], [q.vx - a.vx, q.vy - a.vy, q.vz - a.vz]);
+  n = vlen(n) > 0 ? vnorm(n) : [0, 1, 0];
+  if (n[1] < 0 && Math.abs(n[1]) > 0.2) { /* 쌍성이 거꾸로 돌면 행성도 같은 쪽으로 */ }
+  return { C, ab: Math.hypot(q.x - a.x, q.y - a.y, q.z - a.z), n, crew: bodies.filter(o => o === a || o === q || o.prim === a || o.prim === q) };
+}
+// 놓을 곳 p에서 무엇을 중심으로 돌지: 가까운 쌍성이면 두 별의 질량중심(P형), 한 별에 아주 가까우면 그 별(S형)
+function orbitCenterAt(p) {
+  const dom = dominantAt(p[0], p[1], p[2]); if (!dom) return null;
+  const q = partnerOf(dom);
+  if (!q) return { c: dom, n: [0, 1, 0] };
+  const P = pairInfo(dom, q);
+  const rD = Math.hypot(p[0] - dom.x, p[1] - dom.y, p[2] - dom.z), rQ = Math.hypot(p[0] - q.x, p[1] - q.y, p[2] - q.z);
+  if (Math.min(rD, rQ) < 0.3 * P.ab) return { c: rD < rQ ? dom : q, n: [0, 1, 0] };
+  const rC = Math.hypot(p[0] - P.C.x, p[1] - P.C.y, p[2] - P.C.z);
+  return { c: P.C, pair: [dom, q], ab: P.ab, n: P.n, crew: P.crew, unstable: rC < 2.5 * P.ab };
+}
 function placeVelocity(p, drag, mNew) {
-  const dom = dominantAt(p[0], p[1], p[2]);
+  const oc = orbitCenterAt(p); const dom = oc ? oc.c : null;
   let v = dom ? [dom.vx, dom.vy, dom.vz] : [0, 0, 0];
   const auto = $('pauto').checked;
   if (dom) {
     const rv = vsub(p, [dom.x, dom.y, dom.z]); const r = vlen(rv) || 1e-9;
     const vc = Math.sqrt(G * (dom.m + mNew) / r);
     if (drag) { const k = vc / (0.25 * cam.dist); v = vadd(v, vmul(drag, k)); }
-    else if (auto) { let dir = vcross([0, 1, 0], rv); if (vlen(dir) < 1e-9 * r) dir = [0, 0, -1]; v = vadd(v, vmul(vnorm(dir), vc)); }
+    else if (auto) { const nn = oc.pair ? (oc.n[1] >= 0 ? [0, 1, 0] : [0, -1, 0]) : [0, 1, 0]; let dir = vcross(nn, rv); if (vlen(dir) < 1e-9 * r) dir = [0, 0, -1]; v = vadd(v, vmul(vnorm(dir), vc)); }
   } else if (drag) { const k = 2 * Math.PI * 0.5 / 0.25; v = vadd(v, vmul(drag, k)); }
   return { v, dom };
+}
+// 화면에서 행성 바로 옆(28px 안)을 누르면, 그 행성을 도는 위성 자리(힐 반지름 안)로 맞춰 놓는다
+function snapPlace(p, sx, sy) {
+  if (!p) return p;
+  const t = curType(), mNew = curMass();
+  let best = null, bd = 28;
+  for (const it of frameInfo.items || []) {
+    const c = it.b; if (it.sx == null || it.w <= 0) continue;
+    if (c.kind !== 'planet' && c.stage !== 'brown') continue;
+    if (mNew > 0.5 * c.m) continue;
+    const dpx = Math.hypot(it.sx - sx, it.sy - sy) - Math.max(it.rpx, 0);
+    if (dpx < bd) { bd = dpx; best = c; }
+  }
+  if (!best) return p;
+  const c = best, H = hillR(c);
+  const dNow = Math.hypot(p[0] - c.x, p[1] - c.y, p[2] - c.z);
+  const Rn = newRadius(t, mNew);
+  const rd = 2.44 * Rn * Math.cbrt(c.m / mNew);
+  const dMin = Math.max(rd * 1.6, c.R * 3 + Rn), dMax = Math.min(0.3 * H, 1e9);
+  if (dMin >= dMax) return p;
+  let d = (dNow >= dMin && dNow <= dMax) ? dNow : clamp(dNow, dMin, Math.max(dMin, Math.min(dMax, Math.max(dMin * 2.5, c.R * 10))));
+  let dx = p[0] - c.x, dz = p[2] - c.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  let q = [c.x + dx * d, c.y, c.z + dz * d];
+  // 이미 다른 위성이 있는 자리면 조금씩 바깥으로
+  for (let k = 0; k < 8 && bodies.some(o => Math.hypot(o.x - q[0], o.y - q[1], o.z - q[2]) < (o.R + Rn) * 3); k++) { d = Math.min(d * 1.35, dMax); q = [c.x + dx * d, c.y, c.z + dz * d]; if (d >= dMax) break; }
+  q.snap = c;
+  return q;
 }
 function planePoint(sx, sy) {
   const d = screenRay(sx, sy); const py = cam.target[1];
@@ -1977,6 +2041,15 @@ function newRadius(t, m) { return t.kind === 'planet' ? planetRadius(t.sub, m) :
 function tryPlace(p, drag) {
   const t = curType(), m = curMass(), R = newRadius(t, m);
   for (const o of bodies) if (Math.hypot(o.x - p[0], o.y - p[1], o.z - p[2]) < (o.R + R) * 1.02) { log('다른 천체와 겹치는 곳에는 놓을 수 없습니다.', 1); return null; }
+  if (!drag && $('pauto').checked) {
+    const oc = orbitCenterAt(p);
+    if (oc && oc.unstable) {
+      const C = oc.c, rx = p[0] - C.x, rz = p[2] - C.z, rr = Math.hypot(rx, rz) || 1, want = 2.6 * oc.ab;
+      p = [C.x + rx / rr * want, p[1], C.z + rz / rr * want];
+      log(`두 별(${oc.pair[0].name}·${oc.pair[1].name}) 사이는 궤도가 불안정해서, 두 별 거리의 2.6배(${fmtDist(want)})로 옮겨 놓았습니다.`);
+      for (const o of bodies) if (Math.hypot(o.x - p[0], o.y - p[1], o.z - p[2]) < (o.R + R) * 1.02) { log('다른 천체와 겹치는 곳에는 놓을 수 없습니다.', 1); return null; }
+    }
+  }
   const { v } = placeVelocity(p, drag, m);
   const b = createBody(t, m, p, v);
   zeroMomentum();
@@ -2011,8 +2084,8 @@ function drawPlaceLines() {
     path.forEach((q, i) => { const vv = toView(q[0], q[1], q[2]); linePush(vv[0], vv[1], vv[2], 1 - i / path.length * 0.8); });
     lineDraw(gl.LINE_STRIP, [1.0, 0.85, 0.4, 0.9], s);
   } else if ($('pauto').checked) {
-    const dom = dominantAt(p[0], p[1], p[2]);
-    if (dom) { const r = Math.hypot(p[0] - dom.x, p[2] - dom.z); circleLines(dom.x, p[1], dom.z, r, [0.6, 0.85, 1.0, 1], 0.55, true); }
+    const oc = orbitCenterAt(p); const dom = oc ? oc.c : null;
+    if (dom) { let r = Math.hypot(p[0] - dom.x, p[2] - dom.z); if (oc.unstable) r = 2.6 * oc.ab; circleLines(dom.x, p[1], dom.z, r, oc.unstable ? [1.0, 0.75, 0.35, 1] : [0.6, 0.85, 1.0, 1], 0.55, true); }
   }
 }
 
@@ -2021,6 +2094,90 @@ function drawPlaceLines() {
 // =====================================================================
 let panelKey = '', selMass0 = 0;
 function rocheOf(s, p) { return 2.44 * s.R * Math.cbrt(p.m / s.m); }
+// ---- 고른 천체 둘레에 천체 붙이기 (행성 추가 / 위성 추가 / 쌍둥이 행성) ----
+function addButtons(b) {
+  if (b.anim) return '';
+  if (b.kind === 'star') return `<button class="big" data-act="addPlanet">행성 추가</button>`;
+  const out = [];
+  if (b.sub !== 'asteroid') out.push(`<button class="big" data-act="addMoon">위성 추가</button>`);
+  if (b.sub !== 'asteroid' && b.sub !== 'moon') out.push(`<button class="big" data-act="addTwin">쌍둥이 행성 만들기</button>`);
+  return out.join('');
+}
+function orbitersOf(c) { return bodies.filter(o => o !== c && !o.dead && o.prim === c).map(o => Math.hypot(o.x - c.x, o.y - c.y, o.z - c.z)); }
+function orbitNormal(c) {
+  if (c.prim) { const r = [c.x - c.prim.x, c.y - c.prim.y, c.z - c.prim.z], v = [c.vx - c.prim.vx, c.vy - c.prim.vy, c.vz - c.prim.vz]; const n = vcross(r, v); if (vlen(n) > 0) return vnorm(n); }
+  return [0, 1, 0];
+}
+function hillR(c) { return c.prim ? Math.hypot(c.x - c.prim.x, c.y - c.prim.y, c.z - c.prim.z) * Math.cbrt(c.m / (3 * c.prim.m)) : Infinity; }
+// c 둘레 거리 d의 원 궤도에 b를 놓는다. 둘이 같이 질량중심을 돌도록 c도 반대로 살짝 밀린다.
+function putInOrbit(c, b, d, crewIn, nIn) {
+  const n = nIn || orbitNormal(c);
+  const a1 = vnorm(vcross(n, Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1])), a2 = vcross(n, a1);
+  const ph = rnd(0, Math.PI * 2);
+  const rh = vadd(vmul(a1, Math.cos(ph)), vmul(a2, Math.sin(ph))), vh = vcross(n, rh);
+  const M = c.m + b.m, vc = Math.sqrt(G * M / d);
+  b.x = c.x + rh[0] * d; b.y = c.y + rh[1] * d; b.z = c.z + rh[2] * d;
+  const kb = vc * c.m / M, kc = vc * b.m / M;
+  b.vx = c.vx + vh[0] * kb; b.vy = c.vy + vh[1] * kb; b.vz = c.vz + vh[2] * kb;
+  // c와 c를 도는 것들(위성)은 같이 반대로 밀린다
+  const crew = crewIn || bodies.filter(o => o === c || o.prim === c);
+  for (const o of crew) { o.vx -= vh[0] * kc; o.vy -= vh[1] * kc; o.vz -= vh[2] * kc; }
+  addBody(b); computePrimaries(); zeroMomentum(); saveSoon();
+  if ((cam.follow === c.id || cam.follow === 'com' || (crewIn && crewIn.some(o => o.id === cam.follow))) && cam.tdist < d * 3) cam.tdist = d * 3;
+}
+function planetLike(sub, m, name) {
+  const b = newBody({ kind: 'planet', sub, m, name });
+  b.spinRate = 2 * Math.PI / ((sub === 'gas' || sub === 'ice') ? 0.42 * DAY : sub === 'moon' ? 27 * DAY : rnd(0.6, 1.4) * DAY);
+  if (sub === 'gas' && Math.random() < 0.35) b.ring = { in: 1.25, out: rnd(1.9, 2.4), col: [0.82, 0.74, 0.6] };
+  return b;
+}
+function addPlanetTo(c) {
+  const rs = orbitersOf(c);
+  const L = isLum(c) ? c.L : 0;
+  let d;
+  if (rs.length) d = Math.max(...rs) * 1.6;
+  else d = L > 1e-6 ? Math.sqrt(L) * 0.85 : 0.25 * Math.cbrt(c.m);
+  d = Math.max(d, c.R * 4, 0.004 * Math.cbrt(c.m));
+  // 눈선(얼음이 생기는 거리) 안쪽은 암석 행성, 바깥은 가스·얼음 행성
+  const snow = L > 1e-6 ? 2.7 * Math.sqrt(L) : 1, hzIn = Math.sqrt(L / 1.1), hzOut = Math.sqrt(L / 0.53);
+  let sub, m;
+  if (d < snow) { if (L > 1e-6 && d >= hzIn && d <= hzOut) { sub = 'earth'; m = MEARTH * rnd(0.6, 2); } else if (d < hzIn) { sub = Math.random() < 0.5 ? 'venus' : 'desert'; m = MEARTH * rnd(0.2, 1.2); } else { sub = 'desert'; m = MEARTH * rnd(0.08, 0.6); } }
+  else if (Math.random() < 0.6) { sub = 'gas'; m = MJUP * rnd(0.2, 3); } else { sub = 'ice'; m = 17 * MEARTH * rnd(0.7, 1.4); }
+  const b = planetLike(sub, m, autoName('행성'));
+  const q = partnerOf(c);
+  if (q) {
+    const P = pairInfo(c, q);
+    if (d < 0.25 * P.ab) { putInOrbit(c, b, d); log(`${c.name} 하나만 도는 궤도(두 별 거리의 25% 안쪽)에 ${b.name}을(를) 추가했습니다.`); return; }
+    const cb = bodies.filter(o => (o.prim === c || o.prim === q) && o.kind === 'planet').map(o => Math.hypot(o.x - P.C.x, o.y - P.C.y, o.z - P.C.z)).filter(r => r > 2 * P.ab);
+    d = Math.max(d, 3 * P.ab, cb.length ? Math.max(...cb) * 1.6 : 0);
+    putInOrbit(P.C, b, d, P.crew, P.n);
+    log(`${c.name}·${q.name} 두 별을 함께 도는 안정한 궤도(${fmtDist(d)}, 두 별 거리의 ${(d / P.ab).toFixed(1)}배)에 ${b.name}을(를) 추가했습니다.`);
+    return;
+  }
+  putInOrbit(c, b, d);
+  log(`${c.name} 둘레 ${fmtDist(d)}에 ${b.name}(${SUB_NAME[sub]})을(를) 추가했습니다.`);
+}
+function addMoonTo(c) {
+  const rs = orbitersOf(c);
+  const mm = Math.min(c.m * 0.02, (c.sub === 'gas' || c.sub === 'ice' ? 0.015 : 0.0123) * MEARTH * rnd(0.4, 1.3));
+  const b = planetLike('moon', mm, c.name + ' 위성 ' + (rs.length + 1));
+  const rd = 2.44 * b.R * Math.cbrt(c.m / b.m);
+  let d = rs.length ? Math.max(...rs) * 1.6 : Math.max(rd * 3, c.R * 8);
+  const lim = 0.4 * hillR(c);
+  if (d > lim) { log(`${c.name}의 힐 반지름 안에 위성을 더 넣을 자리가 없습니다.`, 1); nextId--; return; }
+  putInOrbit(c, b, d);
+  log(`${c.name} 둘레 ${fmtDist(d)}에 ${b.name}을(를) 추가했습니다.`);
+}
+function addTwinTo(c) {
+  const b = planetLike(c.sub, c.m * rnd(0.8, 1.0), c.name + ' B');
+  b.pal = jitterPal(c.pal || PAL[c.sub] || PAL.earth, 0.15); b.ring = null;
+  const rd = 2.44 * Math.max(b.R, c.R);
+  let d = Math.max(rd * 5, c.R * 14);
+  const lim = c.prim ? 0.3 * Math.hypot(c.x - c.prim.x, c.y - c.prim.y, c.z - c.prim.z) * Math.cbrt((c.m + b.m) / (3 * c.prim.m)) : Infinity;
+  if (d > lim) { if (lim > rd * 2.2) d = lim; else { log(`${c.name}이(가) 중심 별에 너무 가까워서 쌍둥이 행성을 만들 수 없습니다.`, 1); nextId--; return; } }
+  putInOrbit(c, b, d);
+  log(`쌍둥이 행성을 만들었습니다. ${c.name}와(과) ${b.name}이(가) 질량중심을 같이 돕니다.`);
+}
 function panelButtons(b) {
   const out = [];
   if (b.anim) { out.push(`<button disabled>변하는 중입니다</button>`); return out.join(''); }
@@ -2047,6 +2204,7 @@ function buildPanel(b) {
     <table id="iTab"></table>
     <div class="btns"><button data-act="follow">따라가기</button><button data-act="del" class="danger">삭제</button></div>
     <div class="row">질량 바꾸기 <input type="range" id="iMass" min="-1000" max="1000" value="0"></div>
+    <div id="iAddWrap"><div class="sect">천체 추가</div><div class="btns" id="iAdd"></div></div>
     <div id="iStageWrap"><div class="sect">별의 변화</div><div class="btns" id="iBtns"></div></div>`;
   selMass0 = b.m;
   $('iName').onclick = () => { const nb = byId(selId); if (!nb) return; const n = prompt('새 이름', nb.name); if (n && n.trim()) { nb.name = n.trim().slice(0, 24); saveSoon(); } };
@@ -2068,6 +2226,9 @@ function buildPanel(b) {
       case 'ia': startIa(nb, false); break;
       case 'jet': nb.jetOn = !nb.jetOn; log(nb.jetOn ? `${nb.name}이(가) 감마선 제트를 내뿜기 시작했습니다.` : `${nb.name}의 감마선 제트를 멈췄습니다.`); break;
       case 'next': { const nx = nextStage(nb); if (nx) startStage(nb, nx.to); break; }
+      case 'addPlanet': addPlanetTo(nb); break;
+      case 'addMoon': addMoonTo(nb); break;
+      case 'addTwin': addTwinTo(nb); break;
     }
     panelKey = ''; saveSoon();
   };
@@ -2081,7 +2242,7 @@ function updatePanel() {
   $('iType').textContent = typeName(b);
   $('iDesc').textContent = stageDesc(b);
   const key = [b.id, b.kind, b.stage, !!b.anim, !!b.pending, b.jetOn, b.m < 0.5].join('|');
-  if (key !== panelKey) { panelKey = key; const h = panelButtons(b); $('iBtns').innerHTML = h; $('iStageWrap').style.display = h ? '' : 'none'; }
+  if (key !== panelKey) { panelKey = key; const h = panelButtons(b); $('iBtns').innerHTML = h; $('iStageWrap').style.display = h ? '' : 'none'; const ah = addButtons(b); $('iAdd').innerHTML = ah; $('iAddWrap').style.display = ah ? '' : 'none'; }
   const rows = [];
   rows.push(['질량', fmtMass(b)]);
   if (b.kind === 'star' && b.stage !== 'brown' && b.m < 0.1) rows.push(['', fmtNum(b.m / MJUP) + ' 목성 질량']);
@@ -2206,7 +2367,7 @@ function drawOverlay() {
   // 질량중심
   if (show.com && bodies.length > 1) {
     const cm = systemCOM(); const p = project(cm[0], cm[1], cm[2]);
-    if (p) { c.strokeStyle = 'rgba(255,220,120,.95)'; c.lineWidth = 1.5; c.beginPath(); c.arc(p.x, p.y, 6, 0, 7); c.moveTo(p.x - 11, p.y); c.lineTo(p.x + 11, p.y); c.moveTo(p.x, p.y - 11); c.lineTo(p.x, p.y + 11); c.stroke(); c.fillStyle = 'rgba(255,225,140,.95)'; c.fillText('전체 질량중심', p.x + 13, p.y + 10); comScreen = p; }
+    if (p) { c.strokeStyle = 'rgba(255,220,120,.95)'; c.lineWidth = 1.5; c.beginPath(); c.arc(p.x, p.y, 6, 0, 7); c.moveTo(p.x - 11, p.y); c.lineTo(p.x + 11, p.y); c.moveTo(p.x, p.y - 11); c.lineTo(p.x, p.y + 11); c.stroke(); c.fillStyle = 'rgba(255,225,140,.95)'; c.textAlign = 'right'; c.fillText('전체 질량중심', p.x - 13, p.y + 12); c.textAlign = 'left'; comScreen = p; }
     const s = byId(selId);
     const pairs = [];
     if (s && s.prim) pairs.push([s, s.prim]);
@@ -2273,12 +2434,12 @@ cv.addEventListener('pointerdown', (e) => {
   }
   const mode = e.button === 2 ? 'rotate' : e.button === 1 ? 'pan' : (tool === 'select' ? 'rotate' : 'place');
   drag = { mode, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, t: performance.now(), button: e.button };
-  if (mode === 'place') { const p = planePoint(e.clientX, e.clientY); if (p) place = { p0: p, cur: p, moved: false }; else { place = null; log('궤도면이 보이게 화면을 조금 기울여 주세요.', 1); } }
+  if (mode === 'place') { const p = snapPlace(planePoint(e.clientX, e.clientY), e.clientX, e.clientY); if (p) place = { p0: p, cur: p, moved: false, snap: p.snap }; else { place = null; log('궤도면이 보이게 화면을 조금 기울여 주세요.', 1); } }
 });
 cv.addEventListener('pointermove', (e) => {
   const pr = ptrs.get(e.pointerId); if (pr) { pr.x = e.clientX; pr.y = e.clientY; }
   hoverScreen = [e.clientX, e.clientY];
-  if (tool !== 'select') hoverPlane = planePoint(e.clientX, e.clientY);
+  if (tool !== 'select') hoverPlane = snapPlace(planePoint(e.clientX, e.clientY), e.clientX, e.clientY);
   if (pinch && ptrs.size === 2) {
     const [a, b] = [...ptrs.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
@@ -2306,7 +2467,7 @@ function endPtr(e) {
   const d = drag; drag = null;
   if (d.mode === 'place' && place) {
     const drv = place.moved ? vsub(place.cur, place.p0) : null;
-    tryPlace(place.p0, drv); place = null; return;
+    const nb = tryPlace(place.p0, drv); if (nb && place.snap) log(`${place.snap.name} 둘레를 도는 위성 자리에 맞춰 놓았습니다.`); place = null; return;
   }
   if (d.mode === 'rotate' && !d.moved && d.button !== 2 && performance.now() - d.t < 500) {
     // 누르기 = 고르기, 두 번 누르기 = 따라가기
@@ -2542,7 +2703,7 @@ function boot() {
   updSpeed(); syncToggles();
   requestAnimationFrame((t) => { lastT = t; loop(t); });
 }
-window.__dbg = { PX, PS, get bodies() { return bodies; }, cam, loadPreset, PRESETS, setFollow, startStage, startIa, render: () => { updateCamera(0.016); render(); drawOverlay(); }, sim: (s) => { for (let i = 0; i < s; i++) simulate(1 / 60); }, get NP() { return NP; }, show, setSel: (id) => { selId = id; }, byId, setTool, tryPlace, setSpeed: (i) => { speedIdx = i; updSpeed(); }, pause: (p) => { paused = p; }, effects: () => effects };
+window.__dbg = { PX, PS, items: () => frameInfo.items, get bodies() { return bodies; }, cam, loadPreset, PRESETS, setFollow, startStage, startIa, render: () => { updateCamera(0.016); render(); drawOverlay(); }, sim: (s) => { for (let i = 0; i < s; i++) simulate(1 / 60); }, get NP() { return NP; }, show, setSel: (id) => { selId = id; }, byId, setTool, tryPlace, setSpeed: (i) => { speedIdx = i; updSpeed(); }, pause: (p) => { paused = p; }, effects: () => effects };
 boot();
 </script>
 <script src="../track.js" defer></script>
