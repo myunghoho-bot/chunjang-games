@@ -523,6 +523,27 @@ function buildAdj(parts) {
     if (edgesTouch(E[i], E[j])) { adj.get(parts[i].id).push(parts[j].id); adj.get(parts[j].id).push(parts[i].id); }
   }
   for (const p of parts) if (p.link && adj.has(p.link) && !adj.get(p.id).includes(p.link)) { adj.get(p.id).push(p.link); adj.get(p.link).push(p.id); }
+  // 겹친 부품: 모서리로 안 붙었어도 겹쳐 있으면 같이 다닌다 (2026-11-08 아이 요청 "겹쳐도 그냥 겹친 상태로 다닐 수 있게")
+  // 모서리로 이미 이어진 덩어리끼리는 건드리지 않아서 단계(분리) 순서는 그대로다
+  const comp = new Map(); let nc = 0;
+  for (const p of parts) {
+    if (comp.has(p.id)) continue;
+    const st = [p.id]; comp.set(p.id, nc);
+    while (st.length) { const id = st.pop(); for (const n of adj.get(id)) if (!comp.has(n)) { comp.set(n, nc); st.push(n); } }
+    nc++;
+  }
+  if (nc > 1) {
+    const root = Array.from({ length: nc }, (_, i) => i), find = i => (root[i] === i ? i : (root[i] = find(root[i])));
+    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
+      const P = parts[i], Q = parts[j];
+      if (DEFS[P.t].kind === 'rock' || DEFS[Q.t].kind === 'rock') continue;
+      const ci = find(comp.get(P.id)), cj = find(comp.get(Q.id)); if (ci === cj) continue;
+      const a = bb[i], b = bb[j];
+      if (Math.min(a[1], b[1]) - Math.max(a[0], b[0]) > 0.2 && Math.min(a[3], b[3]) - Math.max(a[2], b[2]) > 0.2) {
+        adj.get(P.id).push(Q.id); adj.get(Q.id).push(P.id); root[ci] = cj;
+      }
+    }
+  }
   return adj;
 }
 function components(parts, adj, skip) {
