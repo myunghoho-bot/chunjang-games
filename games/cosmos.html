@@ -1384,7 +1384,7 @@ function updateCamera(rdt) {
   let base = null;
   if (cam.follow === 'com') base = systemCOM();
   else if (cam.follow != null) { const b = byId(cam.follow); if (b) base = [b.x, b.y, b.z]; else cam.follow = null; }
-  if (base) { const k = Math.exp(-5 * rdt); cam.off = vmul(cam.off, k); if (vlen(cam.off) < cam.dist * 1e-6) cam.off = [0, 0, 0]; cam.target = vadd(base, cam.off); }
+  if (base) { const ol = vlen(cam.off); const k = Math.exp(-(5 + 4 * Math.log10(Math.max(1, ol / Math.max(cam.dist, 1e-12)))) * rdt); cam.off = vmul(cam.off, k); if (vlen(cam.off) < cam.dist * 1e-6) cam.off = [0, 0, 0]; cam.target = vadd(base, cam.off); }
   const mn = minCamDist();
   cam.tdist = clamp(cam.tdist, mn, 2e5);
   cam.dist = Math.exp(lerp(Math.log(cam.dist), Math.log(cam.tdist), 1 - Math.exp(-9 * rdt)));
@@ -1805,10 +1805,29 @@ function trailColor(b) {
   const p = b.pal || PAL.moon; const c = b.sub === 'gas' || b.sub === 'ice' ? p.c1 : b.sub === 'earth' ? [0.4, 0.6, 1.0] : p.c2;
   const m = Math.max(c[0], c[1], c[2], 0.01); return [c[0] / m * 0.85, c[1] / m * 0.85, c[2] / m * 0.85, 0.5];
 }
+// 지금 궤도(타원)를 그린다: 한 장면 사이에 너무 많이 도는 위성은 자국 대신 이것
+function orbitEllipse(b, p) {
+  const r = [b.x - p.x, b.y - p.y, b.z - p.z], v = [b.vx - p.vx, b.vy - p.vy, b.vz - p.vz];
+  const mu = G * (b.m + p.m), rl = vlen(r), v2 = vdot(v, v);
+  const a = 1 / (2 / rl - v2 / mu); if (!(a > 0)) return false;
+  const h = vcross(r, v); if (vlen(h) === 0) return false;
+  const ev = vsub(vmul(vcross(v, h), 1 / mu), vmul(r, 1 / rl)); const e = vlen(ev); if (e >= 0.98) return false;
+  const P = e > 1e-6 ? vmul(ev, 1 / e) : vmul(r, 1 / rl), Q = vnorm(vcross(vnorm(h), P)), bb = a * Math.sqrt(1 - e * e);
+  const s = lineBuf.n, N = 160;
+  for (let i = 0; i <= N; i++) { const E = i / N * Math.PI * 2, x = a * (Math.cos(E) - e), y = bb * Math.sin(E); const w = toView(p.x + P[0] * x + Q[0] * y, p.y + P[1] * x + Q[1] * y, p.z + P[2] * x + Q[2] * y); linePush(w[0], w[1], w[2], 0.55); }
+  const c = trailColor(b); c[3] = b.id === selId ? 0.75 : 0.32; lineDraw(gl.LINE_STRIP, c, s);
+  return true;
+}
+function periodAround(b, p) {
+  const rl = Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z), v2 = (b.vx - p.vx) ** 2 + (b.vy - p.vy) ** 2 + (b.vz - p.vz) ** 2;
+  const a = 1 / (2 / rl - v2 / (G * (b.m + p.m))); return a > 0 ? Math.sqrt(a * a * a / (b.m + p.m)) : Infinity;
+}
 function drawTrailsLines() {
   if (!show.trail) return;
   const rp = refPos();
+  const simPF = Math.max(lastFrameSim || 0, SPEEDS[speedIdx][0] / 60);
   for (const b of bodies) {
+    if (b.prim && b.id !== trailRef && periodAround(b, b.prim) < simPF * 50) { if (orbitEllipse(b, b.prim)) { b.trail.length = 0; continue; } }
     const t = b.trail; const n = t.length / 3; if (n < 2) continue;
     const s = lineBuf.n;
     for (let i = 0; i < n; i++) { const v = toView(t[i * 3] + rp[0], t[i * 3 + 1] + rp[1], t[i * 3 + 2] + rp[2]); linePush(v[0], v[1], v[2], Math.pow(i / n, 1.3)); }
@@ -1830,6 +1849,7 @@ function drawGridLines() {
     gridInfo.push({ r, a });
   }
 }
+let rocheLabels = [], rocheSeen = false;
 function drawRocheLines() {
   if (!show.roche) return;
   const s = byId(selId);
@@ -1837,9 +1857,21 @@ function drawRocheLines() {
   if (s && s.prim && canTear(s) && s.m < 0.5 * s.prim.m) list.push([s, s.prim]);
   else if (s) { for (const o of bodies) if (o.prim === s && canTear(o) && o.m < 0.5 * s.m) list.push([o, s]); }
   else { for (const o of bodies) if (o.prim && canTear(o) && o.m < 0.5 * o.prim.m) list.push([o, o.prim]); }
+  rocheLabels = []; rocheSeen = false;
+  // 보고 있거나 고른 천체 둘레: 바위 천체(밀도 3 g/cm³)가 들어오면 부서지는 거리
+  const f = s || (cam.follow != null && cam.follow !== 'com' ? byId(cam.follow) : null);
+  if (f) {
+    const rho = f.m / (4 / 3 * Math.PI * Math.pow(Math.max(f.R, 1e-30), 3)), rhoRock = 3.0 / 5.94e-7;
+    const rd = isBH(f) ? 2.44 * Math.cbrt(3 * f.m / (4 * Math.PI * rhoRock)) : 2.44 * f.R * Math.cbrt(rho / rhoRock);
+    if (rd > f.R * 1.001) {
+      circleLines(f.x, f.y, f.z, rd, [1.0, 0.35, 0.3, 1], 0.85, true);
+      rocheLabels.push({ x: f.x + rd, y: f.y, z: f.z, r: rd, t: f.name + ' 로슈 한계 (바위 천체 기준)' });
+    }
+  }
   for (const [sm, p] of list.slice(0, 30)) {
     const rd = 2.44 * sm.R * Math.cbrt(p.m / sm.m);
     if (rd < p.R * 1.001) continue;
+    rocheLabels.push({ x: p.x - rd, y: p.y, z: p.z, r: rd, t: sm.name + '의 로슈 한계' });
     // 작은 천체의 궤도면에 맞춘 원
     const r = [sm.x - p.x, sm.y - p.y, sm.z - p.z], v = [sm.vx - p.vx, sm.vy - p.vy, sm.vz - p.vz];
     let nrm = vcross(r, v); if (vlen(nrm) === 0) nrm = [0, 1, 0]; nrm = vnorm(nrm);
@@ -1941,7 +1973,7 @@ function setTool(t) {
   place = null;
 }
 document.querySelectorAll('#tools [data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool === tool && tool !== 'select' ? 'select' : b.dataset.tool));
-document.querySelectorAll('#tools [data-tog]').forEach(b => b.onclick = () => { const k = b.dataset.tog; show[k] = !show[k]; b.classList.toggle('on', show[k]); if (k === 'trail' && show.trail) clearTrails(); if (k === 'com' && show.com && bodies.length > 1 && cam.follow !== 'com') { setFollow('com'); log('전체 질량중심을 따라갑니다. 천체들이 이 점을 함께 돕니다.'); } saveSoon(); });
+document.querySelectorAll('#tools [data-tog]').forEach(b => b.onclick = () => { const k = b.dataset.tog; show[k] = !show[k]; b.classList.toggle('on', show[k]); if (k === 'trail' && show.trail) clearTrails(); if (k === 'com' && show.com && bodies.length > 1 && cam.follow !== 'com' && !(byId(cam.follow) && byId(cam.follow).kind === 'planet')) { setFollow('com'); log('전체 질량중심을 따라갑니다. 천체들이 이 점을 함께 돕니다.'); } saveSoon(); });
 
 // =====================================================================
 //  천체 만들기
@@ -2055,7 +2087,6 @@ function tryPlace(p, drag) {
   zeroMomentum();
   log(`${b.name}(${t.name})을(를) 추가했습니다.`);
   if (bodies.length === 1) { setFollow(b.id, false); }
-  else if (show.com && cam.follow !== 'com') setFollow('com');
   selId = b.id; saveSoon();
   return b;
 }
@@ -2271,7 +2302,7 @@ function updatePanel() {
 //  시간
 // =====================================================================
 const SPEEDS = [[1 / 365.25 / 24 / 60, '1분'], [1 / 365.25 / 24, '1시간'], [6 / 365.25 / 24, '6시간'], [1 / 365.25, '1일'], [7 / 365.25, '1주'], [30 / 365.25, '30일'], [0.25, '3개월'], [1, '1년'], [10, '10년'], [100, '100년'], [1000, '1000년']];
-let speedIdx = 5, paused = false, lagging = false;
+let speedIdx = 5, paused = false, lagging = false, lastFrameSim = 0;
 function updSpeed() { $('speed').textContent = '1초에 ' + SPEEDS[speedIdx][1]; $('speed').classList.toggle('lag', lagging && !paused); $('bPause').textContent = paused ? '재생' : '멈춤'; $('bPause').classList.toggle('on', paused); }
 $('bPause').onclick = () => { paused = !paused; updSpeed(); };
 $('bSlow').onclick = () => { speedIdx = Math.max(0, speedIdx - 1); updSpeed(); saveSoon(); };
@@ -2295,7 +2326,7 @@ function simulate(rdt) {
     t += dt; steps++;
   }
   if (events.length) processEvents();
-  simTime += t;
+  simTime += t; lastFrameSim = t;
   lagging = t < target * 0.9;
   for (const b of bodies) b.spin += clamp(b.spinRate * t, -0.05, 0.05);
 }
@@ -2378,7 +2409,7 @@ function drawOverlay() {
       if (!q || !pa || !pb) continue;
       c.strokeStyle = 'rgba(255,200,110,.35)'; c.lineWidth = 1; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(pa.x, pa.y); c.lineTo(pb.x, pb.y); c.stroke(); c.setLineDash([]);
       c.fillStyle = 'rgba(255,205,120,.95)'; c.beginPath(); c.moveTo(q.x, q.y - 5); c.lineTo(q.x + 5, q.y); c.lineTo(q.x, q.y + 5); c.lineTo(q.x - 5, q.y); c.closePath(); c.fill();
-      if ((a === s || pairs.length === 1) && !(comScreen && Math.hypot(q.x - comScreen.x, q.y - comScreen.y) < 18)) c.fillText(`${a.name}·${b.name} 질량중심`, q.x + 8, q.y - 9);
+      if ((a === s || pairs.length === 1) && !(comScreen && Math.hypot(q.x - comScreen.x, q.y - comScreen.y) < 18)) c.fillText(`${a.name}·${b.name} 질량중심`, q.x + 8, q.y + 14);
     }
   } else comScreen = null;
   // 골디락스 존 이름 (고른 별)
@@ -2386,6 +2417,8 @@ function drawOverlay() {
     const s = byId(selId) || bodies.find(b => isLum(b) && b.L > 1e-9 && b.stage !== 'ns');
     if (s && isLum(s) && s.L > 1e-9) { const r = Math.sqrt(s.L / 0.53); const p = project(s.x + r, s.y, s.z); if (p) { c.fillStyle = 'rgba(120,230,150,.9)'; c.fillText('골디락스 존', p.x + 4, p.y); } }
   }
+  // 로슈 한계 글씨 (원이 화면에서 12px보다 클 때만)
+  if (show.roche) for (const L of rocheLabels) { const pp = project(L.x, L.y, L.z); if (!pp) continue; if (L.r / pp.w * PPU < 8) continue; rocheSeen = true; c.fillStyle = 'rgba(255,140,120,.95)'; c.fillText(L.t, pp.x + 4, pp.y + 10); }
   // 거리 눈금 글씨
   for (const g of gridInfo) { const p = project(cam.target[0] + g.r, cam.target[1], cam.target[2]); if (p) { c.fillStyle = `rgba(150,180,230,${g.a * 2})`; c.fillText(fmtDist(g.r), p.x + 4, p.y - 7); } }
   // 놓을 곳
@@ -2615,6 +2648,7 @@ function clearWorld() {
 function syncToggles() { document.querySelectorAll('#tools [data-tog]').forEach(b => b.classList.toggle('on', !!show[b.dataset.tog])); }
 function loadPreset(i) {
   clearWorld();
+  Object.assign(show, { com: false, roche: false, hz: false, trail: true, label: true, grid: false }); syncToggles();
   const r = PRESETS[i].build() || {};
   cam.tdist = cam.dist = r.dist || 6; cam.pitch = r.pitch ?? 0.55; speedIdx = r.speed ?? 5; paused = false;
   if (r.follow != null) { cam.follow = r.follow; const b = byId(r.follow); cam.target = b ? [b.x, b.y, b.z] : systemCOM(); }
@@ -2674,6 +2708,7 @@ function hintText() {
   if (tool !== 'select') return matchMedia('(pointer: coarse)').matches ? '누르면 놓고, 누른 채로 끌면 던집니다. 두 손가락으로 끌면 화면이 돌아갑니다.' : '누르면 놓고, 누른 채로 끌면 던집니다. 오른쪽 버튼으로 끌면 화면이 돌아갑니다.';
   if (s && s.stage === 'qs' && camDistTo(s.x, s.y, s.z) > s.R * 1.6) return '쿼시별을 더 확대해서 안으로 들어가면 가운데 블랙홀이 보입니다.';
   if (!bodies.length) return '추가 버튼으로 천체를 넣거나, 불러오기에서 태양계 같은 우주를 고릅니다.';
+  if (show.roche && !rocheSeen) return '로슈 한계는 아주 작습니다. 천체를 고르거나 두 번 눌러 가까이 확대하면 빨간 점선 원이 보입니다.';
   return '';
 }
 function loop(now) {
