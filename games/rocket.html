@@ -409,8 +409,8 @@ def('nose', { cat: 'struct', kind: 'nose', name: '노즈콘', note: '공기 저�
   info: '맨 위에 뾰족한 노즈콘이 있으면 공기를 덜 받아서 연료를 아낄 수 있어요.' });
 def('fairing', { cat: 'struct', kind: 'fairing', name: '페어링', note: '위성을 감싸는 덮개', w: 5, h: 13, rw: [1, 12], rh: [2, 40],
   info: '위성이나 정거장 모듈을 감싸서 공기로부터 지켜요. 우주에 나가면 두 쪽으로 갈라져 떨어져요. 바닥을 탱크 위에 붙이고, 안쪽에 넣을 것을 놓아요.' });
-def('truss', { cat: 'struct', kind: 'truss', name: '트러스 뼈대', note: '정거장 뼈대 · 길이 100 m까지', w: 1, h: 8, rw: [0.5, 6], rh: [1, 100], col: 'silver',
-  info: '국제 우주 정거장의 긴 뼈대처럼 모듈과 태양전지판을 이어요. 돌려서 가로로 놓을 수 있어요.' });
+def('truss', { cat: 'struct', kind: 'truss', name: '트러스 뼈대', note: '정거장 뼈대 · 길이 110 m까지', w: 1, h: 8, rw: [0.5, 6], rh: [1, 110], col: 'silver',
+  info: '국제 우주 정거장의 긴 뼈대(진짜는 109 m)처럼 모듈과 태양전지판을 이어요. 돌려서 가로로 놓을 수 있어요.' });
 def('legs', { cat: 'struct', kind: 'legs', name: '착륙 다리', note: '탱크 옆에 붙여요', w: 0.5, h: 3, col: 'silver',
   info: '펼치면 땅에 내릴 때 충격을 받아 줘요. 달에 내릴 때 필요해요.' });
 def('shield', { cat: 'struct', kind: 'shield', name: '열 보호막', note: '대기권에 들어갈 때 열을 막아요', w: 4, h: 0.5, rw: [0.5, 12], rh: [0.3, 1.5], col: 'black',
@@ -425,8 +425,8 @@ def('cupola', { cat: 'stat', kind: 'cupola', name: '큐폴라 창문', note: '�
   info: '창문이 7개 달린 전망대예요. 국제 우주 정거장에 실제로 있어요.' });
 def('solarS', { cat: 'stat', kind: 'solar', name: '태양전지판', note: '위성용 · 펼치면 6 m', w: 0.5, h: 2, mass: 120, len: 6, wide: 1.6, kw: 1.5,
   info: '햇빛으로 전기를 만들어요. 우주에 가서 펼쳐요. 위성 본체 옆에 붙이세요.' });
-def('solarL', { cat: 'stat', kind: 'solar', name: '큰 태양전지판', note: '정거장용 · 펼치면 35 m', w: 1, h: 4.5, mass: 1100, len: 35, wide: 11, kw: 15,
-  info: '국제 우주 정거장 날개 하나와 같은 크기(길이 35 m)예요. 펼치면 아주 커요.' });
+def('solarL', { cat: 'stat', kind: 'solar', name: '큰 태양전지판', note: '정거장용 · 펼치면 35 m', w: 1, h: 4.5, mass: 1100, len: 35, wide: 12, kw: 15,
+  info: '국제 우주 정거장 날개 하나와 같은 크기(길이 35 m, 폭 12 m)예요. 진짜 정거장에는 이런 날개가 8장 있어요.' });
 def('antenna', { cat: 'stat', kind: 'antenna', name: '접시 안테나', note: '지구와 통신', w: 2, h: 1, mass: 150, col: 'white',
   info: '지구와 신호를 주고받아요. 위성 본체 위나 옆에 붙여요.' });
 def('claw', { cat: 'stat', kind: 'claw', name: '집게', note: '소행성을 잡아요', w: 1.5, h: 1.5, mass: 800, col: 'silver',
@@ -722,6 +722,7 @@ function drawPart(ctx, p, mode, lw, extra) {
     }
     case 'capsule': {
       const s = shapeOf(p);
+      if (d.style === 'dragon') { drawDragon(ctx, p, bp, lw); if (p.ch === 2 && !bp && d.chute) drawCanopy(ctx, p.chOpen || 1, h * 0.45, lw, Math.sqrt(d.chute / 1500)); break; }
       if (d.style === 'soyuz') {
         ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, -h / 2);
         ctx.bezierCurveTo(w / 2, h * 0.1, w * 0.35, h / 2, s.wt / 2, h / 2); ctx.lineTo(-s.wt / 2, h / 2);
@@ -736,15 +737,7 @@ function drawPart(ctx, p, mode, lw, extra) {
       ctx.fillStyle = bp ? 'rgba(200,228,255,0.35)' : '#1b2a3a';
       const wy = h * 0.05, ww = w * 0.09;
       ctx.fillRect(-w * 0.2 - ww / 2, wy, ww, ww * 1.1); ctx.fillRect(w * 0.2 - ww / 2, wy, ww, ww * 1.1);
-      if (d.style === 'dragon' && !bp) { ctx.fillStyle = '#2b2f36'; ctx.fillRect(-s.wt / 2, h / 2 - h * 0.12, s.wt, h * 0.12); }
       if (!bp) { ctx.strokeStyle = edge; trap(ctx, s.wb, s.wt, h); if (d.style !== 'soyuz') ctx.stroke(); }
-      if (d.style === 'dragon') {   // 윗부분 드라코 추진기 뭉치 (양옆)
-        const yc = h * 0.22, xs = s.wb / 2 + (s.wt / 2 - s.wb / 2) * ((yc + h / 2) / h);
-        for (const sd of [-1, 1]) {
-          ctx.beginPath(); ctx.rect(sd * xs - 0.2 + sd * 0.06, yc - 0.32, 0.4, 0.64);
-          if (bp) { ctx.strokeStyle = BP_LINE; ctx.stroke(); } else { ctx.fillStyle = '#3a3f47'; ctx.fill(); ctx.fillStyle = '#9aa3ad'; ctx.fillRect(sd * xs - 0.08 + sd * 0.06, yc - 0.36, 0.16, 0.08); ctx.fillRect(sd * xs - 0.08 + sd * 0.06, yc + 0.28, 0.16, 0.08); }
-        }
-      }
       if (p.ch === 2 && !bp && d.chute) drawCanopy(ctx, p.chOpen || 1, h / 2, lw, Math.sqrt(d.chute / 1500));
       break;
     }
@@ -903,6 +896,47 @@ function drawPart(ctx, p, mode, lw, extra) {
       break;
     }
     default: { ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h); bodyFill(ctx, bp, w, hex); }
+  }
+}
+// 크루 드래곤 (진짜 모양: 살짝 볼록한 원뿔 몸통, 위에 경첩 달린 둥근 노즈콘, 옆면 아래 슈퍼드라코 문짝, 창문, 어깨의 드라코 추진기)
+function dragonBody(ctx, w, h) {
+  ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, -h / 2);
+  ctx.quadraticCurveTo(w * 0.47, -h * 0.02, w * 0.3, h * 0.24); ctx.quadraticCurveTo(w * 0.26, h * 0.3, w * 0.22, h * 0.31);
+  ctx.lineTo(-w * 0.22, h * 0.31);
+  ctx.quadraticCurveTo(-w * 0.26, h * 0.3, -w * 0.3, h * 0.24); ctx.quadraticCurveTo(-w * 0.47, -h * 0.02, -w / 2, -h / 2); ctx.closePath();
+}
+const DRACO_POS = [0.285, 0.2];   // 드라코 추진기 자리(폭·높이에 대한 비율)
+function drawDragon(ctx, p, bp, lw) {
+  const w = p.w, h = p.h, white = '#eef1f4';
+  const fillW = (x0, x1) => { if (bp) { ctx.fillStyle = BP_FILL; ctx.fill(); ctx.strokeStyle = BP_LINE; ctx.stroke(); } else { ctx.fillStyle = cylGrad(ctx, x0, x1, white); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.stroke(); } };
+  dragonBody(ctx, w, h); fillW(-w / 2, w / 2);
+  ctx.fillStyle = bp ? 'rgba(200,228,255,0.2)' : '#2e2a27'; ctx.fillRect(-w / 2, -h / 2, w, h * 0.035);
+  // 슈퍼드라코 문짝 (옆면 아래)
+  for (const sd of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sd * w * 0.445, -h * 0.33); ctx.lineTo(sd * w * 0.405, -h * 0.07); ctx.lineTo(sd * w * 0.34, -h * 0.07); ctx.lineTo(sd * w * 0.375, -h * 0.33); ctx.closePath();
+    if (bp) { ctx.strokeStyle = BP_LINE; ctx.stroke(); } else { ctx.fillStyle = '#3c4149'; ctx.fill(); ctx.fillStyle = '#5c636d'; ctx.fillRect(sd * w * 0.39 - w * 0.012, -h * 0.3, w * 0.024, h * 0.2); }
+  }
+  // 창문
+  for (const sd of [-1, 1]) {
+    const ww = w * 0.085, x = sd * w * 0.13 - ww / 2, y = -h * 0.02;
+    ctx.beginPath(); ctx.roundRect(x, y, ww, ww * 1.05, ww * 0.3);
+    if (bp) { ctx.strokeStyle = BP_LINE; ctx.stroke(); } else { ctx.fillStyle = '#16263a'; ctx.fill(); ctx.strokeStyle = '#a9b1bb'; ctx.lineWidth = Math.max(lw, w * 0.012); ctx.stroke(); ctx.lineWidth = lw; ctx.fillStyle = 'rgba(160,200,255,0.25)'; ctx.fillRect(x + ww * 0.15, y + ww * 0.55, ww * 0.25, ww * 0.35); }
+  }
+  // 어깨의 드라코 추진기 (위쪽, 양옆에 두 개씩)
+  for (const sd of [-1, 1]) for (const k of [0, 1]) {
+    const x = sd * w * (DRACO_POS[0] - k * 0.03), y = h * (DRACO_POS[1] - k * 0.05);
+    ctx.fillStyle = bp ? 'rgba(200,228,255,0.5)' : '#2a2e34'; ctx.fillRect(x - w * 0.018, y - w * 0.018, w * 0.036, w * 0.036);
+  }
+  // 노즈콘: 도킹하면 경첩으로 열리고 도킹 고리가 보인다
+  const nose = () => { ctx.beginPath(); ctx.moveTo(-w * 0.22, 0); ctx.bezierCurveTo(-w * 0.21, h * 0.2, w * 0.21, h * 0.2, w * 0.22, 0); ctx.closePath(); };
+  if (p.dockedTo) {
+    ctx.fillStyle = bp ? BP_FILL : '#aab3bd'; ctx.fillRect(-w * 0.17, h * 0.31, w * 0.34, h * 0.19);
+    ctx.save(); ctx.translate(w * 0.22, h * 0.31); ctx.rotate(-1.8); ctx.translate(w * 0.22, 0); nose(); fillW(-w * 0.22, w * 0.22); ctx.restore();
+  } else {
+    ctx.save(); ctx.translate(0, h * 0.31); nose(); fillW(-w * 0.22, w * 0.22);
+    ctx.strokeStyle = bp ? BP_DIM : 'rgba(0,0,0,0.35)'; pLine(ctx, -w * 0.22, 0, w * 0.22, 0);
+    ctx.fillStyle = bp ? BP_DIM : '#8a929c'; ctx.fillRect(w * 0.17, -h * 0.01, w * 0.06, h * 0.03);
+    ctx.restore();
   }
 }
 // 펴진 낙하산 천 (부품 위쪽 topY에서 줄이 나간다)
@@ -2322,18 +2356,46 @@ function apStep(A, real) {
   F.warpIdx = (thr > 0 || (rot != null && !aligned(rot))) ? 2 : Math.max(2, warp);
 }
 
-// ---------- 처음부터 떠 있는 국제 우주 정거장 (2026-11-08 아이 요청 "우주정거장은 우주에 떠있음") ----------
+// ---------- 처음부터 떠 있는 국제 우주 정거장 (2026-11-08 아이 요청 "우주정거장은 우주에 떠있음", "실제 비율 ISS로") ----------
+// 진짜 크기 그대로: 트러스 109 m, 태양전지판 날개 8장(35 m × 12 m), 모듈 지름 4.1~4.6 m
+// 가운데 줄(앞→뒤): 도킹 포트 - PMA-2 - 하모니 - 데스티니 - 유니티 - PMA-1 - 자랴 - (컴퓨터) - 즈베즈다 - 도킹 포트
+// 옆: 하모니 양옆 콜럼버스·키보, 유니티 양옆 트랭퀼리티(+큐폴라)·퀘스트, 즈베즈다 옆 나우카
 function makeStation() {
   const P = (t, x, yb, o) => { const p = newPart(t); Object.assign(p, o || {}); p.x = x; p.y = yb + p.h / 2; return p; };
-  const truss = newPart('truss'); truss.w = 1.5; truss.h = 60; truss.r = 1; truss.x = 0; truss.y = 16.5 + 0.75;
-  const parts = [P('dock', 0, 0), P('hab', 0, 0.5, { w: 4.5, h: 7 }), P('hab', 0, 7.5, { w: 4.5, h: 8.5 }), P('probe', 0, 16, { w: 4.5 }), truss,
-    P('hab', 0, 18, { w: 4.5, h: 13 }), P('dock', 0, 31)];
-  for (const sx of [-27, -14, 14, 27]) { parts.push(P('solarL', sx, 18, { dep: true })); parts.push(P('solarL', sx, 12, { dep: true, r: 2 })); }
+  const side = (t, o, hostHalf, yc, dir) => { const p = newPart(t); Object.assign(p, o || {}); p.r = 1; p.x = dir * (hostHalf + p.h / 2); p.y = yc; return p; };
+  const parts = [
+    P('dock', 0, 0, { name: 'IDA-3' }),
+    P('adapter', 0, 0.5, { w: 1.6, w2: 4.4, h: 2.4, name: 'PMA-2' }),
+    P('hab', 0, 2.9, { w: 4.4, h: 7.2, name: '하모니' }),
+    P('hab', 0, 10.1, { w: 4.3, h: 8.5, name: '데스티니' }),
+    P('hab', 0, 18.6, { w: 4.6, h: 5.5, name: '유니티' }),
+    P('adapter', 0, 24.1, { w: 4.6, w2: 4.1, h: 2.4, name: 'PMA-1' }),
+    P('hab', 0, 26.5, { w: 4.1, h: 12.6, name: '자랴' }),
+    P('probe', 0, 39.1, { w: 4.1 }),
+    P('hab', 0, 39.6, { w: 4.15, h: 13.1, name: '즈베즈다' }),
+    P('dock', 0, 52.7),
+    side('hab', { w: 4.5, h: 6.9, name: '콜럼버스' }, 2.2, 6.5, 1),
+    side('hab', { w: 4.4, h: 11.2, name: '키보' }, 2.2, 6.5, -1),
+    side('hab', { w: 4, h: 5.5, name: '퀘스트' }, 2.3, 21.35, 1),
+    side('hab', { w: 4.5, h: 6.7, name: '트랭퀼리티' }, 2.3, 21.35, -1),
+    side('hab', { w: 4.25, h: 13, name: '나우카' }, 2.075, 46.15, 1),
+  ];
+  const cup = newPart('cupola'); cup.r = 1; cup.x = -(2.3 + 6.7 + cup.h / 2); cup.y = 21.35; parts.push(cup);
+  const truss = newPart('truss'); truss.w = 4.5; truss.h = 109; truss.r = 1; truss.x = 0; truss.y = 14.35; parts.push(truss);
+  for (const sx of [-50, -32, 32, 50]) { parts.push(P('solarL', sx, 16.6, { dep: true })); parts.push(P('solarL', sx, 7.6, { dep: true, r: 2 })); }
   const b = BODY.earth, alt = world.scale === 'real' ? 420000 : 120000, r = b.R + alt, a = Math.PI / 2 + 2.3, sp = Math.sqrt(b.mu / r);
   const v = { id: 'iss' + Math.random().toString(36).slice(2, 6), name: '국제 우주 정거장', parts, x: r * Math.cos(a), y: r * Math.sin(a), vx: sp * Math.sin(a), vy: -sp * Math.cos(a),
     ang: a - Math.PI / 2, av: 0, body: 'earth', landed: false, throttle: 0, sas: true, stages: [], docks: 0, born: 0, iss: true, flags: { space: true } };
   retopo(v); world.vessels.push(v);
   return v;
+}
+// 예전(작은 모양) 정거장을 새 모양으로 바꾸기. 다른 우주선이 붙어 있으면 지우지 않고 이름만 바꾼다
+function upgradeStation() {
+  for (const v of world.vessels.filter(o => o.iss)) {
+    if (v.parts.length <= 15 && !v.docks) { world.vessels = world.vessels.filter(o => o !== v); if (world.activeId === v.id) world.activeId = null; if (world.targetId === v.id) world.targetId = null; }
+    else { v.name = '옛 정거장'; v.iss = false; }
+  }
+  makeStation(); world.iss = true; world.issVer = 2;
 }
 
 // ---------- 부서짐 ----------
@@ -2618,10 +2680,10 @@ function drawFlames(v, pr) {
   for (const e of v._engines) {
     if (!e._fl) continue;
     if (DEFS[e.t].kind === 'capsule') {   // 드라코 추진기: 윗부분 양옆에서 작게
-      const sh = shapeOf(e), yc = e.h * 0.22, xs = sh.wb / 2 + (sh.wt / 2 - sh.wb / 2) * ((yc + e.h / 2) / e.h);
+      const yc = e.h * DRACO_POS[1], xs = e.w * DRACO_POS[0];
       ctx.save(); ctx.translate(e.x, e.y); ctx.rotate((e.r || 0) * Math.PI / 2); if (e.f) ctx.scale(-1, 1);
       for (const sd of [-1, 1]) {
-        const x = sd * (xs + 0.06), y0 = yc - 0.36, L = (1.2 + 1.6 * e._fl) * (0.85 + Math.random() * 0.3);
+        const x = sd * (xs + 0.04), y0 = yc - 0.1, L = (1.2 + 1.6 * e._fl) * (0.85 + Math.random() * 0.3);
         const g = ctx.createLinearGradient(0, y0, 0, y0 - L); g.addColorStop(0, FLAME.mmh[0]); g.addColorStop(0.4, FLAME.mmh[1]); g.addColorStop(1, FLAME.mmh[2]);
         ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 0.12, y0); ctx.quadraticCurveTo(x - 0.3 + sd * 0.2, y0 - L * 0.5, x + sd * 0.35, y0 - L); ctx.quadraticCurveTo(x + 0.3 + sd * 0.2, y0 - L * 0.5, x + 0.12, y0); ctx.closePath(); ctx.fill();
       }
@@ -3567,7 +3629,7 @@ function setModal() {
 }
 function newWorld(scale) {
   world = { scale, time: 0, vessels: [], activeId: null, targetId: null };
-  setupBodies(); makeAsteroids(); world.astro = true; makeStation(); world.iss = true; saveAll();
+  setupBodies(); makeAsteroids(); world.astro = true; makeStation(); world.iss = true; world.issVer = 2; saveAll();
   if (screen === 'fly') exitToBuild();
 }
 function loadModal() {
@@ -3597,7 +3659,7 @@ const EXAMPLES = [
   ['grabber', '소행성 잡이', '집게와 큰 연료 탱크를 단 우주선이에요. 소행성 옆에 놓고 잡아 보세요.'],
 ];
 function makeExample(id) {
-  const P = (t, x, yb, o) => { const p = newPart(t); Object.assign(p, o || {}); if (isEngine(p)) p.w = engWidth(p); p.x = x; p.y = yb + p.h / 2; return p; };
+  const P = (t, x, yb, o) => { const p = newPart(t); Object.assign(p, o || {}); if (isMainEngine(p)) p.w = engWidth(p); p.x = x; p.y = yb + p.h / 2; return p; };
   const side = (t, yc, hostHalfW) => { const a = P(t, 0, 0), [bw] = bboxSize(Object.assign({}, a, { r: 1 })); const r = Object.assign(P(t, 0, 0), { r: 3 }); r.x = hostHalfW + bw / 2; r.y = yc; const l = Object.assign(P(t, 0, 0), { r: 1 }); l.x = -r.x; l.y = yc; l.sym = r.id; r.sym = l.id; return [r, l]; };
   let parts = [], name = '';
   const f9low = () => [P('e_merlin', 0, 0, { n: 9 }), P('tank', 0, 2, { w: 3.5, h: 40 }), P('dec', 0, 42, { w: 3.5, h: 5 }), P('e_mvac', 0, 42.5), P('tank', 0, 47, { w: 3.5, h: 11 })];
@@ -3719,7 +3781,7 @@ function init() {
   setupBodies();
   for (const v of world.vessels.slice()) { try { v._com = null; retopo(v); } catch (e) { console.warn(e); world.vessels = world.vessels.filter(o => o !== v); } }
   if (!world.astro) { makeAsteroids(); world.astro = true; }
-  if (!world.iss) { makeStation(); world.iss = true; }
+  if (!world.iss || world.issVer !== 2) upgradeStation();
   Juice.setMuted(!S.set.sound);
   B.symOn = true;
   $('dName').textContent = D().name;
