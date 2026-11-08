@@ -158,6 +158,7 @@ input[type=range]{width:100%;accent-color:#5cc8ff}
     <button id="fRec">기록</button>
     <span class="sp"></span>
     <button id="wDn">느리게</button><span id="wTxt" class="num" style="min-width:58px;text-align:center">1×</span><button id="wUp">빠르게</button>
+    <button id="fPov" title="캡슐 안에서 창밖 보기 (V)">우주인 시점</button>
     <button id="fMap">지도</button>
   </div>
   <div id="lcol">
@@ -375,7 +376,7 @@ const CATS = [['ctrl', '조종'], ['tank', '연료 탱크'], ['eng', '엔진'], 
 const DEFS = {};
 function def(key, o) { DEFS[key] = Object.assign({ key, col: 'white' }, o); }
 def('dragon', { cat: 'ctrl', kind: 'capsule', style: 'dragon', name: '크루 드래곤', note: '사람 4명 · 스페이스X', w: 4, h: 4.5, mass: 9500, crew: 4,
-  info: '국제 우주 정거장에 사람을 실어 나르는 캡슐이에요. 낙하산을 위에 붙이면 땅으로 돌아올 수 있어요.' });
+  info: '국제 우주 정거장에 사람을 실어 나르는 캡슐이에요. 지구로 돌아오려면 밑에 열 보호막, 위에 낙하산을 붙여요.' });
 def('soyuz', { cat: 'ctrl', kind: 'capsule', style: 'soyuz', name: '소유스 귀환선', note: '사람 3명 · 러시아', w: 2.5, h: 2.5, mass: 2950, crew: 3,
   info: '1967년부터 지금까지 쓰는 러시아 우주선의 귀환 캡슐이에요.' });
 def('apollo', { cat: 'ctrl', kind: 'capsule', style: 'apollo', name: '아폴로 사령선', note: '사람 3명 · 미국', w: 4, h: 3.5, mass: 5800, crew: 3,
@@ -409,6 +410,8 @@ def('truss', { cat: 'struct', kind: 'truss', name: '트러스 뼈대', note: '�
   info: '국제 우주 정거장의 긴 뼈대처럼 모듈과 태양전지판을 이어요. 돌려서 가로로 놓을 수 있어요.' });
 def('legs', { cat: 'struct', kind: 'legs', name: '착륙 다리', note: '탱크 옆에 붙여요', w: 0.5, h: 3, col: 'silver',
   info: '펼치면 땅에 내릴 때 충격을 받아 줘요. 달에 내릴 때 필요해요.' });
+def('shield', { cat: 'struct', kind: 'shield', name: '열 보호막', note: '대기권에 들어갈 때 열을 막아요', w: 4, h: 0.5, rw: [0.5, 12], rh: [0.3, 1.5], col: 'black',
+  info: '우주선이 대기권에 다시 들어오면 공기와 부딪혀 1,600°C 넘게 뜨거워져요. 캡슐 밑에 붙이고, 이 면이 앞으로 가게 내려오면 뒤의 부품을 지켜 줘요. 크루 드래곤은 PICA-X, 아폴로는 에이브코트라는 열 보호막을 썼어요. 2,900°C까지 견뎌요.' });
 def('chute', { cat: 'struct', kind: 'chute', name: '낙하산', note: '캡슐 위에 붙여요', w: 1.5, h: 0.8, mass: 200, col: 'orange',
   info: '공기가 있는 곳에서 천천히 내려오게 해 줘요. 너무 빠를 때는 기다렸다가 저절로 펴져요.' });
 def('dock', { cat: 'stat', kind: 'dock', name: '도킹 포트', note: '우주선끼리 붙는 문', w: 1.5, h: 0.5, mass: 450, col: 'silver',
@@ -458,6 +461,7 @@ function partDry(p) {
     case 'hab': return Math.PI * (w / 2) ** 2 * h * 115;
     case 'bus': return 180 * w * h;
     case 'probe': return 100 * Math.max(1, w / 1.5);
+    case 'shield': return 120 * Math.PI * (w / 2) ** 2 * (h / 0.5);
     case 'rock': return 2000 * 4 / 3 * Math.PI * (w / 2) ** 3;
     default: return d.mass || 100;
   }
@@ -751,6 +755,18 @@ function drawPart(ctx, p, mode, lw, extra) {
       ctx.strokeStyle = bp ? BP_DIM : 'rgba(0,0,0,0.3)'; pLine(ctx, -w / 2, -h / 2 + h * 0.3, w / 2, -h / 2 + h * 0.3);
       break;
     }
+    case 'shield': {
+      ctx.beginPath(); ctx.moveTo(-w / 2, h / 2); ctx.lineTo(w / 2, h / 2); ctx.lineTo(w / 2, -h * 0.1);
+      ctx.quadraticCurveTo(0, -h * 0.9, -w / 2, -h * 0.1); ctx.closePath();
+      if (bp) { ctx.fillStyle = BP_FILL; ctx.fill(); ctx.strokeStyle = BP_LINE; ctx.stroke(); }
+      else {
+        const g = ctx.createLinearGradient(-w / 2, 0, w / 2, 0);
+        g.addColorStop(0, '#2a1d16'); g.addColorStop(0.35, '#5a4232'); g.addColorStop(0.7, '#3d2c22'); g.addColorStop(1, '#22170f');
+        ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.stroke();
+        ctx.strokeStyle = 'rgba(120,95,70,0.5)'; for (let i = 1; i < 6; i++) pLine(ctx, -w / 2 + w * i / 6, h / 2, -w / 2 + w * i / 6, -h * 0.25);
+      }
+      break;
+    }
     case 'decoupler': {
       ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h);
       if (bp) { ctx.fillStyle = 'rgba(120,190,255,0.05)'; ctx.fill(); ctx.setLineDash(h > 0.8 ? [0.3, 0.2] : []); ctx.strokeStyle = BP_LINE; ctx.stroke(); ctx.setLineDash([]); }
@@ -888,7 +904,7 @@ function drawPlaced(ctx, p, mode, lw) {
   drawPart(ctx, p, mode, lw); ctx.restore();
 }
 // 그리는 순서: 엔진이 먼저, 덮개(분리기·페어링)가 나중
-const LAYER = { engine: 0, legs: 1, solar: 1, chute: 1, antenna: 1, tank: 2, hab: 2, truss: 2, probe: 2, bus: 2, capsule: 2, scope: 2, dock: 2, cupola: 2, adapter: 2, nose: 2, rdecoupler: 2, decoupler: 3, fairing: 4 };
+const LAYER = { shield: 2, engine: 0, legs: 1, solar: 1, chute: 1, antenna: 1, tank: 2, hab: 2, truss: 2, probe: 2, bus: 2, capsule: 2, scope: 2, dock: 2, cupola: 2, adapter: 2, nose: 2, rdecoupler: 2, decoupler: 3, fairing: 4 };
 function sortedForDraw(parts) { return parts.slice().sort((a, b) => (LAYER[DEFS[a.t].kind] ?? 2) - (LAYER[DEFS[b.t].kind] ?? 2)); }
 
 // =====================================================================
@@ -1756,6 +1772,59 @@ function groundCheck(v) {
   }
 }
 
+// ---------- 대기권 진입 열 (2026-11-08 아이 요청 "대기 진입하면 뜨거워짐") ----------
+// 앞쪽(공기와 부딪히는 쪽) 부품일수록 뜨겁다. 맨 앞이 열 보호막이면 그 뒤 부품은 거의 안 뜨겁다.
+const heatK = () => (world.scale === 'real' ? 6.1 : 9.5);   // 시험으로 맞춘 값: 보호막 없는 캡슐은 저궤도에서 돌아와도 타고, 보호막이 있으면 달에서 돌아와도 버틴다
+function maxTemp(p) {
+  switch (DEFS[p.t].kind) {
+    case 'shield': return 3170; case 'rock': return 3000; case 'engine': return 1800; case 'capsule': return 1500;
+    case 'nose': case 'fairing': return 1450; case 'solar': return p.dep ? 900 : 1300; case 'chute': return p.ch === 2 ? 1100 : 1650;
+    default: return 1300;
+  }
+}
+function updateHeat(v, rho, sp2, dt) {
+  const sp = Math.sqrt(sp2), q = rho > 0 && sp > 250 ? Math.sqrt(rho) * sp2 * sp : 0;
+  if (q <= 0 && !v._hot) return;
+  const kup = 1 - Math.exp(-dt / 4), kdn = 1 - Math.exp(-dt / 12);
+  let hot = false;
+  if (q > 0) {
+    const c = Math.cos(-v.ang), s = Math.sin(-v.ang), ux = (v.vx * c - v.vy * s) / sp, uy = (v.vx * s + v.vy * c) / sp;
+    let front = -Infinity;
+    for (const p of v.parts) {
+      const [bw, bh] = bboxSize(p);
+      p._lead = p.x * ux + p.y * uy + (Math.abs(ux) * bw + Math.abs(uy) * bh) / 2;
+      p._lat = -p.x * uy + p.y * ux; p._half = (Math.abs(uy) * bw + Math.abs(ux) * bh) / 2;
+      if (p._lead > front) front = p._lead;
+    }
+    let S = null;
+    for (const p of v.parts) if (DEFS[p.t].kind === 'shield' && p._lead > front - 0.35 && (!S || p._half > S._half)) S = p;
+    const base = heatK() * Math.pow(q, 0.25);
+    for (const p of v.parts) {
+      let f;
+      if (S && p !== S && Math.abs(p._lat - S._lat) + p._half <= S._half + 0.35) f = 0.22;
+      else f = Math.max(0.2, 1 - (front - p._lead) / 4);
+      const T0 = p._T || 290, Tt = 290 + base * f;
+      p._T = T0 + (Tt - T0) * (Tt > T0 ? kup : kdn);
+      if (p._T > 330) hot = true;
+    }
+    v._qMax = Math.max(v._qMax || 0, q);
+  } else for (const p of v.parts) { const T0 = p._T || 290; p._T = T0 + (290 - T0) * kdn; if (p._T > 330) hot = true; }
+  v._hot = hot;
+  let tmax = 290; for (const p of v.parts) if ((p._T || 290) > tmax) tmax = p._T;
+  v._glow = clamp((tmax - 900) / 1300, 0, 1);
+  if (hot) { const b = v.parts.filter(p => (p._T || 290) > maxTemp(p)); if (b.length) v._burn = b.map(p => p.id); }
+}
+function burnUp(v, ids) {
+  const names = [...new Set(ids.map(id => v._by.get(id)).filter(Boolean).map(p => DEFS[p.t].name))].join(', ');
+  for (const id of ids) { const p = v._by.get(id); if (!p) continue; const w = localToWorld(v, p.x, p.y, { x: v.x, y: v.y }); boom(v.body, w.x, w.y, partMass(p) * 0.2, false); }
+  const isA = v.id === world.activeId;
+  if (ids.length >= v.parts.length) { crashVessel(v, Math.hypot(v.vx, v.vy), '대기권에 들어오다가 너무 뜨거워서 다 타 버렸어요. 캡슐 밑에 열 보호막을 붙이고, 그 면이 앞으로 가게(뒤로 내려오게) 들어와 보세요.'); return; }
+  if (isA) { Juice.noiseHit(0.35, 0.2, 900); Juice.addShake(0.3); Juice.flash(0.15, '#ff9a4a'); toast(names + '이(가) 너무 뜨거워서 타 버렸어요'); }
+  v.stages = (v.stages || []).map(e => e.filter(id => !ids.includes(id))).filter(e => e.length);
+  splitVessel(v, ids, null, null);
+  if (world.vessels.includes(v)) retopo(v);
+}
+
 // ---------- 한 걸음 물리 (엔진·공기·중력) ----------
 function physStep(v, dt, ctl) {
   const b = BODY[v.body];
@@ -1798,6 +1867,8 @@ function physStep(v, dt, ctl) {
     fx -= Fd * v.vx / sp; fy -= Fd * v.vy / sp;
     v._heat = rho * sp2 * sp;
   } else v._heat = 0;
+  v._accG = v.landed ? b.g / G0 : Math.hypot(fx, fy) / m / G0;
+  updateHeat(v, rho, sp2, dt);
   // 돌기
   if (!v.landed) {
     let alpha = 0;
@@ -1831,6 +1902,7 @@ function physStep(v, dt, ctl) {
   }
   if (burned) recalc(v);
   groundCheck(v);
+  if (v._burn && world.vessels.includes(v)) { const ids = v._burn; v._burn = null; burnUp(v, ids); }
 }
 
 // ---------- 나누기 (분리기·도킹 풀기·페어링) ----------
@@ -2176,6 +2248,8 @@ function updateWorld(dt) {
     }
   }
   for (const o of gone) lostVessel(o);
+  const A2 = active();
+  if (A2 && F.lastBody !== A2.body) { const was = F.lastBody; F.lastBody = A2.body; if (was && F.map) mapInit(); }
   for (const o of world.vessels.slice()) { const b = BODY[o.body]; if (b.kind === 'star' && altOf(o) < b.R) crashVessel(o, 0, '별에 너무 가까이 가서 녹아 버렸어요'); }
 }
 
@@ -2376,9 +2450,19 @@ function drawVessel(v, ab, isActive) {
   drawFlames(v, pr);
   const lw = 1 / F.zoom;
   for (const p of sortedForDraw(v.parts)) drawPlaced(ctx, p, 'real', lw);
+  if (v._hot) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of v.parts) {
+      const T = p._T || 290; if (T < 700) continue;
+      const k = clamp((T - 700) / (maxTemp(p) - 700), 0, 1), [bw, bh] = bboxSize(p);
+      ctx.fillStyle = `rgba(255,${Math.round(60 + 140 * k)},${Math.round(20 + 60 * k)},${0.15 + 0.55 * k})`;
+      ctx.fillRect(p.x - bw / 2, p.y - bh / 2, bw, bh);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
   // 다시 들어올 때 빨갛게 달아오름
-  if (v._heat > 2e7) {
-    const a = clamp((Math.log10(v._heat) - 7.3) * 0.5, 0, 0.85);
+  if ((v._glow || 0) > 0.02) {
+    const a = v._glow * 0.85;
     const c = Math.cos(-v.ang), s = Math.sin(-v.ang), sp = Math.hypot(v.vx, v.vy) || 1;
     const lx = (v.vx * c - v.vy * s) / sp, ly = (v.vx * s + v.vy * c) / sp;
     const gx = v._com.x + lx * v._rad * 0.55, gy = v._com.y + ly * v._rad * 0.55;
@@ -2395,6 +2479,7 @@ function drawBrackets(sx, sy, r, col) {
 function drawFlight(real) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (F.map) { drawMap(); return; }
+  if (F.pov) { const A0 = active(); if (A0 && A0._crew) { drawCockpit(A0, real); return; } F.pov = false; refreshFlightUI(); }
   const b = BODY[cam.body], bs = bodyState(cam.body, world.time);
   const alt = Math.hypot(cam.x - bs.x, cam.y - bs.y) - b.R, rho = density(b, alt);
   const sky = b.rho0 ? Math.pow(rho / b.rho0, 0.22) : 0, sc = SKY[b.id] || [120, 140, 170];
@@ -2431,12 +2516,11 @@ function drawFlight(real) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   Juice.draw(ctx);
   Juice.drawFlash(ctx, W, H);
-  if (A) drawAttitude(A);
+  if (A) drawAttitude(A, W / 2, H - 56, 42);
   if (A && T && vSys(T) === cam.sys && T !== A) drawTargetArrow(A, T);
 }
 // 자세 표시기 (가운데 아래): 위쪽이 하늘, 아래쪽이 땅
-function drawAttitude(A) {
-  const cx = W / 2, cy = H - 56, R = 42;
+function drawAttitude(A, cx, cy, R) {
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.clip();
   ctx.fillStyle = '#2c5f93'; ctx.fillRect(cx - R, cy - R, R * 2, R);
@@ -2468,6 +2552,164 @@ function drawTargetArrow(A, T) {
   ctx.fillStyle = '#ffa94d'; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -8); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.restore();
   ctx.font = '11px Malgun Gothic'; ctx.fillStyle = '#ffd8a8'; ctx.textAlign = 'center';
   ctx.fillText(T.name + ' ' + fDist(Math.hypot(tb.x - ab.x, tb.y - ab.y)), px, py + 22);
+}
+
+// =====================================================================
+//  우주인 시점 (2026-11-08 아이 요청 "우주선 내부에서 우주인 시점으로 볼 수도 있게")
+//  캡슐 안에서 창밖을 본다. 창 가운데 = 우주선 머리 쪽, 창의 위아래 = 우주선이 도는 쪽(2D 세계라서)
+// =====================================================================
+function togglePov() {
+  const A = active();
+  if (!F.pov && (!A || !A._crew)) { toast('사람이 탄 캡슐이 있어야 우주인 시점으로 볼 수 있어요'); return; }
+  F.pov = !F.pov; if (F.pov) F.map = false; hidePop(); refreshFlightUI();
+}
+function drawCockpit(A, real) {
+  const b = BODY[A.body], ab = vAbs(A), bs = bodyState(A.body, world.time);
+  const dx = bs.x - ab.x, dy = bs.y - ab.y, r = Math.hypot(dx, dy) || 1;
+  const rho = density(b, r - b.R), sky = b.rho0 ? Math.pow(rho / b.rho0, 0.22) : 0, sc = SKY[b.id] || [120, 140, 170];
+  const thN = A.ang + Math.PI / 2, tt = performance.now() / 1000;
+  const o = Juice.shakeOffset(7);
+  ctx.save(); ctx.translate(o.x, o.y);
+  // 실내 벽
+  const g0 = ctx.createLinearGradient(0, 0, 0, H); g0.addColorStop(0, '#232b36'); g0.addColorStop(1, '#12171d');
+  ctx.fillStyle = g0; ctx.fillRect(-20, -20, W + 40, H + 40);
+  ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 1;
+  for (let x = -40; x < W + 40; x += 70) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 26, H); ctx.stroke(); }
+  // 창문
+  const top = 52, bot = Math.max(top + 110, Math.min(H * 0.6, H - 170)), cx = W / 2;
+  const wT = Math.min(W * 0.46, 620), wB = Math.min(W * 0.62, 820), winH = bot - top, fov = 80 * DEG, ppr = winH / fov, cy = (top + bot) / 2;
+  const yOf = d => cy - d * ppr;
+  const winPath = () => { ctx.beginPath(); ctx.moveTo(cx - wT / 2, top); ctx.lineTo(cx + wT / 2, top); ctx.lineTo(cx + wB / 2, bot); ctx.lineTo(cx - wB / 2, bot); ctx.closePath(); };
+  ctx.save(); winPath(); ctx.clip();
+  ctx.fillStyle = `rgb(${Math.round(4 + sc[0] * sky)},${Math.round(6 + sc[1] * sky)},${Math.round(12 + sc[2] * sky)})`;
+  ctx.fillRect(cx - wB / 2, top, wB, winH);
+  const sa = 1 - sky * 1.4;
+  if (sa > 0.02) {
+    ctx.fillStyle = '#fff';
+    for (const st of STARS) { const d = wrapA(st.y * TAU - thN); if (Math.abs(d) > fov / 2) continue; ctx.globalAlpha = st.a * sa; ctx.fillRect(cx - wB / 2 + st.x * wB, yOf(d), st.s, st.s); }
+    ctx.globalAlpha = 1;
+  }
+  const dP = wrapA(Math.atan2(dy, dx) - thN), aP = b.kind === 'gal' ? 0 : Math.asin(Math.min(1, b.R / r));
+  // 다른 천체 (별·달·행성)
+  for (const x of BLIST) {
+    if (x.sys !== b.sys || x === b || x.kind === 'gal') continue;
+    const xs = bodyState(x.id, world.time), ex = xs.x - ab.x, ey = xs.y - ab.y, dist = Math.hypot(ex, ey);
+    const d = wrapA(Math.atan2(ey, ex) - thN), ar = Math.asin(Math.min(1, x.R / dist));
+    if (Math.abs(d) - ar > fov / 2) continue;
+    if (aP && Math.abs(wrapA(d - dP)) < aP && dist > r) continue;   // 지금 천체 뒤에 가려짐
+    const px = cx + (hash01(x.id) - 0.5) * wB * 0.5, py = yOf(d), rr = Math.max(x.kind === 'star' ? 3 : 1.5, ar * ppr);
+    if (x.kind === 'star') { const g = ctx.createRadialGradient(px, py, 0, px, py, rr * 5 + 12); g.addColorStop(0, hexA(x.c1, 1)); g.addColorStop(0.25, hexA(x.c2, 0.5)); g.addColorStop(1, hexA(x.c2, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, rr * 5 + 12, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = x.c1; ctx.beginPath(); ctx.arc(px, py, rr, 0, TAU); ctx.fill();
+  }
+  // 지금 천체
+  if (b.kind !== 'gal' && Math.abs(dP) - aP < fov) {
+    const yU = yOf(dP + aP), yD = yOf(dP - aP);
+    const sag = clamp((1 - aP / (Math.PI / 2)) * wB * 0.7, 0, wB * 0.5);
+    const Lx = cx - wB / 2 - 30, Rx = cx + wB / 2 + 30;
+    const limb = () => { ctx.beginPath(); ctx.moveTo(Lx, yU + sag); ctx.quadraticCurveTo(cx, yU - sag, Rx, yU + sag); ctx.lineTo(Rx, yD - sag); ctx.quadraticCurveTo(cx, yD + sag, Lx, yD - sag); ctx.closePath(); };
+    ctx.save(); limb();
+    const top2 = Math.max(top - 50, Math.min(yU, yD)), bot2 = Math.min(bot + 50, Math.max(yU, yD));
+    const g = ctx.createLinearGradient(0, top2, 0, bot2 + 1);
+    const base = b.id === 'earth' ? '#2a64b8' : b.c1;
+    g.addColorStop(0, shade(base, 0.85)); g.addColorStop(1, shade(base, 1.08));
+    ctx.fillStyle = g; ctx.fill(); ctx.clip();
+    // 땅 무늬·구름: 천체 둘레에 고정된 점들이 지나간다
+    const phV = Math.atan2(-dy, -dx), cosLim = b.R / r;
+    const n = b.id === 'earth' ? 40 : b.kind === 'gas' ? 18 : 26;
+    for (let i = 0; i < n; i++) {
+      const th = hash01(b.id + 'f' + i) * TAU, c = Math.cos(th - phV);
+      if (c < cosLim) continue;
+      const fx = bs.x + b.R * Math.cos(th) - ab.x, fy = bs.y + b.R * Math.sin(th) - ab.y, fd = Math.hypot(fx, fy);
+      const d = wrapA(Math.atan2(fy, fx) - thN); if (Math.abs(d) > fov) continue;
+      const flat = clamp((c - cosLim) / (1 - cosLim + 1e-9), 0.08, 1);
+      const size = b.R * (0.05 + 0.1 * hash01(b.id + 's' + i)) / fd * ppr;
+      const px = cx + (hash01(b.id + 'x' + i) - 0.5) * wB * 1.1, py = yOf(d);
+      const cloud = b.id === 'earth' && i % 2 === 0;
+      ctx.fillStyle = cloud ? 'rgba(255,255,255,0.75)' : b.id === 'earth' ? '#3f7a3a' : b.kind === 'gas' ? hexA(b.c2, 0.45) : hexA(b.c2, 0.6);
+      ctx.beginPath(); ctx.ellipse(px, py, Math.min(size * (cloud ? 1.6 : 1.2), wB * 0.6), Math.max(1, size * flat * 0.7), 0, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+    if (b.atmTop) {
+      const k = SKY[b.id] || [150, 180, 220];
+      ctx.strokeStyle = `rgba(${k[0] + 40},${k[1] + 40},${Math.min(255, k[2] + 30)},0.55)`; ctx.lineWidth = clamp(b.atmTop / r * ppr * 3, 3, 26);
+      ctx.beginPath(); ctx.moveTo(Lx, yU + sag); ctx.quadraticCurveTo(cx, yU - sag, Rx, yU + sag); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(Lx, yD - sag); ctx.quadraticCurveTo(cx, yD + sag, Rx, yD - sag); ctx.stroke();
+    }
+  }
+  // 가까운 우주선 (도킹할 때 창밖으로 보임)
+  for (const v of world.vessels) {
+    if (v === A || v.body !== A.body) continue;
+    const vb = vAbs(v), ex = vb.x - ab.x, ey = vb.y - ab.y, dist = Math.hypot(ex, ey);
+    if (dist > 4000 || dist < 0.5) continue;
+    const d = wrapA(Math.atan2(ey, ex) - thN); if (Math.abs(d) > fov / 2 + 0.2) continue;
+    const k = Math.min(60, ppr / dist), px = cx + (hash01(v.id) - 0.5) * wB * 0.3, py = yOf(d);
+    if (v._rad * k < 1.5) { ctx.fillStyle = '#ddd'; ctx.fillRect(px - 1, py - 1, 2, 2); continue; }
+    ctx.save(); ctx.translate(px, py); ctx.scale(k, -k); ctx.rotate(v.ang - A.ang); ctx.translate(-v._com.x, -v._com.y);
+    for (const q of sortedForDraw(v.parts)) drawPlaced(ctx, q, 'real', 1 / k);
+    ctx.restore();
+    if (v.id === world.targetId) drawBrackets(px, py, v._rad * k + 6, '#ffa94d');
+  }
+  // 대기권 진입: 창밖이 주황빛 불꽃으로 덮인다
+  if ((A._glow || 0) > 0.02) {
+    const a = A._glow * 0.9;
+    const g = ctx.createRadialGradient(cx, bot + winH * 0.2, 10, cx, cy, wB * 0.8);
+    g.addColorStop(0, `rgba(255,220,160,${a})`); g.addColorStop(0.45, `rgba(255,120,50,${a * 0.75})`); g.addColorStop(1, `rgba(200,60,140,${a * 0.35})`);
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(cx - wB / 2, top, wB, winH);
+    ctx.strokeStyle = `rgba(255,200,140,${a * 0.6})`; ctx.lineWidth = 2;
+    for (let i = 0; i < 26; i++) { const x = cx - wB / 2 + hash01('pl' + i) * wB, ph = (tt * 2.5 + hash01('pv' + i)) % 1, y = bot - ph * winH; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (x - cx) * 0.05, y - 30 - 40 * hash01('pq' + i)); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.restore();
+  // 창틀
+  winPath(); ctx.lineJoin = 'round'; ctx.lineWidth = 16; ctx.strokeStyle = '#2b323c'; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#55606d'; ctx.stroke();
+  ctx.fillStyle = '#6b7684';
+  for (const [x, y] of [[cx - wT / 2, top], [cx + wT / 2, top], [cx + wB / 2, bot], [cx - wB / 2, bot], [cx, top], [cx, bot]]) { ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); }
+  // 계기판
+  const py0 = bot + 22, pw = Math.min(W * 0.72, 900), ph = Math.max(60, H - py0 - 64), px0 = cx - pw / 2;
+  ctx.fillStyle = '#1b2129'; ctx.strokeStyle = '#38424e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(px0 - 14, py0 - 8, pw + 28, ph + 30, 10); ctx.fill(); ctx.stroke();
+  const sw = (pw - 24) / 3, alt = r - b.R, sp = Math.hypot(A.vx, A.vy), vr = ((ab.x - bs.x) * (A.vx) + (ab.y - bs.y) * (A.vy)) / r;
+  const scr = (i, lines) => {
+    const x = px0 + i * (sw + 12), y = py0;
+    ctx.fillStyle = '#05121c'; ctx.strokeStyle = '#2f6f99'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(x, y, sw, ph, 6); ctx.fill(); ctx.stroke();
+    if (!lines) return [x, y];
+    const fs = clamp(ph / (lines.length + 1.2), 10, 16); ctx.font = `${fs}px Consolas, monospace`; ctx.textAlign = 'left';
+    lines.forEach(([k, val, col], j) => { const yy = y + fs * 1.25 * (j + 1); ctx.fillStyle = '#6fa8cc'; ctx.fillText(k, x + 10, yy); ctx.fillStyle = col || '#bfefff'; ctx.textAlign = 'right'; ctx.fillText(val, x + sw - 10, yy); ctx.textAlign = 'left'; });
+    return [x, y];
+  };
+  scr(0, [['고도', b.kind === 'gal' ? '-' : fDist(alt)], ['속도', fSpd(sp)], ['수직', (vr >= 0 ? '+' : '') + fSpd(vr)], [b.name, A.landed ? '땅 위' : alt < (b.atmTop || 0) ? '대기권' : '우주']]);
+  const [ax, ay] = scr(1, null); drawAttitude(A, ax + sw / 2, ay + ph / 2 + 6, Math.min(ph / 2 - 10, sw / 2 - 10));
+  let hotT = 290, hotP = null; for (const p of A.parts) if ((p._T || 290) > hotT) { hotT = p._T; hotP = p; }
+  const sf = stageFuel(A), tf = fuelOf(A), fp = sf.mx > 0 ? sf.f / sf.mx : tf.mx > 0 ? tf.f / tf.mx : 0;
+  scr(2, [['중력', nf(A._accG || 0, 2) + ' G'], ['온도', nf(hotT - 273, 0) + '°C', hotP && hotT > maxTemp(hotP) * 0.8 ? '#ff7070' : null], ['연료', nf(fp * 100, 0) + '%'], ['사람', A._crew + '명']]);
+  // 둥둥 떠다니는 펜 (무중력이면 떠다니고, 엔진을 켜면 바닥으로 떨어진다)
+  const pen = F.pen || (F.pen = { x: W * 0.62, y: (top + bot) / 2, vx: 14, vy: -9, a: 0.3, va: 0.5 });
+  const gpx = (A._accG || 0) > 0.03 ? (A._accG || 0) * 9.81 * 40 : 0, dtp = Math.min(0.05, real || 0.016);
+  pen.vy += gpx * dtp; pen.x += pen.vx * dtp; pen.y += pen.vy * dtp; pen.a += pen.va * dtp;
+  const floor = py0 - 14;
+  if (pen.x < W * 0.12 || pen.x > W * 0.88) { pen.vx *= -1; pen.x = clamp(pen.x, W * 0.12, W * 0.88); }
+  if (pen.y < top + 10) { pen.vy = Math.abs(pen.vy); }
+  if (pen.y > floor) { pen.y = floor; pen.vy = gpx ? 0 : -Math.abs(pen.vy) * 0.6; if (gpx) { pen.vx *= 0.9; pen.va *= 0.8; pen.a *= 0.9; } }
+  if (!gpx && Math.hypot(pen.vx, pen.vy) < 6) { pen.vx += (Math.random() - 0.5) * 4; pen.vy += (Math.random() - 0.5) * 4; }
+  ctx.save(); ctx.translate(pen.x, pen.y); ctx.rotate(pen.a);
+  ctx.fillStyle = '#2c6fd1'; ctx.fillRect(-22, -3, 38, 6); ctx.fillStyle = '#d9dde3'; ctx.fillRect(16, -3, 6, 6); ctx.fillStyle = '#222'; ctx.beginPath(); ctx.moveTo(-22, -3); ctx.lineTo(-30, 0); ctx.lineTo(-22, 3); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // 우주인들 (뒷모습)
+  const nCrew = Math.min(4, A._crew), gap = Math.min(220, W * 0.22), zeroG = !gpx;
+  for (let i = 0; i < nCrew; i++) {
+    const x = cx + (i - (nCrew - 1) / 2) * gap;
+    const bob = zeroG ? Math.sin(tt * 0.9 + i * 1.7) * 4 - 4 : clamp(((A._accG || 1) - 1) * 6, -4, 22);
+    ctx.fillStyle = '#d9dde3'; ctx.beginPath(); ctx.ellipse(x, H + 26, 92, 62, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2b2f36'; ctx.fillRect(x - 6, H - 30, 12, 40);
+    ctx.fillStyle = '#3a3f47'; ctx.beginPath(); ctx.ellipse(x, H - 26 + bob * 0.5, 40, 12, 0, 0, TAU); ctx.fill();
+    const hg = ctx.createRadialGradient(x - 12, H - 66 + bob - 12, 4, x, H - 62 + bob, 42);
+    hg.addColorStop(0, '#ffffff'); hg.addColorStop(1, '#a9b0ba');
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(x, H - 62 + bob, 38, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#2b2f36'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, H - 62 + bob, 38, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  Juice.draw(ctx); Juice.drawFlash(ctx, W, H);
 }
 
 // =====================================================================
@@ -2706,6 +2948,10 @@ function updateHUD() {
   const twr = b.g ? (A._thrust || 0) / (A._m * b.g) : 0;
   h += `<div class="row"><span class="k">무게</span><span class="v">${fMass(A._m)}</span></div><div class="row"><span class="k">힘/무게</span><span class="v">${nf(twr, 2)}</span></div>`;
   if (A._crew || A._kw) h += `<div class="row"><span class="k">사람 · 전기</span><span class="v">${A._crew}명 · ${nf(A._kw, 1)} kW</span></div>`;
+  if (A._hot) {
+    let wp = null, wr = 0; for (const p of A.parts) { const r = (p._T || 290) / maxTemp(p); if (r > wr) { wr = r; wp = p; } }
+    if (wp && wp._T > 400) h += `<div class="row"><span class="k">${DEFS[wp.t].name}</span><span class="v ${wr > 0.8 ? 'bad' : ''}">${nf(wp._T - 273, 0)} / ${nf(maxTemp(wp) - 273, 0)}°C</span></div>`;
+  }
   h += `<div class="row"><span class="k">시간</span><span class="v">${fClock(world.time)}</span></div>`;
   hud.innerHTML = h;
   // 목표
@@ -2729,7 +2975,7 @@ function refreshFlightUI(soft) {
   if (soft && key === uiKey) return;
   uiKey = key;
   $('vName').textContent = A ? A.name : '';
-  $('fMap').classList.toggle('on', F.map);
+  $('fMap').classList.toggle('on', F.map); $('fPov').classList.toggle('on', F.pov);
   $('sasBtn').classList.toggle('on', !!(A && A.sas));
   if (A) setThrottle(A.throttle);
   // 단계 목록
@@ -2868,6 +3114,7 @@ function flyKey(e, down) {
   switch (e.code) {
     case 'Space': e.preventDefault(); if (A && A._ctrl) { doStage(A); refreshFlightUI(); } break;
     case 'KeyM': toggleMap(); break;
+    case 'KeyV': togglePov(); break;
     case 'KeyT': if (A) { A.sas = !A.sas; refreshFlightUI(); } break;
     case 'KeyZ': setThrottle(1); break;
     case 'KeyX': setThrottle(0); break;
@@ -2935,7 +3182,7 @@ function visitBody(id) {
   S.rec.visit = S.rec.visit || {};
   if (!S.rec.visit[id]) { S.rec.visit[id] = today(); }
   const b = BODY[id];
-  if (b.parent === 'sun' && b.kind !== 'star' && !b.name.includes('(')) setRec('planet');
+  if (b.parent === 'sun' && b.kind !== 'star' && b.id !== 'earth' && !b.name.includes('(')) setRec('planet');
   if (b.sys === 'acenA') setRec('acen');
 }
 function onLanded(v) {
@@ -3037,7 +3284,7 @@ function enterFlight() {
   $('build').classList.add('hide'); $('fly').classList.remove('hide'); hidePop();
   const A = active();
   F.zoom = A ? clamp(0.42 * (H - 44) / Math.max(A._Hh, A._W * 0.7, 3), 1e-6, 40) : 1;
-  F.map = false; F.warpIdx = 0; F.crashed = false; F.autoDock = false; F.match = false; F.smoke = []; F.booms = [];
+  F.map = false; F.warpIdx = 0; F.crashed = false; F.autoDock = false; F.match = false; F.smoke = []; F.booms = []; F.pov = false; F.pen = null;
   if (A) { const ab = vAbs(A); cam.x = ab.x; cam.y = ab.y; cam.body = A.body; cam.sys = vSys(A); const bs = bodyState(A.body, world.time); cam.phi = Math.atan2(cam.y - bs.y, cam.x - bs.x) - Math.PI / 2; }
   Juice.clear(); uiKey = ''; refreshFlightUI(); updateHUD(); saveAll();
 }
@@ -3132,6 +3379,7 @@ function afterLoad() { closeModal(); B.sel = null; $('dName').textContent = D().
 // ---------- 예시 로켓 ----------
 const EXAMPLES = [
   ['falcon', '팰컨 9 + 인공위성', '스페이스X 로켓을 닮은 2단 로켓이에요. 페어링 안에 위성이 들어 있어요.'],
+  ['crew', '팰컨 9 + 크루 드래곤', '사람 4명이 탄 캡슐이에요. 밑에 열 보호막, 위에 낙하산이 있어서 지구로 돌아올 수 있어요.'],
   ['station', '정거장 모듈 로켓', '거주 모듈과 도킹 포트 2개를 싣고 가요. 여러 번 쏘아서 도킹하면 정거장이 돼요.'],
   ['nuri', '누리호', '한국 로켓을 닮은 3단 로켓이에요. KRE-075 엔진 4개로 떠요.'],
   ['saturn', '새턴 V + 아폴로', '폭 10 m짜리 큰 3단 로켓이에요. 달까지 갈 수 있어요.'],
@@ -3143,7 +3391,10 @@ function makeExample(id) {
   const side = (t, yc, hostHalfW) => { const a = P(t, 0, 0), [bw] = bboxSize(Object.assign({}, a, { r: 1 })); const r = Object.assign(P(t, 0, 0), { r: 3 }); r.x = hostHalfW + bw / 2; r.y = yc; const l = Object.assign(P(t, 0, 0), { r: 1 }); l.x = -r.x; l.y = yc; l.sym = r.id; r.sym = l.id; return [r, l]; };
   let parts = [], name = '';
   const f9low = () => [P('e_merlin', 0, 0, { n: 9 }), P('tank', 0, 2, { w: 3.5, h: 40 }), P('dec', 0, 42, { w: 3.5, h: 5 }), P('e_mvac', 0, 42.5), P('tank', 0, 47, { w: 3.5, h: 11 })];
-  if (id === 'falcon') {
+  if (id === 'crew') {
+    name = '크루 드래곤';
+    parts = f9low().concat([P('dec', 0, 58, { w: 3.5, h: 0.5 }), P('shield', 0, 58.5, { w: 4 }), P('dragon', 0, 59), P('chute', 0, 63.5)]);
+  } else if (id === 'falcon') {
     name = '팰컨 9';
     parts = f9low().concat([P('dec', 0, 58, { w: 1.5, h: 0.5 }), P('bus', 0, 58.5, { w: 2, h: 2.5 }), P('antenna', 0, 61)], side('solarS', 59.75, 1), [P('fairing', 0, 58, { w: 5, h: 11 })]);
   } else if (id === 'station') {
@@ -3157,7 +3408,7 @@ function makeExample(id) {
     name = '새턴 V';
     parts = [P('e_f1', 0, 0, { n: 5 }), P('tank', 0, 5.5, { w: 10, h: 26 }), P('dec', 0, 31.5, { w: 10, h: 4 }), P('e_j2', 0, 32, { n: 5 }), P('tank', 0, 35.5, { w: 10, h: 22 }),
       P('adapter', 0, 57.5, { w: 10, w2: 6.5, h: 5 }), P('dec', 0, 62.5, { w: 6.5, h: 0.5 }), P('e_j2', 0, 59.5), P('tank', 0, 63, { w: 6.5, h: 11 }),
-      P('adapter', 0, 74, { w: 6.5, w2: 4, h: 6 }), P('dec', 0, 80, { w: 4, h: 0.5 }), P('apollo', 0, 80.5), P('chute', 0, 84)];
+      P('adapter', 0, 74, { w: 6.5, w2: 4, h: 6 }), P('dec', 0, 80, { w: 4, h: 0.5 }), P('shield', 0, 80.5, { w: 4 }), P('apollo', 0, 81), P('chute', 0, 84.5)];
   } else if (id === 'electron') {
     name = '일렉트론';
     parts = [P('e_rutherford', 0, 0, { n: 9 }), P('tank', 0, 1, { w: 1.5, h: 7.5 }), P('dec', 0, 8.5, { w: 1.5, h: 1.2 }), P('e_rutherford', 0, 8.7), P('tank', 0, 9.7, { w: 1.5, h: 2.2 }),
@@ -3223,7 +3474,7 @@ function bindUI() {
   $('bzOut').onclick = () => { B.cam.z = clamp(B.cam.z / 1.3, 0.3, 80); };
   $('bzFit').onclick = fitBuild;
   $('fBuild').onclick = exitToBuild; $('fBase').onclick = baseModal; $('fRec').onclick = recModal;
-  $('fMap').onclick = toggleMap;
+  $('fMap').onclick = toggleMap; $('fPov').onclick = togglePov;
   $('wUp').onclick = () => warpStep(1); $('wDn').onclick = () => warpStep(-1);
   $('fzIn').onclick = () => flyZoom(2); $('fzOut').onclick = () => flyZoom(1 / 2);
   $('fzFar').onclick = () => {
