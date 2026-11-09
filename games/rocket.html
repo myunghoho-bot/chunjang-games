@@ -3359,6 +3359,20 @@ function quickAction(v, p, sx, sy) {
     splitVessel(v, [p.id], null, { x: p.x, y: p.y, speed: 2.2 }); retopo(v);
     toast(p.h > 0.8 ? '덮개가 분리됐어요' : '분리했어요'); refreshFlightUI(); saveSoon(); return true;
   }
+  if (k === 'adapter') {   // (2026-11-09 아이 요청 "어댑터 눌러서 분리하게") 어댑터는 아래 단에 남고 위쪽이 떨어진다
+    const sh = shapeOf(p);
+    const touching = edge => (v._adj.get(p.id) || []).map(id => v._by.get(id)).filter(q => q && edgesOf(q).some(f => OPP[edge.s] === f.s && Math.abs(edge.c - f.c) < 0.03 && Math.min(edge.b, f.b) - Math.max(edge.a, f.a) > 0.04));
+    let side = xformEdge(['T', sh.h / 2, -sh.wt / 2, sh.wt / 2], p), nbs = touching(side);
+    if (!nbs.length) { side = xformEdge(['B', -sh.h / 2, -sh.wb / 2, sh.wb / 2], p); nbs = touching(side); }
+    if (!nbs.length) { toast('어댑터에 붙은 게 없어요'); return true; }
+    const cut = new Set(nbs.map(q => p.id + '|' + q.id)), mid = (side.a + side.b) / 2;
+    const pt = side.s === 'T' || side.s === 'B' ? { x: mid, y: side.c } : { x: side.c, y: mid };
+    const res = splitVessel(v, [], cut, { x: pt.x, y: pt.y, speed: 2.2 });
+    if (res.length < 2) { toast('다른 곳으로도 붙어 있어서 안 떨어져요'); return true; }
+    retopo(v);
+    Juice.noiseHit(0.18, 0.16, 1800); Juice.addShake(0.2); Juice.hitstop(40); Juice.burst(sx, sy, 14, '#ffe08a', 140, 0.35, 3, 0);
+    toast('어댑터에서 분리했어요'); refreshFlightUI(); saveSoon(); return true;
+  }
   if (k === 'engine') {
     const pool = v._pools[p._sec], fuel = pool ? pool.tanks.reduce((a, t) => a + (t.fuel || 0), 0) : 0;
     p.on = !p.on;
