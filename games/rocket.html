@@ -1025,7 +1025,33 @@ function undo() {
   if (!B.hist.length) { toast('더 되돌릴 게 없어요'); return; }
   D().parts = JSON.parse(B.hist.pop()); B.sel = null; designChanged();
 }
-function designChanged() { B.statsDirty = true; refreshRight(); saveSoon(); }
+function designChanged() {
+  if (autoCovers()) toast('분리기가 늘어나서 엔진을 덮었어요');
+  B.statsDirty = true; refreshRight(); saveSoon();
+}
+// 엔진 덮개 저절로 (2026-11-09 아이 요청): 연료 탱크 밑에 엔진이 달려 있고, 그 엔진 밑에 분리기가 붙으면
+// 분리기가 위로 늘어나 엔진을 덮는다(인터스테이지). 분리기 바닥은 그대로라서 아래 단은 안 움직인다.
+function autoCovers() {
+  const parts = D().parts; if (parts.length < 3) return 0;
+  let n = 0;
+  const near = (a, b) => Math.abs(a - b) < 0.03;
+  const overlapX = (a, b) => Math.min(a.x + bboxSize(a)[0] / 2, b.x + bboxSize(b)[0] / 2) - Math.max(a.x - bboxSize(a)[0] / 2, b.x - bboxSize(b)[0] / 2) > 0.04;
+  for (const dp of parts) {
+    if (DEFS[dp.t].kind !== 'decoupler' || (dp.r || 0) !== 0) continue;
+    const dTop = dp.y + dp.h / 2, dBot = dp.y - dp.h / 2;
+    const eng = parts.find(e => isMainEngine(e) && (e.r || 0) === 0 && near(e.y - e.h / 2, dTop) && overlapX(e, dp));
+    if (!eng) continue;
+    const eTop = eng.y + eng.h / 2;
+    const up = parts.find(u => u !== eng && u !== dp && ['tank', 'adapter'].includes(DEFS[u.t].kind) && (u.r || 0) === 0 && near(u.y - u.h / 2, eTop) && overlapX(u, eng));
+    if (!up) continue;
+    const hNew = eTop - dBot;
+    if (hNew > DEFS.dec.rh[1] + 1e-9) continue;
+    dp.h = Math.round(hNew * 1000) / 1000; dp.y = (eTop + dBot) / 2;
+    dp.w = Math.max(dp.w, Math.ceil(eng.w * 2) / 2);
+    n++;
+  }
+  return n;
+}
 let saveT = 0; function saveSoon() { clearTimeout(saveT); saveT = setTimeout(saveAll, 400); }
 
 // ---------- 부품 목록 ----------
@@ -3316,6 +3342,36 @@ function vesselPop(x, y, v) {
   if (v !== A && v._ctrl) { h += `<button id="ppC">이 우주선 조종하기</button>`; bi.ppC = () => switchTo(v.id); }
   showPop(x, y, h, bi);
 }
+// 누르면 바로 (2026-11-09 아이 요청 "페어링이랑 덮개는 그냥 누르면 분리되고 엔진도 누르면 켜짐")
+// 페어링을 누르면 열리고, 분리기·덮개(인터스테이지)를 누르면 떨어지고, 엔진을 누르면 켜진다(다시 누르면 꺼짐)
+function quickAction(v, p, sx, sy) {
+  if (v !== active() || !v._ctrl) return false;
+  const d = DEFS[p.t], k = d.kind;
+  const dropStage = () => { v.stages = (v.stages || []).map(e => e.filter(id => id !== p.id)).filter(e => e.length); };
+  if (k === 'fairing' && !p.half) {
+    dropStage(); openFairing(v, p); splitVessel(v, [p.id], null, null); retopo(v);
+    Juice.noiseHit(0.2, 0.12, 2400); Juice.burst(sx, sy, 10, '#ffffff', 120, 0.3, 2, 0);
+    toast('페어링이 열렸어요'); refreshFlightUI(); saveSoon(); return true;
+  }
+  if (k === 'decoupler' || k === 'rdecoupler') {
+    dropStage();
+    Juice.noiseHit(0.18, 0.16, 1800); Juice.addShake(0.2); Juice.hitstop(40); Juice.burst(sx, sy, 14, '#ffe08a', 140, 0.35, 3, 0);
+    splitVessel(v, [p.id], null, { x: p.x, y: p.y, speed: 2.2 }); retopo(v);
+    toast(p.h > 0.8 ? '덮개가 분리됐어요' : '분리했어요'); refreshFlightUI(); saveSoon(); return true;
+  }
+  if (k === 'engine') {
+    const pool = v._pools[p._sec], fuel = pool ? pool.tanks.reduce((a, t) => a + (t.fuel || 0), 0) : 0;
+    p.on = !p.on;
+    if (p.on) {
+      S.used[d.eng] = true;
+      if (fuel <= 0) toast(ENGINES[d.eng].name + ' 켜짐 · 그런데 이 칸에 연료가 없어요');
+      else { if (v.throttle === 0) setThrottle(1); toast(ENGINES[d.eng].name + ' 켜짐'); }
+      Juice.beep(110, 0.25, 'sawtooth', 0.08, 0.05, 60); Juice.addShake(0.1);
+    } else { toast(ENGINES[d.eng].name + ' 꺼짐'); Juice.beep(300, 0.06, 'triangle', 0.06); }
+    refreshFlightUI(); return true;
+  }
+  return false;
+}
 function partPop(x, y, v, p) {
   const d = DEFS[p.t], k = d.kind, A = active();
   if (v !== A || !v._ctrl) { vesselPop(x, y, v); return; }
@@ -3359,7 +3415,7 @@ function flyUp(e) {
   F.ptrs.delete(e.pointerId); if (F.ptrs.size < 2) F.pinch = null;
   if (F.pan && !F.pan.moved) {
     if (F.map) mapClick(e.clientX, e.clientY);
-    else { const h = hitVessel(e.clientX, e.clientY); if (h) { if (h.p) partPop(e.clientX, e.clientY, h.v, h.p); else vesselPop(e.clientX, e.clientY, h.v); } }
+    else { const h = hitVessel(e.clientX, e.clientY); if (h) { if (h.p) { if (!quickAction(h.v, h.p, e.clientX, e.clientY)) partPop(e.clientX, e.clientY, h.v, h.p); } else vesselPop(e.clientX, e.clientY, h.v); } }
   }
   F.pan = null;
 }
