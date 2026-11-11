@@ -69,6 +69,27 @@
     'stellar': { mouse: 1 },
     'cosmos': { pinch: 0 },
     'rocket': { pinch: 0 },
+    'galaxy': { pinch: 0 },
+    'airplane3d': {   // 왼쪽: 기수·기울기, 오른쪽: 추력·브레이크(군용기는 기관포·미사일). 게임 속 단추는 미니맵 아래 두 줄로
+      show: () => g(() => G.mode === 'fly' && G.screen === 'fly' && PL && !PL.crashed),
+      L: [{ t: '위로', k: 'ArrowDown', hold: 1 }, { t: '◀', k: 'ArrowLeft', hold: 1 }, { t: '아래로', k: 'ArrowUp', hold: 1 }, { t: '▶', k: 'ArrowRight', hold: 1 }],
+      R: [{ t: '기관포', k: 'Space', hold: 1, when: () => g(() => PL.P.mil) },
+          { t: '미사일', k: 'KeyF', when: () => g(() => PL.P.mil) },
+          { t: '브레이크', k: 'KeyB', hold: 1, when: () => g(() => !PL.P.mil) },
+          { t: '바퀴', k: 'KeyG', when: () => g(() => !PL.P.mil) },
+          { t: '추력 −', k: 'KeyS', hold: 1 }, { t: '추력 +', k: 'KeyW', hold: 1 }],
+      css: `#cjPad .cl.L{display:grid;grid-template-columns:repeat(3,50px);grid-template-rows:repeat(2,50px);gap:6px}
+#cjPad .cl.L button{min-width:0;width:50px;height:50px;padding:0;font-size:12px;border-radius:12px}
+#cjPad .cl.L button:nth-child(1){grid-column:2;grid-row:1}
+#cjPad .cl.L button:nth-child(2){grid-column:1;grid-row:2}
+#cjPad .cl.L button:nth-child(3){grid-column:2;grid-row:2}
+#cjPad .cl.L button:nth-child(4){grid-column:3;grid-row:2}
+#cjPad .cl.R{display:grid;grid-template-columns:repeat(2,64px);gap:6px}
+#cjPad .cl.R button{min-width:0;width:64px;height:42px;padding:0;font-size:12px;border-radius:12px}
+#thrBox,#fMis{display:none!important}
+#flyBtns{top:168px;display:grid;grid-template-columns:repeat(2,auto);gap:4px}
+#flyBtns button{min-width:0;padding:6px 8px;font-size:11px}`,
+    },
     'random-life': {
       pinch: 0, show: () => g(() => MODE) === 'live' && !g(() => modalOpen),
       dpad: 1, R: [{ t: '행동', k: 'KeyE', big: 1 }], css: LIFT(),

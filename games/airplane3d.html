@@ -1,0 +1,2073 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>비행기 게임 3D</title>
+<style>
+:root{--pn:rgba(11,17,25,.86);--pn2:rgba(255,255,255,.045);--ln:rgba(255,255,255,.13);--tx:#e9eff5;--dm:#93a4b5;--ac:#3fa9f5;--ac2:#2a7fc0;--ok:#58cf86;--wn:#f5b63f;--bd:#ff5d55}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0f15;color:var(--tx);font:14px/1.45 'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+canvas#hud{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.scr{position:fixed;inset:0;display:none;pointer-events:none}
+.scr.on{display:block}
+.pn{pointer-events:auto;background:var(--pn);border:1px solid var(--ln);border-radius:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+button{font:inherit;color:var(--tx);background:#1b2836;border:1px solid var(--ln);border-radius:7px;padding:8px 14px;cursor:pointer;transition:background .12s}
+button:hover{background:#25374a}
+button.pri{background:var(--ac2);border-color:#56b4f5}
+button.pri:hover{background:#3192d8}
+button:disabled{opacity:.38;cursor:default}
+button.sel{background:#284a68;border-color:#5fb6f0}
+h2{font-size:17px;font-weight:700;margin-bottom:10px}
+.sub{color:var(--dm);font-size:12px}
+.row{display:flex;gap:8px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px}
+.grow{flex:1}
+.lbl{font-size:12px;color:var(--dm);margin:12px 0 6px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{padding:6px 11px;font-size:13px}
+/* 처음 화면 */
+#sTitle .pn{position:absolute;left:28px;top:28px;bottom:28px;width:330px;display:flex;flex-direction:column;padding:28px 24px}
+.b1{font-size:30px;font-weight:800;letter-spacing:-.5px}
+.b1 b{color:var(--ac)}
+.b2{color:var(--dm);font-size:13px;margin-top:6px}
+.menu{display:flex;flex-direction:column;gap:10px;margin-top:34px}
+.menu button{padding:13px 16px;font-size:15px;text-align:left}
+.foot{margin-top:auto;color:var(--dm);font-size:12px;display:flex;justify-content:space-between}
+/* 목록 화면 */
+.side{position:absolute;left:20px;top:20px;bottom:20px;width:360px;display:flex;flex-direction:column;padding:18px}
+.list{flex:1;overflow-y:auto;margin:10px -6px 12px;padding:0 6px}
+.list::-webkit-scrollbar{width:8px}.list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+.it{padding:9px 11px;border-radius:7px;cursor:pointer;border:1px solid transparent;margin-bottom:3px;display:flex;gap:10px;align-items:center}
+.it:hover{background:var(--pn2)}
+.it.sel{background:#1f3a54;border-color:#4fa6e6}
+.it .nm{font-weight:700}
+.it .ds{font-size:12px;color:var(--dm)}
+.it.dis{opacity:.4}
+.sw{width:30px;height:20px;border-radius:4px;flex:none;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.25)}
+.sw i{position:absolute;right:0;top:0;bottom:0;width:40%}
+.sw u{position:absolute;left:0;right:0;bottom:4px;height:3px}
+.tabs{display:flex;gap:4px}
+.tabs button{flex:1;padding:7px 4px}
+.info{position:absolute;right:20px;bottom:20px;width:400px;max-height:calc(100% - 40px);overflow-y:auto;padding:18px}
+.spec{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px;margin:10px 0}
+.spec span:nth-child(odd){color:var(--dm)}
+.long{font-size:13px;color:#cfd9e3;line-height:1.6}
+.fact{margin-top:10px;padding:9px 11px;border-radius:7px;background:rgba(245,182,63,.1);border:1px solid rgba(245,182,63,.3);font-size:12.5px;color:#f3dcae}
+.nav{display:flex;gap:8px}
+/* 경로 */
+#mapBox{position:absolute;left:20px;top:20px;bottom:20px;right:400px;padding:10px;display:flex}
+#mapCv{flex:1;width:100%;height:100%;cursor:crosshair;border-radius:6px}
+#sRoute .rp{position:absolute;right:20px;top:20px;bottom:20px;width:364px;padding:18px;display:flex;flex-direction:column;overflow-y:auto}
+select{font:inherit;color:var(--tx);background:#1b2836;border:1px solid var(--ln);border-radius:7px;padding:7px 9px;width:100%}
+.note{font-size:12px;color:var(--wn);margin-top:6px;min-height:16px}
+.sum{font-size:13px;margin-top:10px;padding:10px;border-radius:7px;background:var(--pn2)}
+/* 비행 중 버튼 */
+#flyBtns{position:absolute;right:12px;top:230px;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+#flyBtns button{padding:7px 10px;font-size:12px;min-width:92px;background:rgba(11,17,25,.8)}
+#flyBtns button.on{border-color:var(--wn);color:var(--wn)}
+#thrBox{position:absolute;right:120px;top:230px;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px}
+#thrBox input{writing-mode:vertical-lr;direction:rtl;height:150px;width:26px}
+#thrBox span{font-size:11px;color:var(--dm)}
+/* 가운데 창 */
+.mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:440px;max-width:calc(100% - 24px);max-height:calc(100% - 24px);overflow-y:auto;padding:22px}
+.mid .btns{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.mid .btns button{padding:11px}
+.opt{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--ln);font-size:13px}
+.big{font-size:26px;font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:6px 6px;border-bottom:1px solid var(--ln);text-align:left}
+th{color:var(--dm);font-weight:400}
+.keys td:first-child{color:var(--wn);font-weight:700;white-space:nowrap;width:120px}
+#loading{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 26px;font-size:14px;color:var(--dm);z-index:10}
+@media (max-width:860px),(max-height:500px){
+ #sTitle .pn{width:270px;padding:18px;left:12px;top:12px;bottom:12px}.b1{font-size:24px}.menu{margin-top:18px}
+ .side{width:290px;left:10px;top:10px;bottom:10px;padding:12px}.info{width:300px;right:10px;bottom:10px;padding:12px}
+ #mapBox{left:10px;top:10px;bottom:10px;right:300px}#sRoute .rp{width:282px;right:10px;top:10px;bottom:10px;padding:12px}
+ #flyBtns{top:180px}#thrBox{top:180px;right:116px}#thrBox input{height:110px}
+}
+</style><script src="../mobile.js"></script>
+</head><body>
+<canvas id="cv"></canvas><canvas id="hud"></canvas>
+<div id="loading" class="pn">대한민국 지형을 만드는 중입니다…</div>
+
+<div class="scr" id="sTitle"><div class="pn">
+ <div class="b1">비행기 게임 <b>3D</b></div>
+ <div class="b2">대한민국 하늘 · 기종 52 · 항공사 22 · 공항 7</div>
+ <div class="menu">
+  <button class="pri" id="bStart">비행 시작</button>
+  <button id="bLog">비행 기록</button>
+  <button id="bHelp">조작 방법</button>
+ </div>
+ <div class="foot"><span>HJ</span><span id="tCount"></span></div>
+</div></div>
+
+<div class="scr" id="sPlane">
+ <div class="pn side"><h2>기종 선택</h2>
+  <div class="tabs"><button data-tab="pax" class="sel">여객기</button><button data-tab="cargo">화물기</button><button data-tab="mil">군사기</button></div>
+  <div class="list" id="plList"></div>
+  <div class="nav"><button id="bPlBack">이전</button><button class="pri grow" id="bPlNext">다음</button></div>
+ </div>
+ <div class="pn info" id="plInfo"></div>
+</div>
+
+<div class="scr" id="sAir">
+ <div class="pn side"><h2>항공사 선택</h2><div class="sub" id="alSub"></div>
+  <div class="list" id="alList"></div>
+  <div class="nav"><button id="bAlBack">이전</button><button class="pri grow" id="bAlNext">다음</button></div>
+ </div>
+</div>
+
+<div class="scr" id="sRoute">
+ <div class="pn" id="mapBox"><canvas id="mapCv"></canvas></div>
+ <div class="pn rp">
+  <h2>비행 계획</h2><div class="sub" id="rtPlane"></div>
+  <div id="misBox"><div class="lbl">임무</div><div class="seg" id="segMis"><button data-v="fly">목적지로 비행</button><button data-v="fight">공중전 훈련</button></div>
+   <div id="enBox"><div class="lbl">적기 수</div><div class="seg" id="segEn"><button data-v="3">3대</button><button data-v="6">6대</button><button data-v="10">10대</button></div></div></div>
+  <div class="lbl">출발 공항</div><select id="selFrom"></select>
+  <div id="toBox"><div class="lbl">도착 공항</div><select id="selTo"></select></div>
+  <div class="note" id="rtNote"></div>
+  <div class="lbl">시작 위치</div><div class="seg" id="segStart"><button data-v="rw">활주로에서</button><button data-v="air">하늘에서</button></div>
+  <div class="lbl">시간</div><div class="seg" id="segTod"><button data-v="day">낮</button><button data-v="eve">저녁</button><button data-v="night">밤</button></div>
+  <div class="lbl">날씨</div><div class="seg" id="segWx"><button data-v="0">맑음</button><button data-v="1">구름 조금</button><button data-v="2">구름 많음</button></div>
+  <div class="sum" id="rtSum"></div>
+  <div class="nav" style="margin-top:auto;padding-top:14px"><button id="bRtBack">이전</button><button class="pri grow" id="bRtGo">출발</button></div>
+ </div>
+</div>
+
+<div class="scr" id="sFly">
+ <div class="pn" id="thrBox"><span>추력</span><input type="range" id="thrS" min="0" max="100" value="0"><span id="thrV">0%</span></div>
+ <div id="flyBtns"><button id="fGear">바퀴 (G)</button><button id="fCam">시점 (C)</button><button id="fAP">자동 조종 (Z)</button><button id="fMis" style="display:none">미사일 (F)</button><button id="fPause">일시정지 (P)</button></div>
+</div>
+
+<div class="scr" id="sPause"><div class="pn mid"><h2>일시정지</h2>
+ <div class="btns"><button class="pri" id="bResume">계속하기</button><button id="bMore" style="display:none">적기 더 부르기</button><button id="bRestart">처음부터 다시</button><button id="bToPlane">기종 바꾸기</button><button id="bToTitle">처음 화면</button></div>
+ <div style="margin-top:16px">
+  <div class="opt"><span>조종 도우미 (손을 떼면 날개가 수평으로)</span><button id="oAssist"></button></div>
+  <div class="opt"><span>소리</span><button id="oSound"></button></div>
+  <div class="opt"><span>그림자</span><button id="oShadow"></button></div>
+ </div>
+ <div class="lbl">조작 방법</div><div id="pauseKeys"></div>
+</div></div>
+
+<div class="scr" id="sResult"><div class="pn mid" id="resBox"></div></div>
+<div class="scr" id="sCrash"><div class="pn mid" id="crBox"></div></div>
+<div class="scr" id="sLog"><div class="pn mid" style="width:640px"><h2>비행 기록</h2><div id="logBody"></div><div class="btns"><button id="bLogBack">닫기</button></div></div></div>
+<div class="scr" id="sHelp"><div class="pn mid" style="width:560px"><h2>조작 방법</h2><div id="helpBody"></div><div class="btns"><button id="bHelpBack">닫기</button></div></div></div>
+<script>
+
+'use strict';
+/* ═══════════════ 기본 도구 ═══════════════ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const sstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
+const D2R=Math.PI/180, R2D=180/Math.PI, G0=9.81;
+const hex=h=>{const n=parseInt(h.slice(1),16);return[(n>>16&255)/255,(n>>8&255)/255,(n&255)/255]};
+const mixc=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)];
+const mulc=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const add3=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]], sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], sc3=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2], cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const len3=a=>Math.hypot(a[0],a[1],a[2]), norm3=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]};
+const madd3=(a,b,k)=>[a[0]+b[0]*k,a[1]+b[1]*k,a[2]+b[2]*k];
+function rotAx(v,ax,an){const c=Math.cos(an),s=Math.sin(an),d=dot3(ax,v),cr=cross3(ax,v);
+ return[v[0]*c+cr[0]*s+ax[0]*d*(1-c),v[1]*c+cr[1]*s+ax[1]*d*(1-c),v[2]*c+cr[2]*s+ax[2]*d*(1-c)]}
+const wrapPI=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a};
+// 앞 방향과 기울기로 자세 만들기 (F·U·R)
+function orient(F,bank){F=norm3(F);let Rh=cross3(F,[0,1,0]);if(len3(Rh)<1e-4)Rh=[0,0,1];Rh=norm3(Rh);const Uh=cross3(Rh,F);
+ const U=rotAx(Uh,F,bank),R=cross3(F,U);return{F,U,R:norm3(R)}}
+// 값 노이즈
+function hash2(x,y){let h=Math.imul(x|0,374761393)+Math.imul(y|0,668265263)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function vnoise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
+ return lerp(lerp(hash2(ix,iy),hash2(ix+1,iy),u),lerp(hash2(ix,iy+1),hash2(ix+1,iy+1),u),v)*2-1}
+function fbm(x,y,o){let s=0,a=.5,f=1;for(let i=0;i<o;i++){s+=vnoise(x*f+i*17.3,y*f-i*9.1)*a;a*=.5;f*=2.03}return s}
+function ridged(x,y,o){let s=0,a=.5,f=1;for(let i=0;i<o;i++){s+=(1-Math.abs(vnoise(x*f+i*7.7,y*f+i*3.1)))*a;a*=.5;f*=2.1}return s}
+const fmt=(n,d)=>Number(n).toLocaleString('ko-KR',{maximumFractionDigits:d||0,minimumFractionDigits:d||0});
+function fmtTime(s){s=Math.max(0,Math.round(s));const m=Math.floor(s/60),ss=s%60;return m+'분 '+(ss<10?'0':'')+ss+'초'}
+
+/* ═══════════════ 행렬 ═══════════════ */
+const M4={
+ id(){const o=new Float32Array(16);o[0]=o[5]=o[10]=o[15]=1;return o},
+ persp(f,a,n,fa){const t=1/Math.tan(f/2),r=new Float32Array(16);r[0]=t/a;r[5]=t;r[10]=(fa+n)/(n-fa);r[11]=-1;r[14]=2*fa*n/(n-fa);return r},
+ ortho(l,r,b,t,n,f){const o=new Float32Array(16);o[0]=2/(r-l);o[5]=2/(t-b);o[10]=-2/(f-n);o[12]=-(r+l)/(r-l);o[13]=-(t+b)/(t-b);o[14]=-(f+n)/(f-n);o[15]=1;return o},
+ look(e,c,u){let zx=e[0]-c[0],zy=e[1]-c[1],zz=e[2]-c[2];let l=Math.hypot(zx,zy,zz)||1;zx/=l;zy/=l;zz/=l;
+  let xx=u[1]*zz-u[2]*zy,xy=u[2]*zx-u[0]*zz,xz=u[0]*zy-u[1]*zx;l=Math.hypot(xx,xy,xz)||1;xx/=l;xy/=l;xz/=l;
+  const yx=zy*xz-zz*xy,yy=zz*xx-zx*xz,yz=zx*xy-zy*xx,o=new Float32Array(16);
+  o[0]=xx;o[1]=yx;o[2]=zx;o[4]=xy;o[5]=yy;o[6]=zy;o[8]=xz;o[9]=yz;o[10]=zz;
+  o[12]=-(xx*e[0]+xy*e[1]+xz*e[2]);o[13]=-(yx*e[0]+yy*e[1]+yz*e[2]);o[14]=-(zx*e[0]+zy*e[1]+zz*e[2]);o[15]=1;return o},
+ mul(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o},
+ tr(x,y,z){const o=M4.id();o[12]=x;o[13]=y;o[14]=z;return o},
+ sc(x,y,z){const o=M4.id();o[0]=x;o[5]=y;o[10]=z;return o},
+ rx(a){const o=M4.id(),c=Math.cos(a),s=Math.sin(a);o[5]=c;o[6]=s;o[9]=-s;o[10]=c;return o},
+ ry(a){const o=M4.id(),c=Math.cos(a),s=Math.sin(a);o[0]=c;o[2]=-s;o[8]=s;o[10]=c;return o},
+ rz(a){const o=M4.id(),c=Math.cos(a),s=Math.sin(a);o[0]=c;o[1]=s;o[4]=-s;o[5]=c;return o},
+ basis(F,U,R,p){const o=new Float32Array(16);o[0]=F[0];o[1]=F[1];o[2]=F[2];o[4]=U[0];o[5]=U[1];o[6]=U[2];o[8]=R[0];o[9]=R[1];o[10]=R[2];o[12]=p[0];o[13]=p[1];o[14]=p[2];o[15]=1;return o},
+ xf(m,x,y,z){return[m[0]*x+m[4]*y+m[8]*z+m[12],m[1]*x+m[5]*y+m[9]*z+m[13],m[2]*x+m[6]*y+m[10]*z+m[14],m[3]*x+m[7]*y+m[11]*z+m[15]]},
+ inv(m){const o=new Float32Array(16),a00=m[0],a01=m[1],a02=m[2],a03=m[3],a10=m[4],a11=m[5],a12=m[6],a13=m[7],a20=m[8],a21=m[9],a22=m[10],a23=m[11],a30=m[12],a31=m[13],a32=m[14],a33=m[15];
+  const b00=a00*a11-a01*a10,b01=a00*a12-a02*a10,b02=a00*a13-a03*a10,b03=a01*a12-a02*a11,b04=a01*a13-a03*a11,b05=a02*a13-a03*a12,b06=a20*a31-a21*a30,b07=a20*a32-a22*a30,b08=a20*a33-a23*a30,b09=a21*a32-a22*a31,b10=a21*a33-a23*a31,b11=a22*a33-a23*a32;
+  let d=b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06;if(!d)return M4.id();d=1/d;
+  o[0]=(a11*b11-a12*b10+a13*b09)*d;o[1]=(a02*b10-a01*b11-a03*b09)*d;o[2]=(a31*b05-a32*b04+a33*b03)*d;o[3]=(a22*b04-a21*b05-a23*b03)*d;
+  o[4]=(a12*b08-a10*b11-a13*b07)*d;o[5]=(a00*b11-a02*b08+a03*b07)*d;o[6]=(a32*b02-a30*b05-a33*b01)*d;o[7]=(a20*b05-a22*b02+a23*b01)*d;
+  o[8]=(a10*b10-a11*b08+a13*b06)*d;o[9]=(a01*b08-a00*b10-a03*b06)*d;o[10]=(a30*b04-a31*b02+a33*b00)*d;o[11]=(a21*b02-a20*b04-a23*b00)*d;
+  o[12]=(a11*b07-a10*b09-a12*b06)*d;o[13]=(a00*b09-a01*b07+a02*b06)*d;o[14]=(a31*b01-a30*b03-a32*b00)*d;o[15]=(a20*b03-a21*b01+a22*b00)*d;return o}
+};
+
+/* ═══════════════ WebGL 준비 ═══════════════ */
+const cv=$('#cv'), hud=$('#hud'), hc=hud.getContext('2d');
+const gl=cv.getContext('webgl2',{antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
+if(!gl){document.body.innerHTML='<div style="padding:40px;font-size:18px;color:#fff">이 브라우저에서는 3D 화면을 그릴 수 없습니다. 크롬이나 엣지로 열어 주세요.</div>';throw new Error('WebGL2 없음')}
+function mkSh(t,src){const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error('셰이더 오류: '+gl.getShaderInfoLog(s));return s}
+function mkProg(vs,fs){const p=gl.createProgram();gl.attachShader(p,mkSh(gl.VERTEX_SHADER,vs));gl.attachShader(p,mkSh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error('프로그램 오류: '+gl.getProgramInfoLog(p));
+ const u={},n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const a=gl.getActiveUniform(p,i);u[a.name]=gl.getUniformLocation(p,a.name)}return{p,u}}
+const FAR=160000;
+const LOGD=`uniform float u_fc;`;
+const VS_M=`#version 300 es
+precision highp float;
+layout(location=0)in vec3 a_pos;layout(location=1)in vec3 a_nrm;layout(location=2)in vec4 a_col;
+uniform mat4 u_vp,u_m,u_lt;
+out vec3 v_col,v_nrm,v_wp;out float v_gl,v_fd;out vec4 v_ls;
+void main(){vec4 w=u_m*vec4(a_pos,1.);v_wp=w.xyz;v_nrm=mat3(u_m)*a_nrm;v_col=a_col.rgb;v_gl=a_col.a;v_ls=u_lt*w;gl_Position=u_vp*w;v_fd=1.+gl_Position.w;}`;
+const FS_M=`#version 300 es
+precision highp float;
+uniform vec3 u_sun,u_sunC,u_amb0,u_amb1,u_eye,u_fog,u_tint,u_emitC;
+uniform float u_fogD,u_night,u_emit,u_fc,u_spec,u_shOn,u_alpha,u_hz,u_shB;
+uniform highp sampler2DShadow u_sh;
+in vec3 v_col,v_nrm,v_wp;in float v_gl,v_fd;in vec4 v_ls;out vec4 o;
+float shadowAt(vec4 ls,float nl){vec3 p=ls.xyz/ls.w*.5+.5;if(p.x<.003||p.x>.997||p.y<.003||p.y>.997||p.z>.999||p.z<0.)return 1.;
+ float b=u_shB*(1.+3.*(1.-nl)),t=1./2048.,s=0.;
+ for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)s+=texture(u_sh,vec3(p.xy+vec2(float(i),float(j))*t,p.z-b));return s/9.;}
+void main(){
+ vec3 n=normalize(v_nrm);vec3 col=v_col*u_tint;
+ float nl=dot(n,u_sun),d=max(nl,0.);float sh=1.;if(u_shOn>.5&&d>0.)sh=shadowAt(v_ls,d);
+ vec3 amb=mix(u_amb0,u_amb1,n.y*.5+.5);
+ vec3 c=col*(amb+u_sunC*d*sh);
+ if(u_spec>0.){vec3 v=normalize(u_eye-v_wp);vec3 h=normalize(v+u_sun);c+=u_sunC*pow(max(dot(n,h),0.),48.)*u_spec*sh;
+  float fr=pow(1.-max(dot(n,v),0.),4.);c=mix(c,u_amb1*1.15,fr*u_spec*.5);}
+ c=mix(c,col*1.6+.04,v_gl*u_night);
+ c+=u_emitC*u_emit;
+ float dist=length(v_wp-u_eye);
+ float f=1.-exp(-dist*u_fogD*(1.+u_hz*exp(-max(v_wp.y,0.)*.0006)));
+ o=vec4(mix(c,u_fog,clamp(f,0.,1.)),u_alpha);
+ gl_FragDepth=log2(v_fd)*u_fc*.5;}`;
+const VS_S=`#version 300 es
+layout(location=0)in vec3 a_pos;uniform mat4 u_lt,u_m;void main(){gl_Position=u_lt*u_m*vec4(a_pos,1.);}`;
+const FS_S=`#version 300 es
+precision mediump float;void main(){}`;
+const VS_K=`#version 300 es
+layout(location=0)in vec2 a_p;out vec2 v_p;void main(){v_p=a_p;gl_Position=vec4(a_p,.9999,1.);}`;
+const FS_K=`#version 300 es
+precision highp float;uniform mat4 u_ivp;uniform vec3 u_sun,u_top,u_hor,u_sunC,u_moon;uniform float u_time,u_night,u_cir;in vec2 v_p;out vec4 o;
+float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1,1)),f.x),f.y);}
+void main(){vec4 a=u_ivp*vec4(v_p,-1.,1.),b=u_ivp*vec4(v_p,1.,1.);vec3 d=normalize(b.xyz/b.w-a.xyz/a.w);float y=d.y;
+ vec3 c=mix(u_hor,u_top,pow(smoothstep(-.02,.55,y),.75));
+ if(y<0.)c=mix(u_hor,u_hor*.82,smoothstep(0.,-.25,y));
+ if(u_night>.01&&y>0.){vec2 q=d.xz/(y+.35)*70.;float s=hs(floor(q));s=step(.986,s)*hs(floor(q)+.5);c+=vec3(s)*u_night*1.3*smoothstep(0.,.25,y);
+  float mp=dot(d,u_moon);c=mix(c,vec3(.92,.93,.88),smoothstep(.9994,.9996,mp)*u_night);c+=vec3(.25,.27,.3)*pow(max(mp,0.),60.)*u_night*.4;}
+ if(y>.01&&u_cir>0.){vec2 uv=d.xz/(y+.1)*.9+vec2(u_time*.002,u_time*.0008);float n=vn(uv*3.)*.55+vn(uv*7.)*.3+vn(uv*15.)*.15;
+  c=mix(c,mix(vec3(1.),u_hor,.25)*(1.-u_night*.8),smoothstep(.58,.86,n)*smoothstep(.01,.25,y)*.55*u_cir);}
+ float s=max(dot(d,u_sun),0.);c+=u_sunC*(pow(s,1400.)*5.+pow(s,10.)*.14+pow(s,3.)*.05)*(1.-u_night);o=vec4(c,1.);}`;
+const VS_W=`#version 300 es
+precision highp float;layout(location=0)in vec3 a_pos;uniform mat4 u_vp;uniform vec2 u_off;out vec3 v_wp;out float v_fd;
+void main(){vec3 p=a_pos+vec3(u_off.x,0.,u_off.y);v_wp=p;gl_Position=u_vp*vec4(p,1.);v_fd=1.+gl_Position.w;}`;
+const FS_W=`#version 300 es
+precision highp float;uniform vec3 u_eye,u_sun,u_sunC,u_fog,u_top,u_hor,u_amb1;uniform float u_fogD,u_time,u_fc,u_night,u_hz;
+uniform sampler2D u_ht;uniform vec4 u_hb;in vec3 v_wp;in float v_fd;out vec4 o;
+void main(){vec2 q=v_wp.xz;vec2 uv=(q-u_hb.xy)/u_hb.zw;float hm=-90.;if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.)hm=texture(u_ht,uv).r;
+ float dep=max(-hm,0.);float dist=length(v_wp-u_eye);float k=clamp(220./(dist+40.),0.,1.);
+ vec2 d1=vec2(.8,.6),d2=vec2(-.55,.83),d3=vec2(.2,-.98),d4=vec2(-.93,-.37);
+ vec2 g=d1*cos(dot(q,d1)*.09+u_time*1.1)*.05+d2*cos(dot(q,d2)*.17+u_time*1.5)*.04+d3*cos(dot(q,d3)*.43+u_time*2.2)*.03+d4*cos(dot(q,d4)*1.1+u_time*3.)*.02;
+ vec2 g2=d2*cos(dot(q,d2)*.0021+u_time*.2)*.03+d1*cos(dot(q,d1)*.0047+u_time*.3)*.02;
+ vec3 n=normalize(vec3(g.x*k+g2.x,1.,g.y*k+g2.y));
+ vec3 v=normalize(u_eye-v_wp);float fr=pow(1.-max(dot(n,v),0.),5.)*.85+.05;
+ float west=smoothstep(2000.,-14000.,v_wp.x);
+ vec3 sh=mix(vec3(.17,.45,.45),vec3(.33,.45,.33),west),dp=mix(vec3(.03,.15,.30),vec3(.08,.24,.27),west);
+ vec3 base=mix(sh,dp,smoothstep(0.,45.,dep));
+ vec3 lit=u_amb1*1.25+u_sunC*.45;
+ vec3 c=mix(base*lit,mix(u_hor,u_top,.35)*(1.-u_night*.85),fr);
+ vec3 h=normalize(v+u_sun);c+=u_sunC*pow(max(dot(n,h),0.),300.)*2.2*(1.-u_night);
+ float foam=1.-smoothstep(0.,1.8,dep+sin(q.x*.05+u_time*1.3)*.4);c=mix(c,vec3(.92)*lit,foam*.45);
+ float f=clamp(1.-exp(-dist*u_fogD*(1.+u_hz)),0.,1.);o=vec4(mix(c,u_fog,f),1.);
+ gl_FragDepth=log2(v_fd)*u_fc*.5;}`;
+const VS_P=`#version 300 es
+precision highp float;layout(location=0)in vec3 a_pos;layout(location=1)in float a_sz;layout(location=2)in vec4 a_col;
+uniform mat4 u_vp;uniform float u_ps,u_pmax;out vec4 v_col;out float v_fd;out vec3 v_wp;
+void main(){gl_Position=u_vp*vec4(a_pos,1.);v_fd=1.+gl_Position.w;gl_PointSize=clamp(a_sz*u_ps/max(gl_Position.w,.1),1.,u_pmax);v_col=a_col;v_wp=a_pos;}`;
+const FS_P=`#version 300 es
+precision highp float;uniform vec3 u_eye,u_fog;uniform float u_fogD,u_fc,u_add;in vec4 v_col;in float v_fd;in vec3 v_wp;out vec4 o;
+void main(){vec2 p=gl_PointCoord*2.-1.;float r=dot(p,p);if(r>1.)discard;float a=v_col.a*(1.-r)*(1.-r*.5);
+ float f=clamp(1.-exp(-length(v_wp-u_eye)*u_fogD),0.,1.);vec3 c=u_add>.5?v_col.rgb*(1.-f):mix(v_col.rgb,u_fog,f);
+ o=vec4(c,a);gl_FragDepth=log2(v_fd)*u_fc*.5;}`;
+const VS_T=`#version 300 es
+precision highp float;layout(location=0)in vec3 a_pos;layout(location=1)in vec3 a_nrm;layout(location=2)in vec2 a_uv;
+uniform mat4 u_vp,u_m;out vec2 v_uv;out vec3 v_wp,v_nrm;out float v_fd;
+void main(){vec4 w=u_m*vec4(a_pos,1.);v_wp=w.xyz;v_nrm=mat3(u_m)*a_nrm;v_uv=a_uv;gl_Position=u_vp*w;v_fd=1.+gl_Position.w;}`;
+const FS_T=`#version 300 es
+precision highp float;uniform sampler2D u_tex;uniform vec3 u_sun,u_sunC,u_amb0,u_amb1,u_eye,u_fog;uniform float u_fogD,u_fc;
+in vec2 v_uv;in vec3 v_wp,v_nrm;in float v_fd;out vec4 o;
+void main(){vec4 t=texture(u_tex,v_uv);if(t.a<.45)discard;vec3 n=normalize(v_nrm);float d=max(dot(n,u_sun),0.);
+ vec3 c=t.rgb*(mix(u_amb0,u_amb1,n.y*.5+.5)+u_sunC*d);float f=clamp(1.-exp(-length(v_wp-u_eye)*u_fogD),0.,1.);
+ o=vec4(mix(c,u_fog,f),1.);gl_FragDepth=log2(v_fd)*u_fc*.5;}`;
+const PM=mkProg(VS_M,FS_M),PS=mkProg(VS_S,FS_S),PK=mkProg(VS_K,FS_K),PW=mkProg(VS_W,FS_W),PP=mkProg(VS_P,FS_P),PT=mkProg(VS_T,FS_T);
+const PMAX=Math.min(512,gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]||64);
+
+const skyVao=gl.createVertexArray();gl.bindVertexArray(skyVao);{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0)}gl.bindVertexArray(null);
+// 바다: 카메라를 따라다니는 작은 칸 격자 (큰 삼각형 하나로 그리면 깊이가 틀어짐)
+const WAT_N=60,WAT_E=150000;let WAT_CNT=0;const waterVao=gl.createVertexArray();gl.bindVertexArray(waterVao);{const b=gl.createBuffer(),d=[],c=2*WAT_E/WAT_N;
+ for(let j=0;j<WAT_N;j++)for(let i=0;i<WAT_N;i++){const x0=-WAT_E+i*c,z0=-WAT_E+j*c,x1=x0+c,z1=z0+c;d.push(x0,0,z0,x1,0,z0,x0,0,z1,x1,0,z0,x1,0,z1,x0,0,z1)}
+ WAT_CNT=d.length/3;gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(d),gl.STATIC_DRAW);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,0,0)}gl.bindVertexArray(null);
+// 그림자 지도
+const SHN=2048;const shTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,shTex);
+gl.texStorage2D(gl.TEXTURE_2D,1,gl.DEPTH_COMPONENT24,SHN,SHN);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
+const shFB=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,shFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,shTex,0);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+// 파티클 버퍼
+const partVao=gl.createVertexArray(),partBuf=gl.createBuffer();gl.bindVertexArray(partVao);gl.bindBuffer(gl.ARRAY_BUFFER,partBuf);
+gl.bufferData(gl.ARRAY_BUFFER,4*8*20000,gl.DYNAMIC_DRAW);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,32,0);
+gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,1,gl.FLOAT,false,32,12);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,4,gl.FLOAT,false,32,16);gl.bindVertexArray(null);
+
+/* ═══════════════ 모양 만들기 ═══════════════ */
+class Geo{
+ constructor(){this.d=[]}
+ v(p,n,c,g){this.d.push(p[0],p[1],p[2],n[0],n[1],n[2],c[0],c[1],c[2],g||0)}
+ tri(a,b,c,col,g,ref){let n=cross3(sub3(b,a),sub3(c,a));const l=len3(n);if(l<1e-12)return;n=[n[0]/l,n[1]/l,n[2]/l];
+  if(ref){const m=[(a[0]+b[0]+c[0])/3-ref[0],(a[1]+b[1]+c[1])/3-ref[1],(a[2]+b[2]+c[2])/3-ref[2]];if(dot3(n,m)<0)n=[-n[0],-n[1],-n[2]]}
+  this.v(a,n,col,g);this.v(b,n,col,g);this.v(c,n,col,g)}
+ quad(a,b,c,d,col,g,ref){this.tri(a,b,c,col,g,ref);this.tri(a,c,d,col,g,ref)}
+ // 격자 면 — P[i][j], 부드러운 법선. ref(i,j)=안쪽 점. col=색 또는 (i,j,p)=>색. wrap=j 방향이 고리
+ surf(P,col,g,ref,wrap){const ni=P.length,nj=P[0].length,N=[];
+  for(let i=0;i<ni;i++){const row=[];for(let j=0;j<nj;j++){const p=P[i][j];
+   const pa=P[Math.max(i-1,0)][j],pb=P[Math.min(i+1,ni-1)][j];let ja=j-1,jb=j+1;if(wrap){if(ja<0)ja=nj-2;if(jb>nj-1)jb=1}else{ja=Math.max(ja,0);jb=Math.min(jb,nj-1)}
+   const du=sub3(pb,pa),dv=sub3(P[i][jb],P[i][ja]);let n=cross3(du,dv);const r=ref?ref(i,j):null;
+   if(len3(n)<1e-9)n=r?sub3(p,r):[0,1,0];n=norm3(n);if(r&&dot3(n,sub3(p,r))<0)n=sc3(n,-1);row.push(n)}N.push(row)}
+  const cf=typeof col==='function'?col:null;
+  for(let i=0;i<ni-1;i++)for(let j=0;j<nj-1;j++){const q=[[i,j],[i+1,j],[i+1,j+1],[i,j],[i+1,j+1],[i,j+1]];
+   for(const[a,b]of q){const p=P[a][b];this.v(p,N[a][b],cf?cf(a,b,p):col,g)}}}
+ // 상자: 가운데 c, 크기 s, 축(ax: [X,Y,Z] 단위벡터) 선택
+ box(c,s,col,g,ax){const X=ax?ax[0]:[1,0,0],Y=ax?ax[1]:[0,1,0],Z=ax?ax[2]:[0,0,1],hx=s[0]/2,hy=s[1]/2,hz=s[2]/2;
+  const P=(i,j,k)=>[c[0]+X[0]*i*hx+Y[0]*j*hy+Z[0]*k*hz,c[1]+X[1]*i*hx+Y[1]*j*hy+Z[1]*k*hz,c[2]+X[2]*i*hx+Y[2]*j*hy+Z[2]*k*hz];
+  const p=[P(-1,-1,-1),P(1,-1,-1),P(1,-1,1),P(-1,-1,1),P(-1,1,-1),P(1,1,-1),P(1,1,1),P(-1,1,1)];
+  this.quad(p[4],p[5],p[6],p[7],col,g,c);this.quad(p[0],p[1],p[2],p[3],col,g,c);this.quad(p[0],p[1],p[5],p[4],col,g,c);
+  this.quad(p[1],p[2],p[6],p[5],col,g,c);this.quad(p[2],p[3],p[7],p[6],col,g,c);this.quad(p[3],p[0],p[4],p[7],col,g,c)}
+ // 바닥이 y인 상자 (윗면 색 따로) — 건물용
+ bld(x,y,z,sx,sy,sz,col,top,g,ry){const c=Math.cos(ry||0),s=Math.sin(ry||0),hx=sx/2,hz=sz/2;
+  const P=(i,yy,k)=>[x+i*hx*c+k*hz*s,yy,z-i*hx*s+k*hz*c],ct=[x,y+sy/2,z];
+  const a=P(-1,y,-1),b=P(1,y,-1),d=P(1,y,1),e=P(-1,y,1),A=P(-1,y+sy,-1),B=P(1,y+sy,-1),D=P(1,y+sy,1),E=P(-1,y+sy,1);
+  this.quad(A,B,D,E,top||col,0,ct);this.quad(a,b,B,A,col,g,ct);this.quad(b,d,D,B,col,g,ct);this.quad(d,e,E,D,col,g,ct);this.quad(e,a,A,E,col,g,ct)}
+ // 타원체
+ ell(c,r,col,seg,rg,g,cf){seg=seg||14;rg=rg||9;const P=[];
+  for(let j=0;j<=rg;j++){const th=j/rg*Math.PI,row=[];for(let i=0;i<=seg;i++){const ph=i/seg*Math.PI*2;
+   row.push([c[0]+Math.sin(th)*Math.cos(ph)*r[0],c[1]+Math.cos(th)*r[1],c[2]+Math.sin(th)*Math.sin(ph)*r[2]])}P.push(row)}
+  this.surf(P,cf?((i,j,p)=>cf(p)):col,g,()=>c,true)}
+ // 관: a→b, 반지름 r0→r1, 막음 cap
+ cyl(a,b,r0,r1,col,seg,cap,g){seg=seg||12;const d=norm3(sub3(b,a)),rf=Math.abs(d[1])<.9?[0,1,0]:[1,0,0];const u=norm3(cross3(d,rf)),w=cross3(d,u);
+  const ring=(o,r)=>{const R=[];for(let i=0;i<=seg;i++){const t=i/seg*Math.PI*2,cs=Math.cos(t),sn=Math.sin(t);R.push([o[0]+(u[0]*cs+w[0]*sn)*r,o[1]+(u[1]*cs+w[1]*sn)*r,o[2]+(u[2]*cs+w[2]*sn)*r])}return R};
+  const A=ring(a,r0),B=ring(b,r1);const ax=(i,j)=>i?b:a;
+  this.surf([A,B],col,g,(i,j)=>{const p=(i?B:A)[j],q=sub3(p,a),t=dot3(q,d);return madd3(a,d,t)},true);
+  if(cap){for(let i=0;i<seg;i++){if(r0>1e-4)this.tri(a,A[i],A[i+1],col,g,madd3(a,d,1));if(r1>1e-4)this.tri(b,B[i],B[i+1],col,g,madd3(b,d,-1))}}}
+ // 원기둥(세로) 바닥 y
+ vcyl(x,y,z,r,h,n,col,rt,g){this.cyl([x,y,z],[x,y+h,z],r,rt===undefined?r:rt,col,n,true,g)}
+ // 바닥 판
+ flat(p0,p1,p2,p3,col,g){this.v(p0,[0,1,0],col,g);this.v(p1,[0,1,0],col,g);this.v(p2,[0,1,0],col,g);this.v(p0,[0,1,0],col,g);this.v(p2,[0,1,0],col,g);this.v(p3,[0,1,0],col,g)}
+ // 돌림체(x축): prof=[[x,r]...], 가운데 c
+ latheX(c,prof,col,seg,cf){seg=seg||14;const P=[];for(const[x,r]of prof){const row=[];for(let i=0;i<=seg;i++){const t=i/seg*Math.PI*2;row.push([c[0]+x,c[1]+Math.cos(t)*r,c[2]+Math.sin(t)*r])}P.push(row)}
+  this.surf(P,cf||col,0,(i,j)=>[c[0]+prof[i][0],c[1],c[2]],true)}
+}
+function upload(geo,old){if(old){gl.deleteVertexArray(old.vao);gl.deleteBuffer(old.buf)}
+ const a=geo instanceof Float32Array?geo:new Float32Array(geo.d),vao=gl.createVertexArray(),buf=gl.createBuffer();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,a,gl.STATIC_DRAW);
+ gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,40,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,40,12);
+ gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,4,gl.FLOAT,false,40,24);gl.bindVertexArray(null);return{vao,buf,n:a.length/10}}
+function freeMesh(m){if(m){gl.deleteVertexArray(m.vao);gl.deleteBuffer(m.buf);if(m.ib)gl.deleteBuffer(m.ib)}}
+const WHITE=[1,1,1];
+const MESH={};
+{let g=new Geo();g.box([0,0,0],[1,1,1],WHITE);MESH.cube=upload(g);
+ g=new Geo();g.ell([0,0,0],[.5,.5,.5],WHITE,12,8);MESH.ball=upload(g)}
+
+
+const PLANES=[
+  {id:'a300', name:'A300',       cls:'L', eng:2, len:54, hgt:5.6, pax:250, mount:'wing'},
+  {id:'q400', name:'Q400',       cls:'M', eng:2, prop:1, hi:1, ttail:1, len:33, hgt:2.9, pax:78, mount:'wing'},
+  {id:'b747', name:'B747',       cls:'L', eng:4, len:71, hgt:6.4, pax:350, hump:1, mount:'wing'},
+  {id:'b737', name:'B737',       cls:'M', eng:2, len:39, hgt:3.8, pax:150, mount:'wing'},
+  {id:'b777', name:'B777',       cls:'L', eng:2, len:74, hgt:6.2, pax:300, mount:'wing'},
+  {id:'a359', name:'A350-900',   cls:'L', eng:2, len:67, hgt:5.9, pax:315, mount:'wing', mask:1, winglet:1},
+  {id:'a351', name:'A350-1000',  cls:'L', eng:2, len:74, hgt:5.9, pax:370, mount:'wing', mask:1, winglet:1, bogie6:1},  // -900보다 7m 길고 주바퀴가 6개
+  {id:'dc10', name:'DC-10',      cls:'L', eng:3, len:55, hgt:6.0, pax:270, mount:'tri'},
+  {id:'md11', name:'MD-11',      cls:'L', eng:3, len:61, hgt:6.0, pax:290, mount:'tri'},
+  {id:'l1011', name:'L-1011 트라이스타', cls:'L', eng:3, len:54, hgt:6.0, pax:250, mount:'wing', sTail:1},  // 가운데 엔진이 동체 속 S덕트 — 흡입구는 수직미익 밑동, 배기는 꼬리 끝
+  {id:'md83', name:'MD-83',      cls:'M', eng:2, len:45, hgt:3.4, pax:150, mount:'tail', ttail:1},
+  {id:'md80', name:'MD-80',      cls:'M', eng:2, len:45, hgt:3.4, pax:140, mount:'tail', ttail:1},
+  {id:'il62', name:'Il-62',      cls:'L', eng:4, len:53, hgt:4.6, pax:180, mount:'tail', ttail:1},  // 꼬리에 4발(옆에서 2개)+T꼬리
+  {id:'tu134', name:'Tu-134',    cls:'M', eng:2, len:37, hgt:3.4, pax:76, mount:'tail', ttail:1},  // 꼬리 엔진 2개+T꼬리
+  {id:'tu154', name:'Tu-154',    cls:'L', eng:3, len:48, hgt:3.9, pax:160, mount:'tail', ttail:1, sDuct:1},  // 꼬리 트라이제트(옆2+가운데1)
+  {id:'il76p', name:'Il-76 여객', cls:'L', eng:4, hi:1, ttail:1, glassnose:1, len:62, hgt:6.2, pax:140, mount:'wing'},  // 고익+T꼬리+유리노즈 여객형
+  {id:'bae146', name:'BAe 146',  cls:'M', eng:4, hi:1, ttail:1, len:28, hgt:3.6, pax:100, mount:'wing'},  // 고익 4발 제트 (거의 안 알려진)
+  {id:'conni',  name:'컨스텔레이션', cls:'L', eng:4, prop:1, tritail:1, len:35, hgt:4.0, pax:100, mount:'wing'},  // 꼬리 3개 옛날 프롭 여객기
+  {id:'an2',    name:'An-2 복엽기', cls:'S', eng:1, prop:1, biplane:1, len:13, hgt:3.0, pax:12, mount:'wing'},  // 위아래 날개 2개
+  {id:'c172', name:'세스나 172',  cls:'S', eng:1, prop:1, hi:1, len:6,  hgt:2.0, pax:3,  mount:'nose'},
+  {id:'c408', name:'세스나 408',  cls:'S', eng:2, prop:1, hi:1, len:12, hgt:2.1, pax:19, mount:'wing'},
+  {id:'c182', name:'세스나 182',  cls:'S', eng:1, prop:1, hi:1, len:6.5,hgt:2.0, pax:3,  mount:'nose'},
+  {id:'atr72', name:'ATR 72',    cls:'T', eng:2, prop:1, hi:1, ttail:1, len:27, hgt:2.8, pax:70, mount:'wing'},
+  {id:'atr42', name:'ATR 42',    cls:'T', eng:2, prop:1, hi:1, ttail:1, len:23, hgt:2.8, pax:48, mount:'wing'},
+  // ── 특이한 여객기 ──
+  {id:'conc',   name:'콩코드',         cls:'L', eng:4, len:62, hgt:3.6, pax:100, mount:'wing', delta:1, droop:1},   // 삼각날개 + 아래로 꺾인 긴 코
+  {id:'a380',   name:'A380',           cls:'L', eng:4, len:73, hgt:7.4, pax:550, mount:'wing', dbl:1},              // 꼬리까지 통째로 2층 → 창문 두 줄
+  {id:'b377',   name:'스트라토크루저',  cls:'L', eng:4, prop:1, len:33, hgt:5.4, pax:100, mount:'wing', bubble:1, lowprop:1},   // 배가 불룩한 2층 프롭기
+  {id:'comet',  name:'코멧',           cls:'M', eng:4, len:34, hgt:3.5, pax:80,  mount:'wing', rootEng:1},          // 엔진이 날개 뿌리 속에 파묻힘
+  {id:'vfw614', name:'VFW-614',        cls:'T', eng:2, len:20, hgt:2.9, pax:44,  mount:'overwing'},                 // 엔진이 날개 위에 올라탐
+  {id:'avanti', name:'피아지오 아반티', cls:'T', eng:2, prop:1, ttail:1, canard:1, len:14, hgt:2.4, pax:9, mount:'pusher'}, // 앞날개 + 뒤로 미는 프로펠러
+  // ── 화물기 ──
+  {id:'b747f', name:'B747 카고', cargo:1, cls:'L', eng:4, len:71, hgt:6.4, box:45, hump:1, mount:'wing'},
+  {id:'b737f', name:'B737 카고', cargo:1, cls:'M', eng:2, len:39, hgt:3.8, box:20, mount:'wing'},
+  {id:'b777f', name:'B777 카고', cargo:1, cls:'L', eng:2, len:74, hgt:6.2, box:40, mount:'wing'},
+  {id:'b707f', name:'B707 카고', cargo:1, cls:'L', eng:4, len:47, hgt:3.8, box:24, mount:'wing'},
+  {id:'il76', name:'Il-76 카고', cargo:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, len:62, hgt:6.2, box:40, mount:'wing'},  // 고익+T꼬리+날개밑 4발+동체 맨아래 유리혹 수송기
+  {id:'c408f', name:'세스나 408 카고', cargo:1, cls:'S', eng:2, prop:1, hi:1, len:12, hgt:2.1, box:8, mount:'wing'},
+  {id:'dc10f', name:'DC-10 카고', cargo:1, cls:'L', eng:3, len:55, hgt:6.0, box:38, mount:'tri'},
+  {id:'md11f', name:'MD-11 카고', cargo:1, cls:'L', eng:3, len:61, hgt:6.0, box:42, mount:'tri'},
+  {id:'q300f', name:'Q300 카고', cargo:1, cls:'M', eng:2, prop:1, hi:1, ttail:1, len:25, hgt:2.7, box:12, mount:'wing'},
+  {id:'belugaf',name:'벨루가 카고',cargo:1, cls:'L', eng:2, beluga:1, partload:1, len:56, hgt:6.4, box:42, mount:'wing'},  // 고래 모양 — 다른 비행기 부품을 실어 나름
+  {id:'a330f', name:'A330 카고', cargo:1, cls:'L', eng:2, len:63, hgt:6.2, box:44, mount:'wing'},
+  // ── 군사 ──
+  {id:'e707',   name:'707 정찰기',    mil:1, cls:'L', eng:4, len:47, hgt:3.8, pax:20, awacs:1, mount:'wing'},   // AWACS 로토돔
+  {id:'il76ml', name:'Il-76 미사일',  mil:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, missiles:1, len:56, hgt:6.2, pax:6, mount:'wing'},
+  {id:'il76t',  name:'Il-76 수송기',  mil:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, transportWin:1, len:62, hgt:6.2, pax:120, mount:'wing'},  // 군용 수송기 + 동그란 포트홀 창
+  {id:'c130',   name:'C-130',        mil:1, cls:'T', eng:4, prop:1, hi:1, transportWin:1, len:30, hgt:4.2, pax:90, mount:'wing'},   // 허큘리스 4발 터보프롭 수송기
+  {id:'c400',   name:'C-400',        mil:1, cls:'L', eng:4, hi:1, ttail:1, transportWin:1, len:48, hgt:5.6, pax:150, mount:'wing'}, // 대형 제트 수송기
+  {id:'c230',   name:'C-230',        mil:1, cls:'T', eng:2, prop:1, hi:1, ttail:1, transportWin:1, len:24, hgt:3.6, pax:50, mount:'wing'}, // 소형 터보프롭 수송기
+  {id:'atr42r', name:'ATR-42 정찰기', mil:1, cls:'T', eng:2, prop:1, hi:1, ttail:1, radome:1, len:23, hgt:2.8, pax:6, mount:'wing'},
+  {id:'f14',    name:'F-14',         mil:1, cls:'M', eng:2, fighter:'f14', len:19, hgt:4.4, pax:2},
+  {id:'f22',    name:'F-22',         mil:1, cls:'M', eng:2, fighter:'f22', len:19, hgt:4.6, pax:1},
+  {id:'b2',     name:'B-2',          mil:1, cls:'L', eng:4, fighter:'b2', len:21, hgt:5.4, pax:2},
+  {id:'tu95',   name:'Tu-95',        mil:1, cls:'L', eng:4, prop:1, fighter:'tu95', len:49, hgt:5.8, pax:7},
+];
+
+
+
+const AIRLINES=[
+  {id:'hj',    name:'HJ항공',       body:'#f6f5f1', tail:'#2F6B4F', stripe:'#2F6B4F', text:'#2F6B4F', all:1, ic:'✈️'},
+  {id:'lh',    name:'루프트한자',   body:'#f4f5f7', tail:'#0a1e5e', stripe:'#ffce00', text:'#0a1e5e', ic:'🦢',
+    fleet:['b747','b737','b777','b747f','a380','vfw614','a359']},
+  {id:'ke',    name:'대한항공',     body:'#cfe4f0', tail:'#79b6d4', stripe:'#79b6d4', text:'#1c4c6b', ic:'🌀',
+    fleet:['b747','b777','b737','dc10','b777f','b747f','a380','a359']},
+  {id:'jin',   name:'진에어',       body:'#f6f7f2', tail:'#95c11f', stripe:'#95c11f', text:'#5c7a12', ic:'🦋',
+    fleet:['b777','b737']},
+  {id:'ana',   name:'전일본공수',   body:'#f2f4f8', tail:'#10286e', stripe:'#10286e', text:'#10286e', ic:'🗻',
+    fleet:['a300','q400','b777','b737','atr72','atr42','q300f','l1011']},
+  {id:'swa',   name:'사우스웨스트', body:'#304cb2', tail:'#d5152e', stripe:'#f9b612', text:'#ffffff', ic:'❤️',
+    fleet:['md83','md80','b737','atr72']},
+  {id:'tropic',name:'트로픽 에어',  body:'#fdf8ee', tail:'#e8542f', stripe:'#f2b132', text:'#c34a20', ic:'🌴',
+    fleet:['c408','c182','c172','avanti']},
+  {id:'seom',  name:'섬에어',       body:'#f1f9f8', tail:'#0d9488', stripe:'#14b8a6', text:'#0d7a70', ic:'🏝️',
+    fleet:['b737','atr72','atr42','vfw614','avanti']},
+  {id:'aero',  name:'아에로플로트', body:'#eef2f8', tail:'#0a3d91', stripe:'#e01e2b', text:'#0a3d91', ic:'⭐',
+    fleet:['il62','il76','il76p','tu134','tu154','b777','b737']},
+  {id:'af',    name:'공군',         body:'#d7ddd6', tail:'#3a4a3f', stripe:'#5f7a5f', text:'#2a3a2f', ic:'🎖️',
+    fleet:['e707','il76ml','il76t','c130','c400','c230','atr42r','f14','f22','b2','tu95']},
+  {id:'emir',  name:'에미레이트',   body:'#f5f2ea', tail:'#d71921', stripe:'#c8a24a', text:'#d71921', ic:'🌙',
+    fleet:['b747','b777','a300','a330f','a380']},
+  {id:'sia',   name:'싱가포르항공', body:'#f3f0e6', tail:'#0a2a5e', stripe:'#c9a24a', text:'#0a2a5e', ic:'🦁',
+    fleet:['b747','b777','a300','md11','a380','a359']},
+  {id:'afr',   name:'에어프랑스',   body:'#f4f6f8', tail:'#00205b', stripe:'#e2001a', text:'#00205b', ic:'🗼',
+    fleet:['a300','b777','b737','conni','conc','comet','a380','a359','a351']},
+  {id:'klm',   name:'KLM',          body:'#e7f1f8', tail:'#00a1de', stripe:'#ffffff', text:'#0a3d62', ic:'👑',
+    fleet:['b747','b777','md11','b737']},
+  {id:'qfa',   name:'콴타스',       body:'#f6f4f2', tail:'#e0002b', stripe:'#e0002b', text:'#e0002b', ic:'🦘',
+    fleet:['b747','b777','a300','dc10','a380','b377','a351']},
+  {id:'thy',   name:'터키항공',     body:'#f4f6f7', tail:'#c8102e', stripe:'#c8102e', text:'#c8102e', ic:'🌷',
+    fleet:['b737','b777','a300','a330f','a359','a351']},
+  {id:'aal',   name:'아메리칸',     body:'#d3d8dd', tail:'#0d47a1', stripe:'#c8102e', text:'#0d47a1', ic:'🦅',
+    fleet:['b777','b737','md83','dc10','b377']},
+  {id:'dal',   name:'델타',         body:'#f2f4f7', tail:'#0a2444', stripe:'#c8102e', text:'#0a2444', ic:'🔺',
+    fleet:['b777','b737','md80','md11','l1011','a359']},
+  {id:'baw',   name:'브리티시',     body:'#f4f6f8', tail:'#1d4f91', stripe:'#c8102e', text:'#1d4f91', ic:'🎩',
+    fleet:['b747','b777','a300','conni','conc','comet','b377','a380','l1011','a351']},
+  {id:'cpa',   name:'캐세이퍼시픽', body:'#f2f5f4', tail:'#006564', stripe:'#a3d4c8', text:'#006564', ic:'🐉',
+    fleet:['b747','b777','a330f','a300','l1011','a359','a351']},
+  {id:'fedex', name:'페덱스',       body:'#f5f4f8', tail:'#4d148c', stripe:'#ff6200', text:'#4d148c', ic:'📦',
+    fleet:['b747f','b777f','b737f','q300f','dc10f','md11f','a330f','belugaf','il76']},
+  {id:'dhl',   name:'DHL',          body:'#ffcc00', tail:'#ffcc00', stripe:'#d40511', text:'#d40511', ic:'🟡',
+    fleet:['b747f','b777f','b737f','q300f','dc10f','md11f','a330f','il76']},
+];
+
+
+const DEX={
+  a300:{s:'유럽 4개국이 함께 만든 최초의 쌍발 와이드바디',
+    l:'에어버스가 처음 내놓은 기종이다. 프랑스·독일·영국·스페인이 공동으로 개발했다. 당시에는 이 정도 크기의 여객기라면 엔진을 3~4개 달아야 한다는 것이 상식이었지만, A300은 엔진 2개로 같은 일을 해냈다. 엔진 수가 줄면 연료도 정비 비용도 줄어든다. 동체가 넓어 좌석 사이 통로가 두 줄이다.',
+    f:'오늘날 대형기 대부분이 쌍발인데, 그 흐름을 처음 연 기종이 A300이다.'},
+  q400:{s:'터보프롭이지만 순항 속도는 소형 제트기급',
+    l:'프로펠러기지만 순항 속도가 시속 660km에 달해 소형 제트기와 큰 차이가 없다. 이름의 Q는 Quiet, 즉 조용하다는 뜻이다. 기내에 진동과 소음을 상쇄하는 장치가 들어 있어 프로펠러기치고 매우 조용하다. 주익이 동체 위에 붙은 고익 구조이고 다리가 길어 노면이 고르지 않은 활주로에도 대응한다.',
+    f:'활주로가 짧은 섬이나 지방 공항 노선에서 제트기보다 유리하다.'},
+  b747:{s:'앞부분이 2층인 대형기. 별칭은 점보',
+    l:'기수 윗부분이 혹처럼 볼록한 것은 그 안이 실제로 2층이기 때문이다. 조종석도 이 위층에 있다. 원래 화물 수송을 염두에 두고 설계했기 때문에, 기수 전체를 위로 젖혀 열 수 있도록 조종석을 2층으로 올린 것이다. 결과적으로는 여객기로 더 큰 성공을 거뒀다. 40년 넘게 세계 최대 여객기 자리를 지켜 "하늘의 여왕"으로 불린다.',
+    f:'미국 대통령 전용기 에어포스 원도 747을 개조한 기체다.'},
+  b737:{s:'1만 대 이상 생산된 최다 판매 제트 여객기',
+    l:'1만 대 넘게 생산된, 역사상 가장 많이 팔린 제트 여객기다. 지금도 세계 어딘가에서 몇 초에 한 대꼴로 이착륙하고 있다. 동체가 지면에 가깝게 낮은데, 그래서 엔진 나셀 아랫부분이 원형이 아니라 눌린 듯 납작하다. 엔진이 지면에 닿지 않게 하려고 일부러 그렇게 만든 것이다.',
+    f:'다리를 낮게 만든 것은 지상 장비가 없는 공항에서도 화물을 손으로 실을 수 있게 하기 위해서다.'},
+  b777:{s:'엔진 2개로 대륙을 건너는 대형기',
+    l:'엔진이 2개뿐인데도 300명 넘게 태우고 대양을 횡단한다. 엔진 흡입구 지름이 B737의 동체 굵기와 비슷할 정도로 크다. 종이 도면 없이 처음부터 끝까지 컴퓨터로만 설계한 최초의 여객기이기도 하다.',
+    f:'엔진 하나가 정지해도 남은 하나로 몇 시간을 더 비행할 수 있도록 인증받았기 때문에 태평양 횡단이 가능하다.'},
+  a359:{s:'탄소 섬유로 만든 현대 쌍발 와이드바디',
+    l:'동체와 날개의 절반 이상을 금속 대신 탄소 섬유 복합재로 만들어 같은 크기의 옛 기종보다 가볍다. 옆에서 보면 조종석 유리가 검은 띠처럼 뒤로 길게 이어져 있어 멀리서도 바로 알아볼 수 있다. 날개 끝은 꺾이지 않고 위로 부드럽게 휘어 올라간다. -900은 A350 가족의 기본형이다.',
+    f:'기내 공기를 다른 기종보다 촘촘하게 유지해서 오래 타도 덜 피곤하도록 만들었다.'},
+  a351:{s:'A350-900을 7m 늘린 큰 형. 주바퀴가 6개',
+    l:'A350-900의 동체를 약 7m 늘린 형식이다. 길어진 만큼 무거워져서 주바퀴가 한쪽에 4개가 아니라 6개로 늘었다. 엔진도 -900보다 힘이 센 것을 단다. 생김새가 -900과 거의 같아서, 둘을 구별할 때는 길이보다 주바퀴 축이 2줄인지 3줄인지를 보는 쪽이 확실하다.',
+    f:'바퀴를 늘리는 이유는 무게를 넓게 나눠 밟아 활주로가 덜 상하게 하기 위해서다.'},
+  dc10:{s:'수직미익을 관통하는 3번 엔진을 가진 3발기',
+    l:'주익 아래에 2개, 수직미익 밑동에 1개, 합쳐서 엔진이 3개다. 과거에는 쌍발기가 대양을 횡단하는 것이 규정으로 금지돼 있었다. 그렇다고 4발기는 비용이 많이 들기 때문에 절충안으로 3발 구조가 나온 것이다. 3번 엔진은 수직미익을 관통하는 형태로 배치했다.',
+    f:'지금은 쌍발기도 대양을 건널 수 있게 규정이 바뀌어 3발 여객기는 거의 사라졌다.'},
+  l1011:{s:'가운데 엔진이 동체 속에 숨은 3발기',
+    l:'꼬리 쪽에 엔진이 하나 더 있는 3발 여객기다. 같은 3발기인 DC-10은 그 엔진을 수직미익에 매달았지만, L-1011은 동체 안에 집어넣었다. 공기는 수직미익 밑동의 구멍으로 들어가 S자로 굽은 관을 타고 내려와 엔진을 지난 뒤 꼬리 끝으로 빠져나간다. 그래서 옆에서 보면 엔진 자체는 보이지 않고 흡입구와 꼬리 끝 배기구만 보인다.',
+    f:'관을 S자로 굽히면 공기 흐름이 나빠져 설계가 어렵지만, 엔진을 낮은 곳에 둘 수 있어 정비가 편해진다.'},
+  md11:{s:'DC-10의 개량형. 날개 끝에 윙렛이 달렸다',
+    l:'DC-10을 개량한 기종이다. 가장 눈에 띄는 차이는 날개 끝에 위아래로 뻗은 윙렛이다. 날개 끝에서는 공기가 소용돌이치며 양력을 깎아먹는데, 윙렛이 이 소용돌이를 억제해 연비를 개선한다. 동체도 DC-10보다 길어져 좌석 수가 늘었다.',
+    f:'현재 남아 있는 기체는 대부분 화물기로 운용되고 있다.'},
+  md83:{s:'엔진을 꼬리에 단 덕분에 앞자리가 조용하다',
+    l:'엔진이 주익이 아니라 동체 후방 양옆에 붙어 있다. 그래서 앞쪽 좌석은 엔진 소음이 거의 들리지 않는다. 반대로 최후방 좌석은 엔진 바로 옆이라 소음이 크다. 주익에 엔진이 없으므로 날개 표면을 지나는 공기 흐름이 깨끗하다. MD-83은 연료를 더 실어 항속거리를 늘린 형식이다.',
+    f:'조종사들 사이에서 이 계열은 "매드독"이라는 별칭으로 불린다.'},
+  md80:{s:'꼬리 엔진과 T자 미익, 길쭉한 동체',
+    l:'엔진이 동체 후방에 있고, 수평미익이 수직미익 꼭대기에 얹힌 T자 미익 구조다. 동체가 매우 가늘고 길어 옆에서 보면 연필처럼 보인다. 앞쪽 좌석에서는 날개가 시야를 가리지 않고 소음도 적어 승객에게 인기가 많았다.',
+    f:'꼬리에 엔진을 달면 주익은 깨끗해지지만 무게가 뒤로 쏠려 무게중심을 맞추기가 까다로워진다.'},
+  il62:{s:'엔진 4개가 모두 꼬리에 몰린 소련제 장거리기',
+    l:'소련이 만든 장거리 여객기다. 엔진 4개가 전부 동체 후방에 몰려 있어 무게가 심하게 뒤로 쏠린다. 승객이 타지 않은 상태에서는 뒤로 주저앉을 위험이 있어, 꼬리 아래에 지지용 다리를 따로 내리도록 설계했다.',
+    f:'꼬리 밑에 보조 지지대를 내리는 여객기는 세계적으로도 사례가 드물다.'},
+  tu134:{s:'유리 기수를 가졌던 소련제 소형 제트기',
+    l:'소련의 단거리 제트 여객기다. 초기형은 기수가 통유리로 되어 있고, 그 안에 지도를 보며 항로를 계산하는 항법사가 앉았다. 위성항법이 보급된 지금은 그런 자리가 필요 없다. 엔진 소음이 높고 날카로워 "휘파람"이라는 별칭이 붙었다.',
+    f:'폭격기를 여객기로 개조하며 발전한 계열이라 기수가 유리였던 것이다.'},
+  tu154:{s:'한쪽에 바퀴 6개씩 달린 소련제 3발기',
+    l:'소련을 대표하는 3발 제트 여객기다. 3번 엔진은 수직미익 밑동에 들어가 있다. 가장 특이한 점은 착륙장치로, 주 바퀴가 한쪽에 6개씩 달려 있다. 포장되지 않은 흙·자갈 활주로가 많은 환경에서 기체 무게를 넓게 분산시키기 위한 설계다. 바퀴는 주익 뒤쪽의 길쭉한 페어링 안으로 접혀 들어간다.',
+    f:'험한 활주로에서 운용하는 것을 전제로 설계된, 매우 튼튼한 기체다.'},
+  il76p:{s:'고익 구조의 대형 러시아기. 여객형',
+    l:'주익이 동체 위에 붙은 고익 구조라 화물실 단면이 넓고 반듯하다. 기수 아래에 유리창이 있어 그 자리에 앉은 승무원이 지상을 직접 관측한다. 원래 군용 수송기이며, 이 형식은 좌석을 넣어 사람을 태우도록 개조한 것이다. 착륙장치 바퀴 수가 많아 비포장 활주로에도 대응한다.',
+    f:'주익이 위에 있으면 화물실 바닥이 지면과 가까워져 짐을 싣고 내리기가 훨씬 쉽다.'},
+  bae146:{s:'소음이 매우 낮아 도심 공항에 들어가는 4발기',
+    l:'엔진이 4개인데도 소음이 매우 낮아 "위스퍼젯", 즉 속삭이는 제트기로 불린다. 큰 엔진 2개 대신 작은 엔진 4개를 달아 소음 수준을 낮췄다. 덕분에 소음 규제가 엄격한 도심 공항에도 취항할 수 있다. 고익에 T자 미익 구조다.',
+    f:'소음 규제가 심한 도심 공항에서는 이 기종만 들어올 수 있던 시절도 있었다.'},
+  conni:{s:'수직미익이 3개인 곡선 동체의 프로펠러 여객기',
+    l:'동체가 물고기처럼 완만하게 휜 곡선을 그리는 프로펠러 여객기다. 수직미익이 3개인 데는 이유가 있다. 필요한 방향 안정성을 미익 하나로 얻으려면 높이가 너무 커져서 당시 격납고 문에 들어가지 못했기 때문에, 같은 면적을 3개로 나눠 단 것이다.',
+    f:'가장 아름다운 항공기를 꼽을 때 빠지지 않고 이름이 오르는 기종이다.'},
+  an2:{s:'날개가 위아래 2장인 복엽기. 매우 느리게 날 수 있다',
+    l:'주익이 위아래로 2장 겹쳐 있는 복엽기다. 날개 면적이 매우 넓어 아주 낮은 속도에서도 양력을 유지한다. 맞바람이 강하면 지상에서 볼 때 뒤로 밀리는 것처럼 보일 정도다. 엔진이 멈춰도 급강하하지 않고 완만하게 내려온다. 60년 넘게 생산된 기록도 가지고 있다.',
+    f:'조종 교범에 최저 속도 제한이 명시돼 있지 않은, 대단히 이례적인 기종이다.'},
+  c172:{s:'역사상 가장 많이 생산된 항공기',
+    l:'4만 대 넘게 생산된, 역사상 가장 많이 만들어진 항공기다. 조종을 배우는 사람 대부분이 이 기종으로 처음 훈련한다. 주익이 동체 위에 붙은 고익 구조라 아래쪽 시야가 트여 있어 지상 관측과 훈련에 유리하다. 착륙장치는 접히지 않는 고정식이다.',
+    f:'1958년부터 지금까지 생산이 이어지고 있다.'},
+  c408:{s:'대형 화물문을 가진 쌍발 프로펠러기',
+    l:'세스나가 만든 쌍발 프로펠러기다. 측면 화물문이 매우 커서 규격 화물 컨테이너를 통째로 밀어 넣을 수 있다. 착륙장치는 접히지 않는 고정식인데, 접이 기구를 없애면 무게가 줄고 고장 요인도 줄어들기 때문이다. 좌석을 넣어 여객용으로도 쓴다.',
+    f:'대형 물류 회사가 지선 노선용으로 요구해서 개발된 기종이다.'},
+  c182:{s:'172보다 엔진 출력이 높은 상위 기종',
+    l:'세스나 172보다 엔진 출력이 높아 더 무거운 짐을 싣고 더 빠르게 순항한다. 프로펠러 날개 각도를 조종사가 조절할 수 있어, 큰 힘이 필요한 이륙 때와 빠르게 가야 하는 순항 때를 나눠 쓸 수 있다.',
+    f:'스카이다이빙 강하용 기체로도 널리 쓰인다.'},
+  atr72:{s:'단거리 노선을 담당하는 고익 터보프롭기',
+    l:'가까운 도시 사이를 오가는 단거리 노선용 여객기다. 고익 구조라 창문에서 지상이 잘 보인다. 엔진은 제트 엔진으로 프로펠러를 돌리는 터보프롭 방식이라 출력이 크면서도 저속에서 연료 효율이 좋다. 짧은 거리를 자주 오가는 노선에서는 제트기보다 운항 비용이 훨씬 낮다.',
+    f:'후방에 자체 계단이 있어 탑승교가 없는 공항에서도 승객이 타고 내릴 수 있다.'},
+  atr42:{s:'ATR 72의 단축형. 더 짧은 활주로에 대응한다',
+    l:'ATR 72의 동체를 줄인 형식이다. 기체가 가벼워 더 짧은 활주로에서도 이착륙할 수 있다. 수요가 적은 소도시나 섬 노선에 적합하다. 형과 외형이 거의 같아 동체 길이로 구분한다.',
+    f:'42, 72라는 숫자는 표준 좌석 수를 뜻한다.'},
+  conc:{s:'유일하게 실용화된 초음속 여객기',
+    l:'음속의 두 배로 순항한, 실용화에 성공한 유일한 초음속 여객기다. 유럽에서 미국까지 통상 8시간 걸리는 노선을 3시간 30분에 주파했다. 기수가 꺾이는 이유는 초음속 저항을 줄이려고 기수를 극단적으로 길고 뾰족하게 만든 탓에 착륙 시 조종사의 전방 시야가 막혔기 때문이다. 그래서 이착륙 때만 기수를 아래로 내린다.',
+    f:'초음속으로 날면 공기와의 마찰로 기체가 가열돼 팽창한다. 순항 중 콩코드는 약 20cm 늘어났다.'},
+  a380:{s:'전 구간이 2층인 세계 최대 여객기',
+    l:'현존하는 가장 큰 여객기다. 747은 앞부분만 2층이지만 A380은 기수부터 꼬리까지 전 구간이 2층이라 창문이 위아래 두 줄로 보인다. 계단도 앞뒤로 두 곳에 있다. 날개폭은 80m에 달한다. 크기에 비해 객실 소음이 낮은 것으로 평가받는다.',
+    f:'A380을 받으려면 공항이 탑승교를 2층용으로 새로 만들고 유도로 폭도 넓혀야 했다.'},
+  b377:{s:'상하 2개 원통을 겹친 더블 버블 동체',
+    l:'동체 단면이 큰 원통과 작은 원통을 위아래로 겹친 형태여서 옆에서 보면 눈사람처럼 보인다. 위층이 객실이고, 계단으로 내려가면 아래층에 라운지가 있었다. 폭격기의 주익과 미익을 그대로 쓰고 동체만 새로 설계한 기종이다.',
+    f:'침대칸까지 갖춘 당대 최고급 여객기였다.'},
+  comet:{s:'세계 최초의 제트 여객기. 엔진이 날개 뿌리에 매몰됐다',
+    l:'세계 최초로 실용화된 제트 여객기다. 엔진이 주익 아래에 매달린 것이 아니라 날개 뿌리 안에 매몰돼 있어 옆에서 보면 흡입구만 보인다. 공기 저항이 적은 대신 정비가 까다롭다. 초기형은 창문이 사각형이었는데, 사각형 모서리에 응력이 집중돼 금속 피로로 균열이 생긴다는 사실이 나중에 밝혀졌다.',
+    f:'그때 얻은 교훈 때문에 오늘날 모든 여객기 창문은 모서리가 둥글다.'},
+  vfw614:{s:'엔진을 주익 위에 얹은 보기 드문 배치',
+    l:'엔진을 주익 위에 얹은, 세계적으로도 드문 배치를 가진 여객기다. 정비 시설이 부족한 지방의 짧고 거친 활주로에서 운용할 목적으로 만들어졌기 때문에 주익을 지면 가까이 낮게 달아야 했고, 그러면 날개 아래에 엔진을 달 공간이 없어진다. 그래서 파일런을 세워 주익 위로 올린 것이다. 흡입구가 높아 지상의 이물질을 빨아들일 위험도 줄었다.',
+    f:'배치가 워낙 특이해서인지 총 19대만 생산되고 끝났다.'},
+  avanti:{s:'주익 3장과 추진식 프로펠러를 가진 기종',
+    l:'기수 쪽 작은 앞날개, 가운데 주익, 꼬리날개까지 양력을 만드는 면이 3장이다. 프로펠러가 앞에서 끄는 견인식이 아니라 주익 뒤에서 미는 추진식이라, 프로펠러 후류가 동체를 때리지 않아 객실이 조용하고 기수 쪽 시야도 트인다. 동체는 단면이 넓은 유선형이다.',
+    f:'터보프롭기이면서 소형 제트기에 가까운 순항 속도를 낸다.'},
+  b747f:{s:'기수 전체가 위로 열리는 화물형',
+    l:'747의 화물형이다. 가장 큰 특징은 기수 전체가 위로 젖혀 열린다는 점이다. 덕분에 동체 길이에 가까운 긴 화물도 정면에서 밀어 넣을 수 있다. 애초에 화물 수송을 염두에 두고 조종석을 2층에 올렸기 때문에 가능한 구조다.',
+    f:'헬리콥터나 발전기, 철도 차량 부품처럼 다른 기종이 못 싣는 화물을 담당한다.'},
+  b737f:{s:'여객기에서 개조된 단거리 화물기',
+    l:'여객기로 쓰이던 B737이 기령이 차면 좌석을 걷어내고 화물기로 개조된다. 동체 측면에 대형 화물문을 새로 뚫는다. 기체가 작아 활주로가 짧은 공항에도 들어갈 수 있어 도시 사이 야간 화물 노선을 주로 담당한다.',
+    f:'택배가 밤사이 도시를 건너오는 구간은 대개 이런 기종이 맡는다.'},
+  b777f:{s:'쌍발로 장거리를 나는 대형 화물기',
+    l:'엔진이 2개인 대형 화물기다. 4발 화물기보다 연료를 훨씬 적게 쓰면서 100톤이 넘는 화물을 싣고 지구 반대편까지 갈 수 있다. 현재 장거리 화물 노선의 주력 기종이다.',
+    f:'최대 탑재량은 코끼리 20마리 정도의 무게에 해당한다.'},
+  b707f:{s:'제트 여객기 시대를 연 기종의 화물형',
+    l:'제트 여객기 시대를 본격적으로 연 기종이다. 이 기종의 등장으로 대양 횡단 시간이 프로펠러기 시절의 절반 이하로 줄었다. 현재 남은 기체는 대부분 화물 수송이나 군용 특수 임무에 쓰인다.',
+    f:'동체 아래 엔진을 매단 후퇴익 배치 등 오늘날 여객기의 기본 형태가 이 기종에서 정립됐다.'},
+  il76:{s:'비포장 활주로에 대응하는 러시아 수송기',
+    l:'러시아의 대형 수송기다. 착륙장치 바퀴 수가 매우 많아 접지압을 낮췄기 때문에 비포장 활주로나 설상 활주로에도 착륙할 수 있다. 기수 아래 유리창에서 승무원이 지상을 관측하며 투하 지점을 잡는다. 후방 램프가 통째로 열려 차량이 자력으로 진입한다.',
+    f:'물탱크를 달아 산불 진화용으로 개조한 형식도 운용되고 있다.'},
+  c408f:{s:'소규모 공항까지 화물을 배달하는 프로펠러기',
+    l:'대형 화물기가 들어갈 수 없는 소규모 공항까지 화물을 배달하는 프로펠러 화물기다. 대형기가 거점 공항까지 실어 온 화물을 넘겨받아 지선으로 분배하는 역할을 한다.',
+    f:'화물 하나가 목적지에 닿기까지 기종이 다른 항공기를 두세 번 갈아타기도 한다.'},
+  dc10f:{s:'3발기의 화물형',
+    l:'수직미익 밑동에 3번 엔진이 있는 3발 화물기다. 여객기 운용이 끝난 기체를 화물기로 개조한 것이 많다. 동체 단면이 커서 화물을 여러 단으로 쌓을 수 있다.',
+    f:'현재 남아 있는 3발기는 사실상 전부 화물기다.'},
+  md11f:{s:'여객기보다 화물기로 성공한 3발기',
+    l:'DC-10보다 동체가 길고 윙렛이 있어 항속거리가 늘었다. 여객기로서는 판매가 부진했지만, 화물 탑재량과 항속거리의 균형이 좋아 화물기로는 크게 성공했다. 지금도 주요 화물 노선에서 운용 중이다.',
+    f:'여객기로는 실패작으로 평가받다가 화물기로 재평가된 흔치 않은 사례다.'},
+  q300f:{s:'짧은 활주로에 대응하는 프로펠러 화물기',
+    l:'고익에 다리가 긴 프로펠러 화물기다. 활주로 상태가 나쁜 공항에도 대응한다. 대형기가 취항할 수 없는 도서 지역이나 산간 지역의 화물 수송을 담당한다.',
+    f:'항공편이 하루 한 편뿐인 지역에서는 이 기종이 사실상 유일한 물류 수단이다.'},
+  belugaf:{s:'항공기 부품을 실어 나르는 특수 화물기',
+    l:'상부 동체가 크게 부풀어 있어 흰고래를 뜻하는 벨루가라는 이름이 붙었다. 이 기체가 나르는 화물은 다른 항공기의 주익이나 동체 같은 대형 구조물이다. 여러 나라에 나뉘어 있는 공장에서 만든 부품을 최종 조립 공장으로 모으는 역할을 한다. 화물은 조종석 뒤쪽 상부의 대형 문으로 싣는다.',
+    f:'항공기를 만들기 위해 항공기 부품을 항공기로 나르는 셈이다.'},
+  a330f:{s:'현대 화물 노선의 주력 쌍발 화물기',
+    l:'비교적 최근에 개발된 대형 쌍발 화물기다. 연료 효율과 탑재량의 균형이 좋다. 화물실 바닥이 평평해 표준 컨테이너를 효율적으로 배치할 수 있다.',
+    f:'화물기에 창문이 거의 없는 것은 창문 하나마다 동체를 보강해야 해서 무게만 늘기 때문이다.'},
+  e707:{s:'로토돔을 얹은 공중 조기경보기',
+    l:'동체 위에 원반형 레이더인 로토돔을 얹고 회전시키며 원거리의 항공기를 탐지하는 조기경보기다. 지상 레이더는 지형에 가려 저고도 표적을 놓치지만, 공중에서는 그 사각이 사라진다. 기내에는 관제 콘솔과 운용 요원이 탑승한다.',
+    f:'하늘을 나는 관제탑이자 지휘소 역할을 한다.'},
+  il76ml:{s:'동체 아래에 대형 미사일을 장착한 형식',
+    l:'대형 수송기의 튼튼한 기체를 활용해 무장을 장착한 형식이다. 동체 아래 파일런에 대형 미사일 2발을 매단다. 기체가 크고 구조가 튼튼해 무거운 장비를 달 여유가 있는 것이 장점이다.',
+    f:'이 게임에서 이 기종을 고르면 비행 중 미사일을 발사할 수 있다.'},
+  il76t:{s:'병력과 장비를 수송하는 군용형',
+    l:'병력과 차량, 장비를 수송하는 군용 형식이다. 창문이 사각형이 아니라 원형인데, 원형이 응력 집중이 적어 구조적으로 유리하기 때문이다. 후방 램프가 통째로 열려 차량이 자력으로 오르내리며, 비행 중 화물을 낙하산으로 투하하기도 한다.',
+    f:'저공에서 램프를 열고 화물을 밀어내면 유도 낙하산이 화물을 끌어내는 방식으로 투하한다.'},
+  c130:{s:'비포장 활주로에 착륙하는 4발 터보프롭 수송기',
+    l:'4발 터보프롭 전술 수송기다. 접지압이 낮고 구조가 튼튼해 포장되지 않은 활주로에도 착륙할 수 있다. 60년 넘게 생산이 이어지고 있으며 극지와 사막을 포함한 거의 모든 환경에서 운용된다. 후방 램프가 경사로처럼 내려와 차량이 그대로 진입한다.',
+    f:'착륙장치에 스키를 달아 남극 설상 활주로에서 운용하는 형식도 있다.'},
+  c400:{s:'대형 화물을 싣는 4발 제트 수송기',
+    l:'제트 엔진 4개를 단 대형 수송기다. 고익 구조라 화물실 단면이 넓고, 착륙장치 바퀴 수가 많아 중량물을 싣고도 착륙할 수 있다. 헬리콥터나 장갑차 같은 대형 장비를 통째로 수송한다.',
+    f:'전략 수송기는 화물실이 커서 기체 내부에서 차량이 방향을 바꿀 수 있을 정도다.'},
+  c230:{s:'좁은 활주로에 대응하는 소형 수송기',
+    l:'소형 전술 수송기다. 대형 수송기가 들어갈 수 없는 좁고 짧은 활주로에 화물을 배달한다. 기체가 작아 조종과 정비가 쉽고 운용 비용이 낮다.',
+    f:'수송 작전에서는 크기보다 어디까지 들어갈 수 있는가가 더 중요한 경우가 많다.'},
+  atr42r:{s:'레이돔을 장착한 해상 초계기',
+    l:'ATR 42를 기반으로 대형 레이돔을 장착한 해상 초계기다. 동체 아래로 볼록 튀어나온 것이 탐색 레이더다. 터보프롭기는 저속으로 오래 체공할 수 있어, 한 해역을 몇 시간씩 선회하며 감시하는 임무에 적합하다.',
+    f:'초계 임무에서는 속도보다 체공 시간이 중요해 프로펠러기가 제트기보다 유리하다.'},
+  f14:{s:'비행 중 후퇴각을 바꾸는 가변익 전투기',
+    l:'비행 중에 주익의 후퇴각을 바꿀 수 있는 가변익 전투기다. 저속으로 이착륙할 때는 날개를 펴서 양력을 키우고, 고속으로 날 때는 뒤로 접어 저항을 줄인다. 한 기체로 두 가지 날개 형상을 쓰는 셈이다. 항공모함에서 운용된다.',
+    f:'조종사 뒤에 레이더 담당 승무원이 따로 타는 복좌기다.'},
+  f22:{s:'무장을 기체 안에 숨긴 스텔스 전투기',
+    l:'레이더 전파를 반사해 흩어 보내도록 기체 표면을 각지게 설계한 스텔스 전투기다. 미사일도 외부에 달지 않고 기체 내부 무장창에 넣는다. 외부에 무장을 달면 공기 저항이 커질 뿐 아니라 레이더 반사 면적도 커지기 때문이다.',
+    f:'레이더에 잡히는 반사 면적이 실제 크기와 무관하게 극히 작게 나타난다.'},
+  b2:{s:'수직미익이 없는 전익기 형태의 스텔스 폭격기',
+    l:'수직미익이 없고 날개만으로 이루어진 전익기 형태의 스텔스 폭격기다. 수직면이 없으면 레이더에 반사되는 면이 크게 줄어든다. 대신 방향 안정성이 매우 나빠서, 비행 제어 컴퓨터가 초당 수십 번씩 조종면을 자동으로 움직여 자세를 잡는다. 사람의 조작만으로는 안정적으로 비행할 수 없다.',
+    f:'게임 속 형태를 단순화한 것이 아니라 실물이 실제로 이렇게 생겼다.'},
+  tu95:{s:'이중 반전 프로펠러를 단 초고속 프로펠러기',
+    l:'프로펠러기이면서 제트 여객기에 가까운 속도를 내는 폭격기다. 한 축에 프로펠러 두 벌을 앞뒤로 달고 서로 반대 방향으로 돌리는 이중 반전 방식을 쓴다. 프로펠러 끝 속도가 음속을 넘기 때문에 소음이 극심하다.',
+    f:'수중 음탐 장비에 이 기체의 소음이 잡힌다는 이야기가 나올 만큼 시끄러운 것으로 유명하다.'},
+};
+
+
+
+/* ═══════════════ 데이터: 크기별 이륙 ═══════════════ */
+const CLS={
+  S:{name:'소형기', req:550,  vr:28},
+  T:{name:'중형기', req:1200, vr:52},
+  M:{name:'중형기', req:2000, vr:66},
+  L:{name:'대형기', req:2500, vr:78},
+};
+/* 기종별 진짜 수치: [날개폭 m, 최고 속도 km/h, 날개 뒤로 젖힘 °, 프로펠러 날 수] */
+const SPEC={a300:[44.8,900,28],q400:[28.4,667,3,6],b747:[64.4,940,37],b737:[35.8,850,25],b777:[64.8,905,31],a359:[64.75,910,31],a351:[64.75,910,31],
+ dc10:[50.4,900,35],md11:[51.7,900,35],l1011:[47.3,900,35],md83:[32.9,810,24],md80:[32.9,810,24],il62:[43.2,870,32],tu134:[29,850,35],tu154:[37.6,900,35],
+ il76p:[50.5,800,25],bae146:[26.3,760,15],conni:[37.5,550,2,3],an2:[18.2,250,0,4],c172:[11,226,0,2],c408:[22,370,2,4],c182:[11,270,0,3],atr72:[27,510,2,6],atr42:[24.6,500,2,6],
+ conc:[25.6,2150,60],a380:[79.8,945,33],b377:[43,550,3,4],comet:[35,740,20],vfw614:[21.5,700,15],avanti:[14,745,0,5],
+ b747f:[64.4,920,37],b737f:[35.8,850,25],b777f:[64.8,905,31],b707f:[44.4,900,35],il76:[50.5,800,25],c408f:[22,370,2,4],dc10f:[50.4,900,35],md11f:[51.7,900,35],
+ q300f:[27.4,530,3,4],belugaf:[44.8,780,28],a330f:[60.3,880,30],e707:[44.4,850,35],il76ml:[50.5,800,25],il76t:[50.5,800,25],c130:[40.4,590,2,6],c400:[42.4,780,15,8],
+ c230:[25.8,480,3,6],atr42r:[24.6,500,2,6],f14:[19.5,1900,35],f22:[13.6,1900,42],b2:[52.4,1000,33],tu95:[50,920,35,4],enemy:[11.4,1800,42]};
+const WINGLET={b737:1,b737f:1,b747:1,b747f:1,a359:2,a351:2,a330f:1,md11:1,md11f:1,a380:3};
+const WIDE={b777:1,b777f:1,a359:1,a351:1,a330f:1,a300:1,belugaf:1}; // 큰 쌍발 엔진
+/* 항공사 영어 표기 (실제 도장처럼) · 등록 기호 앞자리 */
+const AL_TEXT={hj:'HJ AIR',lh:'Lufthansa',ke:'KOREAN AIR',jin:'JIN AIR',ana:'ANA',swa:'Southwest',tropic:'TROPIC AIR',seom:'SEOM AIR',aero:'AEROFLOT',
+ af:'대한민국 공군',emir:'Emirates',sia:'SINGAPORE AIRLINES',afr:'AIRFRANCE',klm:'KLM',qfa:'QANTAS',thy:'TURKISH AIRLINES',aal:'American',dal:'DELTA',
+ baw:'BRITISH AIRWAYS',cpa:'CATHAY PACIFIC',fedex:'FedEx',dhl:'DHL'};
+const REG={hj:'HL',ke:'HL',jin:'HL',seom:'HL',lh:'D-A',ana:'JA',swa:'N',tropic:'V3-',aero:'RA-',af:'',emir:'A6-E',sia:'9V-S',afr:'F-G',klm:'PH-B',qfa:'VH-O',
+ thy:'TC-J',aal:'N',dal:'N',baw:'G-',cpa:'B-H',fedex:'N',dhl:'D-A'};
+function makeReg(A,P,seed){const r=mulberry(seed),L='ABCDEFGHJKLMNPRSTUVWXYZ',ch=()=>L[Math.floor(r()*L.length)],dg=()=>Math.floor(r()*10),pre=REG[A.id]===undefined?'HL':REG[A.id];
+ if(A.id==='af')return (10+Math.floor(r()*20))+'-'+dg()+dg()+dg();
+ if(pre==='HL')return 'HL'+(7+Math.floor(r()*2))+dg()+dg()+dg();
+ if(pre==='JA')return 'JA'+dg()+dg()+dg()+ch();if(pre==='N')return 'N'+(1+dg())+dg()+dg()+ch()+ch();if(pre==='RA-')return 'RA-'+(6+dg()%4)+dg()+dg()+dg()+dg();
+ if(pre==='G-')return 'G-'+ch()+ch()+ch()+ch();return pre+ch()+ch()+(pre.length<4?ch():'')}
+function fleetOf(P){return AIRLINES.filter(a=>a.all?!P.mil:a.fleet&&a.fleet.includes(P.id))}
+
+/* ═══════════════ 비행 성능 ═══════════════ */
+function perfOf(P){
+ const sp=SPEC[P.id]||[P.len,800,25],c=CLS[P.cls]||CLS.M;
+ let vmax=sp[1]/3.6,vr=c.vr,acc={S:3.6,T:3.3,M:3.5,L:3.2}[P.cls],pr={S:.42,T:.22,M:.19,L:.14}[P.cls],rr={S:.75,T:.45,M:.4,L:.3}[P.cls],yr={S:.35,T:.22,M:.2,L:.14}[P.cls];
+ const ft=P.fighter==='f14'||P.fighter==='f22'||P.id==='enemy';
+ if(ft){vr=72;acc=13;pr=.95;rr=3.6;yr=.5}
+ if(P.fighter==='b2'){vr=75;acc=3.8;pr=.2;rr=.45;yr=.16}
+ if(P.delta){vr=105;acc=6.5;pr=.17;rr=.4}
+ if(P.id==='an2')vr=22;
+ const vref=vr*1.34;
+ const cd=.65*acc/(G0*(vmax/vref)**2);
+ return{vr,vref,vmax,acc,pr,rr,yr,cd,amax:15*D2R,aref:5*D2R,req:c.req,vcru:Math.min(vmax*.86,vmax-12),fighter:ft,prop:!!P.prop,
+  spool:P.prop?1.2:ft?.9:.45,rot:P.cls==='S'?.12:.16};
+}
+
+/* ═══════════════ 지도 (1/10 크기 한반도) ═══════════════ */
+const LON0=127.5,LAT0=36.0,KX=Math.cos(36*D2R)*111320/10,KZ=111320/10;
+const wx=lon=>(lon-LON0)*KX, wz=lat=>-(lat-LAT0)*KZ;
+const lonOf=x=>x/KX+LON0, latOf=z=>-z/KZ+LAT0;
+const LL=(a)=>a.map(([lo,la])=>[wx(lo),wz(la)]);
+// 한반도 바닷가 (경도, 위도)
+const COAST_MAIN=LL([[125.25,38.98],[125.15,38.55],[124.85,38.25],[125.05,38.05],[125.55,37.90],[125.95,37.80],[126.15,37.78],[126.35,37.80],[126.38,37.62],[126.33,37.50],
+ [126.40,37.40],[126.60,37.38],[126.65,37.25],[126.70,37.05],[126.85,36.95],[126.65,36.92],[126.45,36.98],[126.25,36.90],[126.12,36.72],[126.25,36.60],[126.50,36.45],
+ [126.55,36.20],[126.68,36.00],[126.55,35.85],[126.47,35.62],[126.38,35.42],[126.40,35.10],[126.30,34.90],[126.38,34.75],[126.25,34.58],[126.48,34.30],[126.68,34.40],
+ [126.90,34.45],[127.10,34.52],[127.25,34.45],[127.45,34.55],[127.62,34.68],[127.78,34.70],[127.90,34.85],[128.05,34.90],[128.25,34.88],[128.45,34.85],[128.60,34.75],
+ [128.72,34.88],[128.90,35.02],[129.10,35.10],[129.25,35.25],[129.38,35.42],[129.45,35.65],[129.52,35.90],[129.58,36.07],[129.45,36.05],[129.40,36.25],[129.42,36.60],
+ [129.45,36.80],[129.38,37.05],[129.30,37.30],[129.15,37.48],[128.98,37.70],[128.82,37.88],[128.65,38.05],[128.52,38.30],[128.40,38.55],[128.25,38.75],[128.12,38.98]]);
+const COAST_JEJU=(()=>{const c=[wx(126.55),wz(33.37)],u=norm3([7025,0,-1892]),P=[];for(let i=0;i<40;i++){const t=i/40*Math.PI*2,a=3700*Math.cos(t),b=1750*Math.sin(t);
+ P.push([c[0]+u[0]*a-u[2]*b,c[1]+u[2]*a+u[0]*b])}return P})();
+// 작은 섬들 [경도, 위도, 반지름 m]
+const ISLANDS=[[128.62,34.88,1300],[127.92,34.80,1050],[126.25,34.45,950],[126.75,34.32,600],[126.05,34.85,600],[126.0,34.68,500],[126.15,35.0,450],[125.95,35.15,380],
+ [126.35,36.55,600],[126.1,37.2,380],[126.25,37.25,330],[125.6,37.95,380],[127.3,34.15,330],[127.05,34.25,380],[128.3,34.7,480],[128.05,34.62,380],[126.95,34.05,300],
+ [126.55,34.12,330],[125.45,34.68,330],[126.27,33.53,180],[126.47,37.72,700],[126.30,37.68,450],[128.48,34.65,260],[129.0,34.98,240],[126.42,36.32,300],[126.13,36.42,260]];
+const ULLEUNG={x:wx(130.87),z:wz(37.50),r:2300,h:490};
+const DOKDO={x:wx(131.868),z:wz(37.241)};
+// 산줄기 [경도, 위도, 높이]
+const RIDGES=[
+ {w:3300,p:[[128.30,38.95,520],[128.45,38.12,690],[128.55,37.80,640],[128.75,37.45,560],[128.92,37.10,640],[129.05,36.75,420],[129.12,36.35,380],[129.05,35.90,330],[129.0,35.55,450],[128.95,35.35,280]]},
+ {w:2900,p:[[128.90,37.10,560],[128.48,36.96,580],[128.10,36.80,450],[127.85,36.55,430],[127.75,36.25,380],[127.77,35.86,650],[127.70,35.55,500],[127.73,35.34,760],[127.45,35.25,380],[127.1,35.1,260]]},
+ {w:2300,p:[[127.6,37.0,240],[127.1,36.6,300],[126.8,36.35,240]]},
+ {w:2400,p:[[128.05,35.75,420],[128.35,35.95,400],[128.6,36.15,330]]},
+ {w:2200,p:[[127.3,37.9,420],[127.6,37.7,380],[127.9,37.5,330]]},
+ {w:2000,p:[[126.6,35.0,250],[126.9,35.1,330],[127.0,34.8,300]]},
+].map(r=>({w:r.w,p:r.p.map(([lo,la,h])=>[wx(lo),wz(la),h])}));
+const PEAKS=[[126.98,37.66,300,1500],[126.988,37.551,105,450],[126.96,37.44,170,900],[127.03,37.70,200,900],[129.0,35.20,170,1000],[128.6,35.80,320,1500]].map(([lo,la,h,r])=>({x:wx(lo),z:wz(la),h,r}));
+const HALLA={x:wx(126.53),z:wz(33.36),h:975,r:3500};
+// 강
+const RIVERS=[
+ {w:120,p:[[127.75,37.55],[127.5,37.52],[127.3,37.57],[127.15,37.56],[127.05,37.53],[126.98,37.515],[126.90,37.535],[126.82,37.58],[126.72,37.63],[126.62,37.68],[126.52,37.72]]},
+ {w:90,p:[[128.6,36.6],[128.45,36.4],[128.4,36.1],[128.45,35.85],[128.5,35.6],[128.75,35.4],[128.95,35.25],[128.96,35.08]]},
+ {w:80,p:[[127.5,36.5],[127.3,36.45],[127.05,36.3],[126.9,36.15],[126.75,36.05],[126.62,36.02]]},
+ {w:70,p:[[126.95,35.2],[126.75,35.0],[126.6,34.85],[126.45,34.78]]},
+].map(r=>({w:r.w,p:LL(r.p)}));
+// 도시 [이름, 경도, 위도, 반지름 m, 건물 수, 높이]
+const CITIES=[['서울',126.98,37.55,2700,1500,1],['인천',126.70,37.45,1200,450,.8],['수원',127.02,37.28,900,300,.7],['부산',129.06,35.16,1500,700,.9],['대구',128.60,35.87,1300,500,.8],
+ ['대전',127.39,36.35,1100,400,.8],['광주',126.86,35.16,1000,380,.75],['울산',129.31,35.54,900,300,.7],['제주',126.52,33.495,650,180,.45],['강릉',128.90,37.76,600,150,.5],
+ ['포항',129.36,36.03,600,150,.55],['청주',127.49,36.64,700,200,.65],['전주',127.15,35.82,700,200,.6],['창원',128.68,35.23,800,250,.7],['서귀포',126.56,33.255,400,80,.4],
+ ['속초',128.59,38.2,380,80,.45],['목포',126.39,34.81,450,100,.55],['여수',127.66,34.76,450,100,.55],['춘천',127.73,37.88,600,150,.55],['원주',127.92,37.34,550,130,.55]]
+ .map(([n,lo,la,r,c,h])=>({name:n,x:wx(lo),z:wz(la),r,c,h}));
+
+/* ═══════════════ 공항 ═══════════════ */
+// hdg = 활주로 진짜 방향(북쪽에서 시계방향). 활주로 번호는 자북 기준(편차 약 8도)
+const AIRPORTS=[
+ {id:'icn',name:'인천공항',code:'ICN',lon:126.44,lat:37.462,hdg:142,elev:4,rws:[{off:0,len:3750,w:60},{off:-420,len:3750,w:60}],side:1,big:1},
+ {id:'gmp',name:'김포공항',code:'GMP',lon:126.80,lat:37.558,hdg:132,elev:6,rws:[{off:0,len:3600,w:45},{off:-360,len:3200,w:45}],side:1,big:1},
+ {id:'cju',name:'제주공항',code:'CJU',lon:126.493,lat:33.506,hdg:62,elev:8,rws:[{off:0,len:3180,w:45}],side:1,big:1},
+ {id:'pus',name:'김해공항',code:'PUS',lon:128.94,lat:35.18,hdg:172,elev:3,rws:[{off:0,len:3200,w:60}],side:1},
+ {id:'hin',name:'사천공항',code:'HIN',lon:128.07,lat:35.09,hdg:52,elev:4,rws:[{off:0,len:2744,w:45}],side:-1,base:1},
+ {id:'yny',name:'양양공항',code:'YNY',lon:128.67,lat:38.06,hdg:142,elev:14,rws:[{off:0,len:2500,w:45}],side:-1},
+ {id:'ull',name:'울릉공항',code:'ULL',lon:130.905,lat:37.478,hdg:40,elev:6,rws:[{off:0,len:1200,w:30}],side:-1,small:1},
+];
+for(const a of AIRPORTS){a.x=wx(a.lon);a.z=wz(a.lat);const h=a.hdg*D2R;a.dir=[Math.sin(h),0,-Math.cos(h)];a.rt=[Math.cos(h),0,Math.sin(h)];
+ a.maxLen=Math.max(...a.rws.map(r=>r.len));a.pad=a.small?{l:230,w0:-160,w1:300,b:420}:{l:650,w0:-600,w1:900,b:900};
+ for(const r of a.rws){r.cx=a.x+a.rt[0]*r.off;r.cz=a.z+a.rt[2]*r.off;r.num=Math.round(((a.hdg+8)%360)/10)||36;r.num2=Math.round(((a.hdg+188)%360)/10)||36}}
+const AP=id=>AIRPORTS.find(a=>a.id===id);
+// 공항 좌표계: 활주로 방향 s, 옆 방향 t
+function aptLocal(a,x,z){const dx=x-a.x,dz=z-a.z;return[dx*a.dir[0]+dz*a.dir[2],dx*a.rt[0]+dz*a.rt[2]]}
+function aptWorld(a,s,t){return[a.x+a.dir[0]*s+a.rt[0]*t,a.z+a.dir[2]*s+a.rt[2]*t]}
+
+
+
+/* ═══════════════ 비행기 3D 모양 ═══════════════
+   모델 좌표: +x = 코(앞), +y = 위, +z = 오른쪽 날개. 원점 = 동체 가운데 선의 한가운데. 바퀴 바닥 = y:-gearH */
+const AF=[[0,0],[.025,.032],[.1,.055],[.28,.062],[.55,.045],[.8,.022],[1,.003],[1,-.003],[.8,-.012],[.55,-.022],[.28,-.032],[.1,-.03],[.025,-.02],[0,0]];
+// 날개 같은 면: secs=[{le, cd(시위 방향), td(두께 방향), c(시위), t(두께비)}]
+function lsurf(g,secs,col,cap,gw){
+ const P=secs.map(s=>AF.map(([u,v])=>{const k=v*s.c*s.t*10;return[s.le[0]+s.cd[0]*u*s.c+s.td[0]*k,s.le[1]+s.cd[1]*u*s.c+s.td[1]*k,s.le[2]+s.cd[2]*u*s.c+s.td[2]*k]}));
+ g.surf(P,col,gw||0,i=>madd3(secs[i].le,secs[i].cd,secs[i].c*.35),true);
+ const cc=typeof col==='function'?col(0,0,secs[0].le):col;
+ if(cap){const n=secs.length,s=secs[n-1],row=P[n-1],c=madd3(s.le,s.cd,s.c*.35),q=secs[n-2],ins=madd3(q.le,q.cd,q.c*.35);for(let j=0;j<row.length-1;j++)g.tri(c,row[j],row[j+1],cc,gw||0,ins)}
+ if(cap===2){const s=secs[0],row=P[0],c=madd3(s.le,s.cd,s.c*.35),q=secs[1],ins=madd3(q.le,q.cd,q.c*.35);for(let j=0;j<row.length-1;j++)g.tri(c,row[j],row[j+1],cc,gw||0,ins)}
+}
+function diskX(g,c,r,col,nx,seg,gw){seg=seg||16;for(let i=0;i<seg;i++){const a0=i/seg*Math.PI*2,a1=(i+1)/seg*Math.PI*2;
+ g.tri(c,[c[0],c[1]+Math.cos(a0)*r,c[2]+Math.sin(a0)*r],[c[0],c[1]+Math.cos(a1)*r,c[2]+Math.sin(a1)*r],col,gw||0,[c[0]-nx,c[1],c[2]])}}
+const C_GLASS=[.08,.11,.16],C_DARK=[.1,.1,.12],C_METAL=[.72,.73,.76],C_TIRE=[.08,.08,.09],C_STRUT=[.74,.75,.78],C_WING=[.78,.79,.82];
+
+// 동체 모양
+function fusMaker(P){
+ const L=P.len,H=P.hgt,R=H/2,x0=-L/2,conc=!!P.delta;
+ const transport=P.hi&&(P.transportWin||P.glassnose||P.id==='c400'||P.id==='c130'||P.id==='c230');
+ let nl=conc?.25*L:P.mount==='nose'?.95*H:P.prop?1.3*H:P.glassnose?1.45*H:1.6*H;
+ let tl=conc?.2*L:transport?2.5*H:P.prop?2.8*H:3.1*H;
+ nl=Math.min(nl,.3*L);tl=Math.min(tl,.42*L);
+ const tn0=1-nl/L,tt0=tl/L,up=transport?1:.7;
+ const hump=t=>P.hump?sstep(.60,.70,t)*(1-sstep(.935,.99,t)):0;
+ const bel=t=>P.beluga?sstep(.05,.30,t)*(1-sstep(.80,.965,t)):0;
+ const wk=P.dbl?.93:1;
+ function sec(t){let ym=0,rt=R,rb=R,w=R*wk,kt=0,kb=0;
+  if(t>tn0){const u=Math.min((t-tn0)/(1-tn0),1);let s;
+   if(conc)s=Math.pow(Math.cos(u*Math.PI/2),.8);else s=Math.pow(Math.max(1-Math.pow(u,2.1),0),.5);
+   ym=-R*(conc?.12:P.mount==='nose'?.05:.22)*Math.pow(u,1.5);rt=R*s*(1-.06*u);rb=R*s;w=R*wk*s;
+   if(P.glassnose){rb*=1+.1*Math.sin(u*Math.PI);ym-=R*.05*Math.sin(u*Math.PI)}}
+  if(t<tt0){const u=1-t/tt0;const yt=R-R*(transport?.25:.42)*Math.pow(u,2.2),yb=-R+R*(.85+up*.75)*Math.pow(u,1.25);
+   ym=(yt+yb)/2;rt=rb=Math.max((yt-yb)/2,R*.05);w=Math.max(R*(1-.9*Math.pow(u,1.35)),R*.06)*wk}
+  const hm=hump(t);if(hm>0){rt+=R*.42*hm;kt=-.3*hm}
+  const bl=bel(t);if(bl>0){rt+=R*1.05*bl;kt=.5*bl}
+  if(P.bubble){const m=sstep(.1,.3,t)*(1-sstep(.8,.95,t));rb*=1+.14*m;kb=-.2*m}
+  return{ym,rt,rb,w,kt,kb}}
+ function pt(x,ph){const s=sec((x-x0)/L),c=Math.cos(ph),sn=Math.sin(ph);return[x,s.ym+(c>0?s.rt*c:s.rb*c),s.w*sn*(c>0?1+s.kt*c:1+s.kb*(-c))]}
+ const X=t=>x0+t*L;
+ return{L,H,R,x0,tn0,tt0,nl,tl,sec,pt,X,transport,top:x=>{const s=sec((x-x0)/L);return s.ym+s.rt},bot:x=>{const s=sec((x-x0)/L);return s.ym-s.rb},hw:x=>sec((x-x0)/L).w}
+}
+
+const PROPR={q400:2.06,conni:2.3,an2:1.8,c172:1.0,c408:1.3,c182:1.05,atr72:1.95,atr42:1.95,b377:2.1,avanti:1.08,q300f:2.0,c408f:1.3,c130:2.05,c230:1.95,atr42r:1.95,tu95:2.8};
+
+function gearLeg(gg,top,gearH,wr,ax,nw,col){ // ax=축 수, nw=축당 바퀴
+ const by=-gearH+wr;gg.cyl(top,[top[0],by+wr*.4,top[2]],wr*.2,wr*.17,col||C_STRUT,8,true);
+ const sp=wr*2.3;if(ax>1)gg.box([top[0],by,top[2]],[sp*(ax-1)+wr*.6,wr*.3,wr*.35],col||C_STRUT);
+ for(let i=0;i<ax;i++){const x=top[0]+(i-(ax-1)/2)*sp;for(let k=0;k<nw;k++){const z=top[2]+(k-(nw-1)/2)*wr*1.25*(nw>1?1:0);
+  gg.cyl([x,by,z-wr*.32],[x,by,z+wr*.32],wr,wr,C_TIRE,12,true);diskX;gg.cyl([x,by,z-wr*.34],[x,by,z+wr*.34],wr*.5,wr*.5,[.6,.61,.63],8,true)}}}
+
+function propBlades(R,n,col){const g=new Geo();for(let k=0;k<n;k++){const a=k/n*Math.PI*2,u=[0,Math.cos(a),Math.sin(a)],w=[0,-Math.sin(a),Math.cos(a)];
+ const tw=norm3(madd3([1,0,0],w,1.6));g.box(sc3(u,R*.55),[R*.035,R*.9,R*.13],col||[.16,.16,.18],0,[cross3(u,tw),u,tw])}return g}
+function propDisc(R){const g=new Geo();diskX(g,[0,0,0],R,[.55,.55,.57],1,24);diskX(g,[0,0,0],R,[.55,.55,.57],-1,24);return g}
+
+function buildPlane(P,A){
+ if(P.fighter==='f14'||P.fighter==='f22'||P.id==='enemy')return buildFighter(P,A);
+ if(P.fighter==='b2')return buildB2(P,A);
+ const g=new Geo(),gg=new Geo(),ng=P.delta?new Geo():null;
+ const sp=SPEC[P.id]||[P.len,800,25,4],span=sp[0],semi=span/2,sweep=sp[2],blades=sp[3]||4;
+ const F=fusMaker(P),L=F.L,H=F.H,R=F.R,x0=F.x0;
+ const body=hex(A.body),tailC=hex(A.tail),stripeC=hex(A.stripe);
+ const white=body[0]+body[1]+body[2]>2.45,belly=white?mixc(body,[.70,.72,.75],.45):mulc(body,.88);
+ const milGrey=A.id==='af';
+ const wingC=milGrey?mulc(body,.95):mixc(C_WING,body,.15);
+ const podC=milGrey?mulc(body,.92):white?mixc(body,[.8,.81,.84],.3):mixc(body,[.8,.8,.82],.5);
+ const out={P,A,L,R,H,span,props:[],lights:{},exh:[],decals:[],contacts:{},fixedGear:P.cls==='S'||!!P.biplane};
+ // ── 동체 ──
+ const NS=70,NA=26,tH=.915,rows=[],nrows=[];
+ for(let i=0;i<=NS;i++){const s=i/NS;let t=.5-.5*Math.cos(Math.PI*s);t=Math.min(t,.9993);const x=F.X(t),row=[];for(let j=0;j<=NA;j++)row.push(F.pt(x,j/NA*Math.PI*2));
+  if(ng){if(t<=tH)rows.push(row);if(t>=tH||(rows.length&&nrows.length===0&&t>tH))nrows.push(row)}else rows.push(row)}
+ if(ng&&nrows.length&&rows.length){const xh=F.X(tH),row=[];for(let j=0;j<=NA;j++)row.push(F.pt(xh,j/NA*Math.PI*2));rows.push(row);nrows.unshift(row)}
+ const fcol=(i,j,p)=>{const t=(p[0]-x0)/L,s=F.sec(t);
+  if(P.glassnose&&t>F.tn0+(1-F.tn0)*.45&&p[1]<s.ym-s.rb*.2)return C_GLASS;
+  if(p[1]<s.ym-s.rb*.55&&t>F.tt0*.5)return belly;return body};
+ const fref=R0=>(i,j)=>{const x=R0[i][j][0],s=F.sec((x-x0)/L);return[x,s.ym,0]};
+ g.surf(rows,fcol,0,fref(rows),true);
+ if(ng)ng.surf(nrows,fcol,0,fref(nrows),true);
+ {const r0=rows[0],s=F.sec(0),c=[x0,s.ym,0];for(let j=0;j<NA;j++)g.tri(c,r0[j],r0[j+1],body,0,[x0+1,s.ym,0])}
+ {const NR=ng?nrows:rows,r1=NR[NR.length-1],xe=r1[0][0],s=F.sec((xe-x0)/L),c=[xe+.02,s.ym,0];for(let j=0;j<NA;j++)(ng||g).tri(c,r1[j],r1[j+1],fcol(0,0,c),0,[xe-1,s.ym,0])}
+ out.nose=ng;if(ng)out.noseHinge=[F.X(tH),F.sec(tH).ym-F.sec(tH).rb];
+ // 동체 겉면 위 점 (창문·글씨는 여기에 붙인다 → 동체 밖으로 안 나감)
+ const y2ph=(x,y,sd)=>{const s=F.sec((x-x0)/L),r=y>s.ym?s.rt:s.rb,c=clamp((y-s.ym)/r,-.97,.97),ph=Math.acos(c);return sd>0?ph:2*Math.PI-ph};
+ const onF=(x,y,sd,off)=>{const p=F.pt(x,y2ph(x,y,sd)),s=F.sec((x-x0)/L),n=norm3([0,p[1]-s.ym,p[2]]);return madd3(p,n,off)};
+ const onP=(x,ph,off)=>{const p=F.pt(x,ph),s=F.sec((x-x0)/L),n=norm3([0,p[1]-s.ym,p[2]||1e-6]);return madd3(p,n,off)};
+ const fquad=(G,xa,xb,ya,yb,sd,col,off,gw)=>{const a=onF(xa,ya,sd,off),b=onF(xb,ya,sd,off),c=onF(xb,yb,sd,off),d=onF(xa,yb,sd,off),xm=(xa+xb)/2,s=F.sec((xm-x0)/L);G.quad(a,b,c,d,col,gw||0,[xm,s.ym,0])};
+ const fpatch=(G,xa,xb,pa,pb,col,off,n)=>{n=n||3;const Pp=[];for(let i=0;i<=n;i++){const x=lerp(xa,xb,i/n),row=[];for(let j=0;j<=n;j++)row.push(onP(x,lerp(pa,pb,j/n),off));Pp.push(row)}
+  G.surf(Pp,col,0,(i,j)=>{const x=Pp[i][j][0],s=F.sec((x-x0)/L);return[x,s.ym,0]},false)};
+ const off=Math.max(.012,R*.006);
+ // 조종석 유리
+ const ux=u=>F.X(F.tn0+u*(1-F.tn0));
+ let cu=P.hump?[.62,.80]:P.delta?[.60,.70]:[.30,.53];
+ const CG=ng||g;
+ if(P.mount==='nose'){const xa=F.X(F.tn0)-.1*L,xb=F.X(F.tn0)+.01*L;fpatch(g,xa,xb,-62*D2R,62*D2R,C_GLASS,off,6);
+  for(const sd of[1,-1]){fquad(g,F.X(F.tn0)-.33*L,F.X(F.tn0)-.12*L,F.sec(.5).ym+.05*R,F.sec(.5).ym+.75*R,sd,C_GLASS,off)}}
+ else{const P1=[[cu[0],cu[0]+(cu[1]-cu[0])*.45,46,72],[cu[0]+(cu[1]-cu[0])*.47,cu[0]+(cu[1]-cu[0])*.8,33,62],[cu[0]+(cu[1]-cu[0])*.82,cu[1],6,36]];
+  for(const[ua,ub,pa,pb]of P1){const G=(ng&&ux(ua)>F.X(tH))?ng:g;fpatch(G,ux(ua),ux(ub),pa*D2R,pb*D2R,C_GLASS,off,3);fpatch(G,ux(ua),ux(ub),(360-pb)*D2R,(360-pa)*D2R,C_GLASS,off,3)}}
+ // 객실 창문·문
+ const xa=F.X(F.tn0)-.012*L-(P.cls==='L'?1.6:1),xb=F.X(F.tt0)+.012*L;
+ const doors=[];if(P.mount!=='nose'&&!P.biplane){const fr=P.cls==='L'?[0,.3,.62,.985]:P.cls==='M'?[0,.985]:[0];for(const f of fr)doors.push(lerp(xa+.8,xb-.6,f))}
+ const dw=clamp(H*.17,.7,1.1),dh=clamp(R*.95,1.1,1.95);
+ const winC=[.12,.15,.2],frameC=mulc(body,.72);
+ const hasWin=!P.cargo&&!P.beluga&&!P.delta||P.delta;
+ const winRow=(y,pitch,w,h,x1,x2)=>{for(let x=x2;x<=x1;x+=pitch){if(doors.some(d=>Math.abs(x-d)<dw*.5+.35))continue;for(const sd of[1,-1])fquad(g,x-w/2,x+w/2,y-h/2,y+h/2,sd,winC,off)}};
+ if(P.mount==='nose'){}
+ else if(P.transportWin){winRow(.1*R,2.4,.32,.32,xa-1,xb+1)}
+ else if(P.awacs){winRow(.15*R,3.2,.25,.32,xa-1,xa-12)}
+ else if(hasWin&&!P.cargo){const pitch=P.cls==='S'?.9:P.cls==='T'?.75:.53*clamp(H/3.8,.85,1.15),ww=clamp(R*.13,.22,.32),wh=clamp(R*.18,.3,.42);
+  if(P.dbl){winRow(-.05*R,pitch,ww,wh,xa,xb);winRow(.55*R,pitch,ww,wh,xa-1.5,xb+2)}
+  else{winRow(.16*R,pitch,ww,wh,xa,xb);if(P.hump)winRow(R*1.12,pitch,ww,wh,F.X(.915),F.X(.735))}}
+ if(P.mount!=='nose'&&!P.biplane)for(const d of doors)for(const sd of[1,-1]){const y0=-.02*R,fw=.07;
+  fquad(g,d-dw/2,d+dw/2,y0+dh/2-fw,y0+dh/2,sd,frameC,off*.8);fquad(g,d-dw/2,d+dw/2,y0-dh/2,y0-dh/2+fw,sd,frameC,off*.8);
+  fquad(g,d-dw/2,d-dw/2+fw,y0-dh/2,y0+dh/2,sd,frameC,off*.8);fquad(g,d+dw/2-fw,d+dw/2,y0-dh/2,y0+dh/2,sd,frameC,off*.8);
+  if(!P.cargo&&!P.mil)fquad(g,d-.13,d+.13,y0+dh*.12,y0+dh*.3,sd,winC,off)}
+ // 줄무늬
+ if(!(P.mil&&!P.cargo)||A.id!=='af'){const n=40,xs=F.X(F.tt0)+.02*L,xe=F.X(F.tn0)+.05*F.nl,ya=-.42*R,yb=-.31*R;
+  for(let i=0;i<n;i++){const a=lerp(xs,xe,i/n),b=lerp(xs,xe,(i+1)/n);for(const sd of[1,-1])fquad(g,a,b,ya,yb,sd,stripeC,off*.6)}}
+ // 글씨 (항공사 이름 + 등록 기호)
+ const nameH=clamp(R*.34,.35,1.25),regH=clamp(R*.17,.22,.6);
+ out.decalSpec={nameY:P.dbl?.82*R:P.hump?.42*R:.55*R,nameH,regY:.36*R,regH,nameX:F.X(F.tn0)-.05*L-(P.hump?1:0),regX:F.X(F.tt0)+.035*L,maxLen:.34*L};
+ out.onF=onF;out.F=F;
+ // ── 날개 ──
+ const hi=!!P.hi,tail=P.mount==='tail';
+ const wFrac=hi?.43:tail?.52:P.mount==='nose'?.33:P.prop?.4:P.delta?.5:.41;
+ let cr=(P.prop?.105:P.cls==='S'?.15:.19)*span*(hi&&F.transport?1.12:1);if(P.mount==='nose')cr=.145*span;if(P.biplane)cr=.13*span;
+ const xLE0=L/2-wFrac*L+cr*.3,tr=P.prop?(P.mount==='nose'?.75:.55):.26;
+ const dih=hi?(F.transport||P.id==='bae146'?-3:0):P.prop?4:P.mount==='nose'?1.7:6;
+ const yW=hi?R*.84:-R*.55,z0=R*.55;
+ const tanS=Math.tan(sweep*D2R),tanD=Math.tan(dih*D2R);
+ const W={x:xLE0,y:yW,z0,semi,cr,ct:cr*tr};
+ const wLE=z=>xLE0-(z-z0)*tanS,wY=z=>yW+(z-z0)*tanD,wC=z=>{const f=(z-z0)/(semi-z0);return lerp(cr,cr*tr,f)};
+ out.wing=W;
+ if(P.delta){ // 콩코드: 오지 삼각날개
+  const zs=[0,.15,.35,.55,.78,1].map(f=>z0*.6+f*(semi-z0*.6)),lex=[.66,.53,.36,.25,.17,.12],tex=[.03,.035,.04,.05,.07,.1];
+  for(const sd of[1,-1]){const secs=zs.map((z,i)=>({le:[x0+lex[i]*L,-R*.5-(z/semi)**2*.5,sd*z],cd:[-1,0,0],td:[0,1,0],c:(lex[i]-tex[i])*L,t:i?.035-.01*i/5:.04}));lsurf(g,secs,wingC,1)}
+  W.x=x0+.66*L;W.cr=.63*L;W.ct=.02*L}
+ else{for(const sd of[1,-1]){const st=(z,t)=>({le:[wLE(z),wY(z),sd*z],cd:[-1,0,0],td:[0,1,0],c:wC(z),t});
+   const kz=z0+.32*(semi-z0),secs=[];
+   if(!P.prop&&P.cls!=='S'){secs.push({...st(z0,.14),c:wC(z0)*1.25});secs.push(st(kz,.12));secs.push(st(semi,.09))}else{secs.push(st(z0,.15));secs.push(st(semi,.12))}
+   lsurf(g,secs,wingC,1);
+   const wl=WINGLET[P.id];if(wl){const ct=wC(semi),tx=wLE(semi),ty=wY(semi);
+    if(wl===1){const h=ct*1.25;lsurf(g,[{le:[tx-ct*.1,ty,sd*(semi-.05)],cd:[-1,0,0],td:[0,0,1],c:ct*.85,t:.08},{le:[tx-ct*.1-h*.75,ty+h,sd*(semi+h*.18)],cd:[-1,0,0],td:[0,0,1],c:ct*.42,t:.07}],tailC,1)}
+    else if(wl===2){const h=ct*1.6;lsurf(g,[{le:[tx-ct*.05,ty-.02,sd*(semi-.1)],cd:[-1,0,0],td:[0,1,0],c:ct*.95,t:.08},{le:[tx-ct*.25,ty+h*.25,sd*(semi+h*.3)],cd:[-1,0,0],td:norm3([0,-sd*.7,.7]),c:ct*.75,t:.08},
+     {le:[tx-ct*.55-h*.3,ty+h,sd*(semi+h*.42)],cd:[-1,0,0],td:[0,0,1],c:ct*.42,t:.07}],wingC,1)}
+    else{const h=ct*.6;lsurf(g,[{le:[tx,ty-h,sd*semi],cd:[-1,0,0],td:[0,0,1],c:ct*.9,t:.08},{le:[tx-h*.6,ty+h,sd*semi],cd:[-1,0,0],td:[0,0,1],c:ct*.5,t:.07}],wingC,1)}}
+   if(P.biplane){const ly=-R*.8,lz=semi*.78;lsurf(g,[{le:[wLE(z0)-.1,ly,sd*z0],cd:[-1,0,0],td:[0,1,0],c:cr*.95,t:.12},{le:[wLE(z0)-.1,ly+lz*.05,sd*lz],cd:[-1,0,0],td:[0,1,0],c:cr*.9,t:.11}],wingC,1);
+    for(const f of[.55,.95]){const z=lz*f;g.box([wLE(z)-cr*.45,(ly+wY(z))/2,sd*z],[.12,wY(z)-ly,.25],C_STRUT)}}
+  }}
+ out.tips=[[wLE(semi)-W.ct*.4,wY(semi),semi],[wLE(semi)-W.ct*.4,wY(semi),-semi]];
+ if(P.delta)out.tips=[[x0+.13*L,-R*.5-.5,semi],[x0+.13*L,-R*.5-.5,-semi]];
+ // 앞날개 (아반티)
+ if(P.canard){const cx=L/2-.2*L;for(const sd of[1,-1])lsurf(g,[{le:[cx,-R*.1,sd*R*.6],cd:[-1,0,0],td:[0,1,0],c:.9,t:.12},{le:[cx-.3,-R*.05,sd*semi*.28],cd:[-1,0,0],td:[0,1,0],c:.55,t:.1}],wingC,1)}
+ // ── 꼬리 ──
+ const S=P.cls==='S';
+ let finH=(P.ttail?1.35:P.prop?1.45:1.55)*H*(P.id==='a380'?1.12:1)*(S?.78:1);if(P.delta)finH=2.1*H;if(P.beluga)finH=1.0*H;
+ let crF=(S?.22:P.prop?.19:.17)*L;if(P.delta)crF=.2*L;const ctF=crF*(P.ttail?.75:P.delta?.3:.38);
+ const swF=P.delta?52:P.prop?30:S?22:40;
+ const fxTE=x0+.012*L,fxLE=fxTE+crF;
+ const fTop=x=>F.top(x)-.12*R;
+ const rootLE=[fxLE,fTop(fxLE),0],rootTE=[fxTE,fTop(fxTE),0];
+ const fcd=norm3(sub3(rootTE,rootLE)),fc=len3(sub3(rootTE,rootLE));
+ const fyTip=Math.max(rootLE[1],rootTE[1])+finH;
+ const tipLE=[fxLE-finH*Math.tan(swF*D2R),fyTip,0];
+ out.finTop=[tipLE[0]-ctF*.5,fyTip,0];
+ const tailCnt=P.tritail?0:1;
+ if(tailCnt)lsurf(g,[{le:rootLE,cd:fcd,td:[0,0,1],c:fc,t:.12},{le:tipLE,cd:[-1,0,0],td:[0,0,1],c:ctF,t:.1}],tailC,1);
+ // 수평 꼬리
+ if(!P.delta){const sH=(P.prop?.2:.175)*span*(S?1.05:1)*(P.tritail?1.3:1),crH=(P.prop?.11:.1)*L*(S?1.5:1),ctH=crH*.45,swH=P.prop?8:33,dH=P.prop?0:6;
+  let hx,hy,hc=crH;
+  if(P.ttail){hc=ctF*1.05;hx=tipLE[0]+ctF*.15;hy=fyTip-.05}else{hx=x0+.035*L+crH;hy=F.sec((hx-crH*.5-x0)/L).ym+.12*R}
+  const hz0=P.ttail?0:R*.25;
+  for(const sd of[1,-1])lsurf(g,[{le:[hx,hy,sd*hz0],cd:[-1,0,0],td:[0,1,0],c:hc,t:.1},{le:[hx-(sH-hz0)*Math.tan(swH*D2R),hy+(sH-hz0)*Math.tan(dH*D2R),sd*sH],cd:[-1,0,0],td:[0,1,0],c:P.ttail?hc*.5:ctH,t:.09}],P.ttail?tailC:wingC,1);
+  if(P.tritail){const fh=H*.9;for(const z of[-sH,0,sH]){const lx=hx-(Math.abs(z)-hz0)*Math.tan(swH*D2R)*(z?1:0)+.3,bx=z?lx:hx+.3;
+    lsurf(g,[{le:[bx,hy-fh*.35,z],cd:[-1,0,0],td:[0,0,1],c:crH*.95,t:.1},{le:[bx-.4,hy+fh,z],cd:[-1,0,0],td:[0,0,1],c:crH*.6,t:.09}],tailC,1)}
+   out.finTop=[hx,hy+fh,0]}}
+ // ── 엔진 ──
+ let minY=-R;const pods=[];
+ const addJet=(c,r,len,side,stub)=>{ // c = 흡입구 가운데
+  const prof=[[0,r*.86],[-.035*len,r*.97],[-.13*len,r],[-.45*len,r*.97],[-.74*len,r*.86],[-.9*len,r*.72],[-len,r*.6]];
+  g.latheX(c,prof,podC,18);g.latheX(c,[[.01*len,r*.8],[0,r*.865],[-.025*len,r*.91]],C_METAL,18);
+  diskX(g,[c[0]-.07*len,c[1],c[2]],r*.82,[.16,.17,.19],1,18);g.latheX([c[0]-.07*len,c[1],c[2]],[[0,r*.24],[.06*len,r*.12],[.09*len,.001]],[.22,.23,.25],10);
+  g.latheX(c,[[-len,r*.56],[-len*1.07,r*.46],[-len*1.1,r*.4]],[.42,.43,.46],14);diskX(g,[c[0]-len*1.1,c[1],c[2]],r*.4,[.12,.12,.13],-1,14);
+  g.latheX(c,[[-len*1.08,r*.3],[-len*1.25,r*.05]],[.36,.36,.38],10);
+  out.exh.push([c[0]-len*1.2,c[1],c[2]]);minY=Math.min(minY,c[1]-r);pods.push([c[0]-len*.5,c[1]-r,c[2]])};
+ const addProp=(c,r,len,pr,dir)=>{ // c = 프로펠러 자리(앞)
+  g.latheX(c,[[0,r*.5],[-.08*len,r*.85],[-.25*len,r],[-.6*len,r*.95],[-.85*len,r*.7],[-len,r*.3]],podC,14);
+  g.latheX(c,[[0,r*.5],[.12*len,r*.42],[.24*len,r*.15],[.28*len,.001]],[.85,.86,.88],12);
+  out.props.push({p:[c[0]+.05*len,c[1],c[2]],r:pr,n:blades,dir:dir||1});minY=Math.min(minY,c[1]-pr);pods.push([c[0]-len*.4,c[1]-r,c[2]])};
+ const pylon=(x1,x2,yTop,yBot,z,w)=>g.box([(x1+x2)/2,(yTop+yBot)/2,z],[Math.abs(x1-x2),Math.abs(yTop-yBot)+.1,w],podC);
+ const E=P.eng||2;
+ if(P.mount==='nose'){const pr=PROPR[P.id]||1;out.props.push({p:[L/2+.12,F.sec(1).ym,0],r:pr,n:blades,dir:1});g.latheX([L/2-.05,F.sec(.999).ym,0],[[0,R*.25],[.15,R*.15],[.22,.001]],[.85,.86,.88],10);minY=Math.min(minY,-pr)}
+ else if(P.delta){for(const sd of[1,-1]){const zc=semi*.33,cx=x0+.3*L,cy=-R*.5-.95,lenB=.2*L;g.box([cx,cy,sd*zc],[lenB,1.3,2.6],podC);
+   for(const k of[-.6,.6]){diskX(g,[cx+lenB/2+.01,cy,sd*zc+k],.5,[.12,.12,.13],1,10);g.cyl([cx-lenB/2,cy,sd*zc+k],[cx-lenB/2-1.2,cy,sd*zc+k],.55,.45,[.4,.4,.42],12,true);out.exh.push([cx-lenB/2-1.4,cy,sd*zc+k])}
+   minY=Math.min(minY,cy-.65);pods.push([cx,cy-.65,sd*zc])}}
+ else if(P.prop){const pr=PROPR[P.id]||2,r=clamp(.21*H,.3,.85),len=4.6*r;
+  const zs=E>=4?[Math.max(.28*semi,R+pr+.35),0]:[Math.max(.34*semi,R+pr+.35)];if(E>=4)zs[1]=zs[0]+2*pr+.6;
+  for(const z of zs)for(const sd of[1,-1]){const zz=sd*z,lx=wLE(z);let c;
+   if(P.mount==='pusher'){c=[lx-wC(z)*1.15,wY(z),zz];g.latheX([lx+.3,wY(z),zz],[[0,r*.4],[-.2*len,r],[-.75*len,r*.9],[-len,r*.4]],podC,12);out.props.push({p:[c[0]-.2,c[1],zz],r:pr,n:blades,dir:-1});minY=Math.min(minY,c[1]-pr);continue}
+   if(hi)c=[lx+.42*len,wY(z)-r*.35,zz];else c=[lx+.42*len,wY(z)+r*(P.lowprop?-.5:.05),zz];
+   addProp(c,r,len,pr,sd);
+   if(P.fighter==='tu95'){out.props.push({p:[c[0]+.32*len,c[1],zz],r:pr*.95,n:blades,dir:-sd})}}}
+ else{ // 제트
+  const nr=WIDE[P.id]?.28*H:E>=4?(P.id==='a380'?.22:P.hi?.19:.2)*H:P.mount==='tail'?.2*H:.25*H;
+  const nlen=(P.id==='b707f'||P.id==='e707'||P.id==='il62'||P.id==='tu154'||P.id==='comet'?4.2:3.4)*nr;
+  if(P.mount==='wing'||P.mount==='tri'){
+   if(P.rootEng){for(const sd of[1,-1])for(const k of[0,1]){const z=R*1.05+k*1.2+.6,lx=wLE(z);g.ell([lx-.05,wY(z),sd*z],[.18,.32,.5],C_DARK,10,6);
+     g.cyl([lx-wC(z)*.9,wY(z),sd*z],[lx-wC(z)*1.12,wY(z),sd*z],.42,.36,[.38,.38,.4],10,true);out.exh.push([lx-wC(z)*1.15,wY(z),sd*z])}}
+   else{const wz=E>=4?[.36*semi,.64*semi]:[.33*semi];
+    for(const z of wz)for(const sd of[1,-1]){const lx=wLE(z),yw=wY(z);
+     if(P.mount==='overwing'){const c=[lx-wC(z)*.15,yw+nr*1.55,sd*z];addJet(c,nr,nlen,sd);pylon(c[0]-nlen*.2,c[0]-nlen*.8,c[1]-nr*.8,yw,sd*z,nr*.25);continue}
+     const c=[lx+nlen*(hi?.45:.55),yw-nr*(hi?1.2:1.28),sd*z];addJet(c,nr,nlen,sd);pylon(c[0]-nlen*.15,lx-wC(z)*.35,c[1]+nr*.75,yw,sd*z,nr*.24)}}
+   if(P.mount==='tri'){const cx=x0+.2*L+nlen*.5,cy=F.top(cx-nlen*.5)+nr*.85;addJet([cx,cy,0],nr*.95,nlen*1.15,0);
+    g.box([cx-nlen*.6,(cy+F.top(cx-nlen*.6))/2,0],[nlen*.9,cy-F.top(cx-nlen*.6)+.2,nr*.5],tailC)}
+   if(P.sTail){const ix=fxLE+nlen*.1,iy=F.top(ix)+nr*.6;g.ell([ix-nlen*.4,iy-nr*.25,0],[nlen*.75,nr*.75,nr*.85],tailC,14,8);diskX(g,[ix+nlen*.32,iy-nr*.2,0],nr*.62,C_DARK,1,14);
+    g.cyl([x0+.02*L,F.sec(.01).ym,0],[x0-.6,F.sec(.01).ym,0],R*.32,R*.28,[.4,.4,.42],12,true);out.exh.push([x0-.8,F.sec(.01).ym,0])}}
+  else if(P.mount==='tail'){const cx=x0+.34*L,rows2=P.id==='il62'?2:1;
+   for(const sd of[1,-1])for(let k=0;k<rows2;k++){const z=sd*(F.hw(cx-nlen*.5)+nr*(1.15+k*2.15)+.15);addJet([cx,.25*R,z],nr,nlen,sd);
+    g.box([cx-nlen*.5,.25*R,sd*(F.hw(cx-nlen*.5)*.6+Math.abs(z)*.4)],[nlen*.5,nr*.35,Math.abs(z)-F.hw(cx-nlen*.5)*.6],podC)}
+   if(P.sDuct){const ix=fxLE+nlen*.15,iy=F.top(ix)+nr*.55;g.ell([ix-nlen*.4,iy-nr*.2,0],[nlen*.7,nr*.7,nr*.8],tailC,14,8);diskX(g,[ix+nlen*.28,iy-nr*.15,0],nr*.6,C_DARK,1,14);
+    g.cyl([x0+.02*L,F.sec(.01).ym,0],[x0-.5,F.sec(.01).ym,0],R*.3,R*.26,[.4,.4,.42],12,true);out.exh.push([x0-.7,F.sec(.01).ym,0])}}
+ }
+ // ── 덧붙이는 것 ──
+ if(P.awacs){const dx=x0+.32*L,dy=F.top(dx);for(const k of[-1,1])g.box([dx+k*.9,dy+1.6,0],[.5,3.2,.7],podC);
+  g.cyl([dx,dy+3.0,0],[dx,dy+4.8,0],4.55,4.55,[.9,.9,.9],28,true);g.cyl([dx,dy+3.6,0],[dx,dy+4.2,0],4.6,4.6,C_DARK,28,false)}
+ if(P.missiles){for(const sd of[1,-1]){const z=sd*.5*semi,lx=wLE(.5*semi)-wC(.5*semi)*.3,y=wY(.5*semi)-1.1;g.cyl([lx+3.2,y,z],[lx-3.2,y,z],.38,.38,[.92,.92,.9],12,true);
+  g.cyl([lx+3.2,y,z],[lx+4.4,y,z],.38,.02,[.85,.3,.2],12,false);for(const a of[0,90])g.box([lx-2.8,y,z],[1,a?1.3:.06,a?.06:1.3],[.8,.8,.8])}}
+ if(P.radome)g.ell([.05*L,-R-.15,0],[L*.12,.45,.8],[.86,.86,.84],16,8);
+ if(P.glassnose)g.ell([L/2-F.nl*.55,F.bot(L/2-F.nl*.55)+.2,0],[F.nl*.28,.45,.6],[.25,.27,.3],14,7);
+ // ── 바퀴 ──
+ const big=P.cls==='L',wr=S?.25:P.cls==='T'?.42:big?.62:.45;
+ let gearH=R+(F.transport?.13*H+.15:hi?.3*H:S?.6:.3*H+.3);
+ if(P.delta)gearH=R+.75*H;
+ gearH=Math.max(gearH,-minY+(P.prop?.4:.45));
+ let xm=hi?W.x-W.cr*.55:W.x-W.cr*.62;if(P.delta)xm=x0+.42*L;if(P.mount==='nose')xm=W.x-W.cr*.75;
+ let zm=hi?R*.92:Math.max(R*.85,.16*semi);if(S)zm=Math.max(R*1.1,1.2);if(P.delta)zm=semi*.27;
+ const xn=L/2-Math.max(.11*L,F.nl*.78);
+ out.gearH=gearH;
+ const legTop=x=>F.bot(x)+.3,axN=P.id==='b777'||P.id==='b777f'||P.id==='a351'?3:big?2:1,nwN=S?1:2;
+ const mainTopY=z=>hi?F.bot(xm)+.4:(P.delta?-R*.6:wY(Math.abs(z))-.15);
+ if(P.biplane){ // 꼬리바퀴
+  const mx=W.x+.2,ly=-R*.8;for(const sd of[1,-1]){gg.cyl([mx,ly,sd*.4],[mx,-gearH+.4,sd*1.5],.08,.08,C_STRUT,6,true);gg.cyl([mx,-gearH+.4,sd*1.5-.15],[mx,-gearH+.4,sd*1.5+.15],.4,.4,C_TIRE,12,true)}
+  const tx=x0+.06*L,ty=F.bot(tx);gg.cyl([tx,ty,0],[tx-.2,ty-.35,0],.05,.05,C_STRUT,6,true);gg.cyl([tx-.2,ty-.35,-.08],[tx-.2,ty-.35,.08],.15,.15,C_TIRE,8,true);
+  out.contacts.main=[[mx,-gearH,1.5],[mx,-gearH,-1.5]];out.contacts.nose=[[tx-.2,ty-.5,0]]}
+ else{
+  const mains=[];if(P.hump||P.id==='a380'){mains.push([xm,.18*semi],[xm-2.2,R*.45])}else mains.push([xm,zm]);
+  for(const[x,z]of mains)for(const sd of[1,-1]){const zz=sd*z,top=[x,P.hump||P.id==='a380'?(z>R?mainTopY(z):F.bot(x)+.3):mainTopY(z),zz];
+   gearLeg(gg,top,gearH,wr,P.id==='a380'&&z<R?3:axN,nwN,C_STRUT);if(P.mount==='nose'||S)gg.box([x,-gearH+wr*1.1,zz],[wr*2.6,wr*1.2,wr*.9],body)}
+  gearLeg(gg,[xn,legTop(xn),0],gearH,wr*(S?1:.8),1,S?1:2,C_STRUT);
+  out.contacts.main=[[xm,-gearH,zm],[xm,-gearH,-zm]];out.contacts.nose=[[xn,-gearH,0]]}
+ out.contacts.tail=[[x0+.06*L,F.bot(x0+.06*L),0],[x0+.2*L,F.bot(x0+.2*L),0]];
+ out.contacts.belly=[[xm,F.bot(xm),0],[L*.25,F.bot(L*.25),0],[-L*.2,F.bot(-L*.2),0]].concat(pods);
+ out.contacts.tips=out.tips;
+ // ── 불빛 ──
+ out.lights={red:[[out.tips[1][0],out.tips[1][1],out.tips[1][2]-.15]],green:[[out.tips[0][0],out.tips[0][1],out.tips[0][2]+.15]],white:[[x0-.15,F.sec(0).ym,0]],
+  beacon:[[xm+1,F.top(xm+1)+.08,0],[xm+1,F.bot(xm+1)-.08,0]],strobe:[out.tips[0],out.tips[1]]};
+ out.body=g;out.gear=gg;out.xm=xm;out.xn=xn;
+ out.cockpit=[F.X(F.tn0+(1-F.tn0)*(cu[0]+.1)),P.hump?R*1.2:R*.5,0];
+ if(P.mount==='nose')out.cockpit=[F.X(F.tn0)-.12*L,R*.45,0];
+ return out;
+}
+
+/* ── 전투기 (F-14 · F-22 · 적기) ── */
+function buildFighter(P,A){
+ const g=new Geo(),gg=new Geo(),kind=P.fighter||'enemy',L=P.len,x0=-L/2;
+ const grey=kind==='f22'?[.55,.58,.62]:kind==='f14'?[.63,.66,.69]:[.30,.34,.40],dk=mulc(grey,.85),glass=kind==='f22'?[.42,.36,.16]:[.12,.16,.22];
+ const out={P,A,L,R:.9,H:P.hgt,span:SPEC[P.id][0],props:[],exh:[],lights:{},contacts:{},fixedGear:false,fighter:1};
+ // 앞 동체
+ const nose=[];const NA=16;const nx0=kind==='f14'?1.5:2.5;
+ const rad=x=>{const u=(L/2-x)/(L/2-nx0);return u<=0?0:(kind==='f22'?1.05:.95)*Math.pow(Math.min(u,1),.55)};
+ for(let i=0;i<=14;i++){const x=L/2-(L/2-nx0)*(1-Math.pow(1-i/14,1.4)),r=Math.max(rad(x),.02),row=[];
+  for(let j=0;j<=NA;j++){const a=j/NA*Math.PI*2;row.push([x,.1+Math.cos(a)*r*(kind==='f22'?.8:1),Math.sin(a)*r*(kind==='f22'?1.25:1)])}nose.unshift(row)}
+ g.surf(nose,(i,j,p)=>p[0]>L/2-1.6?dk:grey,0,(i,j)=>[nose[i][j][0],.1,0],true);
+ if(kind==='f14'){ // 가운데 납작한 몸통 + 엔진 두 개 + 날개
+  for(const sd of[1,-1]){lsurf(g,[{le:[3.6,0,0],cd:[-1,0,0],td:[0,1,0],c:12.6,t:.075},{le:[-1,0,sd*4.3],cd:[-1,0,0],td:[0,1,0],c:3.4,t:.08}],grey,1);
+   g.cyl([2.2,-.4,sd*1.75],[-8.6,-.35,sd*1.75],.78,.7,grey,14,false);g.cyl([-8.6,-.35,sd*1.75],[-9.6,-.35,sd*1.75],.66,.55,[.35,.35,.37],12,true);
+   g.box([2.6,-.3,sd*1.75],[2.4,1.3,1.15],grey);g.box([3.82,-.3,sd*1.75],[.05,1.15,1.0],C_DARK);
+   lsurf(g,[{le:[-.6,.1,sd*4.0],cd:[-1,0,0],td:[0,1,0],c:3.3,t:.07},{le:[-.6-5.7*Math.tan(28*D2R),.25,sd*9.75],cd:[-1,0,0],td:[0,1,0],c:1.3,t:.06}],grey,1);
+   const ft=[0,Math.cos(5*D2R),sd*Math.sin(5*D2R)];lsurf(g,[{le:[-4.9,.3,sd*1.75],cd:[-1,0,0],td:[0,-sd*Math.sin(5*D2R),Math.cos(5*D2R)],c:4.0,t:.08},{le:[-4.9-3*Math.tan(48*D2R),.3+ft[1]*3,sd*(1.75+ft[2]*3)],cd:[-1,0,0],td:[0,0,1],c:1.6,t:.07}],grey,1);
+   lsurf(g,[{le:[-6.0,-.35,sd*2.2],cd:[-1,0,0],td:[0,1,0],c:3.2,t:.07},{le:[-6.0-3*Math.tan(48*D2R),-.35,sd*5.2],cd:[-1,0,0],td:[0,1,0],c:1.2,t:.06}],grey,1)}
+  g.ell([3.4,.72,0],[2.1,.58,.55],glass,16,8);out.exh=[[-9.8,-.35,1.75],[-9.8,-.35,-1.75]];out.gearH=2.05;
+  out.contacts.main=[[-2.5,-2.05,2.6],[-2.5,-2.05,-2.6]];out.contacts.nose=[[6.2,-2.05,0]];out.tips=[[-4.2,.25,9.75],[-4.2,.25,-9.75]];out.finTop=[-7.6,3.3,1.8]}
+ else{ // F-22 / 적기
+  const f22=kind==='f22';
+  // 뒷 동체
+  const rows=[];for(let i=0;i<=10;i++){const x=lerp(nx0,-L/2,i/10),w=f22?lerp(2.2,1.35,i/10):lerp(1.0,.7,i/10),ht=f22?lerp(.75,.4,i/10):lerp(1,.7,i/10),hb=f22?lerp(-.65,-.35,i/10):-lerp(.95,.65,i/10),row=[];
+   for(let j=0;j<=NA;j++){const a=j/NA*Math.PI*2,c=Math.cos(a),s=Math.sin(a);row.push([x,.1+(c>0?ht*c:-hb*c),s*w*(f22?(1-.25*Math.abs(c)):1)])}rows.push(row)}
+  g.surf(rows,grey,0,(i,j)=>[rows[i][j][0],.1,0],true);
+  if(!f22){g.cyl([nx0+.05,.1,0],[nx0-.05,.1,0],1.0,1.0,grey,NA,false)}
+  for(const sd of[1,-1]){
+   if(f22){lsurf(g,[{le:[1.8,-.05,sd*1.7],cd:[-1,0,0],td:[0,1,0],c:8.1,t:.045},{le:[1.8-5.1*Math.tan(42*D2R),-.05,sd*6.8],cd:[-1,0,0],td:[0,1,0],c:1.4,t:.04}],grey,1);
+    const ca=28*D2R;lsurf(g,[{le:[-3.9,.45,sd*1.8],cd:[-1,0,0],td:[0,sd*Math.sin(ca),-Math.cos(ca)],c:3.6,t:.06},{le:[-3.9-2.6*Math.tan(24*D2R),.45+2.6*Math.cos(ca),sd*(1.8+2.6*Math.sin(ca))],cd:[-1,0,0],td:[0,sd*Math.sin(ca),-Math.cos(ca)],c:1.5,t:.05}],grey,1);
+    lsurf(g,[{le:[-6.3,0,sd*1.5],cd:[-1,0,0],td:[0,1,0],c:3.1,t:.05},{le:[-6.3-3.4*Math.tan(42*D2R),0,sd*4.9],cd:[-1,0,0],td:[0,1,0],c:1.0,t:.04}],grey,1);
+    g.box([3.3,-.1,sd*1.62],[.06,.95,.75],C_DARK,0,[norm3([1,0,sd*.4]),[0,1,0],norm3([-sd*.4,0,1])]);
+    g.box([-9.55,0,sd*.62],[.3,.5,.95],[.22,.22,.24])}
+   else{lsurf(g,[{le:[1.0,0,sd*.8],cd:[-1,0,0],td:[0,1,0],c:5.4,t:.05},{le:[1.0-4.9*Math.tan(45*D2R),0,sd*5.7],cd:[-1,0,0],td:[0,1,0],c:1.1,t:.04}],grey,1);
+    lsurf(g,[{le:[-5.6,0,sd*.6],cd:[-1,0,0],td:[0,1,0],c:2.4,t:.05},{le:[-5.6-2.6*Math.tan(45*D2R),0,sd*3.0],cd:[-1,0,0],td:[0,1,0],c:.9,t:.04}],grey,1);
+    g.box([nx0-.2,-.2,sd*1.0],[1.6,.9,.7],grey);diskX(g,[nx0+.62,-.2,sd*1.0],.32,C_DARK,1,10)}}
+  if(!f22){lsurf(g,[{le:[-3.4,.8,0],cd:[-1,0,0],td:[0,0,1],c:3.8,t:.07},{le:[-3.4-3.2*Math.tan(48*D2R),4.0,0],cd:[-1,0,0],td:[0,0,1],c:1.2,t:.06}],[.62,.16,.13],1);
+   g.cyl([-L/2,.1,0],[-L/2-.8,.1,0],.62,.5,[.25,.25,.27],12,true)}
+  g.ell([f22?3.6:4.0,f22?.78:.95,0],[f22?2.2:1.7,.52,.5],glass,16,8);
+  out.exh=f22?[[-9.8,0,.62],[-9.8,0,-.62]]:[[-L/2-1,.1,0]];out.gearH=f22?1.95:1.85;
+  out.contacts.main=[[-1.5,-out.gearH,1.7],[-1.5,-out.gearH,-1.7]];out.contacts.nose=[[5.5,-out.gearH,0]];
+  out.tips=f22?[[-3.6,-.05,6.8],[-3.6,-.05,-6.8]]:[[-4.4,0,5.7],[-4.4,0,-5.7]];out.finTop=f22?[-5.6,2.7,3.0]:[-7.5,4,0]}
+ const gH=out.gearH;
+ for(const c of out.contacts.main)gearLeg(gg,[c[0],-.5,c[2]],gH,.42,1,1,C_STRUT);
+ gearLeg(gg,[out.contacts.nose[0][0],-.4,0],gH,.3,1,1,C_STRUT);
+ out.contacts.tail=[[-L/2+.5,-.6,0]];out.contacts.belly=[[0,-1.0,0],[4,-.9,0],[-5,-.9,0]];out.contacts.tips=out.tips;
+ out.lights={red:[out.tips[1]],green:[out.tips[0]],white:[[-L/2,.4,0]],beacon:[],strobe:[]};
+ out.body=g;out.gear=gg;out.xm=out.contacts.main[0][0];out.xn=out.contacts.nose[0][0];
+ out.cockpit=[kind==='f14'?4.6:4.6,1.05,0];out.decalSpec=null;
+ return out;
+}
+/* ── B-2 날개만 있는 폭격기 ── */
+function buildB2(P,A){
+ const g=new Geo(),gg=new Geo(),c=[.27,.28,.31];
+ const zs=[0,3,7,10,13,19,26.2],te=[-10.5,-7.4,-4.2,-6.6,-9.0,-8.6,-8.0],th=[.16,.14,.1,.08,.07,.06,.05];
+ for(const sd of[1,-1]){const secs=zs.map((z,i)=>{const le=10.5-z*Math.tan(33*D2R);return{le:[le,i?-.2:-.1,sd*z],cd:[-1,0,0],td:[0,1,0],c:le-te[i],t:th[i]}});lsurf(g,secs,c,1);
+  g.ell([1.5,.95,sd*4.6],[5.5,.65,1.6],c,14,7);g.box([3.8,1.3,sd*4.6],[.4,.25,2.2],[.08,.08,.09]);g.box([-4.4,.75,sd*4.8],[1.2,.12,2.6],[.15,.15,.16])}
+ g.ell([5.2,.9,0],[3.4,.95,1.5],c,14,7);
+ for(const sd of[1,-1])g.box([7.1,1.45,sd*.42],[.9,.22,.6],C_GLASS,0,[norm3([1,.45,0]),norm3([-.45,1,0]),[0,0,1]]);
+ const out={P,A,L:P.len,R:1.4,H:P.hgt,span:52.4,props:[],exh:[[-5,.7,4.8],[-5,.7,-4.8]],lights:{},contacts:{},fixedGear:false,fighter:1};
+ out.gearH=2.7;out.contacts.main=[[-1,-2.7,6],[-1,-2.7,-6]];out.contacts.nose=[[4.5,-2.7,0]];
+ for(const p of out.contacts.main)gearLeg(gg,[p[0],-.6,p[2]],2.7,.55,2,2);gearLeg(gg,[4.5,-.6,0],2.7,.45,1,2);
+ out.tips=[[-7.2,-.2,26.2],[-7.2,-.2,-26.2]];out.contacts.tips=out.tips;out.contacts.tail=[[-9.5,-.6,0]];out.contacts.belly=[[0,-1.3,0],[5,-1,0]];
+ out.lights={red:[out.tips[1]],green:[out.tips[0]],white:[],beacon:[],strobe:[]};out.finTop=[0,2,0];
+ out.body=g;out.gear=gg;out.xm=-1;out.xn=4.5;out.cockpit=[7.4,1.7,0];out.decalSpec=null;return out;
+}
+
+/* ── 글씨 그림 (항공사 이름·등록 기호) ── */
+function decalTexture(A,reg){const c=document.createElement('canvas');c.width=1024;c.height=128;const x=c.getContext('2d');
+ const txt=AL_TEXT[A.id]||A.name,col=A.text||'#223';x.fillStyle=col;x.textBaseline='middle';
+ const kr=/[가-힣]/.test(txt),font=kr?'bold 92px "Malgun Gothic",sans-serif':(A.id==='dal'||A.id==='aal'||A.id==='baw'?'bold ':A.id==='emir'?'italic bold ':'bold ')+'96px "Segoe UI",Arial,sans-serif';
+ x.font=font;let w=Math.min(x.measureText(txt).width,740);x.fillText(txt,6,66,740);
+ x.font='bold 70px "Segoe UI",Arial,sans-serif';x.fillStyle=mixHex(col,'#333333',.3);const w2=Math.min(x.measureText(reg).width,240);x.fillText(reg,778,66,240);
+ return{canvas:c,nameW:(w+12)/1024,nameAsp:(w+12)/128,regW:w2/1024,regAsp:w2/100}}
+function mixHex(a,b,t){const A=hex(a),B=hex(b);return'rgb('+A.map((v,i)=>Math.round(lerp(v,B[i],t)*255)).join(',')+')'}
+// 글씨 판: 동체 곡면을 따라 붙인다
+function buildDecals(m,tex){const ds=m.decalSpec;if(!ds||!m.onF)return null;const d=[];const onF=m.onF;
+ const strip=(sd,x1,x2,yc,h,u0,u1)=>{const n=8;for(let i=0;i<n;i++){const xa=lerp(x1,x2,i/n),xb=lerp(x1,x2,(i+1)/n),ua=lerp(u0,u1,i/n),ub=lerp(u0,u1,(i+1)/n);
+  const ys=[yc-h/2,yc,yc+h/2],vs=[1,.5,0];
+  for(let k=0;k<2;k++){const a=onF(xa,ys[k],sd,.03),b=onF(xb,ys[k],sd,.03),c=onF(xb,ys[k+1],sd,.03),e=onF(xa,ys[k+1],sd,.03);
+   const n=[0,0,sd];const P=[[a,ua,vs[k]],[b,ub,vs[k]],[c,ub,vs[k+1]],[a,ua,vs[k]],[c,ub,vs[k+1]],[e,ua,vs[k+1]]];
+   for(const[p,u,v]of P)d.push(p[0],p[1],p[2],n[0],n[1],n[2],u,v)}}};
+ const ln=Math.min(ds.nameH*tex.nameAsp*.92,ds.maxLen),lr=Math.min(ds.regH*tex.regAsp*1.1,ds.maxLen*.4);
+ const nx2=ds.nameX,nx1=nx2-ln,rx1=ds.regX,rx2=rx1+lr;
+ // 오른쪽: 꼬리→코 방향으로 읽힘, 왼쪽: 반대
+ strip(1,nx1,nx2,ds.nameY,ds.nameH,0,tex.nameW);strip(-1,nx2,nx1,ds.nameY,ds.nameH,0,tex.nameW);
+ strip(1,rx1,rx2,ds.regY,ds.regH,770/1024,770/1024+tex.regW);strip(-1,rx2,rx1,ds.regY,ds.regH,770/1024,770/1024+tex.regW);
+ const a=new Float32Array(d),vao=gl.createVertexArray(),buf=gl.createBuffer();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,a,gl.STATIC_DRAW);
+ gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,32,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,32,12);
+ gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,2,gl.FLOAT,false,32,24);gl.bindVertexArray(null);
+ const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,tex.canvas);
+ gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ return{vao,buf,n:a.length/8,tex:t}}
+
+// 모델 만들기 (같은 기종+항공사는 다시 쓰기)
+const MODELS={};
+function getModel(P,A,seed){const key=P.id+'|'+A.id+'|'+(seed||0);if(MODELS[key])return MODELS[key];
+ const m=buildPlane(P,A);
+ const M={...m,body:upload(m.body),gear:m.gear.d.length?upload(m.gear):null,nose:m.nose?upload(m.nose):null};
+ M.propMeshes={};for(const pr of m.props){const k=pr.r.toFixed(2)+'_'+pr.n;if(!M.propMeshes[k])M.propMeshes[k]={blades:upload(propBlades(pr.r,pr.n)),disc:upload(propDisc(pr.r))};pr.k=k}
+ M.reg=makeReg(A,P,(seed||0)*977+P.id.length*31+A.id.charCodeAt(0));
+ if(m.decalSpec){try{M.decal=buildDecals(m,decalTexture(A,M.reg))}catch(e){M.decal=null}}
+ M.groundPitch=0;const mn=m.contacts.main[0],nn=m.contacts.nose[0];if(mn&&nn&&Math.abs(mn[0]-nn[0])>.01)M.groundPitch=Math.atan((nn[1]-mn[1])/(mn[0]-nn[0]));
+ delete M.onF;delete M.F;
+ MODELS[key]=M;return M}
+
+
+
+/* ═══════════════ 땅 만들기 ═══════════════ */
+const WX0=-26300,WZ0=-32900,TC=130,TN=515,TNV=TN+1,WSZ=TN*TC;
+const HM=new Float32Array(TNV*TNV),APT=new Int8Array(TNV*TNV).fill(-1);
+function segDist(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,l=dx*dx+dz*dz;let t=l?((px-ax)*dx+(pz-az)*dz)/l:0;t=clamp(t,0,1);const qx=ax+dx*t-px,qz=az+dz*t-pz;return[Math.sqrt(qx*qx+qz*qz),t]}
+function polySD(px,pz,P){let inside=false,md=1e12;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];
+  if(((a[1]>pz)!==(b[1]>pz))&&(px<(b[0]-a[0])*(pz-a[1])/(b[1]-a[1])+a[0]))inside=!inside;const d=segDist(px,pz,a[0],a[1],b[0],b[1])[0];if(d<md)md=d}
+ return inside?md:-md}
+function landDist(x,z){let d=polySD(x,z,COAST_MAIN);d=Math.max(d,polySD(x,z,COAST_JEJU));
+ for(const[lo,la,r]of ISLANDS){const ix=wx(lo),iz=wz(la);d=Math.max(d,r-Math.hypot(x-ix,z-iz))}
+ d=Math.max(d,ULLEUNG.r-Math.hypot(x-ULLEUNG.x,z-ULLEUNG.z));
+ return d}
+function ridgeH(x,z){let h=0;for(const r of RIDGES){for(let i=0;i<r.p.length-1;i++){const a=r.p[i],b=r.p[i+1];if(Math.abs(x-a[0])>r.w*3+Math.abs(b[0]-a[0])&&Math.abs(x-b[0])>r.w*3)continue;
+   const[d,t]=segDist(x,z,a[0],a[1],b[0],b[1]);if(d>r.w*2.6)continue;const hh=lerp(a[2],b[2],t);h=Math.max(h,hh*Math.exp(-((d/r.w)**2)))}}return h}
+function natHeight(x,z){
+ const amp=600-350*sstep(-5000,20000,x);
+ let d=landDist(x,z)+fbm(x/2600,z/2600,4)*amp;
+ if(d<0){const deep=lerp(.45,2.2,sstep(-9000,12000,x));return Math.max(-3-(-d)*.004*deep*(1+fbm(x/9000,z/9000,2)),-140)}
+ const inl=sstep(0,2200,d);
+ const hilA=lerp(35,120,sstep(-12000,16000,x));
+ const hills=(fbm(x/4800+3.1,z/4800-1.7,5)*.5+.5)*hilA;
+ const rg=ridgeH(x,z)*(.62+.55*ridged(x/2300,z/2300,4));
+ let h=1.2+Math.min(d*.004,9)+inl*(hills+rg);
+ for(const p of PEAKS){const q=Math.hypot(x-p.x,z-p.z);if(q<p.r*2)h+=p.h*Math.exp(-((q/p.r)**2)*2.2)*(.85+.3*ridged(x/900,z/900,3))}
+ {const q=Math.hypot(x-HALLA.x,(z-HALLA.z)*1.9);if(q<HALLA.r*1.5){h+=HALLA.h*Math.pow(Math.max(0,1-q/HALLA.r),1.55)*(.92+.12*fbm(x/700,z/700,3));
+   for(let k=0;k<26;k++){const ox=HALLA.x+(hash2(k,3)-.5)*6400,oz=HALLA.z+(hash2(k,7)-.5)*2600,r=110+hash2(k,9)*120,qq=Math.hypot(x-ox,z-oz);if(qq<r*2)h+=(40+hash2(k,11)*45)*Math.exp(-((qq/r)**2)*1.6)}}}
+ {const q=Math.hypot(x-ULLEUNG.x,z-ULLEUNG.z);if(q<ULLEUNG.r*1.2)h+=ULLEUNG.h*Math.pow(Math.max(0,1-q/ULLEUNG.r),1.15)*(.85+.3*ridged(x/600,z/600,3))}
+ return h}
+function buildHeights(){
+ for(let j=0;j<TNV;j++)for(let i=0;i<TNV;i++){const x=WX0+i*TC,z=WZ0+j*TC;let h=natHeight(x,z);
+  const ez=sstep(WZ0+3200,WZ0+200,z);if(ez>0)h=lerp(h,-12,ez);
+  HM[j*TNV+i]=h}
+ // 공항 자리 고르기
+ AIRPORTS.forEach((a,ai)=>{const p=a.pad,hl=a.maxLen/2+p.l,R=hl+p.b+800;
+  for(let j=0;j<TNV;j++){const z=WZ0+j*TC;if(Math.abs(z-a.z)>R)continue;for(let i=0;i<TNV;i++){const x=WX0+i*TC;if(Math.abs(x-a.x)>R)continue;
+   const[s,t0]=aptLocal(a,x,z),t=t0*a.side;const ds=Math.max(0,Math.abs(s)-hl),dt=Math.max(0,p.w0-t,t-p.w1),dd=Math.hypot(ds,dt);
+   const k=j*TNV+i;if(dd<=0){HM[k]=a.elev;APT[k]=ai}else if(dd<p.b){const f=sstep(0,p.b,dd);HM[k]=lerp(a.elev,HM[k]<a.elev?Math.max(HM[k],a.elev-25-dd*.05):Math.min(HM[k],a.elev+dd*.12),f);if(dd<p.b*.3)APT[k]=ai}}}});
+}
+// 땅 높이 (그림 삼각형과 똑같이)
+function hAt(x,z){let fx=(x-WX0)/TC,fz=(z-WZ0)/TC;if(fx<0||fz<0||fx>=TN||fz>=TN)return -60;const ix=fx|0,iz=fz|0;fx-=ix;fz-=iz;const k=iz*TNV+ix;
+ const a=HM[k],b=HM[k+1],c=HM[k+TNV],d=HM[k+TNV+1];return fx+fz<=1?a+(b-a)*fx+(c-a)*fz:d+(c-d)*(1-fx)+(b-d)*(1-fz)}
+function aptAt(x,z){for(const a of AIRPORTS){const[s,t0]=aptLocal(a,x,z),t=t0*a.side;if(Math.abs(s)<=a.maxLen/2+a.pad.l&&t>=a.pad.w0&&t<=a.pad.w1)return a}return null}
+function rwAt(a,x,z){const[s,t]=aptLocal(a,x,z);for(const r of a.rws){if(Math.abs(s)<=r.len/2+60&&Math.abs(t-r.off)<=r.w/2+8)return r}return null}
+// 바닥: {h, water, apt, rw}
+function groundAt(x,z){const a=aptAt(x,z);if(a)return{h:a.elev,water:false,apt:a,rw:rwAt(a,x,z)};const h=hAt(x,z);if(h<0)return{h:0,water:true,apt:null,rw:null};return{h,water:false,apt:null,rw:null}}
+function nearApt(x,z,m){for(const a of AIRPORTS){const[s,t0]=aptLocal(a,x,z),t=t0*a.side;if(Math.abs(s)<=a.maxLen/2+a.pad.l+m&&t>=a.pad.w0-m&&t<=a.pad.w1+m)return a}return null}
+function riverDist(x,z,rv){let m=1e9;for(let i=0;i<rv.p.length-1;i++){const a=rv.p[i],b=rv.p[i+1];m=Math.min(m,segDist(x,z,a[0],a[1],b[0],b[1])[0])}return m}
+
+let TERR=null,HTEX=null;
+function buildTerrain(){
+ const N=TNV*TNV,V=new Float32Array(N*10);const rnd=mulberry(7);
+ const cityAt=(x,z)=>{let m=0;for(const c of CITIES){const d=Math.hypot(x-c.x,z-c.z);if(d<c.r*1.15)m=Math.max(m,1-sstep(c.r*.55,c.r*1.15,d))}return m};
+ for(let j=0;j<TNV;j++)for(let i=0;i<TNV;i++){const k=j*TNV+i,x=WX0+i*TC,z=WZ0+j*TC,h=HM[k];
+  const hl=HM[j*TNV+Math.max(i-1,0)],hr=HM[j*TNV+Math.min(i+1,TN)],hd=HM[Math.max(j-1,0)*TNV+i],hu=HM[Math.min(j+1,TN)*TNV+i];
+  const n=norm3([(hl-hr),2*TC,(hd-hu)]),slope=1-n[1];
+  const nz=fbm(x/1700,z/1700,3),nz2=vnoise(x/420,z/420),nz3=vnoise(x/160+7,z/160-3);
+  let c;
+  if(h<-.5){c=mixc([.62,.58,.44],[.28,.33,.33],sstep(0,30,-h))}
+  else if(APT[k]>=0){c=mixc([.50,.56,.33],[.58,.6,.38],nz2*.5+.5)}
+  else{
+   const paddy=[.63,.57,.36],field=[.47,.52,.30],forest=[.20,.31,.17],autumn=[.52,.33,.15],autumn2=[.60,.46,.20],rock=[.47,.45,.42],snow=[.92,.93,.96],sand=[.84,.78,.6];
+   const low=mixc(paddy,field,clamp(nz*1.2+.5,0,1));
+   const fk=sstep(25,140,h+nz*60)+slope*2.2;
+   let fo=mixc(forest,mixc(autumn,autumn2,nz3*.5+.5),clamp(.35+nz2*.55,0,.85));
+   fo=mixc(fo,mulc(forest,.85),sstep(380,600,h));
+   c=mixc(low,fo,clamp(fk,0,1));
+   c=mixc(c,rock,clamp(sstep(520,760,h)*.7+slope*1.4-.5,0,.8));
+   if(h>640)c=mixc(c,snow,sstep(640,820,h+nz2*60)*.85);
+   const cm=cityAt(x,z);if(cm>0)c=mixc(c,mixc([.56,.55,.53],[.46,.46,.45],nz3*.5+.5),cm*.85);
+   if(h<5&&slope<.05){const sd=landDist(x,z);if(sd<280)c=mixc(c,sand,1-sstep(80,280,sd))}
+  }
+  c=mulc(c,.94+.12*nz3);
+  V.set([x,h,z,n[0],n[1],n[2],c[0],c[1],c[2],0],k*10)}
+ const I=new Uint32Array(TN*TN*6);let q=0;for(let j=0;j<TN;j++)for(let i=0;i<TN;i++){const a=j*TNV+i,b=a+1,c=a+TNV,d=c+1;I[q++]=a;I[q++]=c;I[q++]=b;I[q++]=b;I[q++]=c;I[q++]=d}
+ const vao=gl.createVertexArray(),buf=gl.createBuffer(),ib=gl.createBuffer();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,V,gl.STATIC_DRAW);
+ gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,40,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,40,12);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,4,gl.FLOAT,false,40,24);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,I,gl.STATIC_DRAW);gl.bindVertexArray(null);
+ TERR={vao,buf,ib,n:I.length,V};
+ // 물 셰이더용 높이 그림
+ const H16=new Float32Array(N);for(let k=0;k<N;k++)H16[k]=APT[k]>=0?Math.max(HM[k],2):HM[k];
+ HTEX=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.texImage2D(gl.TEXTURE_2D,0,gl.R16F,TNV,TNV,0,gl.RED,gl.FLOAT,H16);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+}
+
+/* ═══════════════ 공항 ═══════════════ */
+const C_ASPH=[.21,.22,.24],C_ASPH2=[.27,.28,.29],C_CONC=[.56,.56,.54],C_MARK=[.93,.93,.9],C_YEL=[.92,.74,.18];
+function aptGeo(a,ai){const g=new Geo(),y0=a.elev;const rnd=mulberry(ai*101+5);
+ const W=(s,t)=>{const p=aptWorld(a,s,t);return p}, side=a.side;
+ const rect=(s0,s1,t0,t1,y,col,gw)=>{const p0=W(s0,t0),p1=W(s1,t0),p2=W(s1,t1),p3=W(s0,t1);g.flat([p0[0],y,p0[1]],[p3[0],y,p3[1]],[p2[0],y,p2[1]],[p1[0],y,p1[1]],col,gw)};
+ const boxA=(s,t,y,ls,lt,h,col,top,g2)=>{const p=W(s,t);(g2||g).bld(p[0],y,p[1],lt,h,ls,col,top,0,Math.atan2(a.dir[0],a.dir[2]))};
+ const lights=[];
+ for(const r of a.rws){const hl=r.len/2,hw=r.w/2,t=r.off;
+  rect(-hl-60,hl+60,t-hw-7,t+hw+7,y0+.12,C_ASPH2);rect(-hl,hl,t-hw,t+hw,y0+.2,C_ASPH);
+  for(let s=-hl+420;s<hl-420;s+=60)rect(s,s+34,t-.45,t+.45,y0+.26,C_MARK);
+  rect(-hl,hl,t-hw+.6,t-hw+1.5,y0+.26,C_MARK);rect(-hl,hl,t+hw-1.5,t+hw-.6,y0+.26,C_MARK);
+  for(const e of[-1,1]){const th=e*hl,dn=-e;
+   // 문지방 줄무늬
+   const nb=r.w>=60?16:r.w>=45?12:8,bw=1.8,gap=(r.w-6-nb*bw)/(nb-1);for(let k=0;k<nb;k++){const tt=t-hw+3+k*(bw+gap);if(Math.abs(tt-t)<2)continue;rect(th+dn*6,th+dn*36,tt,tt+bw,y0+.26,C_MARK)}
+   rect(th+dn*1,th+dn*4,t-hw,t+hw,y0+.26,C_MARK);
+   // 활주로 번호
+   const num=e<0?r.num:r.num2,lr=a.rws.length>1?(r.off===0?(e<0?'R':'L'):(e<0?'L':'R')):'';
+   drawRwNum(rect,th+dn*48,t,dn,String(num).padStart(2,'0')+lr,y0+.27);
+   // 착지 지점 표시
+   rect(th+dn*400,th+dn*460,t-hw+6,t-hw+16,y0+.26,C_MARK);rect(th+dn*400,th+dn*460,t+hw-16,t+hw-6,y0+.26,C_MARK);
+   for(const sd of[150,300,600,750,900])if(sd<hl*.9){rect(th+dn*sd,th+dn*(sd+22),t-hw+8,t-hw+11,y0+.26,C_MARK);rect(th+dn*sd,th+dn*(sd+22),t+hw-11,t+hw-8,y0+.26,C_MARK)}
+   // 진입등 (활주로 바깥)
+   for(let s=30;s<=(a.small?300:900);s+=30){const ss=th-dn*s;lights.push([ss,t,.4,[1,.95,.8]]);if(s%150===0)for(const k of[-12,-6,6,12])lights.push([ss,t+k,.4,[1,.95,.8]]);if(s===300)for(let k=-24;k<=24;k+=4)lights.push([ss,t+k,.4,[1,.95,.8]])}
+   for(let k=-hw;k<=hw;k+=3)lights.push([th-dn*1.5,t+k,.3,e<0?[.3,1,.4]:[.3,1,.4]]);
+   // PAPI (진입각 표시등)
+   a.papi=a.papi||[];const ps=th+dn*400;const pt=t-hw-15;const pp=[];for(let k=0;k<4;k++){const w=W(ps,pt-k*9);pp.push([w[0],y0+1,w[1]])}a.papi.push({pos:pp,dir:dn,rw:r,end:e});
+   for(const p of pp)g.box(p,[2,1.2,2],[.25,.25,.27]);
+  }
+  for(let s=-hl;s<=hl;s+=60)for(const k of[-1,1])lights.push([s,t+k*(hw+2),.35,[1,1,.92]]);
+ }
+ // 유도로·계류장
+ const mainR=a.rws.find(r=>r.off===0),hl=mainR.len/2,tw=side*(a.small?90:190),apT=side*(a.small?150:340);
+ rect(-hl+40,hl-40,tw-11.5,tw+11.5,y0+.16,C_ASPH2);for(let s=-hl+40;s<hl-40;s+=3)rect(s,s+1.6,tw-.15,tw+.15,y0+.22,C_YEL);
+ const nCon=a.small?2:Math.round(mainR.len/700);for(let k=0;k<=nCon;k++){const s=lerp(-hl+60,hl-60,k/nCon);rect(s-11,s+11,Math.min(0,tw)+(side>0?mainR.w/2:-0),Math.max(0,tw)-(side<0?mainR.w/2:0),y0+.15,C_ASPH2)}
+ const apL=a.small?220:a.big?mainR.len*.6:mainR.len*.45,apD=a.small?90:a.big?260:190;
+ const t0=apT,t1=apT+side*apD;rect(-apL/2,apL/2,Math.min(t0,t1),Math.max(t0,t1),y0+.14,C_CONC);rect(-apL/2,apL/2,Math.min(tw+side*11,t0),Math.max(tw+side*11,t0),y0+.15,C_ASPH2);
+ // 터미널
+ const termT=t1+side*(a.small?18:40),tD=a.small?22:a.big?70:45,tH=a.small?8:a.big?22:15;
+ boxA(0,termT+side*tD/2,y0,apL*.85,tD,tH,[.82,.83,.84],[.62,.64,.66]);
+ boxA(0,termT+side*2,y0+tH*.25,apL*.86,3,tH*.55,[.2,.35,.48],null);
+ const stands=[];const nS=a.small?2:a.big?9:5;for(let k=0;k<nS;k++){const s=lerp(-apL*.38,apL*.38,nS>1?k/(nS-1):.5);stands.push({s,t:t1-side*(a.small?40:60)});
+  if(!a.small){boxA(s,termT-side*14,y0+4,4,28,3.5,[.78,.79,.8],[.6,.6,.62])}}
+ a.stands=stands;
+ // 관제탑
+ const tws=apL/2+(a.small?40:120),twt=termT+side*20,tH2=a.small?22:a.big?75:45;{const p=W(tws,twt);g.vcyl(p[0],y0,p[1],a.small?3:6,tH2,10,[.85,.85,.84],undefined);
+  g.vcyl(p[0],y0+tH2,p[1],a.small?5:10,a.small?5:8,12,[.18,.3,.4],a.small?5.5:11);g.vcyl(p[0],y0+tH2+(a.small?5:8),p[1],a.small?5.5:11,1.5,12,[.75,.75,.74],a.small?2:4);a.tower=[p[0],y0+tH2+4,p[1]]}
+ // 격납고
+ if(!a.small)for(let k=0;k<(a.base?5:3);k++){const s=-apL/2-120-k*95,p=W(s,t1-side*40);g.bld(p[0],y0,p[1],70,a.base?14:20,60,[.7,.72,.7],[.55,.58,.56],0,Math.atan2(a.dir[0],a.dir[2]))}
+ // 기지: 격납고(쉘터)
+ if(a.base)for(let k=0;k<6;k++){const p=W(hl-200-k*80,-side*160);g.bld(p[0],y0,p[1],30,9,26,[.42,.47,.4],[.36,.42,.35],0,Math.atan2(a.dir[0],a.dir[2]))}
+ // 불빛 덩어리
+ for(const[s,t,h,c]of lights){const p=W(s,t);g.box([p[0],y0+h/2+.2,p[1]],[.6,h,.6],c,1)}
+ return g}
+// 7칸 숫자 (바닥에 그림)
+const SEG7={'0':'abcdef','1':'bc','2':'abged','3':'abgcd','4':'fgbc','5':'afgcd','6':'afgedc','7':'abc','8':'abcdefg','9':'abcfgd','L':'fed','R':'efabgc','C':'afed'};
+function drawRwNum(rect,s0,t,dn,str,y){const H=18,Wd=9,th=1.6,n=str.length,sp=Wd+5;
+ for(let i=0;i<n;i++){const segs=SEG7[str[i]]||'';const tc=t+(i-(n-1)/2)*sp*dn;
+  const S=(u0,u1,v0,v1)=>{const a=s0+dn*u0,b=s0+dn*u1;const c=tc+dn*v0,d=tc+dn*v1;rect(Math.min(a,b),Math.max(a,b),Math.min(c,d),Math.max(c,d),y,C_MARK)};
+  const w=Wd/2;
+  if(segs.includes('a'))S(H-th,H,-w,w);if(segs.includes('g'))S(H/2-th/2,H/2+th/2,-w,w);if(segs.includes('d'))S(0,th,-w,w);
+  if(segs.includes('f'))S(H/2,H,-w,-w+th);if(segs.includes('b'))S(H/2,H,w-th,w);if(segs.includes('e'))S(0,H/2,-w,-w+th);if(segs.includes('c'))S(0,H/2,w-th,w)}}
+
+/* ═══════════════ 도시 ═══════════════ */
+function cityGeo(c,ci){const g=new Geo(),r=mulberry(ci*7919+3);
+ const ok=(x,z)=>{const h=hAt(x,z);if(h<1.5)return false;if(aptAt(x,z))return false;for(const a of AIRPORTS){const[s,t]=aptLocal(a,x,z);if(Math.abs(s)<a.maxLen/2+1400&&Math.abs(t)<900)return false}
+  for(const rv of RIVERS)if(riverDist(x,z,rv)<rv.w+40)return false;const d=hAt(x+30,z)-hAt(x-30,z),e=hAt(x,z+30)-hAt(x,z-30);return Math.abs(d)+Math.abs(e)<14};
+ let made=0,tries=0;const cols=[[.86,.85,.82],[.8,.8,.78],[.9,.88,.84],[.7,.72,.74],[.55,.62,.7],[.78,.74,.68]];
+ while(made<c.c&&tries<c.c*6){tries++;const a=r()*Math.PI*2,d=Math.sqrt(-2*Math.log(1-r()*.98))*c.r*.42;const x=c.x+Math.cos(a)*d,z=c.z+Math.sin(a)*d;if(!ok(x,z))continue;
+  const y=hAt(x,z)-1,core=1-clamp(d/c.r,0,1),ty=r();
+  if(ty<.42){const n=2+Math.floor(r()*5),ry=Math.floor(r()*4)*Math.PI/4+(r()-.5)*.2,hh=(36+r()*42)*(.7+c.h*.4),col=r()<.7?[.9,.89,.86]:[.86,.82,.74];
+   for(let k=0;k<n;k++){const ox=Math.cos(ry)*0+Math.sin(ry)*(k-n/2)*42,oz=Math.cos(ry)*(k-n/2)*42;const bx=x+ox,bz=z+oz;if(!ok(bx,bz))continue;g.bld(bx,hAt(bx,bz)-1,bz,62,hh+r()*8,15,col,[.5,.52,.5],.7,ry);made++}}
+  else if(ty<.62+core*.25){const hh=(25+r()*60+core*core*160*c.h)*(.6+c.h*.5),w=18+r()*22,col=cols[Math.floor(r()*cols.length)];g.bld(x,y,z,w,hh,w*(.8+r()*.5),col,mulc(col,.7),.7,r()*Math.PI);made++}
+  else{const hh=6+r()*14,w=12+r()*16;g.bld(x,y,z,w,hh,w*(.7+r()*.6),[.76+r()*.1,.72+r()*.1,.66+r()*.1],r()<.5?[.42,.3,.25]:[.45,.47,.48],.5,r()*Math.PI);made++}}
+ return g}
+function landmarkGeo(){const g=new Geo();
+ // 롯데월드타워 (555 m)
+ {const x=wx(127.1025),z=wz(37.5126),y=hAt(x,z)-1,P=[];const N=4,levels=16;for(let i=0;i<=levels;i++){const t=i/levels,h=t*520,w=lerp(36,7,Math.pow(t,1.6)),row=[];for(let j=0;j<=N*2;j++){const a=j/(N*2)*Math.PI*2+Math.PI/4;row.push([x+Math.cos(a)*w,y+h,z+Math.sin(a)*w])}P.push(row)}
+  g.surf(P,[.72,.78,.82],.6,(i)=>[x,y+i/levels*520,z],true);g.vcyl(x,y+520,z,4,35,6,[.85,.86,.88],.3)}
+ // 남산 N서울타워
+ {const x=wx(126.988),z=wz(37.5512),y=hAt(x,z)-2;g.vcyl(x,y,z,6,150,10,[.9,.9,.88],4);g.vcyl(x,y+120,z,14,14,14,[.85,.85,.84],14,.6);g.vcyl(x,y+134,z,14,6,14,[.3,.4,.5],12,.8);g.vcyl(x,y+140,z,2.5,70,8,[.85,.25,.2],1)}
+ // 63빌딩
+ {const x=wx(126.9402),z=wz(37.5198),y=hAt(x,z)-1;g.bld(x,y,z,50,230,28,[.83,.66,.3],[.6,.5,.3],.8,.6);g.bld(x,y+230,z,30,18,18,[.83,.66,.3],[.6,.5,.3],.8,.6)}
+ // 해운대 엘시티
+ {const x=wx(129.168),z=wz(35.161),y=hAt(x,z)-1;for(const[o,h]of[[0,411],[70,339],[-70,339]])g.bld(x+o*.6,y,z+o*.8,40,h,40,[.62,.72,.8],[.5,.55,.6],.7,.3)}
+ // 한강 다리
+ const han=RIVERS[0];for(let i=2;i<8;i++){const a=han.p[i],b=han.p[i+1];for(const f of[.3,.75]){const x=lerp(a[0],b[0],f),z=lerp(a[1],b[1],f),d=norm3([b[0]-a[0],0,b[1]-a[1]]),y=hAt(x,z)+6;
+  g.bld(x,y,z,22,3,han.w*2.4,[.68,.68,.66],[.4,.4,.42],0,Math.atan2(d[0],d[2]))}}
+ // 독도
+ for(const[ox,oz,rr,h]of[[0,0,110,85],[160,-40,80,50]])g.ell([DOKDO.x+ox,0,DOKDO.z+oz],[rr,h,rr*.8],[.45,.42,.38],12,7,0,p=>p[1]>h*.6?[.38,.46,.28]:[.45,.42,.38]);
+ return g}
+// 강 (물 띠)
+function riverGeo(){const g=new Geo();const col=[.22,.38,.44];
+ for(const rv of RIVERS){for(let i=0;i<rv.p.length-1;i++){const a=rv.p[i],b=rv.p[i+1],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(L/90);
+  const d=[(b[0]-a[0])/L,(b[1]-a[1])/L],pn=[-d[1],d[0]];
+  for(let k=0;k<n;k++){const p=[lerp(a[0],b[0],k/n),lerp(a[1],b[1],k/n)],q=[lerp(a[0],b[0],(k+1)/n),lerp(a[1],b[1],(k+1)/n)];
+   if(nearApt(p[0],p[1],350)||nearApt(q[0],q[1],350))continue;
+   const w=rv.w*(.8+.4*vnoise(p[0]/500,p[1]/500));const yp=Math.max(hAt(p[0],p[1]),.3)+.6,yq=Math.max(hAt(q[0],q[1]),.3)+.6;
+   g.flat([p[0]-pn[0]*w,yp,p[1]-pn[1]*w],[p[0]+pn[0]*w,yp,p[1]+pn[1]*w],[q[0]+pn[0]*w,yq,q[1]+pn[1]*w],[q[0]-pn[0]*w,yq,q[1]-pn[1]*w],col);
+   g.flat([p[0]-pn[0]*w,yp,p[1]-pn[1]*w],[q[0]-pn[0]*w,yq,q[1]-pn[1]*w],[q[0]+pn[0]*w,yq,q[1]+pn[1]*w],[p[0]+pn[0]*w,yp,p[1]+pn[1]*w],col)}}}
+ return g}
+// 공항 둘레 나무
+function treeGeo(a,ai){const g=new Geo(),r=mulberry(ai*31+17);let n=0;
+ for(let k=0;k<4000&&n<(a.small?700:1300);k++){const ang=r()*Math.PI*2,d=900+Math.sqrt(r())*3500,x=a.x+Math.cos(ang)*d,z=a.z+Math.sin(ang)*d;
+  const h=hAt(x,z);if(h<3||aptAt(x,z))continue;const[s,t]=aptLocal(a,x,z);if(Math.abs(s)<a.maxLen/2+1300&&Math.abs(t)<120)continue;
+  let city=false;for(const c of CITIES)if(Math.hypot(x-c.x,z-c.z)<c.r*.8){city=true;break}if(city)continue;
+  if(vnoise(x/300,z/300)<-.15&&h<60)continue;
+  const s0=7+r()*9;if(r()<.55)g.cyl([x,h-1,z],[x,h+s0*1.9,z],s0*.55,0,[.17+r()*.05,.29+r()*.06,.15],6,true);
+  else g.ell([x,h+s0*.9,z],[s0*.7,s0*.95,s0*.7],[.5+r()*.15,.32+r()*.14,.13],6,4);n++}
+ return g}
+// 구름
+let CLOUD=null;
+function buildClouds(amount,seed){if(CLOUD){freeMesh(CLOUD);CLOUD=null}CLOUD_LIST.length=0;if(!amount)return;const g=new Geo(),r=mulberry(seed||11);
+ const N=amount===2?95:35;for(let k=0;k<N;k++){const x=WX0+r()*WSZ,z=WZ0+r()*WSZ,base=900+r()*700,sz=600+r()*1100,np=7+Math.floor(r()*7);
+  for(let i=0;i<np;i++){const ox=(r()-.5)*sz*1.6,oz=(r()-.5)*sz,rr=sz*(.25+r()*.3),oy=rr*(.2+r()*.5);const c=[x+ox,base+oy,z+oz],rad=[rr*1.2,rr*.72,rr];
+   CLOUD_LIST.push({c,r:rad});g.ell(c,rad,WHITE,10,6,0,p=>{const t=clamp((p[1]-base)/(rr*1.2),0,1);return mixc([.76,.79,.85],[1,1,1],t)})}}
+ CLOUD=upload(g)}
+const CLOUD_LIST=[];
+// 배
+function shipGeo(){const g=new Geo(),r=mulberry(99);SHIPS.length=0;
+ for(let k=0;k<400&&SHIPS.length<34;k++){const x=WX0+r()*WSZ,z=WZ0+r()*WSZ;if(hAt(x,z)>-8||landDist(x,z)>-1500)continue;const ry=r()*Math.PI,L=120+r()*180,W=L*.15;
+  const c=Math.cos(ry),s=Math.sin(ry);g.bld(x,0,z,W,7,L,[.25,.27,.32],[.55,.2,.18],0,ry);
+  const hx=x+s*(-L*.38),hz=z+c*(-L*.38);g.bld(hx,7,hz,W*.8,14,L*.1,[.9,.9,.88],[.6,.6,.6],0,ry);
+  for(let i=0;i<5;i++){const t=-.2+i*.13,cx=x+s*L*t,cz=z+c*L*t;g.bld(cx,7,cz,W*.85,6+r()*5,L*.1,[[.7,.25,.2],[.2,.4,.6],[.75,.6,.2],[.3,.5,.35]][Math.floor(r()*4)],null,0,ry)}
+  SHIPS.push([x,z,ry,L])}
+ return g}
+const SHIPS=[];
+
+/* ═══════════════ 세상 묶음 ═══════════════ */
+const WORLD={static:[],apt:[],ready:false};
+function buildWorld(){const T0=performance.now(),TM=n=>console.log('[시간] '+n+' '+Math.round(performance.now()-T0)+'ms');
+ buildHeights();TM('높이');buildTerrain();TM('땅');
+ AIRPORTS.forEach((a,i)=>{const g=aptGeo(a,i),t=treeGeo(a,i);WORLD.apt.push({a,mesh:upload(g),trees:upload(t)})});
+ TM('공항');CITIES.forEach((c,i)=>{const g=cityGeo(c,i);if(g.d.length)WORLD.static.push({x:c.x,z:c.z,r:c.r*2,mesh:upload(g),city:1})});
+ WORLD.static.push({x:0,z:0,r:1e9,mesh:upload(landmarkGeo())});
+ WORLD.static.push({x:0,z:0,r:1e9,mesh:upload(riverGeo()),river:1});
+ WORLD.static.push({x:0,z:0,r:1e9,mesh:upload(shipGeo())});TM('끝');
+ WORLD.ready=true}
+
+
+
+/* ═══════════════ 게임 상태 ═══════════════ */
+const SAVE_KEY='airplane3d_v1';
+const G={mode:'menu',screen:'title',t:0,time:1,paused:false,tod:'day',weather:1,night:0,
+ plane:null,airline:null,from:null,to:null,start:'rw',mission:'fly',enemyN:6,kills:0,spawned:0,missionDone:false,
+ settings:{assist:1,sound:1,shadow:1},log:[],toasts:[],warn:[],flightT:0,dist:0,result:null,crash:null};
+try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s){G.log=s.log||[];Object.assign(G.settings,s.settings||{})}}catch(e){}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({log:G.log.slice(-300),settings:G.settings}))}catch(e){}}
+let PL=null,SHOW=null;
+const NPC=[],ENEMY=[],BUL=[],MIS=[],PARTS=[],DECOYS=[],PARKED=[];
+function toast(t,ms){G.toasts.push({t,until:performance.now()+(ms||2600)});if(G.toasts.length>4)G.toasts.shift()}
+
+/* ═══════════════ 비행기 만들기 ═══════════════ */
+function makeCraft(P,A,seed){const m=getModel(P,A,seed||0);return{P,A,m,pf:perfOf(P),pos:[0,0,0],vel:[0,0,0],F:[1,0,0],U:[0,1,0],R:[0,0,1],
+ thr:0,thrA:0,rev:0,gear:1,gearPos:1,brake:0,onGround:true,nose:1,spin:0,hp:100,ap:{on:false},airT:0,gndT:0,touched:false,td:null,crashed:false,stopT:0,
+ inAir:false,maxAGL:0,bank:0,spd:0}}
+function setOrient(c,F,U){c.F=norm3(F);c.R=norm3(cross3(c.F,U));c.U=cross3(c.R,c.F)}
+function rotCraft(c,ax,an){if(Math.abs(an)<1e-9)return;c.F=rotAx(c.F,ax,an);c.U=rotAx(c.U,ax,an);c.R=rotAx(c.R,ax,an);setOrient(c,c.F,c.U)}
+function wpos(c,q){return[c.pos[0]+c.F[0]*q[0]+c.U[0]*q[1]+c.R[0]*q[2],c.pos[1]+c.F[1]*q[0]+c.U[1]*q[1]+c.R[1]*q[2],c.pos[2]+c.F[2]*q[0]+c.U[2]*q[1]+c.R[2]*q[2]]}
+function wheelOffset(c){let mn=1e9;for(const q of c.m.contacts.main.concat(c.m.contacts.nose)){const y=c.F[1]*q[0]+c.U[1]*q[1]+c.R[1]*q[2];if(y<mn)mn=y}return mn}
+function placeOnGround(c,x,z,dir,elev){const o=orient(dir,0);setOrient(c,o.F,o.U);rotCraft(c,c.R,c.m.groundPitch||0);c.pos=[x,0,z];c.pos[1]=elev-wheelOffset(c);
+ c.vel=[0,0,0];c.onGround=true;c.gear=1;c.gearPos=1;c.thr=0;c.thrA=0;c.inAir=false;c.touched=false;c.td=null}
+function placeOnRunway(c,a,rw,end){const dir=end<0?a.dir:sc3(a.dir,-1),s=end*(rw.len/2-Math.max(40,c.m.L*.7)),p=aptWorld(a,s,rw.off);placeOnGround(c,p[0],p[1],dir,a.elev);c.rw={a,rw,end}}
+function pitchOf(c){return Math.asin(clamp(c.F[1],-1,1))}
+function bankOf(c){return Math.atan2(-c.R[1],c.U[1])}
+function hdgOf(F){let h=Math.atan2(F[0],-F[2])*R2D;return(h+360)%360}
+function aglOf(c){const g=groundAt(c.pos[0],c.pos[2]);return c.pos[1]+wheelOffset(c)-g.h}
+
+/* ═══════════════ 조종 입력 ═══════════════ */
+const KEY={};
+function inputs(){const k=KEY,t=TOUCH;let pitch=(k.ArrowDown?1:0)-(k.ArrowUp?1:0)+t.pitch,roll=(k.ArrowRight?1:0)-(k.ArrowLeft?1:0)+t.roll,yaw=(k.KeyD?1:0)-(k.KeyA?1:0)+t.yaw;
+ return{pitch:clamp(pitch,-1,1),roll:clamp(roll,-1,1),yaw:clamp(yaw,-1,1)}}
+const TOUCH={pitch:0,roll:0,yaw:0};
+
+/* ═══════════════ 비행 물리 ═══════════════ */
+function stepPlayer(c,dt,inp){
+ const pf=c.pf;if(c.crashed)return;
+ // 스로틀
+ if(KEY.KeyW){c.thr=Math.min(1,c.thr+.45*dt);c.rev=0}
+ if(KEY.KeyS){if(c.thr>0)c.thr=Math.max(0,c.thr-.45*dt);else if(c.onGround&&!pf.fighter)c.rev=Math.min(1,c.rev+.8*dt)}
+ if(c.rev>0&&(!c.onGround||KEY.KeyW))c.rev=Math.max(0,c.rev-1.5*dt);
+ const tgtThr=c.rev>0?-c.rev*.5:c.thr;c.thrA+=(tgtThr-c.thrA)*Math.min(1,dt*pf.spool*(tgtThr>c.thrA?1:1.4));
+ c.spin+=dt*(8+40*Math.max(c.thrA,0)+(c.thrA<0?20:0));
+ // 바퀴·코
+ const gt=c.m.fixedGear?1:c.gear;c.gearPos+=clamp(gt-c.gearPos,-dt/4.5,dt/4.5);
+ if(c.P.delta){const nt=(c.inAir&&aglOf(c)>300&&c.gearPos<.5)?0:1;c.nose+=clamp(nt-c.nose,-dt/3,dt/3)}
+ c.brake=(KEY.KeyB||(KEY.Space&&!c.P.mil))?1:0;
+ const v=len3(c.vel)||.001,vh=sc3(c.vel,1/v);
+ const vf=dot3(c.vel,c.F),vu=dot3(c.vel,c.U),vr=dot3(c.vel,c.R);
+ const alpha=v>2?Math.atan2(-vu,Math.max(vf,.5)):0,beta=v>2?Math.atan2(vr,Math.max(vf,.5)):0;
+ const q=(v/pf.vref)**2,eff=clamp(v/pf.vr,0,1.25);
+ const bank=bankOf(c),gamma=Math.asin(clamp(vh[1],-1,1));
+ c.alpha=alpha;c.bank=bank;
+ // 자동 조종
+ let ip=inp.pitch,ir=inp.roll,iy=inp.yaw;
+ if(c.ap.on){if(Math.abs(ip)>.1||(Math.abs(ir)>.1&&!c.ap.on)){}
+  if(Math.abs(ip)>.1){c.ap.alt+=ip*60*dt;ip=0}
+  if(Math.abs(ir)>.1){c.ap.hdg=(c.ap.hdg+ir*25*dt+360)%360;c.ap.nav=false;ir=0}
+  if(c.ap.nav&&G.to){const fx=G.to.faf;const b=Math.atan2(fx[0]-c.pos[0],-(fx[1]-c.pos[2]))*R2D;c.ap.hdg=(b+360)%360}
+  const he=wrapPI((c.ap.hdg-hdgOf(c.F))*D2R),tb=clamp(he*1.6,-.45,.45);ir=clamp((tb-bank)*2.2,-1,1);
+  const vsT=clamp((c.ap.alt-c.pos[1])*.08,-14,14),gT=Math.asin(clamp(vsT/Math.max(v,30),-.3,.3));ip=clamp((gT-gamma)*5,-.6,.6);
+  c.thr=clamp(c.thr+(c.ap.spd-v)*.03*dt,0,1)}
+ // 필요한 받음각 (높이를 지키는 받음각)
+ let cb=Math.cos(bank);cb=(cb<0?-1:1)*Math.max(Math.abs(cb),.4);
+ let need=q>.02?pf.aref*(Math.cos(gamma)/cb)/q:pf.amax;need=clamp(need,-pf.amax*.6,pf.amax*.95);
+ let wz,wx,wy;
+ if(c.onGround){const auth=sstep(pf.vr*.7,pf.vr*.95,v);wz=ip*pf.pr*.55*auth-(ip<=0?.06+.2*(1-auth):0);wx=0;wy=0}
+ else{const gH=G.settings.assist&&Math.abs(gamma)<1.3*D2R&&Math.abs(bank)<35*D2R&&!c.ap.on?-gamma*1.5:0;
+  wz=ip*pf.pr*Math.min(eff*eff,1.2)+(1-Math.abs(ip))*(3*(need-alpha)+gH)*Math.min(eff,1);
+  if(alpha>pf.amax&&wz>0)wz=Math.min(wz,(pf.amax-alpha)*3);
+  const BL=60*D2R,prot=G.settings.assist&&!pf.fighter;if(prot&&Math.abs(bank)>BL&&ir*bank>0)ir=0;
+  wx=ir*pf.rr*Math.min(eff,1.1);if(Math.abs(ir)<.05&&G.settings.assist&&Math.abs(bank)<65*D2R&&!c.ap.on)wx+=-bank*1.3*Math.min(eff,1);
+  if(prot&&Math.abs(bank)>BL)wx+=-(bank-Math.sign(bank)*BL)*3;
+  wy=-iy*pf.yr*Math.min(eff,1)-2.4*beta*Math.min(eff,1)}
+ // 회전
+ const w=add3(add3(sc3(c.R,wz),sc3(c.F,wx)),sc3(c.U,wy)),wl=len3(w);if(wl>1e-7)rotCraft(c,sc3(w,1/wl),wl*dt);
+ // 힘
+ const as=pf.amax*1.15;let clf=Math.abs(alpha)<as?alpha/pf.aref:Math.sign(alpha)*(as/pf.aref)*Math.max(.35,1-(Math.abs(alpha)-as)/(12*D2R));
+ const lift=G0*q*clf;let Ld=sub3(c.U,sc3(vh,dot3(c.U,vh)));Ld=len3(Ld)>1e-6?norm3(Ld):c.U;
+ const thrust=c.thrA>=0?pf.acc*c.thrA*(1-.3*v/pf.vmax):pf.acc*c.thrA*.9;
+ const drag=G0*q*pf.cd*(1+c.gearPos*.55+(c.onGround?0:0))+Math.abs(lift*Math.sin(alpha))*.55;
+ let acc=[0,-G0,0];acc=madd3(acc,c.F,thrust);if(v>1){acc=madd3(acc,Ld,lift);acc=madd3(acc,vh,-drag)}
+ acc=madd3(acc,c.R,-vr*1.6*Math.min(eff,1));
+ c.vel=madd3(c.vel,acc,dt);
+ // 땅 위에서
+ if(c.onGround&&c.gearPos>.95){let fw=[c.F[0],0,c.F[2]];fw=norm3(fw);const rt=norm3(cross3(fw,[0,1,0]));
+  const vlat=dot3(c.vel,rt);c.vel=madd3(c.vel,rt,-vlat*Math.min(1,dt*12));
+  const vff=dot3(c.vel,fw),gd=groundAt(c.pos[0],c.pos[2]);let dec=(gd.rw?.015:.08)*G0+c.brake*.45*G0;
+  if(c.touched&&c.thr<.05&&c.rev===0&&v>3)dec=Math.max(dec,.2*G0);
+  if(Math.abs(vff)>.01)c.vel=madd3(c.vel,fw,-Math.sign(vff)*Math.min(Math.abs(vff),dec*dt));
+  const st=clamp(ir+iy,-1,1),yr=st*.5*clamp(1-v/70,.12,1)*Math.min(1,v/1.5);rotCraft(c,[0,1,0],-yr*dt);
+  const bk=bankOf(c);if(Math.abs(bk)>1e-4)rotCraft(c,c.F,-bk*Math.min(1,dt*10));
+  const pt=pitchOf(c),gp=c.m.groundPitch||0;if(pt<gp)rotCraft(c,c.R,gp-pt)}
+ c.pos=madd3(c.pos,c.vel,dt);
+ // 땅에 닿기
+ contactStep(c,dt);
+ if(!c.onGround){c.airT+=dt;c.gndT=0}else{c.gndT+=dt}
+ const agl=c.pos[1]-groundAt(c.pos[0],c.pos[2]).h;
+ if(!c.inAir&&!c.onGround&&agl>c.m.gearH+6){c.inAir=true;c.takeoffT=G.flightT;if(G.flightT>2){toast('이륙했습니다');say('positive rate')}}
+ if(c.inAir&&!c.onGround)c.maxAGL=Math.max(c.maxAGL,agl);
+}
+function contactStep(c,dt){
+ const gearDown=c.m.fixedGear||c.gearPos>.95,C=c.m.contacts,list=[];
+ if(gearDown){for(const q of C.main)list.push([q,'w']);for(const q of C.nose)list.push([q,'w'])}
+ for(const q of C.belly)list.push([q,'b']);for(const q of C.tail)list.push([q,'t']);for(const q of C.tips)list.push([q,'x']);
+ let mp=-1e9,mt=null,mw=null,gw=null;
+ for(const[q,t]of list){const w=wpos(c,q),g=groundAt(w[0],w[2]),pen=g.h-w[1];if(pen>mp){mp=pen;mt=t;mw=w;gw=g}}
+ if(mp>0){c.pos[1]+=mp;const vy=c.vel[1];const v=len3(c.vel);
+  if(vy<0)c.vel[1]=0;
+  const wasAir=!c.onGround;c.onGround=true;
+  if(gw.water){if(c.inAir&&v<55&&-vy<3.5&&Math.abs(bankOf(c))<.25){endFlight('ditch')}else crashCraft(c,'바다에 떨어졌습니다');return}
+  if(mt==='x'&&v>12){crashCraft(c,'날개 끝이 땅에 부딪혔습니다');return}
+  if(!gw.apt&&v>36){crashCraft(c,c.inAir?'땅에 부딪혔습니다':'활주로를 벗어났습니다');return}
+  if(wasAir&&c.inAir&&c.airT>1){
+   if(-vy>7.5){crashCraft(c,'너무 세게 내려앉았습니다');return}
+   if(mt==='b'&&!gearDown){if(-vy>4||v>115){crashCraft(c,'바퀴 없이 내려앉다 부서졌습니다');return}toast('동체 착륙');c.belly=true}
+   if(!c.touched||G.flightT-c.td.t>8){const[s,t]=gw.apt?aptLocal(gw.apt,c.pos[0],c.pos[2]):[0,0];
+    c.td={vs:-vy,t:G.flightT,apt:gw.apt,rw:gw.rw,off:gw.rw?Math.abs(t-gw.rw.off):99,spd:v,pitch:pitchOf(c)*R2D};c.touched=true;
+    sfx('touch',clamp(-vy/4,.3,1.2));for(const q of C.main){const w=wpos(c,q);for(let i=0;i<10;i++)part([w[0],w[1]+.3,w[2]],[(Math.random()-.5)*4,Math.random()*2,(Math.random()-.5)*4],1.6+Math.random(),1.4,3,[.88,.88,.86],.55,0,1.2,0)}}
+   c.airT=0}
+  if(mt==='t'&&v>20&&Math.random()<dt*8){const w=mw;part(w,[(Math.random()-.5)*5,Math.random()*3,(Math.random()-.5)*5],.4,.4,0,[1,.7,.3],1,1,2,4);if(!c.tailWarn){c.tailWarn=1;toast('꼬리가 땅에 닿았습니다')}}
+  if((c.belly||!gearDown)&&v>5){c.vel=sc3(c.vel,Math.max(0,1-dt*.45));if(Math.random()<dt*30){const w=mw;part(w,[(Math.random()-.5)*6,Math.random()*4,(Math.random()-.5)*6],.5,.5,0,[1,.7,.3],1,1,1,6)}}
+ }else if(mp<-.25)c.onGround=false;
+}
+function crashCraft(c,why){if(c.crashed)return;c.crashed=true;c.crashWhy=why;c.crashT=performance.now();
+ explode(c.pos,Math.max(c.m.L,c.m.span)*.6,c.onGround||true);c.vel=[0,0,0];c.thr=0;c.thrA=0;
+ if(c===PL){sfx('boom',1.2);G.crash={why,at:performance.now()};setTimeout(()=>{if(PL===c&&G.mode==='fly')showCrash()},2600)}}
+function explode(p,s,ground){sfx('boom',Math.min(1.2,s/30));
+ for(let i=0;i<46;i++){const d=norm3([Math.random()-.5,Math.random()*.8,Math.random()-.5]);part(madd3(p,d,s*.2),sc3(d,s*(1+Math.random()*2)),.8+Math.random()*.8,s*.5,s*.8,[1,.62+Math.random()*.2,.22],1,1,2.5,-2)}
+ for(let i=0;i<30;i++){const d=norm3([Math.random()-.5,Math.random()*.6+.2,Math.random()-.5]);part(madd3(p,d,s*.3),sc3(d,s*(.5+Math.random())),5+Math.random()*5,s*.6,s*.5,[.25,.24,.23],.7,0,1.2,-1.5)}
+ for(let i=0;i<26;i++){const d=norm3([Math.random()-.5,Math.random()*.9+.1,Math.random()-.5]);part(p.slice(),sc3(d,s*(1.5+Math.random()*2.5)),2+Math.random()*2,s*.08,0,[.12,.11,.1],1,0,.3,9.8)}
+ FIRES.push({p:p.slice(),t:0,life:ground?40:4,s})}
+const FIRES=[];
+
+/* ═══════════════ 파티클 ═══════════════ */
+function part(p,v,life,size,grow,col,a,add,drag,grav){if(PARTS.length>7000)PARTS.splice(0,500);PARTS.push({p,v,t:0,life,size,grow,c:col,a,add,drag,grav})}
+function stepParts(dt){for(let i=PARTS.length-1;i>=0;i--){const q=PARTS[i];q.t+=dt;if(q.t>q.life){PARTS.splice(i,1);continue}
+ const k=Math.exp(-q.drag*dt);q.v[0]*=k;q.v[1]=q.v[1]*k-q.grav*dt;q.v[2]*=k;q.p[0]+=q.v[0]*dt;q.p[1]+=q.v[1]*dt;q.p[2]+=q.v[2]*dt;q.size+=q.grow*dt}
+ for(let i=FIRES.length-1;i>=0;i--){const f=FIRES[i];f.t+=dt;if(f.t>f.life){FIRES.splice(i,1);continue}const k=1-f.t/f.life;
+  if(Math.random()<dt*25*k)part([f.p[0]+(Math.random()-.5)*f.s*.5,f.p[1]+2,f.p[2]+(Math.random()-.5)*f.s*.5],[(Math.random()-.5)*3,8+Math.random()*6,(Math.random()-.5)*3],5+Math.random()*4,f.s*.35,f.s*.5,[.2,.19,.18],.55*k,0,.4,-1.5);
+  if(Math.random()<dt*30*k)part([f.p[0]+(Math.random()-.5)*f.s*.4,f.p[1]+1,f.p[2]+(Math.random()-.5)*f.s*.4],[(Math.random()-.5)*2,5+Math.random()*4,(Math.random()-.5)*2],.7+Math.random()*.5,f.s*.2,f.s*.15,[1,.55,.18],.9*k,1,1,-2)}}
+function emitTrails(c,dt){if(c.crashed)return;const v=len3(c.vel);
+ if(c.pos[1]>2300&&v>120){c.ctr=(c.ctr||0)+dt;if(c.ctr>.05){c.ctr=0;for(const e of c.m.exh){const w=wpos(c,e);part(w,sc3(c.vel,.02),16,2.5+c.m.L*.03,3.2,[.97,.98,1],.32,0,.05,0)}}}
+ if(c.hp<40||c.burning){if(Math.random()<dt*25){const e=c.m.exh[0]||[0,0,0],w=wpos(c,e);part(w,sc3(c.vel,.3),3,c.m.L*.06,c.m.L*.08,c.hp<15?[.16,.15,.15]:[.45,.45,.45],.6,0,.6,-1);if(c.hp<20)part(w,sc3(c.vel,.5),.4,c.m.L*.05,0,[1,.6,.2],.9,1,1,0)}}}
+
+/* ═══════════════ 다른 비행기 (교통) ═══════════════ */
+const NPC_TYPES=()=>PLANES.filter(p=>!p.mil&&!p.beluga);
+function randNPCType(){const T=NPC_TYPES(),P=T[Math.floor(Math.random()*T.length)],F=fleetOf(P).filter(a=>a.id!=='af');return{P,A:F.length?F[Math.floor(Math.random()*F.length)]:AIRLINES[0]}}
+function spawnNPC(init){const{P,A}=randNPCType();const c=makeCraft(P,A,Math.floor(Math.random()*5));
+ const ok=AIRPORTS.filter(a=>a.maxLen>=c.pf.req);if(ok.length<2)return;let a=ok[Math.floor(Math.random()*ok.length)],b;do{b=ok[Math.floor(Math.random()*ok.length)]}while(b===a);
+ const f=init?.15+Math.random()*.6:.08,sx=lerp(a.x,b.x,f),sz=lerp(a.z,b.z,f);const alt=1300+Math.random()*1500;
+ c.pos=[sx,alt,sz];c.npcTo=b;c.spd=c.pf.vcru*(.85+Math.random()*.1);const o=orient(norm3([b.x-sx,0,b.z-sz]),0);setOrient(c,o.F,o.U);c.vel=sc3(c.F,c.spd);c.gear=0;c.gearPos=0;c.thrA=.7;c.alt=alt;
+ c.inAir=true;c.onGround=false;NPC.push(c)}
+function steerTo(c,tgt,rate,maxBank,dt){const d=norm3(sub3(tgt,c.pos));const ang=Math.acos(clamp(dot3(c.F,d),-1,1));if(ang>1e-4){const ax=norm3(cross3(c.F,d));const h0=hdgOf(c.F);
+  const F2=rotAx(c.F,ax,Math.min(ang,rate*dt));const dh=wrapPI((hdgOf(F2)-h0)*D2R)/dt;c.F=F2;const bt=clamp(Math.atan(dh*c.spd/G0),-maxBank,maxBank);c.bank=lerp(c.bank||0,bt,Math.min(1,dt*2.5))}
+ else c.bank=lerp(c.bank||0,0,Math.min(1,dt*2));const o=orient(c.F,c.bank);c.F=o.F;c.U=o.U;c.R=o.R;c.vel=sc3(c.F,c.spd);c.pos=madd3(c.pos,c.vel,dt);c.spin+=dt*40}
+function stepNPC(dt){for(let i=NPC.length-1;i>=0;i--){const c=NPC[i],b=c.npcTo,d=Math.hypot(b.x-c.pos[0],b.z-c.pos[2]);
+  const alt=d<9000?Math.max(b.elev+80,d*.11):c.alt;steerTo(c,[b.x,alt,b.z],.05,.4,dt);
+  if(d<2500||c.pos[1]<hAt(c.pos[0],c.pos[2])+40){NPC.splice(i,1);spawnNPC(false)}}}
+function buildParked(){PARKED.length=0;for(const a of AIRPORTS){if(!a.stands)continue;const types=a.base?PLANES.filter(p=>p.mil&&!p.fighter):PLANES.filter(p=>!p.mil&&p.pf_req!==1);
+ a.stands.forEach((st,k)=>{let P,A,tries=0;do{P=types[Math.floor(hash2(k*13,a.x|0)*types.length+tries)%types.length];tries++}while((CLS[P.cls].req>a.maxLen||(a.small&&P.cls!=='T'&&P.cls!=='S'))&&tries<60);
+  const fl=a.base?[AIRLINES.find(x=>x.id==='af')]:fleetOf(P).filter(x=>x.id!=='af');A=fl[Math.floor(hash2(k,7+(a.z|0))*fl.length)]||AIRLINES[0];
+  const c=makeCraft(P,A,k);const p=aptWorld(a,st.s,st.t),dir=sc3(a.rt,a.side);placeOnGround(c,p[0],p[1],sc3(dir,1),a.elev);
+  const back=sc3(c.F,-(c.m.L*.5));c.pos=add3(c.pos,[back[0],0,back[2]]);c.parked=a;PARKED.push(c)})}}
+
+/* ═══════════════ 전투 ═══════════════ */
+const ENEMY_P={id:'enemy',name:'적기',mil:1,cls:'M',eng:1,len:17,hgt:4.5,fighter:null};
+function spawnEnemies(n){if(!PL)return;for(let i=0;i<n;i++){const A={id:'enemy',body:'#4a525e',tail:'#9c2a22',stripe:'#9c2a22',text:'#111'};const c=makeCraft(ENEMY_P,A,0);
+  const h=hdgOf(PL.F)+(Math.random()-.5)*130,dist=6500+Math.random()*5000,d=[Math.sin(h*D2R),0,-Math.cos(h*D2R)];
+  let p=madd3(PL.pos,d,dist);p[1]=Math.max(PL.pos[1]+(Math.random()-.4)*700,hAt(p[0],p[2])+600);c.pos=p;c.spd=230+Math.random()*40;
+  const o=orient(norm3(sub3(PL.pos,p)),0);setOrient(c,o.F,o.U);c.hp=6;c.state='attack';c.fireCD=2+Math.random()*3;c.flares=2;c.gearPos=0;c.gear=0;c.inAir=true;c.onGround=false;c.burst=0;ENEMY.push(c)}
+ G.spawned+=n}
+function stepEnemies(dt){for(let i=ENEMY.length-1;i>=0;i--){const e=ENEMY[i];
+  if(e.dead){e.vel[1]-=G0*dt;e.pos=madd3(e.pos,e.vel,dt);rotCraft(e,e.F,dt*2.2);if(Math.random()<dt*40){part(e.pos.slice(),[0,0,0],4,9,9,[.2,.2,.2],.6,0,.5,-1);part(e.pos.slice(),[0,0,0],.5,7,0,[1,.6,.2],.9,1,1,0)}
+   if(e.pos[1]<groundAt(e.pos[0],e.pos[2]).h+2){explode([e.pos[0],groundAt(e.pos[0],e.pos[2]).h+2,e.pos[2]],12,true);ENEMY.splice(i,1)}continue}
+  if(!PL||PL.crashed){steerTo(e,madd3(e.pos,e.F,1000),.3,1.2,dt);continue}
+  const toP=sub3(PL.pos,e.pos),d=len3(toP),dP=sc3(toP,1/d);
+  const behind=dot3(e.F,dP)<-.2&&d<2000,aimed=dot3(PL.F,sc3(dP,-1))>.94;
+  if(e.state!=='evade'&&behind&&aimed&&Math.random()<dt*1.2){e.state='evade';e.evT=2.5+Math.random()*3;const s=Math.random()<.5?1:-1;e.evD=norm3(add3(rotAx(e.F,[0,1,0],s*(1.6+Math.random())),[0,(Math.random()-.5)*.8,0]))}
+  let tgt;if(e.state==='evade'){e.evT-=dt;tgt=madd3(e.pos,e.evD,2000);if(e.evT<0)e.state='attack'}else tgt=madd3(PL.pos,PL.vel,clamp(d/650,0,2.5));
+  const gh=hAt(e.pos[0],e.pos[2]);if(e.pos[1]<gh+400)tgt[1]=Math.max(tgt[1],e.pos[1]+600);
+  e.spd=lerp(e.spd,e.state==='evade'?290:d>3000?270:235,dt*.4);steerTo(e,tgt,e.state==='evade'?.55:.42,1.35,dt);
+  e.fireCD-=dt;if(e.state==='attack'&&d<1100&&dot3(e.F,dP)>.985&&e.fireCD<0){e.burst=.7;e.fireCD=3+Math.random()*3}
+  if(e.burst>0){e.burst-=dt;e.gunT=(e.gunT||0)-dt;if(e.gunT<0){e.gunT=.08;const lead=madd3(PL.pos,PL.vel,d/900),dir=norm3(add3(sub3(lead,e.pos),[(Math.random()-.5)*d*.04,(Math.random()-.5)*d*.04,(Math.random()-.5)*d*.04]));
+    BUL.push({p:madd3(e.pos,e.F,9),v:add3(e.vel,sc3(dir,900)),life:1.6,own:'en'});sfx('gunE',clamp(1-d/1500,.1,.6))}}
+  if(e.pos[1]<gh+15){explode(e.pos,12,true);ENEMY.splice(i,1)}}}
+let GUN_T=0,MIS_CD=0,LOCK={c:null,t:0};
+function stepCombat(dt){if(!PL||!PL.P.mil||PL.crashed)return;
+ // 조준 (가장 가까운 앞쪽 적)
+ let best=null,ba=30*D2R;for(const e of ENEMY){if(e.dead)continue;const d=sub3(e.pos,PL.pos),l=len3(d);if(l>8000)continue;const a=Math.acos(clamp(dot3(PL.F,sc3(d,1/l)),-1,1));if(a<ba){ba=a;best=e}}
+ if(best&&best===LOCK.c)LOCK.t+=dt;else{LOCK.c=best;LOCK.t=0}
+ PL.locked=LOCK.c&&LOCK.t>1.0;
+ // 기관포
+ GUN_T-=dt;if(KEY.Space&&GUN_T<0&&PL.inAir){GUN_T=.045;let dir=PL.F;if(best&&ba<5*D2R){const d=len3(sub3(best.pos,PL.pos)),lead=madd3(best.pos,best.vel,d/1050);dir=norm3(lerp3(PL.F,norm3(sub3(lead,PL.pos)),.75))}
+  dir=norm3(add3(dir,[(Math.random()-.5)*.006,(Math.random()-.5)*.006,(Math.random()-.5)*.006]));const mz=wpos(PL,[PL.m.L*.3,.3,.6]);
+  BUL.push({p:mz,v:add3(PL.vel,sc3(dir,1050)),life:1.5,own:'pl'});sfx('gun');part(mz,sc3(PL.vel,.9),.06,1.6,0,[1,.85,.4],1,1,0,0)}
+ MIS_CD-=dt;
+}
+function lerp3(a,b,t){return[lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)]}
+function fireMissile(){if(!PL||!PL.P.mil||PL.crashed||MIS_CD>0||!PL.inAir)return;MIS_CD=.9;const side=(G.misSide=-(G.misSide||1));
+ const p=wpos(PL,[0,-PL.m.R*.8,side*Math.min(PL.m.span*.25,4)]);MIS.push({p,v:madd3(PL.vel,PL.U,-8),tgt:PL.locked?LOCK.c:null,t:0,life:11,own:'pl',spd:len3(PL.vel)});sfx('missile')}
+function stepShots(dt){
+ for(let i=BUL.length-1;i>=0;i--){const b=BUL[i];b.life-=dt;const p0=b.p;b.p=madd3(b.p,b.v,dt);b.v[1]-=G0*dt*.5;
+  if(b.life<0){BUL.splice(i,1);continue}
+  const tg=b.own==='pl'?ENEMY:(PL&&!PL.crashed?[PL]:[]);let hit=null;
+  for(const e of tg){if(e.dead)continue;const r=e===PL?Math.max(PL.m.L,PL.m.span)*.38:10;if(segSphere(p0,b.p,e.pos,r)){hit=e;break}}
+  if(hit){BUL.splice(i,1);for(let k=0;k<5;k++)part(b.p.slice(),[(Math.random()-.5)*20,(Math.random()-.5)*20,(Math.random()-.5)*20],.25,1.2,0,[1,.8,.4],1,1,2,0);
+   if(hit===PL){PL.hp-=3;PL.hitT=performance.now();PL.lastHit=G.flightT;if(PL.hp<=0)playerDown()}else{hit.hp-=1;if(hit.hp<=0)killEnemy(hit)}continue}
+  const gh=groundAt(b.p[0],b.p[2]);if(b.p[1]<gh.h){BUL.splice(i,1);if(Math.random()<.3)part([b.p[0],gh.h+.5,b.p[2]],[0,6,0],.6,2,4,gh.water?[.9,.95,1]:[.55,.5,.42],.6,0,1,6)}}
+ for(let i=MIS.length-1;i>=0;i--){const m=MIS[i];m.t+=dt;m.life-=dt;m.spd=Math.min(m.spd+320*dt,800);let dir=norm3(m.v);
+  if(m.tgt&&m.t>.25){const tg=m.tgt;if(tg.dead&&!tg.decoy)m.tgt=null;else{const d=len3(sub3(tg.pos,m.p)),lead=madd3(tg.pos,tg.vel||[0,0,0],d/m.spd);const want=norm3(sub3(lead,m.p));
+    const ang=Math.acos(clamp(dot3(dir,want),-1,1));if(ang>1e-4){const ax=norm3(cross3(dir,want));dir=rotAx(dir,ax,Math.min(ang,1.3*dt))}
+    if(!tg.decoy&&tg.flares>0&&d<1700&&!m.fl){m.fl=1;if(Math.random()<.45){tg.flares--;const dc={pos:tg.pos.slice(),vel:sc3(tg.vel,.4),decoy:true,dead:false};DECOYS.push(dc);for(let k=0;k<6;k++)part(tg.pos.slice(),[(Math.random()-.5)*60,-10-Math.random()*20,(Math.random()-.5)*60],2.5,3,0,[1,.95,.75],1,1,.6,9);if(Math.random()<.7)m.tgt=dc}}
+    if(d<20){if(!tg.decoy)killEnemy(tg);explodeAir(m.p);MIS.splice(i,1);continue}}}
+  m.v=sc3(dir,m.spd);m.p=madd3(m.p,m.v,dt);
+  m.st=(m.st||0)+dt;if(m.st>.015){m.st=0;part(m.p.slice(),[0,0,0],2.6,1.8,3,[.9,.9,.9],.5,0,0,0);part(m.p.slice(),[0,0,0],.08,1.4,0,[1,.75,.35],1,1,0,0)}
+  if(m.life<0||m.p[1]<groundAt(m.p[0],m.p[2]).h){explodeAir(m.p);MIS.splice(i,1)}}
+ for(let i=DECOYS.length-1;i>=0;i--){const d=DECOYS[i];d.vel[1]-=G0*dt;d.pos=madd3(d.pos,d.vel,dt);d.t=(d.t||0)+dt;if(d.t>4)DECOYS.splice(i,1)}
+}
+function explodeAir(p){sfx('boom',.5);for(let i=0;i<24;i++){const d=norm3([Math.random()-.5,Math.random()-.5,Math.random()-.5]);part(madd3(p,d,2),sc3(d,20+Math.random()*30),.6+Math.random()*.4,5,8,[1,.65,.25],1,1,2,0)}
+ for(let i=0;i<14;i++){const d=norm3([Math.random()-.5,Math.random()-.5,Math.random()-.5]);part(madd3(p,d,3),sc3(d,8+Math.random()*10),4,6,6,[.3,.3,.3],.6,0,.8,-1)}}
+function segSphere(a,b,c,r){const ab=sub3(b,a),l=dot3(ab,ab);let t=l?dot3(sub3(c,a),ab)/l:0;t=clamp(t,0,1);const q=madd3(a,ab,t);return len3(sub3(q,c))<r}
+function killEnemy(e){if(e.dead)return;e.dead=true;explodeAir(e.pos);e.vel=madd3(e.vel,[0,-10,0],1);if(PL&&PL.P.mil){G.kills++;toast('격추 '+G.kills+(G.mission==='fight'?' / '+G.enemyN:''));say('splash')}
+ if(G.mission==='fight'&&!G.missionDone&&ENEMY.filter(x=>!x.dead).length===0&&G.spawned>=G.enemyN){G.missionDone=true;setTimeout(()=>{if(G.mode==='fly')toast('임무 완료 — 적기 '+G.enemyN+'대를 모두 격추했습니다. 일시정지에서 적기를 더 부를 수 있습니다',6000)},1500)}}
+function playerDown(){if(PL.burning)return;PL.burning=true;toast('기체가 크게 손상되었습니다');sfx('boom',.7);setTimeout(()=>{if(PL&&PL.burning&&!PL.crashed){crashCraft(PL,'적기에 맞아 비상 탈출했습니다')}},3500)}
+
+/* ═══════════════ 소리 ═══════════════ */
+const AU={ctx:null};
+function auInit(){if(AU.ctx||!G.settings.sound)return;try{const C=new (window.AudioContext||window.webkitAudioContext)();AU.ctx=C;const M=C.createGain();M.gain.value=.55;M.connect(C.destination);AU.M=M;
+ const nb=C.createBuffer(1,C.sampleRate*2,C.sampleRate),d=nb.getChannelData(0);let last=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=w*.5+last*3}AU.nb=nb;
+ const src=()=>{const s=C.createBufferSource();s.buffer=nb;s.loop=true;s.start();return s};
+ AU.eN=src();AU.eF=C.createBiquadFilter();AU.eF.type='bandpass';AU.eF.Q.value=.7;AU.eG=C.createGain();AU.eG.gain.value=0;AU.eN.connect(AU.eF).connect(AU.eG).connect(M);
+ AU.wO=C.createOscillator();AU.wO.type='sawtooth';AU.wF=C.createBiquadFilter();AU.wF.type='lowpass';AU.wF.frequency.value=2500;AU.wG=C.createGain();AU.wG.gain.value=0;AU.wO.connect(AU.wF).connect(AU.wG).connect(M);AU.wO.start();
+ AU.pO=C.createOscillator();AU.pO.type='sawtooth';AU.pF=C.createBiquadFilter();AU.pF.type='lowpass';AU.pF.frequency.value=400;AU.pG=C.createGain();AU.pG.gain.value=0;AU.pO.connect(AU.pF).connect(AU.pG).connect(M);AU.pO.start();
+ AU.aN=src();AU.aF=C.createBiquadFilter();AU.aF.type='highpass';AU.aF.frequency.value=600;AU.aG=C.createGain();AU.aG.gain.value=0;AU.aN.connect(AU.aF).connect(AU.aG).connect(M);
+ AU.sO=C.createOscillator();AU.sO.type='square';AU.sO.frequency.value=28;AU.sG=C.createGain();AU.sG.gain.value=0;AU.sO.connect(AU.sG).connect(M);AU.sO.start();
+ AU.lO=C.createOscillator();AU.lO.type='sine';AU.lO.frequency.value=1150;AU.lG=C.createGain();AU.lG.gain.value=0;AU.lO.connect(AU.lG).connect(M);AU.lO.start();
+ }catch(e){AU.ctx=null}}
+function auUpdate(){if(!AU.ctx)return;const C=AU.ctx,t=C.currentTime,set=(p,v)=>p.setTargetAtTime(v,t,.08);
+ if(!G.settings.sound||G.mode!=='fly'||G.paused||!PL||PL.crashed){set(AU.eG.gain,0);set(AU.wG.gain,0);set(AU.pG.gain,0);set(AU.aG.gain,0);set(AU.sG.gain,0);set(AU.lG.gain,0);return}
+ const th=Math.abs(PL.thrA),v=len3(PL.vel),inC=CAM.mode==='cockpit'?.55:1,far=CAM.mode==='tower'||CAM.mode==='flyby'?clamp(1-len3(sub3(CAM.pos,PL.pos))/3000,.05,1):1;
+ if(PL.P.prop){set(AU.pG.gain,(.05+th*.16)*inC*far);set(AU.pO.frequency,38+th*40);set(AU.pF.frequency,250+th*700);set(AU.eG.gain,.04*far);set(AU.eF.frequency,500);set(AU.wG.gain,0)}
+ else{set(AU.eG.gain,(.06+th*.3)*inC*far);set(AU.eF.frequency,300+th*900);set(AU.wG.gain,(.006+th*.022)*inC*far);set(AU.wO.frequency,600+th*2400);set(AU.pG.gain,0)}
+ set(AU.aG.gain,clamp(v/280,0,1)**2*.22*(CAM.mode==='cockpit'?.6:1));
+ set(AU.sG.gain,PL.stallW?.05:0);
+ set(AU.lG.gain,PL.locked?(Math.floor(t*8)%2?.05:0):(LOCK.c&&LOCK.t>0?(Math.floor(t*3)%3===0?.03:0):0))}
+function sfx(k,v){if(!AU.ctx||!G.settings.sound)return;const C=AU.ctx,t=C.currentTime;v=v||1;
+ const nz=(dur,f0,f1,type,g0)=>{const s=C.createBufferSource();s.buffer=AU.nb;const f=C.createBiquadFilter();f.type=type||'lowpass';f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(Math.max(f1,20),t+dur);
+  const g=C.createGain();g.gain.setValueAtTime(g0*v,t);g.gain.exponentialRampToValueAtTime(.0005,t+dur);s.connect(f).connect(g).connect(AU.M);s.start(t,Math.random()*1.5);s.stop(t+dur+.05)};
+ const tone=(dur,f,g0,type)=>{const o=C.createOscillator();o.type=type||'sine';o.frequency.value=f;const g=C.createGain();g.gain.setValueAtTime(g0*v,t);g.gain.exponentialRampToValueAtTime(.0005,t+dur);o.connect(g).connect(AU.M);o.start(t);o.stop(t+dur+.02)};
+ if(k==='gear')nz(.5,400,80,'lowpass',.35);
+ else if(k==='touch'){nz(.35,300,60,'lowpass',.6);nz(.5,3000,1500,'bandpass',.12)}
+ else if(k==='gun')nz(.06,2400,600,'lowpass',.22);
+ else if(k==='gunE')nz(.07,1500,400,'lowpass',.15);
+ else if(k==='missile')nz(1.2,600,3000,'bandpass',.35);
+ else if(k==='boom')nz(1.6,900,40,'lowpass',.9);
+ else if(k==='beep')tone(.12,880,.12);
+ else if(k==='click')tone(.04,1400,.06,'square');
+ else if(k==='warn'){tone(.18,700,.08,'square')}}
+let lastSay=0;
+function say(txt){if(!G.settings.sound||!window.speechSynthesis)return;const n=performance.now();if(n-lastSay<700&&txt!=='minimum')return;lastSay=n;try{const u=new SpeechSynthesisUtterance(txt);u.lang='en-US';u.rate=1.05;u.pitch=.9;u.volume=.8;
+ const vs=speechSynthesis.getVoices().filter(v=>/en[-_]US/i.test(v.lang));if(vs.length)u.voice=vs.find(v=>/David|Mark|Male/i.test(v.name))||vs[0];speechSynthesis.speak(u)}catch(e){}}
+
+
+
+/* ═══════════════ 빛 (시간대) ═══════════════ */
+const TOD={
+ day:{sun:norm3([-.45,.56,.7]),sunC:[1.18,1.12,1.02],amb0:[.27,.26,.24],amb1:[.44,.52,.64],fog:[.70,.78,.87],top:[.28,.48,.78],hor:[.74,.82,.90],fogD:1/30000,night:0,cir:1},
+ eve:{sun:norm3([-.92,.13,.35]),sunC:[1.35,.78,.48],amb0:[.22,.16,.13],amb1:[.36,.33,.42],fog:[.86,.64,.52],top:[.22,.30,.55],hor:[.98,.66,.45],fogD:1/26000,night:.25,cir:1},
+ night:{sun:norm3([.35,.55,-.6]),sunC:[.13,.15,.22],amb0:[.03,.03,.045],amb1:[.06,.075,.12],fog:[.04,.05,.09],top:[.008,.015,.04],hor:[.05,.07,.13],fogD:1/22000,night:1,cir:.3}};
+const MOON=norm3([.35,.55,-.6]);
+
+/* ═══════════════ 카메라 ═══════════════ */
+const CAM={mode:'chase',pos:[0,500,0],tgt:[0,0,0],up:[0,1,0],fov:55,yaw:0,pit:0,zoom:1,drag:false,lastDrag:0,dir:null,fly:null,orbitA:0};
+const CAM_MODES=['chase','cockpit','tower','flyby'],CAM_NAME={chase:'뒤에서 보기',cockpit:'조종석',tower:'관제탑에서 보기',flyby:'지나가는 모습'};
+function nextCam(){const i=CAM_MODES.indexOf(CAM.mode);CAM.mode=CAM_MODES[(i+1)%CAM_MODES.length];CAM.fly=null;CAM.yaw=CAM.pit=0;toast(CAM_NAME[CAM.mode],1400)}
+function updateCamera(dt){
+ if(G.mode==='menu'){const c=SHOW;if(!c)return;const m=c.m,sz=Math.max(m.L,m.span);
+  if(!CAM.drag&&performance.now()-CAM.lastDrag>2500)CAM.orbitA+=dt*.13;
+  const a=CAM.orbitA+CAM.yaw,r=sz*(G.screen==='title'?1.25:.95)*CAM.zoom,h=sz*(.16+.25*sstep(0,1,CAM.pit+.3));
+  const ctr=madd3(c.pos,c.U,m.R*.3);
+  if(G.screen==='title'){const b=madd3(c.pos,c.F,0);CAM.pos=[b[0]+Math.cos(a)*r,b[1]+h*.6,b[2]+Math.sin(a)*r];CAM.tgt=ctr}
+  else{CAM.pos=[ctr[0]+Math.cos(a)*r,ctr[1]+h,ctr[2]+Math.sin(a)*r];CAM.tgt=[ctr[0],ctr[1]-m.R*.1,ctr[2]]}
+  CAM.up=[0,1,0];CAM.fov=45;const gh=groundAt(CAM.pos[0],CAM.pos[2]).h;CAM.pos[1]=Math.max(CAM.pos[1],gh+2);return}
+ const c=PL;if(!c)return;const m=c.m,sz=Math.max(m.L,m.span*.8);
+ if(!CAM.drag&&performance.now()-CAM.lastDrag>2200){CAM.yaw*=Math.exp(-dt*2);CAM.pit*=Math.exp(-dt*2)}
+ const v=len3(c.vel),vh=v>5?sc3(c.vel,1/v):c.F;
+ if(c.crashed){CAM.orbitA+=dt*.2;const r=Math.max(sz*2.5,90);CAM.pos=[c.pos[0]+Math.cos(CAM.orbitA)*r,c.pos[1]+r*.35,c.pos[2]+Math.sin(CAM.orbitA)*r];CAM.tgt=c.pos.slice();CAM.up=[0,1,0];CAM.fov=50}
+ else if(CAM.mode==='chase'){let d=norm3(lerp3(c.F,vh,.35));if(!CAM.dir)CAM.dir=d;CAM.dir=norm3(lerp3(CAM.dir,d,1-Math.exp(-dt*4.5)));
+  let dd=CAM.dir;const Uw=norm3(lerp3([0,1,0],c.U,.3));
+  if(CAM.yaw||CAM.pit){dd=rotAx(dd,[0,1,0],CAM.yaw);const rr=norm3(cross3(dd,[0,1,0]));dd=rotAx(dd,rr,-CAM.pit)}
+  const dist=clamp(sz*1.35+12,22,180)*CAM.zoom;CAM.pos=add3(madd3(c.pos,dd,-dist),sc3(Uw,dist*.2));CAM.tgt=madd3(madd3(c.pos,dd,dist*.22),Uw,m.R*.6);CAM.up=Uw;CAM.fov=55}
+ else if(CAM.mode==='cockpit'){const e=wpos(c,m.cockpit);let f=c.F;if(CAM.yaw||CAM.pit){f=rotAx(f,c.U,-CAM.yaw*1.6);f=rotAx(f,c.R,-CAM.pit*1.4)}
+  CAM.pos=e;CAM.tgt=madd3(e,f,100);CAM.up=c.U;CAM.fov=72/CAM.zoom}
+ else if(CAM.mode==='tower'){let best=null,bd=1e18;for(const a of AIRPORTS){const d=(a.x-c.pos[0])**2+(a.z-c.pos[2])**2;if(d<bd){bd=d;best=a}}
+  CAM.pos=best.tower.slice();CAM.tgt=c.pos.slice();CAM.up=[0,1,0];const d=len3(sub3(c.pos,CAM.pos));CAM.fov=clamp(2*Math.atan(sz*2.4/d)*R2D,1.5,60)/CAM.zoom}
+ else if(CAM.mode==='flyby'){if(!CAM.fly||len3(sub3(CAM.fly,c.pos))>Math.max(1800,v*7)){const p=add3(madd3(c.pos,c.vel,4.5),madd3(sc3(c.R,sz*1.4),[0,1,0],sz*.4));p[1]=Math.max(p[1],groundAt(p[0],p[2]).h+3);CAM.fly=p}
+  CAM.pos=CAM.fly.slice();CAM.tgt=c.pos.slice();CAM.up=[0,1,0];const d=len3(sub3(c.pos,CAM.pos));CAM.fov=clamp(2*Math.atan(sz*1.6/d)*R2D,4,60)/CAM.zoom}
+ if(CAM.mode!=='cockpit'){const gh=groundAt(CAM.pos[0],CAM.pos[2]).h;if(CAM.pos[1]<gh+1.5)CAM.pos[1]=gh+1.5}
+}
+
+/* ═══════════════ 그리기 ═══════════════ */
+let VW=1,VH=1,DPR=1,VP=null,EYE=[0,0,0],LT=M4.id(),SHON=0,SHB=.0001;const FC=2/Math.log2(FAR+1);
+function resize(){DPR=Math.min(window.devicePixelRatio||1,G.settings.hiDPI===0?1:1.5);const w=Math.max(1,Math.floor(innerWidth*DPR)),h=Math.max(1,Math.floor(innerHeight*DPR));
+ if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}if(hud.width!==w||hud.height!==h){hud.width=w;hud.height=h}VW=w;VH=h}
+let curP=null;function use(P){if(curP!==P){gl.useProgram(P.p);curP=P}}
+function U(P,n){return P.u[n]}
+function setCommon(P,L){gl.uniformMatrix4fv(U(P,'u_vp'),false,VP);if(U(P,'u_eye'))gl.uniform3fv(U(P,'u_eye'),EYE);if(U(P,'u_sun'))gl.uniform3fv(U(P,'u_sun'),L.sun);if(U(P,'u_sunC'))gl.uniform3fv(U(P,'u_sunC'),L.sunC);
+ if(U(P,'u_amb0'))gl.uniform3fv(U(P,'u_amb0'),L.amb0);if(U(P,'u_amb1'))gl.uniform3fv(U(P,'u_amb1'),L.amb1);if(U(P,'u_fog'))gl.uniform3fv(U(P,'u_fog'),L.fog);if(U(P,'u_fogD'))gl.uniform1f(U(P,'u_fogD'),L.fogD*(G.weather===2?1.25:1));
+ if(U(P,'u_fc'))gl.uniform1f(U(P,'u_fc'),FC);if(U(P,'u_night'))gl.uniform1f(U(P,'u_night'),L.night)}
+const I4=M4.id();
+let DRAWN=0;
+function dm(mesh,m,o){if(!mesh)return;o=o||{};const P=PM;gl.uniformMatrix4fv(U(P,'u_m'),false,m||I4);gl.uniform3fv(U(P,'u_tint'),o.tint||WHITE);gl.uniform1f(U(P,'u_emit'),o.emit||0);
+ if(o.emit)gl.uniform3fv(U(P,'u_emitC'),o.emitC||WHITE);gl.uniform1f(U(P,'u_spec'),o.spec||0);gl.uniform1f(U(P,'u_alpha'),o.alpha===undefined?1:o.alpha);gl.uniform1f(U(P,'u_shOn'),o.noSh?0:SHON);
+ gl.bindVertexArray(mesh.vao);if(mesh.ib)gl.drawElements(gl.TRIANGLES,mesh.n,gl.UNSIGNED_INT,0);else gl.drawArrays(gl.TRIANGLES,0,mesh.n);DRAWN++}
+function ds(mesh,m){if(!mesh)return;gl.uniformMatrix4fv(U(PS,'u_m'),false,m||I4);gl.bindVertexArray(mesh.vao);if(mesh.ib)gl.drawElements(gl.TRIANGLES,mesh.n,gl.UNSIGNED_INT,0);else gl.drawArrays(gl.TRIANGLES,0,mesh.n)}
+// 비행기 한 대의 그리기 목록
+function craftParts(c){const m=c.m,M=M4.basis(c.F,c.U,c.R,c.pos),L=[];L.push([m.body,M]);
+ if(m.nose){const h=m.noseHinge,ang=(c.nose===undefined?1:c.nose)*12.5*D2R;L.push([m.nose,M4.mul(M,M4.mul(M4.tr(h[0],h[1],0),M4.mul(M4.rz(-ang),M4.tr(-h[0],-h[1],0))))])}
+ const gp=m.fixedGear?1:c.gearPos;if(m.gear&&gp>.02){const yA=-m.R*.3;L.push([m.gear,M4.mul(M,M4.mul(M4.tr(0,yA,0),M4.mul(M4.sc(1,gp,1),M4.tr(0,-yA,0))))])}
+ return{M,L}}
+function drawCraft(c,shadow,trans){if(c.hidden||(c===PL&&!shadow&&CAM.mode==='cockpit'&&G.mode==='fly'&&!c.crashed))return undefined;const{M,L}=craftParts(c);
+ for(const[me,mm]of L)shadow?ds(me,mm):dm(me,mm,{spec:.32});
+ const fast=Math.abs(c.thrA)>.12||c.inAir;
+ for(const pr of c.m.props){const pm=c.m.propMeshes[pr.k];const mm=M4.mul(M,M4.mul(M4.tr(pr.p[0],pr.p[1],pr.p[2]),M4.rx((c.spin||0)*pr.dir*(fast?1.7:.6))));
+  if(shadow){if(!fast)ds(pm.blades,mm)}else{if(!fast||(c.spin*7)%1<.5)dm(pm.blades,mm);if(fast&&trans)trans.push([pm.disc,M4.mul(M,M4.tr(pr.p[0],pr.p[1],pr.p[2]))])}}
+ return M}
+function drawLights(c,M){const L=c.m.lights,t=G.t;const nt=TOD[G.tod].night;const box=(p,col,s)=>{const w=M4.xf(M,p[0],p[1],p[2]);dm(MESH.cube,M4.mul(M4.tr(w[0],w[1],w[2]),M4.sc(s,s,s)),{tint:col,emit:1+nt*2,emitC:col,noSh:1})};
+ const s=Math.max(.35,c.m.L*.008);for(const p of L.red||[])box(p,[1,.1,.08],s);for(const p of L.green||[])box(p,[.1,1,.2],s);for(const p of L.white||[])box(p,[1,1,1],s*.8);
+ if((t%1.1)<.08)for(const p of L.strobe||[])box(p,[1,1,1],s*1.6);if((t%1.4)<.12)for(const p of L.beacon||[])box(p,[1,.15,.1],s*1.2)}
+function drawDecal(c,M){const d=c.m.decal;if(!d)return;gl.uniformMatrix4fv(U(PT,'u_m'),false,M);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,d.tex);gl.uniform1i(U(PT,'u_tex'),1);gl.bindVertexArray(d.vao);gl.drawArrays(gl.TRIANGLES,0,d.n)}
+function visibleCraft(c,maxD){const d=len3(sub3(c.pos,EYE));return d<maxD&&d<Math.max(c.m.L,c.m.span)*1400}
+function render(){
+ resize();const L=TOD[G.tod];G.night=L.night;
+ const asp=VW/VH,near=CAM.mode==='cockpit'&&G.mode==='fly'?.25:1.0;const P=M4.persp(CAM.fov*D2R,asp,near,FAR);const V=M4.look(CAM.pos,CAM.tgt,CAM.up);VP=M4.mul(P,V);EYE=CAM.pos.slice();
+ const crafts=[];if(G.mode==='fly'){if(PL)crafts.push(PL);for(const c of NPC)crafts.push(c);for(const e of ENEMY)crafts.push(e)}else if(SHOW)crafts.push(SHOW);
+ for(const c of PARKED)crafts.push(c);
+ const focus=G.mode==='fly'&&PL?PL:SHOW;
+ // ── 그림자 ──
+ SHON=0;
+ if(G.settings.shadow&&L.night<.9&&focus){const sz=Math.max(focus.m.L,focus.m.span);const nearApt=aptAt(focus.pos[0],focus.pos[2]);const E=nearApt&&focus.pos[1]<nearApt.elev+150?Math.max(sz*1.6,260):clamp(sz*.85+15,40,160);
+  const c=focus.pos,agl=Math.max(0,c[1]-groundAt(c[0],c[2]).h),Dn=Math.max(E*1.5,400),Df=Dn+agl/Math.max(L.sun[1],.15)+E*2+300;SHB=.12/(Df-1);const lv=M4.look(madd3(c,L.sun,Dn),c,Math.abs(L.sun[1])>.98?[1,0,0]:[0,1,0]),lp=M4.ortho(-E,E,-E,E,1,Df);LT=M4.mul(lp,lv);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,null);gl.bindFramebuffer(gl.FRAMEBUFFER,shFB);gl.viewport(0,0,SHN,SHN);gl.clear(gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.disable(gl.CULL_FACE);use(PS);gl.uniformMatrix4fv(U(PS,'u_lt'),false,LT);
+  gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(2,4);
+  for(const cc of crafts)if(len3(sub3(cc.pos,c))<E*2.5)drawCraft(cc,true);
+  if(nearApt){for(const w of WORLD.apt)if(w.a===nearApt){ds(w.mesh);}}
+  gl.disable(gl.POLYGON_OFFSET_FILL);gl.bindFramebuffer(gl.FRAMEBUFFER,null);SHON=1}
+ gl.viewport(0,0,VW,VH);gl.clearColor(L.hor[0],L.hor[1],L.hor[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ // ── 하늘 ──
+ gl.disable(gl.DEPTH_TEST);use(PK);gl.uniformMatrix4fv(U(PK,'u_ivp'),false,M4.inv(VP));gl.uniform3fv(U(PK,'u_sun'),L.sun);gl.uniform3fv(U(PK,'u_top'),L.top);gl.uniform3fv(U(PK,'u_hor'),L.hor);gl.uniform3fv(U(PK,'u_sunC'),L.sunC);
+ gl.uniform3fv(U(PK,'u_moon'),MOON);gl.uniform1f(U(PK,'u_time'),G.t);gl.uniform1f(U(PK,'u_night'),L.night);gl.uniform1f(U(PK,'u_cir'),G.weather?L.cir:0);gl.bindVertexArray(skyVao);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+ gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+ // ── 땅과 물체 ──
+ use(PM);setCommon(PM,L);gl.uniformMatrix4fv(U(PM,'u_lt'),false,LT);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shTex);gl.uniform1i(U(PM,'u_sh'),0);gl.uniform1f(U(PM,'u_shB'),SHB);gl.uniform1f(U(PM,'u_hz'),G.weather===2?.6:.25);
+ DRAWN=0;if(!DBG.noTerr)dm(TERR);
+ for(const w of WORLD.apt){const d=Math.hypot(w.a.x-EYE[0],w.a.z-EYE[2]);if(d<26000)dm(w.mesh);if(d<9000)dm(w.trees)}
+ for(const s of WORLD.static){if(s.city){const d=Math.hypot(s.x-EYE[0],s.z-EYE[2]);if(d>52000)continue}dm(s.mesh,null,s.river?{spec:.6}:null)}
+ const trans=[];const mats=[];
+ for(const c of crafts){if(!visibleCraft(c,c===PL||c===SHOW?1e9:c.parked?7000:40000))continue;const M=drawCraft(c,false,trans);if(M)mats.push([c,M])}
+ for(const b of BUL){const d=norm3(b.v),Lb=b.own==='pl'?22:18,o=orient(d,0);const M=M4.mul(M4.basis(o.F,o.U,o.R,b.p),M4.sc(Lb,.5,.5));dm(MESH.cube,M,{tint:[1,.85,.4],emit:2,emitC:b.own==='pl'?[1,.8,.35]:[1,.35,.25],noSh:1})}
+ for(const m of MIS){const d=norm3(m.v),o=orient(d,0);dm(MESH.cube,M4.mul(M4.basis(o.F,o.U,o.R,m.p),M4.sc(3.6,.28,.28)),{tint:[.9,.9,.88]})}
+ for(const[c,M]of mats)if(len3(sub3(c.pos,EYE))<6000)drawLights(c,M);
+ if(G.mode==='fly'){for(const w of WORLD.apt){const a=w.a;if(!a.papi||Math.hypot(a.x-EYE[0],a.z-EYE[2])>16000)continue;for(const pp of a.papi){const ang=[2.5,2.83,3.17,3.5];
+   for(let k=0;k<4;k++){const p=pp.pos[k],d=sub3(EYE,p),hz=Math.hypot(d[0],d[2]),el=Math.atan2(d[1],hz)*R2D;const col=el>ang[3-k]?[1,1,.95]:[1,.1,.08];
+    dm(MESH.cube,M4.mul(M4.tr(p[0],p[1]+.3,p[2]),M4.sc(1.4,.9,1.4)),{tint:col,emit:1.5+L.night*2,emitC:col,noSh:1})}}}}
+ // 구름
+ if(CLOUD)dm(CLOUD,null,{noSh:1,tint:L.night>.5?[.25,.27,.33]:G.tod==='eve'?[1,.86,.78]:WHITE});
+ // ── 물 ──
+ if(!DBG.noWater){use(PW);setCommon(PW,L);gl.uniform3fv(U(PW,'u_top'),L.top);gl.uniform3fv(U(PW,'u_hor'),L.hor);gl.uniform1f(U(PW,'u_time'),G.t);gl.uniform1f(U(PW,'u_hz'),G.weather===2?.3:.1);
+ gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,HTEX);gl.uniform1i(U(PW,'u_ht'),2);gl.uniform4f(U(PW,'u_hb'),WX0,WZ0,WSZ+TC,WSZ+TC);const cs=2*WAT_E/WAT_N;gl.uniform2f(U(PW,'u_off'),Math.round(EYE[0]/cs)*cs,Math.round(EYE[2]/cs)*cs);gl.bindVertexArray(waterVao);gl.drawArrays(gl.TRIANGLES,0,WAT_CNT)}
+ // ── 글씨 ──
+ use(PT);setCommon(PT,L);for(const[c,M]of mats)if(c.m.decal&&len3(sub3(c.pos,EYE))<2500)drawDecal(c,M);
+ // ── 투명한 것 ──
+ gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+ use(PM);for(const[me,M]of trans)dm(me,M,{alpha:.16,noSh:1});
+ drawParticles(L);
+ gl.depthMask(true);gl.disable(gl.BLEND);gl.bindVertexArray(null);
+}
+const DBG={};
+const PBUF=new Float32Array(20000*8);
+function drawParticles(L){if(!PARTS.length)return;use(PP);setCommon(PP,L);gl.uniform1f(U(PP,'u_ps'),VH/(2*Math.tan(CAM.fov*D2R/2)));gl.uniform1f(U(PP,'u_pmax'),PMAX);
+ for(const add of[0,1]){let n=0;for(const q of PARTS){if(!!q.add!==!!add)continue;if(n>=20000)break;const k=1-q.t/q.life,a=q.a*(add?k:Math.min(1,k*1.6)*Math.min(1,q.t*6+.2));
+   let c=q.c;if(add&&q.c[1]>.5)c=[q.c[0],q.c[1]*(.55+.45*k),q.c[2]*k];
+   const nl=L.night>.5&&!add?.35:1;PBUF.set([q.p[0],q.p[1],q.p[2],q.size,c[0]*nl,c[1]*nl,c[2]*nl,a],n*8);n++}
+  if(!n)continue;gl.bindBuffer(gl.ARRAY_BUFFER,partBuf);gl.bufferSubData(gl.ARRAY_BUFFER,0,PBUF.subarray(0,n*8));gl.uniform1f(U(PP,'u_add'),add);
+  if(add)gl.blendFunc(gl.SRC_ALPHA,gl.ONE);else gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.bindVertexArray(partVao);gl.drawArrays(gl.POINTS,0,n)}
+ gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA)}
+// 화면 위 위치 (HUD용)
+function proj(p){const v=M4.xf(VP,p[0],p[1],p[2]);if(v[3]<=0)return null;return[(v[0]/v[3]*.5+.5)*VW,(1-(v[1]/v[3]*.5+.5))*VH,v[3]]}
+
+
+
+/* ═══════════════ 지도 그림 ═══════════════ */
+let MAPIMG=null;
+function buildMapImage(){const N=TNV,c=document.createElement('canvas');c.width=N;c.height=N;const x=c.getContext('2d'),im=x.createImageData(N,N),d=im.data;
+ for(let j=0;j<N;j++)for(let i=0;i<N;i++){const k=j*N+i,h=HM[k];let col;
+  if(h<0&&APT[k]<0){const t=clamp(-h/80,0,1);col=mixc([.36,.58,.68],[.13,.27,.42],t)}
+  else{const hl=HM[j*N+Math.max(i-1,0)],hu=HM[Math.max(j-1,0)*N+i],sh=clamp(.5+((hl-h)+(hu-h))*.012,.15,1.1);
+   col=h<40?[.55,.66,.42]:h<180?mixc([.55,.66,.42],[.40,.52,.30],(h-40)/140):h<480?mixc([.40,.52,.30],[.55,.47,.33],(h-180)/300):mixc([.55,.47,.33],[.9,.9,.9],clamp((h-480)/400,0,1));
+   if(APT[k]>=0)col=[.72,.72,.7];col=mulc(col,.75+sh*.35)}
+  const q=k*4;d[q]=col[0]*255;d[q+1]=col[1]*255;d[q+2]=col[2]*255;d[q+3]=255}
+ x.putImageData(im,0,0);
+ x.fillStyle='rgba(90,90,96,.55)';for(const ct of CITIES){const p=[(ct.x-WX0)/TC,(ct.z-WZ0)/TC];x.beginPath();x.arc(p[0],p[1],ct.r/TC*.75,0,7);x.fill()}
+ MAPIMG=c}
+const m2p=(x,z,ox,oy,sc)=>[ox+(x-WX0)*sc,oy+(z-WZ0)*sc];
+
+/* ═══════════════ 계기판 ═══════════════ */
+const HUDC={pn:'rgba(10,16,24,.78)',ln:'rgba(255,255,255,.14)',tx:'#e8eef4',dm:'#98a9ba',ac:'#5fc0ff',ok:'#5fd38a',wn:'#f5b63f',bd:'#ff5d55',mg:'#e070ff'};
+function rr(x,y,w,h,r){hc.beginPath();hc.moveTo(x+r,y);hc.arcTo(x+w,y,x+w,y+h,r);hc.arcTo(x+w,y+h,x,y+h,r);hc.arcTo(x,y+h,x,y,r);hc.arcTo(x,y,x+w,y,r);hc.closePath()}
+function panel(x,y,w,h){rr(x,y,w,h,8);hc.fillStyle=HUDC.pn;hc.fill();hc.strokeStyle=HUDC.ln;hc.lineWidth=1;hc.stroke()}
+function txt(s,x,y,sz,col,al,wt){hc.font=(wt||'')+' '+sz+'px "Malgun Gothic","Segoe UI",sans-serif';hc.fillStyle=col||HUDC.tx;hc.textAlign=al||'left';hc.fillText(s,x,y)}
+function flightStatus(c){if(c.crashed)return'사고';if(c.onGround){if(c.touched&&c.td&&len3(c.vel)>3)return'착륙 활주';const g=groundAt(c.pos[0],c.pos[2]);return g.rw?'활주로 위':'지상'}
+ const vs=c.vel[1],agl=aglOf(c);if(G.to&&distTo(G.to)<16000&&agl<900&&vs<1)return'접근 중';if(vs>4)return'상승 중';if(vs<-4)return'하강 중';return'순항'}
+function distTo(a){return Math.hypot(a.x-PL.pos[0],a.z-PL.pos[2])}
+// 착륙 길잡이 (계기 착륙처럼)
+function ilsInfo(){if(!PL||!G.to||PL.onGround)return null;const a=G.to;let best=null;
+ for(const r of a.rws)for(const e of[-1,1]){const th=aptWorld(a,e*r.len/2,r.off),dir=e<0?a.dir:sc3(a.dir,-1);
+  const dx=PL.pos[0]-th[0],dz=PL.pos[2]-th[1],along=-(dx*dir[0]+dz*dir[2]),cross=dx*dir[2]*-1+dz*dir[0]*1;
+  const lat=-(dx*(-dir[2])+dz*dir[0]);if(along<300||along>22000)continue;const hdgDiff=Math.abs(wrapPI((hdgOf(PL.F)-hdgOf(dir))*D2R))*R2D;if(hdgDiff>60)continue;
+  const locDev=Math.atan2(lat,along)*R2D,gsAlt=a.elev+Math.tan(3*D2R)*along+15,gsDev=(PL.pos[1]-gsAlt)/Math.max(along*Math.tan(.7*D2R),8);
+  const sc=Math.abs(locDev)+hdgDiff*.1;if(!best||sc<best.sc)best={sc,r,e,along,locDev,gsDev,num:(e<0?r.num:r.num2),apt:a,gsAlt}}
+ return best&&Math.abs(best.locDev)<12?best:null}
+function drawHUD(){const W=VW/DPR,H=VH/DPR;hc.setTransform(1,0,0,1,0,0);hc.clearRect(0,0,VW,VH);hc.setTransform(DPR,0,0,DPR,0,0);
+ const now=performance.now();
+ if(G.mode==='fly'&&PL&&!G.paused&&$('#sFly').classList.contains('on')){
+  const c=PL,v=len3(c.vel),small=W<820;
+  if(CAM.mode==='cockpit'&&!c.crashed)cockpitFrame(W,H);
+  // 피해
+  if(c.hitT&&now-c.hitT<350){const g=hc.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.7);g.addColorStop(0,'rgba(255,40,30,0)');g.addColorStop(1,'rgba(255,40,30,.35)');hc.fillStyle=g;hc.fillRect(0,0,W,H)}
+  if(c.P.mil)combatHUD(W,H);
+  // 왼쪽 위 정보
+  const lines=[],iw=small?236:290;
+  const rt=G.mission==='fight'?'공중전 훈련':G.from&&G.to?G.from.name+' → '+G.to.name:'자유 비행';
+  lines.push([c.P.name+' · '+(c.A.id==='af'?'공군':c.A.name)+(c.m.reg?' '+c.m.reg:''),13,HUDC.tx,'bold']);lines.push([rt,12,HUDC.dm]);
+  if(G.to&&G.mission!=='fight'){const d=distTo(G.to);lines.push(['남은 거리 '+fmt(d/1000,1)+' km'+(v>30&&!c.onGround?' · 도착까지 약 '+fmtTime(d/Math.max(v,1)):''),12,HUDC.tx])}
+  if(G.mission==='fight')lines.push(['격추 '+G.kills+' / '+G.enemyN+' · 남은 적기 '+ENEMY.filter(e=>!e.dead).length,12,HUDC.tx]);
+  lines.push(['상태: '+flightStatus(c)+(G.time>1?' · 시간 '+G.time+'배':''),12,HUDC.ac]);
+  const ih=14+lines.length*19+(c.P.mil?16:0);panel(12,12,iw,ih);lines.forEach((l,i)=>txt(l[0],24,32+i*19,l[1],l[2],'left',l[3]));
+  if(c.P.mil){const y=12+ih-16;hc.fillStyle='rgba(255,255,255,.12)';hc.fillRect(24,y,iw-24,6);hc.fillStyle=c.hp>50?HUDC.ok:c.hp>25?HUDC.wn:HUDC.bd;hc.fillRect(24,y,(iw-24)*clamp(c.hp/100,0,1),6);txt('기체 '+Math.max(0,Math.round(c.hp))+'%',24,y-3,10,HUDC.dm)}
+  // 경고
+  const W2=warnings(c);let wy=12+ih+8;for(const[t,col]of W2){hc.font='bold 13px "Malgun Gothic",sans-serif';const tw=hc.measureText(t).width+22;rr(12,wy,tw,24,6);hc.fillStyle=col===HUDC.bd?'rgba(120,20,18,.85)':'rgba(110,75,10,.85)';hc.fill();txt(t,23,wy+17,13,'#fff','left','bold');wy+=29}
+  pfd(c,W,H,small);
+  miniMap(c,W,H,small);
+  const il=ilsInfo();if(il)ilsPanel(il,W,H,small);
+  if(G.showHelp&&G.flightT<30||G.helpOn)helpLine(W,H);
+ }
+ if(G.bigMap&&G.mode==='fly'&&PL&&!G.paused)bigMap(W,H);
+ // 알림
+ G.toasts=G.toasts.filter(t=>t.until>now);let ty=14;for(const t of G.toasts){hc.font='13px "Malgun Gothic",sans-serif';const tw=hc.measureText(t.t).width+28;const x=(W-tw)/2;rr(x,ty,tw,28,7);hc.fillStyle='rgba(10,16,24,.82)';hc.fill();hc.strokeStyle=HUDC.ln;hc.stroke();txt(t.t,W/2,ty+19,13,HUDC.tx,'center');ty+=34}
+}
+function warnings(c){const w=[];if(c.crashed)return w;const v=len3(c.vel),agl=aglOf(c);c.stallW=false;
+ if(!c.onGround&&c.inAir){if(c.alpha>c.pf.amax*.92&&v<c.pf.vr*1.1){w.push(['실속 경고 — 속도를 올리세요',HUDC.bd]);c.stallW=true}
+  // 앞쪽 땅
+  let tw=false;for(let s=4;s<=18;s+=2){const p=madd3(c.pos,c.vel,s),g=groundAt(p[0],p[2]);if(!g.apt&&p[1]<g.h+40){tw=true;break}}
+  if(tw&&!(G.to&&distTo(G.to)<5000)){w.push(['지형 주의 — 기수를 올리세요',HUDC.bd]);if(!c.twSaid||G.t-c.twSaid>3){c.twSaid=G.t;say('terrain, pull up')}}
+  if(c.gearPos<.5&&!c.m.fixedGear&&agl<260&&c.vel[1]<-2)w.push(['바퀴가 올라가 있습니다 — G 키',HUDC.wn]);
+  if(v>c.pf.vmax*1.03)w.push(['속도 초과',HUDC.wn]);
+  if(c.pos[1]>6500)w.push(['너무 높습니다',HUDC.wn])}
+ const lat=latOf(c.pos[2]),lon=lonOf(c.pos[0]);if(lat>38.35&&lon<128.4||lat>38.65)w.push(['비행 금지 구역 (휴전선) — 남쪽으로 돌아가세요',HUDC.bd]);
+ if(c.pos[0]<WX0+2500||c.pos[0]>WX0+WSZ-2500||c.pos[2]>WZ0+WSZ-2500)w.push(['지도 끝입니다 — 돌아가세요',HUDC.wn]);
+ if(c.onGround&&c.rev>0)w.push(['역추진',HUDC.wn]);
+ if(c.ap.on)w.push(['자동 조종 '+(c.ap.nav?'(목적지 방향) ':'')+'· 높이 '+fmt(c.ap.alt)+' m · 방향 '+Math.round(c.ap.hdg)+'°',HUDC.wn]);
+ if(G.runwayShort)w.push([G.runwayShort,HUDC.wn]);
+ return w.slice(0,4)}
+function pfd(c,W,H,small){const v=len3(c.vel),kmh=v*3.6,pw=small?430:560,ph=small?120:150,x=(W-pw)/2,y=H-ph-12;panel(x,y,pw,ph);
+ const pitch=pitchOf(c),bank=bankOf(c),hdg=hdgOf(c.F),vs=c.vel[1],agl=aglOf(c);
+ // 수평계
+ const cx=x+pw/2,cy=y+ph/2-(small?6:8),r=ph/2-(small?14:18);hc.save();hc.beginPath();hc.arc(cx,cy,r,0,7);hc.clip();hc.translate(cx,cy);hc.rotate(-bank);const pp=pitch*R2D*r/30;
+ hc.fillStyle='#2f6ea8';hc.fillRect(-r*2,-r*3+pp,r*4,r*3);hc.fillStyle='#7a5530';hc.fillRect(-r*2,pp,r*4,r*3);hc.strokeStyle='#fff';hc.lineWidth=1.5;hc.beginPath();hc.moveTo(-r*2,pp);hc.lineTo(r*2,pp);hc.stroke();
+ hc.lineWidth=1;for(let p=-30;p<=30;p+=10){if(!p)continue;const yy=pp-p*r/30;hc.beginPath();hc.moveTo(-r*.25,yy);hc.lineTo(r*.25,yy);hc.stroke();txt(String(Math.abs(p)),r*.3,yy+4,9,'#fff')}
+ hc.restore();hc.strokeStyle=HUDC.wn;hc.lineWidth=3;hc.beginPath();hc.moveTo(cx-r*.55,cy);hc.lineTo(cx-r*.18,cy);hc.lineTo(cx-r*.1,cy+6);hc.moveTo(cx+r*.55,cy);hc.lineTo(cx+r*.18,cy);hc.lineTo(cx+r*.1,cy+6);hc.stroke();
+ hc.fillStyle=HUDC.wn;hc.fillRect(cx-2,cy-2,4,4);hc.strokeStyle='rgba(255,255,255,.4)';hc.lineWidth=1;hc.beginPath();hc.arc(cx,cy,r,0,7);hc.stroke();
+ // 기울기 눈금
+ hc.save();hc.translate(cx,cy);for(const a of[-45,-30,-20,-10,0,10,20,30,45]){hc.save();hc.rotate(a*D2R);hc.strokeStyle='#fff';hc.beginPath();hc.moveTo(0,-r);hc.lineTo(0,-r+(a%30===0?8:5));hc.stroke();hc.restore()}
+ hc.rotate(-bank);hc.fillStyle='#fff';hc.beginPath();hc.moveTo(0,-r+9);hc.lineTo(-5,-r+16);hc.lineTo(5,-r+16);hc.fill();hc.restore();
+ const ils=ilsInfo();if(ils){const ld=clamp(ils.locDev/2.5,-1,1),gd=clamp(-ils.gsDev,-1,1);hc.fillStyle=HUDC.mg;hc.save();hc.translate(cx+ld*r*.8,cy+r+6);hc.rotate(Math.PI/4);hc.fillRect(-4,-4,8,8);hc.restore();
+  hc.save();hc.translate(cx+r+7,cy-gd*r*.8);hc.rotate(Math.PI/4);hc.fillRect(-4,-4,8,8);hc.restore()}
+ // 속도
+ const bx=x+14,bw=small?110:140;txt('속도',bx,y+22,11,HUDC.dm);txt(fmt(kmh),bx,y+(small?54:60),small?30:36,HUDC.tx,'left','bold');txt('km/h',bx+(small?80:100),y+(small?54:60),11,HUDC.dm);
+ const vr=c.pf.vr*3.6;txt(c.onGround?'이륙 속도 '+fmt(vr)+' km/h':'',bx,y+(small?72:80),11,kmh>vr*.95&&c.onGround?HUDC.ok:HUDC.dm);
+ // 추력
+ const ty=y+ph-(small?28:34);txt(c.rev>0?'역추진':'추력',bx,ty-6,11,c.rev>0?HUDC.wn:HUDC.dm);hc.fillStyle='rgba(255,255,255,.12)';hc.fillRect(bx,ty,bw,8);
+ hc.fillStyle=c.rev>0?HUDC.wn:HUDC.ac;hc.fillRect(bx,ty,bw*clamp(Math.abs(c.rev>0?c.rev:c.thr),0,1),8);hc.fillStyle='#fff';hc.fillRect(bx+bw*clamp(Math.abs(c.thrA),0,1)-1,ty-2,2,12);txt(Math.round((c.rev>0?c.rev:c.thr)*100)+'%',bx+bw+6,ty+8,11,HUDC.tx);
+ // 고도
+ const ax=x+pw-14;txt('고도',ax,y+22,11,HUDC.dm,'right');txt(fmt(c.pos[1]),ax-22,y+(small?54:60),small?30:36,HUDC.tx,'right','bold');txt('m',ax,y+(small?54:60),11,HUDC.dm,'right');
+ txt('땅에서 '+fmt(Math.max(0,agl))+' m',ax,y+(small?72:80),11,agl<150&&!c.onGround?HUDC.wn:HUDC.dm,'right');
+ txt((vs>=0?'▲ ':'▼ ')+fmt(Math.abs(vs),1)+' m/s',ax,ty+2,12,Math.abs(vs)>12?HUDC.wn:HUDC.tx,'right');
+ // 바퀴
+ const gp=c.m.fixedGear?1:c.gearPos;const gs=gp>.98?'바퀴 내림':gp<.02?'바퀴 올림':'바퀴 움직이는 중';txt(gs,ax,ty+20,11,gp>.98?HUDC.ok:gp<.02?HUDC.dm:HUDC.wn,'right');
+ if(c.brake&&c.onGround)txt('브레이크',bx,ty+20,11,HUDC.wn);
+ // 방향
+ const hw=small?150:200,hx=cx-hw/2,hy=y-26;panel(hx,hy,hw,22);hc.save();rr(hx,hy,hw,22,8);hc.clip();for(let d=-40;d<=40;d+=5){const a=Math.round(hdg/5)*5+d,px=cx+(a-hdg)*hw/80;const nm=((a%360)+360)%360;
+  hc.strokeStyle='rgba(255,255,255,.6)';hc.beginPath();hc.moveTo(px,hy+22);hc.lineTo(px,hy+(nm%10?17:14));hc.stroke();if(nm%30===0)txt(nm===0?'북':nm===90?'동':nm===180?'남':nm===270?'서':String(nm/10).padStart(2,'0'),px,hy+12,10,'#fff','center')}
+ if(G.to){const b=(Math.atan2(G.to.x-c.pos[0],-(G.to.z-c.pos[2]))*R2D+360)%360,d=wrapPI((b-hdg)*D2R)*R2D;const px=cx+clamp(d,-40,40)*hw/80;hc.fillStyle=HUDC.mg;hc.beginPath();hc.moveTo(px,hy+22);hc.lineTo(px-5,hy+15);hc.lineTo(px+5,hy+15);hc.fill()}
+ hc.restore();txt(String(Math.round(hdg)).padStart(3,'0')+'°',cx,hy-4,12,HUDC.wn,'center','bold')}
+function miniMap(c,W,H,small){const S=small?150:200,x=W-S-12,y=12;panel(x,y,S,S);if(!MAPIMG)return;hc.save();rr(x+3,y+3,S-6,S-6,6);hc.clip();
+ const span=28000,sc=(S-6)/span,ox=x+S/2-(c.pos[0]-WX0)*sc,oy=y+S/2-(c.pos[2]-WZ0)*sc;hc.globalAlpha=.92;hc.drawImage(MAPIMG,ox,oy,WSZ*sc+TC*sc,WSZ*sc+TC*sc);hc.globalAlpha=1;
+ if(G.from&&G.to){const a=m2p(G.from.x,G.from.z,ox,oy,sc),b=m2p(G.to.x,G.to.z,ox,oy,sc);hc.strokeStyle=HUDC.mg;hc.lineWidth=2;hc.setLineDash([5,4]);hc.beginPath();hc.moveTo(a[0],a[1]);hc.lineTo(b[0],b[1]);hc.stroke();hc.setLineDash([])}
+ for(const a of AIRPORTS){const p=m2p(a.x,a.z,ox,oy,sc);hc.fillStyle=a===G.to?HUDC.mg:'#fff';hc.beginPath();hc.arc(p[0],p[1],3.5,0,7);hc.fill();txt(a.code,p[0]+6,p[1]+4,10,'#fff','left','bold')}
+ for(const n of NPC){const p=m2p(n.pos[0],n.pos[2],ox,oy,sc);hc.fillStyle='rgba(255,255,255,.8)';hc.fillRect(p[0]-1.5,p[1]-1.5,3,3)}
+ for(const e of ENEMY){if(e.dead)continue;const p=m2p(e.pos[0],e.pos[2],ox,oy,sc);hc.fillStyle=HUDC.bd;hc.beginPath();hc.arc(p[0],p[1],3,0,7);hc.fill()}
+ hc.restore();const h=hdgOf(c.F)*D2R;hc.save();hc.translate(x+S/2,y+S/2);hc.rotate(h);hc.fillStyle=HUDC.wn;hc.beginPath();hc.moveTo(0,-8);hc.lineTo(6,6);hc.lineTo(0,3);hc.lineTo(-6,6);hc.fill();hc.restore();
+ txt('북',x+S/2,y+16,10,'#fff','center','bold');txt('M: 큰 지도',x+S-8,y+S-8,10,HUDC.dm,'right')}
+function bigMap(W,H){const S=Math.min(W,H)-80,x=(W-S)/2,y=(H-S)/2;panel(x-8,y-8,S+16,S+16);const sc=S/WSZ;hc.drawImage(MAPIMG,x,y,S,S);
+ if(G.from&&G.to){const a=m2p(G.from.x,G.from.z,x,y,sc),b=m2p(G.to.x,G.to.z,x,y,sc);hc.strokeStyle=HUDC.mg;hc.lineWidth=2;hc.setLineDash([6,5]);hc.beginPath();hc.moveTo(a[0],a[1]);hc.lineTo(b[0],b[1]);hc.stroke();hc.setLineDash([])}
+ for(const a of AIRPORTS){const p=m2p(a.x,a.z,x,y,sc);hc.fillStyle=a===G.to?HUDC.mg:'#fff';hc.beginPath();hc.arc(p[0],p[1],4,0,7);hc.fill();txt(a.name,p[0]+7,p[1]+4,12,'#fff','left','bold')}
+ const p=m2p(PL.pos[0],PL.pos[2],x,y,sc);hc.save();hc.translate(p[0],p[1]);hc.rotate(hdgOf(PL.F)*D2R);hc.fillStyle=HUDC.wn;hc.beginPath();hc.moveTo(0,-9);hc.lineTo(7,7);hc.lineTo(0,3);hc.lineTo(-7,7);hc.fill();hc.restore();txt('M: 닫기',x+S-6,y+S-8,11,HUDC.dm,'right')}
+function ilsPanel(il,W,H,small){const tx='착륙 길잡이 · '+il.apt.name+' 활주로 '+String(il.num).padStart(2,'0')+' · '+fmt(il.along/1000,1)+' km',w=small?260:330,x=(W-w)/2,y=H-(small?120:150)-12-26-36;
+ panel(x,y,w,26);txt(tx,W/2,y+17,12,HUDC.mg,'center','bold');
+ const hint=il.gsDev>1?'너무 높습니다':il.gsDev<-1?'너무 낮습니다':Math.abs(il.locDev)>2?(il.locDev>0?'활주로가 오른쪽에 있습니다':'활주로가 왼쪽에 있습니다'):'좋은 경로입니다';
+ txt(hint,W/2,y-6,11,HUDC.dm,'center')}
+function helpLine(W,H){const s='W/S 추력 · ↑↓ 기수 · ←→ 기울기 · A/D 방향 · G 바퀴 · B 브레이크 · C 시점 · Z 자동 조종 · T 시간 · M 지도 · P 일시정지'+(PL&&PL.P.mil?' · 스페이스 기관포 · F 미사일':'');
+ hc.font='11px "Malgun Gothic",sans-serif';const w=Math.min(hc.measureText(s).width+20,W-24),x=(W-w)/2,y=H-(W<820?120:150)-12-26-34;panel(x,y,w,24);hc.save();rr(x,y,w,24,8);hc.clip();txt(s,x+10,y+16,11,HUDC.dm);hc.restore()}
+function cockpitFrame(W,H){hc.fillStyle='rgba(18,20,24,.96)';hc.beginPath();hc.moveTo(0,H);hc.lineTo(0,H*.8);hc.quadraticCurveTo(W*.5,H*.7,W,H*.8);hc.lineTo(W,H);hc.fill();
+ hc.fillStyle='rgba(22,24,28,.95)';hc.beginPath();hc.moveTo(W*.5-W*.012,0);hc.lineTo(W*.5+W*.012,0);hc.lineTo(W*.5+W*.006,H*.72);hc.lineTo(W*.5-W*.006,H*.72);hc.fill();
+ hc.beginPath();hc.moveTo(0,0);hc.lineTo(W*.06,0);hc.lineTo(W*.12,H*.8);hc.lineTo(0,H*.83);hc.fill();hc.beginPath();hc.moveTo(W,0);hc.lineTo(W*.94,0);hc.lineTo(W*.88,H*.8);hc.lineTo(W,H*.83);hc.fill();
+ hc.fillRect(0,0,W,H*.035)}
+function combatHUD(W,H){const c=PL;if(c.crashed)return;
+ for(const e of ENEMY){if(e.dead)continue;const p=proj(e.pos);const d=len3(sub3(e.pos,c.pos));
+  if(p&&p[0]>0&&p[0]<VW&&p[1]>0&&p[1]<VH){const x=p[0]/DPR,y=p[1]/DPR,s=clamp(2400/d*8,10,40);const lk=LOCK.c===e;hc.strokeStyle=lk&&c.locked?HUDC.bd:lk?HUDC.wn:'rgba(255,120,100,.9)';hc.lineWidth=lk?2.5:1.5;
+   if(lk&&c.locked){hc.beginPath();hc.arc(x,y,s+6,0,7);hc.stroke()}hc.strokeRect(x-s,y-s,s*2,s*2);txt(fmt(d/1000,1)+' km',x,y+s+13,11,'#ffb0a0','center');
+   if(lk&&!c.locked){hc.beginPath();hc.arc(x,y,s+6,-Math.PI/2,-Math.PI/2+Math.PI*2*clamp(LOCK.t/1,0,1));hc.stroke()}}
+  else{const q=M4.xf(VP,e.pos[0],e.pos[1],e.pos[2]);let ex=q[0]/Math.abs(q[3]),ey=-q[1]/Math.abs(q[3]);if(q[3]<0){ex=-ex;ey=-ey}const a=Math.atan2(ey,ex);const R=Math.min(W,H)*.42;
+   const x=W/2+Math.cos(a)*R,y=H/2+Math.sin(a)*R;hc.save();hc.translate(x,y);hc.rotate(a);hc.fillStyle='rgba(255,110,90,.9)';hc.beginPath();hc.moveTo(12,0);hc.lineTo(-6,-7);hc.lineTo(-6,7);hc.fill();hc.restore()}}
+ // 조준점
+ const aim=proj(madd3(c.pos,c.F,800));if(aim&&CAM.mode!=='tower'){const x=aim[0]/DPR,y=aim[1]/DPR;hc.strokeStyle='rgba(120,255,150,.9)';hc.lineWidth=1.5;hc.beginPath();hc.arc(x,y,10,0,7);hc.moveTo(x-18,y);hc.lineTo(x-12,y);hc.moveTo(x+12,y);hc.lineTo(x+18,y);hc.moveTo(x,y-18);hc.lineTo(x,y-12);hc.stroke()}
+ const s=c.locked?'미사일 조준 완료 — F 키':LOCK.c?'조준 중…':'적기를 앞에 두면 조준됩니다';txt(s,W/2,H-(W<820?120:150)-60,13,c.locked?HUDC.bd:HUDC.dm,'center','bold')}
+
+
+
+/* ═══════════════ 화면 이동 ═══════════════ */
+function show(id){for(const s of $$('.scr'))s.classList.toggle('on',s.id===id);G.screen={sTitle:'title',sPlane:'plane',sAir:'air',sRoute:'route',sFly:'fly',sPause:'pause',sResult:'result',sCrash:'crash',sLog:'log',sHelp:'help'}[id]||id}
+const KEYS_HELP=[['W / S','추력 올리기 / 내리기 (땅에서 S를 더 누르면 역추진)'],['↑ / ↓','기수 내리기 / 올리기 (↓를 누르면 위로 올라갑니다)'],['← / →','왼쪽 / 오른쪽으로 기울이기 (땅에서는 방향 바꾸기)'],
+ ['A / D','방향타 (코를 왼쪽 / 오른쪽으로)'],['G','바퀴 올리기 / 내리기'],['B','브레이크'],['C','시점 바꾸기 (뒤 · 조종석 · 관제탑 · 지나가는 모습)'],['마우스 끌기 / 휠','둘러보기 / 가까이 · 멀리'],
+ ['Z','자동 조종 (지금 높이와 방향 유지). 켜져 있을 때 N = 목적지 방향'],['T','시간 빠르게 (1배 · 2배 · 4배)'],['M','큰 지도'],['P / Esc','일시정지'],['스페이스','군사기: 기관포 (여객기: 브레이크)'],['F','군사기: 미사일 (적을 1초 조준하면 따라갑니다)']];
+function keysTable(){return'<table class="keys">'+KEYS_HELP.map(([k,d])=>'<tr><td>'+k+'</td><td>'+d+'</td></tr>').join('')+'</table>'}
+function tabOf(P){return P.mil?'mil':P.cargo?'cargo':'pax'}
+let PL_TAB='pax';
+function setupTitle(){G.mode='menu';G.paused=false;PL=null;clearFlight();G.tod='day';G.weather=1;buildClouds(1,5);
+ const P=PLANES.find(p=>p.id==='b747'),A=AIRLINES.find(a=>a.id==='hj');SHOW=makeCraft(P,A,1);SHOW.gear=0;SHOW.gearPos=0;SHOW.title=true;SHOW.thrA=.7;SHOW.ang=0;SHOW.inAir=true;titleFlight(0);
+ for(let i=0;i<5;i++)spawnNPC(true);CAM.orbitA=.8;CAM.zoom=1;CAM.yaw=CAM.pit=0;$('#tCount').textContent=G.log.length?'비행 '+G.log.length+'회':'';show('sTitle')}
+function titleFlight(dt){if(!SHOW||!SHOW.title)return;const a=AP('icn');const cx=a.x-6000,cz=a.z+1500,R=5200;SHOW.ang+=dt*SHOW.pf.vcru*.7/R;
+ const x=cx+Math.cos(SHOW.ang)*R,z=cz+Math.sin(SHOW.ang)*R,F=norm3([-Math.sin(SHOW.ang),0,Math.cos(SHOW.ang)]);const o=orient(F,.17);setOrient(SHOW,o.F,o.U);SHOW.pos=[x,520,z];SHOW.vel=sc3(SHOW.F,SHOW.pf.vcru*.7);SHOW.spin+=dt*40}
+function showroom(P,A){const a=AP('icn');const p=aptWorld(a,-700,a.side*500);SHOW=makeCraft(P,A,1);placeOnGround(SHOW,p[0],p[1],a.dir,a.elev);SHOW.thrA=0}
+function clearFlight(){NPC.length=0;ENEMY.length=0;BUL.length=0;MIS.length=0;PARTS.length=0;FIRES.length=0;DECOYS.length=0;LOCK.c=null;LOCK.t=0}
+// ── 기종 ──
+function showPlane(){G.mode='menu';if(!G.plane)G.plane=PLANES.find(p=>p.id==='b737');PL_TAB=tabOf(G.plane);buildPlaneList();selPlane(G.plane,true);show('sPlane')}
+function buildPlaneList(){for(const b of $$('#sPlane .tabs button'))b.classList.toggle('sel',b.dataset.tab===PL_TAB);
+ const L=$('#plList');L.innerHTML='';for(const P of PLANES.filter(p=>tabOf(p)===PL_TAB)){const d=document.createElement('div');d.className='it'+(P===G.plane?' sel':'');
+  const dx=DEX[P.id];d.innerHTML='<div><div class="nm">'+P.name+'</div><div class="ds">'+(dx?dx.s:'')+'</div></div>';d.onclick=()=>selPlane(P);L.appendChild(d);P._el=d}}
+function selPlane(P,keep){G.plane=P;for(const e of $$('#plList .it'))e.classList.remove('sel');if(P._el)P._el.classList.add('sel');
+ const fl=fleetOf(P);if(!G.airline||!fl.includes(G.airline))G.airline=fl.find(a=>a.id!=='hj')||fl[0];
+ showroom(P,G.airline);CAM.zoom=1;
+ const sp=SPEC[P.id]||[0,0],c=CLS[P.cls],dx=DEX[P.id]||{};
+ const load=P.pax?'승객 '+P.pax+'명':P.box?'짐 '+P.box+'상자':'';const eng=(P.eng||1)+'개 · '+(P.prop?'프로펠러':'제트');
+ $('#plInfo').innerHTML='<h2>'+P.name+'</h2><div class="sub">'+(dx.s||'')+'</div><div class="spec"><span>크기</span><span>'+c.name+'</span><span>길이</span><span>'+P.len+' m</span><span>날개 폭</span><span>'+sp[0]+' m</span>'+
+  '<span>엔진</span><span>'+eng+'</span><span>최고 속도</span><span>'+fmt(sp[1])+' km/h</span><span>필요한 활주로</span><span>'+fmt(c.req)+' m 이상</span>'+(load?'<span>싣는 것</span><span>'+load+'</span>':'')+'</div>'+
+  (dx.l?'<div class="long">'+dx.l+'</div>':'')+(dx.f?'<div class="fact">'+dx.f+'</div>':'')}
+// ── 항공사 ──
+function showAir(){const P=G.plane,fl=fleetOf(P);if(fl.length<=1){G.airline=fl[0]||AIRLINES[0];showRoute();return}
+ $('#alSub').textContent=P.name+'을(를) 가진 항공사 '+fl.length+'곳';const L=$('#alList');L.innerHTML='';
+ for(const A of fl){const d=document.createElement('div');d.className='it'+(A===G.airline?' sel':'');d.innerHTML='<div class="sw" style="background:'+A.body+'"><i style="background:'+A.tail+'"></i><u style="background:'+A.stripe+'"></u></div><div><div class="nm">'+A.name+'</div><div class="ds">'+(AL_TEXT[A.id]||'')+'</div></div>';
+  d.onclick=()=>{G.airline=A;for(const e of $$('#alList .it'))e.classList.remove('sel');d.classList.add('sel');showroom(P,A)};L.appendChild(d)}
+ showroom(P,G.airline);show('sAir')}
+// ── 경로 ──
+function okApt(a){return a.maxLen>=CLS[G.plane.cls].req}
+function showRoute(){const P=G.plane;if(!G.from||!okApt(G.from))G.from=AIRPORTS.find(okApt)||AIRPORTS[0];if(P.mil&&!G.from.base&&okApt(AP('hin')))G.from=AP('hin');
+ if(!G.to||!okApt(G.to)||G.to===G.from)G.to=AIRPORTS.find(a=>okApt(a)&&a!==G.from)||AIRPORTS[1];if(!P.mil)G.mission='fly';
+ $('#misBox').style.display=P.mil?'':'none';fillSel();syncSeg();show('sRoute');requestAnimationFrame(drawRouteMap)}
+function fillSel(){for(const[id,k]of[['#selFrom','from'],['#selTo','to']]){const s=$(id);s.innerHTML='';for(const a of AIRPORTS){const o=document.createElement('option');o.value=a.id;o.textContent=a.name+' ('+a.code+') · 활주로 '+fmt(a.maxLen)+' m'+(okApt(a)?'':' · 너무 짧음');o.disabled=!okApt(a);if(G[k]===a)o.selected=true;s.appendChild(o)}}}
+function syncSeg(){const set=(id,v)=>{for(const b of $$(id+' button'))b.classList.toggle('sel',b.dataset.v===String(v))};set('#segMis',G.mission);set('#segEn',G.enemyN);set('#segStart',G.start);set('#segTod',G.tod);set('#segWx',G.weather);
+ const fight=G.mission==='fight';$('#enBox').style.display=fight?'':'none';$('#toBox').style.display=fight?'none':'';
+ const d=Math.hypot(G.to.x-G.from.x,G.to.z-G.from.z),v=perfOf(G.plane).vcru;
+ $('#rtNote').textContent=!fight&&G.from===G.to?'출발 공항과 도착 공항이 같습니다':'';
+ $('#rtSum').innerHTML=fight?'<b>'+G.from.name+'</b> 근처 하늘에서 적기 '+G.enemyN+'대와 공중전을 합니다.':'<b>'+G.from.name+'</b> → <b>'+G.to.name+'</b><br>거리 '+fmt(d/1000,1)+' km · 순항 속도 '+fmt(v*3.6)+' km/h · 약 '+fmtTime(d/v+(G.start==='rw'?120:0));
+ $('#rtPlane').textContent=G.plane.name+' · '+(G.airline.id==='af'?'공군':G.airline.name);$('#bRtGo').disabled=!fight&&G.from===G.to}
+function drawRouteMap(){const cvm=$('#mapCv'),r=cvm.getBoundingClientRect();if(!r.width)return;const d=Math.min(devicePixelRatio||1,2);cvm.width=r.width*d;cvm.height=r.height*d;const x=cvm.getContext('2d');x.setTransform(d,0,0,d,0,0);
+ x.fillStyle='#1d4560';x.fillRect(0,0,r.width,r.height);const sc=Math.min(r.width,r.height)/WSZ*1.0,ox=(r.width-WSZ*sc)/2,oy=(r.height-WSZ*sc)/2;x.imageSmoothingEnabled=true;x.drawImage(MAPIMG,ox,oy,WSZ*sc,WSZ*sc);
+ cvm._m={sc,ox,oy};const fight=G.mission==='fight';
+ if(!fight){const a=m2p(G.from.x,G.from.z,ox,oy,sc),b=m2p(G.to.x,G.to.z,ox,oy,sc);x.strokeStyle='#e070ff';x.lineWidth=2.5;x.setLineDash([7,5]);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();x.setLineDash([])}
+ x.font='bold 13px "Malgun Gothic",sans-serif';
+ for(const a of AIRPORTS){const p=m2p(a.x,a.z,ox,oy,sc),ok=okApt(a),isF=a===G.from,isT=a===G.to&&!fight;x.beginPath();x.arc(p[0],p[1],isF||isT?7:5,0,7);x.fillStyle=!ok?'#777':isF?'#3fa9f5':isT?'#e070ff':'#fff';x.fill();x.strokeStyle='#0b1118';x.lineWidth=2;x.stroke();
+  const lab=a.name+(isF?' · 출발':isT?' · 도착':''),lft=a.id==='icn',lx=lft?p[0]-10:p[0]+10,ly=p[1]+(lft?12:a.id==='gmp'?-4:5);x.textAlign=lft?'right':'left';x.lineWidth=3.5;x.strokeStyle='rgba(8,12,18,.85)';x.strokeText(lab,lx,ly);x.fillStyle=ok?'#fff':'#999';x.fillText(lab,lx,ly);x.textAlign='left'}
+ x.font='12px "Malgun Gothic",sans-serif';x.fillStyle='rgba(255,255,255,.7)';x.fillText('공항을 누르면 '+(fight?'출발 공항':'도착 공항')+'이 바뀝니다 (Shift+누르기: 출발 공항)',12,r.height-12)}
+// ── 출발 ──
+function chooseEnd(a,toward){let best=-1,bv=-2;for(const e of[-1,1]){const dir=e<0?a.dir:sc3(a.dir,-1);const v=toward?dot3(dir,toward):(e<0?1:0);if(v>bv){bv=v;best=e}}return best}
+function startFlight(){const P=G.plane,A=G.airline;clearFlight();auInit();
+ PL=makeCraft(P,A,1);G.mode='fly';G.paused=false;G.flightT=0;G.kills=0;G.spawned=0;G.missionDone=false;G.time=1;G.result=null;G.crash=null;G.dist=0;G.bigMap=false;G.showHelp=true;G.runwayShort=null;G.callH=1e9;G.calls={};
+ CAM.mode='chase';CAM.dir=null;CAM.yaw=CAM.pit=0;CAM.zoom=1;CAM.fly=null;buildClouds(G.weather,Math.floor(Math.random()*1000));
+ const a=G.from,b=G.mission==='fight'?G.from:G.to;
+ // 도착 공항 접근 지점
+ if(b){const tw=norm3([b.x-a.x,0,b.z-a.z]);const e=a===b?-1:chooseEnd(b,tw),r=b.rws[0],th=aptWorld(b,e*r.len/2,r.off),dir=e<0?b.dir:sc3(b.dir,-1);b.faf=[th[0]-dir[0]*9000,th[1]-dir[2]*9000]}
+ const toB=a!==b?norm3([b.x-a.x,0,b.z-a.z]):null;
+ if(G.start==='rw'){const rw=a.rws.reduce((m,r)=>r.len>m.len?r:m,a.rws[0]);placeOnRunway(PL,a,rw,chooseEnd(a,toB));G.runwayShort=rw.len<CLS[P.cls].req?'활주로가 짧습니다':null}
+ else{const dir=toB||a.dir;const p=[a.x+dir[0]*5000,0,a.z+dir[2]*5000];p[1]=Math.max(hAt(p[0],p[2]),0)+(G.mission==='fight'?2200:1100);const o=orient(dir,0);setOrient(PL,o.F,o.U);PL.pos=p;
+  PL.vel=sc3(PL.F,PL.pf.vcru*.8);PL.thr=PL.thrA=.65;PL.gear=0;PL.gearPos=0;PL.onGround=false;PL.inAir=true;PL.touched=false;PL.airT=5}
+ for(let i=0;i<7;i++)spawnNPC(true);
+ if(G.mission==='fight')spawnEnemies(Math.min(3,G.enemyN));
+ $('#fMis').style.display=P.mil?'':'none';$('#thrS').value=Math.round(PL.thr*100);
+ show('sFly');toast(G.start==='rw'?'W 키로 추력을 올려 이륙하세요':'하늘에서 시작합니다',3500)}
+function endFlight(kind){if(G.result||!PL)return;const c=PL,td=c.td||{vs:0,off:0,apt:null};
+ let score=100;score-=Math.max(0,td.vs-.8)*13;score-=Math.max(0,(td.off||0)-3)*1.6;if(c.belly)score-=40;if(kind==='ditch')score=Math.min(score,35);score=clamp(Math.round(score),0,100);
+ const grade=kind==='ditch'?'비상 착수':score>=90?'아주 부드러움':score>=75?'부드러움':score>=55?'보통':'거침';
+ const at=td.apt,ok=at&&at===G.to;
+ G.result={kind,score,grade,vs:td.vs,off:td.off,at,ok,time:G.flightT,dist:G.dist};
+ G.log.push({d:new Date().toISOString().slice(0,16).replace('T',' '),p:c.P.id,pn:c.P.name,a:c.A.name,from:G.from.name,to:G.to?G.to.name:'',at:at?at.name:kind==='ditch'?'바다':'',score,grade,kills:G.kills,mis:G.mission});save();
+ setTimeout(showResult,900)}
+function showResult(){if(G.mode!=='fly')return;const r=G.result;if(!r)return;
+ const title=r.kind==='ditch'?'바다에 비상 착수했습니다':r.ok?r.at.name+'에 착륙했습니다':r.at?'다른 공항('+r.at.name+')에 착륙했습니다':'착륙했습니다';
+ $('#resBox').innerHTML='<h2>'+title+'</h2><div class="big" style="color:'+(r.score>=75?'var(--ok)':r.score>=55?'var(--wn)':'var(--bd)')+'">'+r.grade+' · '+r.score+'점</div>'+
+  '<table style="margin-top:12px"><tr><th>땅에 닿을 때 내려온 속도</th><td>'+fmt(r.vs,1)+' m/s</td></tr><tr><th>활주로 가운데에서 벗어난 거리</th><td>'+fmt(r.off||0,1)+' m</td></tr><tr><th>비행 시간</th><td>'+fmtTime(r.time)+'</td></tr><tr><th>날아간 거리</th><td>'+fmt(r.dist/1000,1)+' km</td></tr>'+(PL.P.mil?'<tr><th>격추</th><td>'+G.kills+'대</td></tr>':'')+'</table>'+
+  '<div class="sub" style="margin-top:8px">내려온 속도가 1 m/s보다 느리면 아주 부드러운 착륙입니다.</div>'+
+  '<div class="btns"><button class="pri" id="rBack">돌아가는 비행 ('+(r.at||G.from).name+' → '+G.from.name+')</button><button id="rAgain">같은 비행 다시</button><button id="rPlane">기종 바꾸기</button><button id="rTitle">처음 화면</button></div>';
+ $('#rBack').onclick=()=>{const f=r.at||G.to;G.to=G.from;G.from=f;if(G.to===G.from)G.to=AIRPORTS.find(a=>a!==G.from&&okApt(a));G.start='rw';startFlight()};
+ if(!r.at||r.at===G.from)$('#rBack').style.display='none';
+ $('#rAgain').onclick=startFlight;$('#rPlane').onclick=showPlane;$('#rTitle').onclick=setupTitle;G.paused=true;show('sResult')}
+function showCrash(){if(!PL||G.mode!=='fly')return;$('#crBox').innerHTML='<h2>사고가 났습니다</h2><div class="sub" style="font-size:14px;color:#ffb3ad">'+PL.crashWhy+'</div>'+
+  '<div class="long" style="margin-top:10px">'+crashTip(PL.crashWhy)+'</div>'+(PL.P.mil&&G.kills?'<div class="sub" style="margin-top:6px">격추 '+G.kills+'대</div>':'')+
+  '<div class="btns"><button class="pri" id="cAgain">다시 하기</button><button id="cPlane">기종 바꾸기</button><button id="cTitle">처음 화면</button></div>';
+ $('#cAgain').onclick=startFlight;$('#cPlane').onclick=showPlane;$('#cTitle').onclick=setupTitle;show('sCrash')}
+function crashTip(w){if(/세게/.test(w))return'착륙 직전에는 ↓ 키를 살짝 눌러 기수를 들고, 추력을 줄여 천천히 내려앉으세요. 계기판의 ▼ 숫자가 3 m/s보다 작으면 안전합니다.';
+ if(/날개/.test(w))return'땅 가까이에서는 날개를 수평으로 두세요. ← → 키에서 손을 떼면 날개가 저절로 수평이 됩니다.';
+ if(/바다/.test(w))return'바다 위에서는 고도를 충분히 지키세요. 계기판의 "땅에서" 숫자를 보면 바다나 땅까지 남은 높이를 알 수 있습니다.';
+ if(/적기/.test(w))return'적기가 뒤에 붙으면 크게 돌거나 높이를 바꿔서 피하세요.';
+ if(/벗어/.test(w))return'활주로 위에서는 ← → 키로 방향을 맞추고, 속도가 빠를 때는 조금씩만 누르세요.';
+ return'"지형 주의"가 보이면 바로 ↓ 키로 기수를 올리세요. 산이 많은 동쪽에서는 높게 나는 것이 안전합니다.'}
+function pauseGame(on){if(G.mode!=='fly'||G.result||(PL&&PL.crashed))return;G.paused=on;if(on){syncOpts();$('#bMore').style.display=PL.P.mil?'':'none';$('#pauseKeys').innerHTML=keysTable();show('sPause')}else show('sFly')}
+function syncOpts(){$('#oAssist').textContent=G.settings.assist?'켜짐':'꺼짐';$('#oSound').textContent=G.settings.sound?'켜짐':'꺼짐';$('#oShadow').textContent=G.settings.shadow?'켜짐':'꺼짐'}
+function showLog(){const L=G.log.slice().reverse();const kills=G.log.reduce((s,l)=>s+(l.kills||0),0);
+ $('#logBody').innerHTML=L.length?'<div class="sub" style="margin-bottom:8px">비행 '+G.log.length+'회 · 착륙 '+G.log.filter(l=>l.at&&l.at!=='바다').length+'회'+(kills?' · 격추 '+kills+'대':'')+'</div><div style="max-height:52vh;overflow-y:auto"><table><tr><th>날짜</th><th>기종</th><th>경로</th><th>결과</th></tr>'+
+  L.map(l=>'<tr><td>'+l.d+'</td><td>'+l.pn+'<div class="sub">'+l.a+'</div></td><td>'+(l.mis==='fight'?'공중전 ('+l.from+')':l.from+' → '+(l.at||l.to))+'</td><td>'+l.grade+' · '+l.score+'점'+(l.kills?'<div class="sub">격추 '+l.kills+'</div>':'')+'</td></tr>').join('')+'</table></div>':'<div class="sub">아직 비행 기록이 없습니다.</div>';
+ show('sLog')}
+
+/* ═══════════════ 입력 연결 ═══════════════ */
+addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='SELECT')return;KEY[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+ auInit();if(e.repeat)return;
+ if(G.mode!=='fly'||!PL)return;
+ if(e.code==='KeyP'||e.code==='Escape'){if(G.screen==='pause')pauseGame(false);else pauseGame(true);return}
+ if(G.paused)return;
+ if(e.code==='KeyG'){gearToggle()}
+ else if(e.code==='KeyC')nextCam();
+ else if(e.code==='KeyZ')apToggle();
+ else if(e.code==='KeyN'&&PL.ap.on&&G.to){PL.ap.nav=!PL.ap.nav;toast(PL.ap.nav?'자동 조종: 목적지 방향으로 갑니다':'자동 조종: 지금 방향 유지')}
+ else if(e.code==='KeyT'){if(G.mission==='fight'){toast('공중전 중에는 시간을 빠르게 할 수 없습니다');return}G.time=G.time===1?2:G.time===2?4:1;toast('시간 '+G.time+'배')}
+ else if(e.code==='KeyM')G.bigMap=!G.bigMap;
+ else if(e.code==='KeyF')fireMissile();
+ else if(e.code==='KeyH')G.helpOn=!G.helpOn});
+addEventListener('keyup',e=>{KEY[e.code]=false});
+addEventListener('blur',()=>{for(const k in KEY)KEY[k]=false});
+function gearToggle(){if(!PL||PL.m.fixedGear){toast('이 기종은 바퀴가 고정되어 있습니다');return}if(PL.onGround&&PL.gear===1){toast('땅에서는 바퀴를 올릴 수 없습니다');return}PL.gear=PL.gear?0:1;sfx('gear');toast(PL.gear?'바퀴 내림':'바퀴 올림',1400)}
+function apToggle(){if(!PL)return;if(PL.ap.on){PL.ap.on=false;toast('자동 조종 꺼짐');sfx('warn');return}if(PL.onGround||!PL.inAir){toast('하늘에서만 켤 수 있습니다');return}
+ PL.ap={on:true,alt:Math.round(PL.pos[1]/10)*10,hdg:hdgOf(PL.F),spd:len3(PL.vel),nav:false};toast('자동 조종 켜짐 — N: 목적지 방향');sfx('beep')}
+// 마우스 둘러보기
+let dragP=null;cv.addEventListener('pointerdown',e=>{dragP=[e.clientX,e.clientY];CAM.drag=true;cv.setPointerCapture(e.pointerId);auInit()});
+cv.addEventListener('pointermove',e=>{if(!dragP)return;const dx=e.clientX-dragP[0],dy=e.clientY-dragP[1];dragP=[e.clientX,e.clientY];CAM.yaw+=dx*.006;CAM.pit=clamp(CAM.pit+dy*.004,-1.2,1.2);CAM.lastDrag=performance.now()});
+cv.addEventListener('pointerup',()=>{dragP=null;CAM.drag=false;CAM.lastDrag=performance.now()});
+cv.addEventListener('wheel',e=>{CAM.zoom=clamp(CAM.zoom*Math.exp(e.deltaY*.0012),.35,3.5);e.preventDefault()},{passive:false});
+// 버튼
+$('#bStart').onclick=showPlane;$('#bLog').onclick=showLog;$('#bHelp').onclick=()=>{$('#helpBody').innerHTML=keysTable()+'<div class="long" style="margin-top:12px">이륙: W 키로 추력을 끝까지 올리고, 계기판의 이륙 속도가 되면 ↓ 키로 기수를 듭니다. 하늘에 뜨면 G 키로 바퀴를 올리세요.<br>착륙: 도착 공항 근처에서 "착륙 길잡이"가 나오면 보라색 마름모를 가운데로 맞추며 내려가세요. 활주로 왼쪽의 빨강·하양 불빛(진입각 표시등)이 2개씩이면 알맞은 높이입니다.</div>';show('sHelp')};
+$('#bLogBack').onclick=()=>show('sTitle');$('#bHelpBack').onclick=()=>show('sTitle');
+for(const b of $$('#sPlane .tabs button'))b.onclick=()=>{PL_TAB=b.dataset.tab;buildPlaneList();const f=PLANES.find(p=>tabOf(p)===PL_TAB);if(tabOf(G.plane)!==PL_TAB)selPlane(f)};
+$('#bPlBack').onclick=setupTitle;$('#bPlNext').onclick=showAir;$('#bAlBack').onclick=showPlane;$('#bAlNext').onclick=showRoute;
+$('#bRtBack').onclick=()=>{fleetOf(G.plane).length>1?showAir():showPlane()};$('#bRtGo').onclick=startFlight;
+$('#selFrom').onchange=e=>{G.from=AP(e.target.value);syncSeg();drawRouteMap()};$('#selTo').onchange=e=>{G.to=AP(e.target.value);syncSeg();drawRouteMap()};
+const segs=[['#segMis','mission',v=>v],['#segEn','enemyN',Number],['#segStart','start',v=>v],['#segTod','tod',v=>v],['#segWx','weather',Number]];
+for(const[id,k,f]of segs)for(const b of $$(id+' button'))b.onclick=()=>{G[k]=f(b.dataset.v);if(k==='mission'&&G[k]==='fight')G.start='air';syncSeg();drawRouteMap()};
+$('#mapCv').addEventListener('click',e=>{const c=$('#mapCv'),m=c._m;if(!m)return;const r=c.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;let best=null,bd=22;
+ for(const a of AIRPORTS){const p=m2p(a.x,a.z,m.ox,m.oy,m.sc),d=Math.hypot(p[0]-x,p[1]-y);if(d<bd&&okApt(a)){bd=d;best=a}}if(!best)return;
+ if(e.shiftKey||G.mission==='fight'){G.from=best;if(G.to===best)G.to=AIRPORTS.find(a=>a!==best&&okApt(a))}else{if(best===G.from){G.from=G.to;G.to=best}else G.to=best}fillSel();syncSeg();drawRouteMap()});
+addEventListener('resize',()=>{if(G.screen==='route')drawRouteMap()});
+$('#fGear').onclick=gearToggle;$('#fCam').onclick=nextCam;$('#fAP').onclick=apToggle;$('#fPause').onclick=()=>pauseGame(true);$('#fMis').onclick=fireMissile;
+$('#thrS').oninput=e=>{if(PL){PL.thr=e.target.value/100;PL.rev=0}};
+$('#bResume').onclick=()=>pauseGame(false);$('#bRestart').onclick=startFlight;$('#bToPlane').onclick=showPlane;$('#bToTitle').onclick=setupTitle;
+$('#bMore').onclick=()=>{G.enemyN+=3;G.missionDone=false;G.mission=G.mission==='fight'?'fight':G.mission;spawnEnemies(3);pauseGame(false);toast('적기 3대가 다가옵니다')};
+$('#oAssist').onclick=()=>{G.settings.assist^=1;syncOpts();save()};$('#oSound').onclick=()=>{G.settings.sound^=1;if(G.settings.sound)auInit();syncOpts();save()};$('#oShadow').onclick=()=>{G.settings.shadow^=1;syncOpts();save()};
+
+/* ═══════════════ 한 번씩 확인하는 것 ═══════════════ */
+function flightChecks(dt){const c=PL;if(!c||c.crashed)return;const v=len3(c.vel);
+ // 착륙 후 멈춤
+ if(c.inAir&&c.touched&&c.onGround&&v<2.5){c.stopT+=dt;if(c.stopT>1.2)endFlight('land')}else c.stopT=0;
+ // 이륙 콜
+ if(c.onGround&&!c.inAir&&!c.pf.fighter){const vr=c.pf.vr;if(v>vr*.92&&!G.calls.v1){G.calls.v1=1;say('V one')}if(v>vr&&!G.calls.rot){G.calls.rot=1;say('rotate')}}
+ // 착륙 콜 (전파 고도, 피트)
+ if(c.inAir&&!c.onGround&&c.gearPos>.9&&c.vel[1]<-.5&&G.flightT>15){const ft=aglOf(c)*3.28;for(const h of[1000,500,100,50,40,30,20,10]){if(G.callH>h&&ft<=h&&!G.calls['h'+h]){G.calls['h'+h]=1;say(h===1000?'one thousand':h===500?'five hundred':h===100?'one hundred':h===50?'fifty':h===40?'forty':h===30?'thirty':h===20?'twenty':'ten');break}}G.callH=ft}
+ if(c.inAir&&!c.onGround&&aglOf(c)*3.28>1200)for(const k in G.calls)if(k[0]==='h')delete G.calls[k];
+ // 공중전 다음 무리
+ if(G.mission==='fight'&&G.spawned<G.enemyN&&ENEMY.filter(e=>!e.dead).length<2)spawnEnemies(Math.min(3,G.enemyN-G.spawned));
+ // 기체 회복
+ if(c.P.mil&&!c.burning&&c.hp<100&&G.flightT-(c.lastHit||0)>6)c.hp=Math.min(100,c.hp+dt*3);
+ // 지도 끝에서 돌려보내기
+ if(c.pos[2]<WZ0+800&&c.vel[2]<0)c.vel[2]*=.98;
+ const ts=$('#thrS');if(document.activeElement!==ts){ts.value=Math.round(c.thr*100)}$('#thrV').textContent=Math.round(c.thr*100)+'%';
+ $('#fGear').classList.toggle('on',c.gear===0);$('#fAP').classList.toggle('on',!!c.ap.on);
+ if(c.ap.on&&!c.inAir)c.ap.on=false}
+
+/* ═══════════════ 메인 루프 ═══════════════ */
+let last=performance.now(),ERR=0;
+function loop(now){requestAnimationFrame(loop);try{
+ const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+ if(!G.paused){G.t+=dt;
+  if(G.mode==='fly'&&PL){const T=G.time,steps=Math.max(1,Math.ceil(dt*T*120)),h=dt*T/steps,inp=inputs();
+   for(let i=0;i<steps;i++){stepPlayer(PL,h,inp);G.flightT+=h}
+   if(!PL.crashed)G.dist+=len3(PL.vel)*dt*T;
+   const dd=dt*T;stepNPC(dd);stepEnemies(dd);stepCombat(dd);stepShots(dd);emitTrails(PL,dt);for(const n of NPC)if(len3(sub3(n.pos,CAM.pos))<15000)emitTrails(n,dt);
+   flightChecks(dt)}
+  else if(G.mode==='menu'){titleFlight(dt);if(SHOW&&SHOW.title)emitTrails(SHOW,dt);stepNPC(dt)}
+  stepParts(dt*(G.mode==='fly'?G.time:1))}
+ updateCamera(dt);render();drawHUD();auUpdate();
+}catch(e){ERR++;if(ERR<5)console.error(e)}}
+function boot(){try{buildWorld();buildMapImage();buildParked();}catch(e){console.error(e);$('#loading').textContent='지형을 만드는 중 문제가 생겼습니다: '+e.message;return}
+ $('#loading').style.display='none';setupTitle();requestAnimationFrame(loop)}
+setTimeout(boot,40);
+
+</script>
+<script src="../track.js" defer></script>
+</body></html>
