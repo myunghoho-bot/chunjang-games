@@ -1762,6 +1762,7 @@ function buildMapImage(){const N=TNV,c=document.createElement('canvas');c.width=
 const m2p=(x,z,ox,oy,sc)=>[ox+(x-WX0)*sc,oy+(z-WZ0)*sc];
 
 /* ═══════════════ 계기판 ═══════════════ */
+const TOUCHDEV=matchMedia('(hover:none) and (pointer:coarse)').matches;
 const HUDC={pn:'rgba(10,16,24,.78)',ln:'rgba(255,255,255,.14)',tx:'#e8eef4',dm:'#98a9ba',ac:'#5fc0ff',ok:'#5fd38a',wn:'#f5b63f',bd:'#ff5d55',mg:'#e070ff'};
 function rr(x,y,w,h,r){hc.beginPath();hc.moveTo(x+r,y);hc.arcTo(x+w,y,x+w,y+h,r);hc.arcTo(x+w,y+h,x,y+h,r);hc.arcTo(x,y+h,x,y,r);hc.arcTo(x,y,x+w,y,r);hc.closePath()}
 function panel(x,y,w,h){rr(x,y,w,h,8);hc.fillStyle=HUDC.pn;hc.fill();hc.strokeStyle=HUDC.ln;hc.lineWidth=1;hc.stroke()}
@@ -1780,7 +1781,7 @@ function ilsInfo(){if(!PL||!G.to||PL.onGround)return null;const a=G.to;let best=
 function drawHUD(){const W=VW/DPR,H=VH/DPR;hc.setTransform(1,0,0,1,0,0);hc.clearRect(0,0,VW,VH);hc.setTransform(DPR,0,0,DPR,0,0);
  const now=performance.now();
  if(G.mode==='fly'&&PL&&!G.paused&&$('#sFly').classList.contains('on')){
-  const c=PL,v=len3(c.vel),small=W<820;
+  const c=PL,v=len3(c.vel),small=(W<820||H<500);
   if(CAM.mode==='cockpit'&&!c.crashed)cockpitFrame(W,H);
   // 피해
   if(c.hitT&&now-c.hitT<350){const g=hc.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.7);g.addColorStop(0,'rgba(255,40,30,0)');g.addColorStop(1,'rgba(255,40,30,.35)');hc.fillStyle=g;hc.fillRect(0,0,W,H)}
@@ -1799,7 +1800,7 @@ function drawHUD(){const W=VW/DPR,H=VH/DPR;hc.setTransform(1,0,0,1,0,0);hc.clear
   pfd(c,W,H,small);
   miniMap(c,W,H,small);
   const il=ilsInfo();if(il)ilsPanel(il,W,H,small);
-  if(G.showHelp&&G.flightT<30||G.helpOn)helpLine(W,H);
+  if(!TOUCHDEV&&(G.showHelp&&G.flightT<30||G.helpOn))helpLine(W,H);
  }
  if(G.bigMap&&G.mode==='fly'&&PL&&!G.paused)bigMap(W,H);
  // 알림
@@ -1867,7 +1868,7 @@ function ilsPanel(il,W,H,small){const tx='착륙 길잡이 · '+il.apt.name+' �
  const hint=il.gsDev>1?'너무 높습니다':il.gsDev<-1?'너무 낮습니다':Math.abs(il.locDev)>2?(il.locDev>0?'활주로가 오른쪽에 있습니다':'활주로가 왼쪽에 있습니다'):'좋은 경로입니다';
  txt(hint,W/2,y-6,11,HUDC.dm,'center')}
 function helpLine(W,H){const s='W/S 추력 · ↑↓ 기수 · ←→ 기울기 · A/D 방향 · G 바퀴 · B 브레이크 · C 시점 · Z 자동 조종 · T 시간 · M 지도 · P 일시정지'+(PL&&PL.P.mil?' · 스페이스 기관포 · F 미사일':'');
- hc.font='11px "Malgun Gothic",sans-serif';const w=Math.min(hc.measureText(s).width+20,W-24),x=(W-w)/2,y=H-(W<820?120:150)-12-26-34;panel(x,y,w,24);hc.save();rr(x,y,w,24,8);hc.clip();txt(s,x+10,y+16,11,HUDC.dm);hc.restore()}
+ hc.font='11px "Malgun Gothic",sans-serif';const w=Math.min(hc.measureText(s).width+20,W-24),x=(W-w)/2,y=H-((W<820||H<500)?120:150)-12-26-34;panel(x,y,w,24);hc.save();rr(x,y,w,24,8);hc.clip();txt(s,x+10,y+16,11,HUDC.dm);hc.restore()}
 function cockpitFrame(W,H){hc.fillStyle='rgba(18,20,24,.96)';hc.beginPath();hc.moveTo(0,H);hc.lineTo(0,H*.8);hc.quadraticCurveTo(W*.5,H*.7,W,H*.8);hc.lineTo(W,H);hc.fill();
  hc.fillStyle='rgba(22,24,28,.95)';hc.beginPath();hc.moveTo(W*.5-W*.012,0);hc.lineTo(W*.5+W*.012,0);hc.lineTo(W*.5+W*.006,H*.72);hc.lineTo(W*.5-W*.006,H*.72);hc.fill();
  hc.beginPath();hc.moveTo(0,0);hc.lineTo(W*.06,0);hc.lineTo(W*.12,H*.8);hc.lineTo(0,H*.83);hc.fill();hc.beginPath();hc.moveTo(W,0);hc.lineTo(W*.94,0);hc.lineTo(W*.88,H*.8);hc.lineTo(W,H*.83);hc.fill();
@@ -1881,7 +1882,7 @@ function combatHUD(W,H){const c=PL;if(c.crashed)return;
    const x=W/2+Math.cos(a)*R,y=H/2+Math.sin(a)*R;hc.save();hc.translate(x,y);hc.rotate(a);hc.fillStyle='rgba(255,110,90,.9)';hc.beginPath();hc.moveTo(12,0);hc.lineTo(-6,-7);hc.lineTo(-6,7);hc.fill();hc.restore()}}
  // 조준점
  const aim=proj(madd3(c.pos,c.F,800));if(aim&&CAM.mode!=='tower'){const x=aim[0]/DPR,y=aim[1]/DPR;hc.strokeStyle='rgba(120,255,150,.9)';hc.lineWidth=1.5;hc.beginPath();hc.arc(x,y,10,0,7);hc.moveTo(x-18,y);hc.lineTo(x-12,y);hc.moveTo(x+12,y);hc.lineTo(x+18,y);hc.moveTo(x,y-18);hc.lineTo(x,y-12);hc.stroke()}
- const s=c.locked?'미사일 조준 완료 — F 키':LOCK.c?'조준 중…':'적기를 앞에 두면 조준됩니다';txt(s,W/2,H-(W<820?120:150)-60,13,c.locked?HUDC.bd:HUDC.dm,'center','bold')}
+ const s=c.locked?'미사일 조준 완료 — F 키':LOCK.c?'조준 중…':'적기를 앞에 두면 조준됩니다';txt(s,W/2,H-((W<820||H<500)?120:150)-60,13,c.locked?HUDC.bd:HUDC.dm,'center','bold')}
 
 
 
@@ -1937,7 +1938,7 @@ function drawRouteMap(){const cvm=$('#mapCv'),r=cvm.getBoundingClientRect();if(!
  if(!fight){const a=m2p(G.from.x,G.from.z,ox,oy,sc),b=m2p(G.to.x,G.to.z,ox,oy,sc);x.strokeStyle='#e070ff';x.lineWidth=2.5;x.setLineDash([7,5]);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();x.setLineDash([])}
  x.font='bold 13px "Malgun Gothic",sans-serif';
  for(const a of AIRPORTS){const p=m2p(a.x,a.z,ox,oy,sc),ok=okApt(a),isF=a===G.from,isT=a===G.to&&!fight;x.beginPath();x.arc(p[0],p[1],isF||isT?7:5,0,7);x.fillStyle=!ok?'#777':isF?'#3fa9f5':isT?'#e070ff':'#fff';x.fill();x.strokeStyle='#0b1118';x.lineWidth=2;x.stroke();
-  const lab=a.name+(isF?' · 출발':isT?' · 도착':''),lft=a.id==='icn',lx=lft?p[0]-10:p[0]+10,ly=p[1]+(lft?12:a.id==='gmp'?-4:5);x.textAlign=lft?'right':'left';x.lineWidth=3.5;x.strokeStyle='rgba(8,12,18,.85)';x.strokeText(lab,lx,ly);x.fillStyle=ok?'#fff':'#999';x.fillText(lab,lx,ly);x.textAlign='left'}
+  const lab=a.name+(isF?' · 출발':isT?' · 도착':''),lft=a.id==='icn'||a.id==='hin',lx=lft?p[0]-10:p[0]+10,ly=p[1]+(a.id==='icn'?12:a.id==='gmp'?-4:5);x.textAlign=lft?'right':'left';x.lineWidth=3.5;x.strokeStyle='rgba(8,12,18,.85)';x.strokeText(lab,lx,ly);x.fillStyle=ok?'#fff':'#999';x.fillText(lab,lx,ly);x.textAlign='left'}
  x.font='12px "Malgun Gothic",sans-serif';x.fillStyle='rgba(255,255,255,.7)';x.fillText('공항을 누르면 '+(fight?'출발 공항':'도착 공항')+'이 바뀝니다 (Shift+누르기: 출발 공항)',12,r.height-12)}
 // ── 출발 ──
 function chooseEnd(a,toward){let best=-1,bv=-2;for(const e of[-1,1]){const dir=e<0?a.dir:sc3(a.dir,-1);const v=toward?dot3(dir,toward):(e<0?1:0);if(v>bv){bv=v;best=e}}return best}
