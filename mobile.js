@@ -70,6 +70,7 @@
     'cosmos': { pinch: 0 },
     'rocket': { pinch: 0 },
     'galaxy': { pinch: 0 },
+    'impact': { pinch: 0 },
     'airplane3d': {   // 왼쪽: 기수·기울기, 오른쪽: 추력·브레이크(군용기는 기관포·미사일). 게임 속 단추는 미니맵 아래 두 줄로
       show: () => g(() => G.mode === 'fly' && G.screen === 'fly' && PL && !PL.crashed),
       L: [{ t: '위로', k: 'ArrowDown', hold: 1 }, { t: '◀', k: 'ArrowLeft', hold: 1 }, { t: '아래로', k: 'ArrowUp', hold: 1 }, { t: '▶', k: 'ArrowRight', hold: 1 }],

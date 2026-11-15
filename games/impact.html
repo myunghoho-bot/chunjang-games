@@ -1,0 +1,3075 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>행성 충돌 실험실</title>
+<style>
+:root{--pn:rgba(10,11,15,.88);--ln:rgba(190,170,150,.15);--ln2:rgba(200,180,160,.3);--tx:#e4ddd5;--dim:#958b80;--ac:#ff9a4d;--ac2:#ffc48a;--cool:#8fc1ff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--tx);font:13px/1.45 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+#gl,#ov{position:fixed;left:0;top:0;width:100%;height:100%;display:block}
+#gl{touch-action:none}
+#ov{pointer-events:none}
+.pn{position:fixed;background:var(--pn);border:1px solid var(--ln);border-radius:6px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#top{left:8px;right:8px;top:8px;height:42px;display:flex;align-items:center;gap:6px;padding:0 8px;z-index:5}
+.brand{font-weight:700;white-space:nowrap;line-height:1.1;margin-right:6px}
+.brand small{display:block;font:600 9px/1 Consolas,monospace;color:var(--dim);letter-spacing:.2em;margin-top:3px}
+button,select{font:inherit;font-size:12.5px;color:var(--tx);background:rgba(255,255,255,.04);border:1px solid var(--ln2);border-radius:4px;padding:4px 9px;cursor:pointer;white-space:nowrap}
+button:hover{background:rgba(255,154,77,.12);border-color:rgba(255,154,77,.55)}
+button.on{background:rgba(255,154,77,.22);border-color:var(--ac);color:#fff}
+button.primary{background:#8a3d12;border-color:#d0702e;color:#fff;font-weight:700}
+button.primary:hover{background:#a2491a}
+button.warn:hover{background:rgba(255,90,70,.16);border-color:#e0705e}
+button:disabled{opacity:.4;cursor:default}
+select{background:#100e0d}
+select option{background:#100e0d}
+#sPreset{max-width:200px}
+.sep{flex:1}
+.vline{width:1px;height:22px;background:var(--ln)}
+#tTime{min-width:150px;font-family:Consolas,"Malgun Gothic",monospace;color:#ffe2c8;white-space:nowrap}
+#tTime small{display:block;color:var(--dim);font-size:10.5px;line-height:1.1}
+#left{left:8px;top:58px;width:278px;max-height:calc(100% - 66px);padding:10px 10px 12px;overflow:auto;z-index:4}
+#right{right:8px;top:58px;width:286px;max-height:calc(100% - 66px);padding:10px;overflow:auto;z-index:4;display:none}
+.h{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:13px;margin:0 0 8px;gap:6px}
+.h small{font:600 9px Consolas,monospace;letter-spacing:.16em;color:var(--dim)}
+.types{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px}
+.tc{border:1px solid var(--ln);border-radius:4px;padding:3px 2px 2px;text-align:center;cursor:pointer;background:rgba(0,0,0,.4)}
+.tc canvas{width:100%;height:auto;aspect-ratio:1;display:block}
+.tc span{display:block;font-size:10.5px;color:#c2b8ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.tc:hover{border-color:rgba(255,154,77,.45)}
+.tc.on{border-color:var(--ac);background:rgba(255,154,77,.12)}
+.tc.on span{color:#fff}
+.tc.new{display:flex;flex-direction:column;align-items:center;justify-content:center;border-style:dashed;color:var(--dim);font-size:10.5px;min-height:64px;gap:3px}
+.tc.new b{font-size:18px;font-weight:300;line-height:1;color:var(--ac)}
+.tname{font-size:12px;color:#ffe2c8;margin:2px 0 4px;min-height:17px;display:flex;justify-content:space-between;align-items:center;gap:4px}
+.tname button{padding:1px 6px;font-size:11px}
+.tdesc{font-size:11px;color:var(--dim);margin:0 0 6px;line-height:1.5;min-height:32px}
+.row{display:grid;grid-template-columns:48px 1fr 104px;align-items:center;gap:6px;margin:5px 0}
+.row label{color:var(--dim);font-size:12px}
+.row output{font:12px Consolas,"Malgun Gothic",monospace;text-align:right;color:#ffe2c8;white-space:nowrap}
+input[type=range]{width:100%;accent-color:#ff9a4d;height:16px;margin:0}
+.stat{font-size:11.5px;color:var(--dim);margin:8px 0;line-height:1.65;border-top:1px solid var(--ln);padding-top:7px}
+.stat b{color:#efe6dc;font-weight:600}
+#bPlace{width:100%;padding:8px;margin-top:2px}
+#bPlace.on{background:#2c5f8f;border-color:#5d9bd6}
+.note{font-size:11px;color:var(--dim);margin-top:6px;line-height:1.5}
+#right table{width:100%;border-collapse:collapse;font-size:12px;margin:2px 0 6px}
+#right td{padding:3px 0;border-bottom:1px solid rgba(190,170,150,.08);vertical-align:top}
+#right td:first-child{color:var(--dim);width:74px;white-space:nowrap}
+.bar{display:flex;height:7px;border-radius:2px;overflow:hidden;margin:3px 0 1px;background:#222}
+.bar i{display:block;height:100%}
+#iName{font-size:14px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+#iName i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.btns{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.btns button{flex:1}
+.h2{font-size:12px;color:var(--dim);margin:10px 0 3px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--ln);padding-top:8px}
+.h2 select{flex:1;padding:2px 4px}
+#right .row{grid-template-columns:40px 1fr 92px}
+#aimInfo{font-size:11px;color:var(--dim);line-height:1.5;margin-top:4px}
+#log{position:fixed;left:296px;bottom:10px;width:min(480px,calc(100% - 620px));pointer-events:none;font-size:12px;line-height:1.5;z-index:3}
+#log div{background:rgba(8,8,10,.76);border-left:2px solid var(--cool);padding:3px 8px;margin-top:3px;color:#ddd5cc;border-radius:0 3px 3px 0;transition:opacity 1s}
+#log div.w{border-left-color:var(--ac)}
+#log div i{font-style:normal;color:var(--dim);font-family:Consolas,monospace;margin-right:6px}
+#hint{position:fixed;top:56px;left:50%;transform:translateX(-50%);font-size:12px;color:#b8ab9e;pointer-events:none;text-align:center;width:min(560px,calc(100% - 620px));text-shadow:0 1px 3px #000;z-index:3}
+#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:9;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:rgba(14,12,10,.94);border:1px solid var(--ac);color:#ffe2c2;padding:6px 12px;border-radius:5px;font-size:12.5px;animation:tin .35s cubic-bezier(.3,1.5,.6,1)}
+@keyframes tin{from{transform:translateY(10px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+#scale{position:fixed;bottom:12px;right:12px;font:11px Consolas,"Malgun Gothic",monospace;color:#b8ab9e;pointer-events:none;text-align:right;z-index:2}
+#scale div{height:6px;border:1px solid #b8ab9e;border-top:none;margin-top:2px;margin-left:auto}
+#legend{position:fixed;bottom:34px;right:12px;font-size:11px;color:#b8ab9e;pointer-events:none;text-align:right;z-index:2;line-height:1.6}
+#legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 3px 0 8px;vertical-align:-1px}
+.pop{position:fixed;top:54px;z-index:8;padding:10px 12px;display:none;width:260px}
+.pop.show{display:block}
+.pop label{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12.5px;cursor:pointer}
+.pop .row{grid-template-columns:56px 1fr 38px}
+.pop .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:4px 0 8px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:20}
+.modal.show{display:flex}
+.mbox{background:#0d0c0b;border:1px solid var(--ln2);border-radius:8px;padding:14px 16px;max-width:min(980px,96vw);max-height:92vh;overflow:auto}
+.mbox h3{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mbox h3 small{font-weight:400;color:var(--dim);font-size:12px}
+.dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.dc{border:1px solid var(--ln);border-radius:5px;padding:6px;background:#080706}
+.dc .im{width:100%;aspect-ratio:16/9;background:#030303;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#4a423b;font-size:11px;overflow:hidden}
+.dc .im img{width:100%;height:100%;object-fit:cover}
+.dc b{display:block;margin:5px 0 2px;font-size:12.5px}
+.dc p{margin:0;font-size:11px;color:var(--dim);line-height:1.45}
+.dc.lock b{color:#5e5650}.dc.lock p{color:#4a433d}
+.dc i{font-style:normal;font-size:10.5px;color:#c08a5a;font-family:Consolas,monospace}
+.ed{display:grid;grid-template-columns:240px 1fr;gap:16px}
+.ed canvas{width:240px;height:240px;background:#000;border:1px solid var(--ln);border-radius:4px;display:block}
+.ed .row{grid-template-columns:86px 1fr 92px}
+.ed .row input[type=color]{width:100%;height:22px;border:1px solid var(--ln2);background:none;padding:0;cursor:pointer}
+.ed .seg{display:flex;gap:4px}.ed .seg button{flex:1;padding:3px 0}
+.help p{margin:4px 0;font-size:12.5px}
+.help kbd{font:11px Consolas,monospace;border:1px solid var(--ln2);border-radius:3px;padding:0 4px;color:#ffe2c8}
+#busy{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);background:rgba(14,12,10,.92);border:1px solid var(--ln2);padding:6px 14px;border-radius:5px;font-size:12px;display:none;z-index:12}
+#err{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);background:#3a0d0d;border:1px solid #c55;color:#fdd;padding:8px 12px;border-radius:5px;display:none;z-index:30;font-size:12px;max-width:80%}
+#fatal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000;z-index:40;font-size:14px;text-align:center;line-height:1.8;padding:20px}
+@media (max-height:560px),(max-width:900px){
+  #left{width:240px;font-size:12px}#right{width:240px}
+  .types{grid-template-columns:repeat(5,1fr);gap:3px}.tc span{font-size:9.5px}
+  .row{grid-template-columns:42px 1fr 88px;margin:3px 0}.row label{font-size:11px;white-space:nowrap}
+  #log{left:254px;width:calc(100% - 510px)}#hint{width:calc(100% - 510px)}
+  .brand small{display:none}.tdesc{display:none}
+}
+@media (max-height:520px){
+  #top{height:36px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}#top::-webkit-scrollbar{display:none}
+  #top button,#top select{font-size:11.5px;padding:3px 6px}.brand{font-size:12px}#tTime{min-width:110px;font-size:11.5px}
+  #left,#right{top:50px;max-height:calc(100% - 56px);width:218px;padding:8px}
+  .types{grid-template-columns:repeat(4,1fr)}
+  #log{left:232px;width:calc(100% - 464px);font-size:11px}#log div:nth-last-child(n+3){display:none}
+  .stat{font-size:10.5px}.note{display:none}#legend{display:none}
+}
+body.hidepanels #left,body.hidepanels #right{display:none!important}
+</style>
+<script src="../mobile.js"></script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="ov"></canvas>
+
+<div id="top" class="pn">
+  <div class="brand">행성 충돌 실험실<small>PLANET IMPACT LAB</small></div>
+  <div class="vline"></div>
+  <button id="bPlay">일시정지</button>
+  <select id="sSpeed" title="시간 빠르기"></select>
+  <span id="tTime">0분</span>
+  <div class="sep"></div>
+  <select id="sPreset"></select>
+  <button id="bFit">전체 보기</button>
+  <button id="bClear" class="warn">모두 지우기</button>
+  <button id="bView">보기</button>
+  <button id="bDex">충돌 도감</button>
+  <button id="bSound">소리 켬</button>
+  <button id="bPanels" title="옆 창 숨기기">창</button>
+  <button id="bHelp">조작법</button>
+</div>
+
+<div id="left" class="pn">
+  <div class="h">행성 만들기 <small>CREATE</small></div>
+  <div class="types" id="types"></div>
+  <div class="tname"><span id="tName">지구</span><span id="tEdit"></span></div>
+  <div class="tdesc" id="tDesc"></div>
+  <div class="row"><label>질량</label><input type="range" id="rMass" min="0" max="1000" step="1"><output id="vMass"></output></div>
+  <div class="row"><label>하루</label><input type="range" id="rDay" min="0" max="100" step="1"><output id="vDay"></output></div>
+  <div class="row"><label>정밀도</label><select id="sQual" style="grid-column:span 2"></select></div>
+  <div class="stat" id="vInfo"></div>
+  <button id="bPlace" class="primary">우주에 놓기</button>
+  <div class="note" id="placeNote">누른 다음 화면을 누르면 그 자리에 놓입니다. 누른 채 끌면 끈 방향으로 던집니다.</div>
+</div>
+
+<div id="right" class="pn">
+  <div class="h"><span id="iName" title="눌러서 이름 바꾸기"></span><button id="iClose">닫기</button></div>
+  <table id="iTable"></table>
+  <div class="btns"><button id="iFollow">따라가기</button><button id="iRename">이름 바꾸기</button><button id="iDel" class="warn">삭제</button></div>
+  <div class="h2">겨누기 <select id="iTarget"></select></div>
+  <div class="row"><label>속도</label><input type="range" id="aSpeed" min="0" max="1000" step="1"><output id="avSpeed"></output></div>
+  <div class="row"><label>각도</label><input type="range" id="aAng" min="0" max="85" step="1"><output id="avAng"></output></div>
+  <div class="btns"><button data-ang="0">정면</button><button data-ang="45">비스듬히</button><button data-ang="72">스치기</button></div>
+  <div class="btns"><button id="aGo" class="primary">이렇게 겨누기</button><button id="aStop">멈추기</button></div>
+  <div id="aimInfo"></div>
+</div>
+
+<div id="hint"></div>
+<div id="log"></div>
+<div id="toast"></div>
+<div id="busy"></div>
+<div id="legend"></div>
+<div id="scale"><span id="scaleT"></span><div id="scaleB"></div></div>
+
+<div id="viewPop" class="pop pn">
+  <div style="font-size:12px;color:var(--dim)">색으로 보기</div>
+  <div class="seg" id="modeSeg"><button data-m="0">겉모습</button><button data-m="1">재료</button><button data-m="2">온도</button><button data-m="3">처음 행성</button></div>
+  <label><input type="checkbox" id="cCut"> 반 잘라서 속 보기</label>
+  <label><input type="checkbox" id="cNames" checked> 이름 표시</label>
+  <label><input type="checkbox" id="cGrid" checked> 바닥 격자</label>
+  <label><input type="checkbox" id="cPred"> 앞으로 갈 길 늘 보기</label>
+  <label><input type="checkbox" id="cAxes"> 자전축 보기</label>
+  <label><input type="checkbox" id="cRoche"> 로슈 한계 보기</label>
+  <label><input type="checkbox" id="cStars" checked> 배경 별</label>
+  <label><input type="checkbox" id="cShake" checked> 부딪힐 때 화면 흔들림</label>
+  <div class="row"><label>빛 번짐</label><input type="range" id="rGlow" min="0" max="100"><output id="vGlow"></output></div>
+  <div class="row"><label>매끈함</label><input type="range" id="rSmooth" min="0" max="100"><output id="vSmooth"></output></div>
+</div>
+
+<div id="dexM" class="modal"><div class="mbox" style="width:980px">
+  <h3><span>충돌 도감 <small id="dexCount"></small></span><button id="dexClose">닫기</button></h3>
+  <div class="dex" id="dexGrid"></div>
+</div></div>
+
+<div id="edM" class="modal"><div class="mbox">
+  <h3><span id="edTitle">새 행성 만들기</span><button id="edClose">닫기</button></h3>
+  <div class="ed">
+    <div><canvas id="edCv" width="240" height="240"></canvas>
+      <div class="note" id="edStat"></div>
+    </div>
+    <div id="edRows"></div>
+  </div>
+  <div class="btns" style="margin-top:12px"><button id="edSave" class="primary">이 행성 저장</button><button id="edDel" class="warn">이 행성 지우기</button><button id="edCancel">취소</button></div>
+</div></div>
+
+<div id="helpM" class="modal"><div class="mbox help" style="width:600px">
+  <h3><span>조작법</span><button id="helpClose">닫기</button></h3>
+  <p><b>화면 돌리기</b> 왼쪽 버튼으로 끌기 (핸드폰: 한 손가락)</p>
+  <p><b>화면 옮기기</b> 오른쪽 버튼으로 끌기, 또는 <kbd>Shift</kbd> + 끌기 (핸드폰: 두 손가락)</p>
+  <p><b>확대 / 축소</b> 마우스 휠 (핸드폰: 두 손가락 벌리기)</p>
+  <p><b>행성 놓기</b> 왼쪽에서 행성과 질량을 고르고 '우주에 놓기'를 누른 다음 화면을 누릅니다. 누른 채 끌면 끈 방향과 길이만큼 빠르게 던집니다. 끄는 동안에는 시간이 멈추고 앞으로 갈 길과 부딪힐 때의 속도·각도가 보입니다.</p>
+  <p><b>겨누기</b> 행성을 누르고 오른쪽 '겨누기'에서 과녁, 부딪히는 속도, 각도를 정한 다음 '이렇게 겨누기'를 누릅니다. 0°는 정면, 90°에 가까울수록 스치듯 부딪힙니다.</p>
+  <p><b>로슈 한계</b> 작은 천체가 큰 행성에 가까워지면 빨간 점선 원(로슈 한계)이 보입니다. 그 안으로 들어가면 행성 쪽과 반대쪽을 끌어당기는 힘이 달라서 길게 늘어나고, 여러 번 들어가면 찢어져 고리가 됩니다. 장면 목록 맨 아래 '로슈 한계를 여러 번 지나는 달'에서 볼 수 있습니다.</p>
+  <p><b>속 보기</b> '보기' → '반 잘라서 속 보기'를 켜면 철 핵과 맨틀이 보입니다. '재료', '온도', '처음 행성' 색으로도 볼 수 있습니다.</p>
+  <p><b>단축키</b> <kbd>Space</kbd> 재생/일시정지 · <kbd>Esc</kbd> 놓기 취소 · <kbd>Delete</kbd> 고른 행성 삭제 · <kbd>F</kbd> 따라가기 · <kbd>C</kbd> 반 잘라 보기 · <kbd>H</kbd> 옆 창 숨기기</p>
+  <p style="color:var(--dim);margin-top:10px">행성은 같은 무게의 알갱이 수천 개로 되어 있습니다. 알갱이는 실제 재료(철·암석·물·얼음)의 단단함대로 서로 밀어내고, 모든 알갱이가 서로 끌어당깁니다(과학자들이 쓰는 SPH 계산과 같은 방법). 부딪히면 알갱이가 빨라진 만큼 뜨거워져 녹고 빛납니다. 조용히 굳은 행성은 계산을 아끼려고 통째로 움직이다가, 무언가 닿으면 다시 알갱이로 깨어납니다.</p>
+  <p style="color:var(--dim)">알갱이가 많으면 계산이 오래 걸립니다. 그래서 컴퓨터의 두뇌(코어) 여러 개에 알갱이를 나눠 주고 동시에 계산합니다. '정밀도'를 올리면 알갱이가 많아져 더 자세하지만, 같은 시간에 흐르는 시간은 줄어듭니다.</p>
+  <p style="color:var(--dim)">파편 원반은 실제로는 아주 빽빽해서 파편끼리 계속 부딪히며 궤도가 둥글어집니다. 이 계산은 알갱이 수가 적어서 그 효과를 따로 넣었습니다.</p>
+</div></div>
+
+<div id="err"></div>
+<div id="fatal"></div>
+<script>
+'use strict';
+/* ===================== 공통 도구 ===================== */
+const PI = Math.PI, TAU = Math.PI * 2;
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const lerp = (a, b, t) => a + (b - a) * t;
+const V = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  mul: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: a => Math.hypot(a[0], a[1], a[2]),
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  rot(v, ax, ang) {
+    ax = V.norm(ax); const c = Math.cos(ang), s = Math.sin(ang), d = V.dot(ax, v), cr = V.cross(ax, v);
+    return [v[0] * c + cr[0] * s + ax[0] * d * (1 - c), v[1] * c + cr[1] * s + ax[1] * d * (1 - c), v[2] * c + cr[2] * s + ax[2] * d * (1 - c)];
+  }
+};
+function numK(x, d) { return x.toLocaleString('ko-KR', { maximumFractionDigits: d || 0, minimumFractionDigits: 0 }); }
+function fmtMassShort(m) {   // 지구 질량 단위 → 쉬운 말
+  if (m >= 0.1) return '지구의 ' + numK(m, m < 1 ? 2 : 1) + '배';
+  if (m >= MMOON * 0.05) return '달의 ' + numK(m / MMOON, m / MMOON < 1 ? 2 : 1) + '배';
+  return fmtKg(m);
+}
+function fmtKg(m) { const kg = m * ME_KG, e = Math.floor(Math.log10(kg)), f = kg / Math.pow(10, e); const sup = String(e).split('').map(c => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+c]).join(''); return numK(f, 2) + ' × 10' + sup + ' kg'; }
+function fmtTime(t) {   // 시간 단위 → 쉬운 말
+  const s = t * TU_S;
+  if (s < 3600) return Math.floor(s / 60) + '분';
+  if (s < 86400) { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h + '시간 ' + m + '분'; }
+  if (s < 86400 * 365) { const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600); return d + '일 ' + h + '시간'; }
+  return numK(s / (86400 * 365.25), 1) + '년';
+}
+function fatal(msg) { const f = document.getElementById('fatal'); if (f) { f.style.display = 'flex'; f.innerHTML = msg; } throw new Error(msg); }
+
+/* ===================== 물리 엔진: SPH 알갱이 + 바네스-헛 중력 + 굳은 몸 =====================
+   단위: 거리 = 지구 반지름(6,371 km), 질량 = 지구 질량, G = 1
+         시간 = 805.5초, 속도 = 초속 7.91 km, 밀도 = 23.09 g/cm³, 압력 = 1,443 GPa, 에너지 = 6.26e7 J/kg
+   - 행성은 같은 무게의 알갱이 수천 개. 알갱이끼리는 SPH(압력·인공 점성)로 밀고, 모두가 서로 끌어당김.
+   - 중력은 몇 걸음마다 한 번(느리게 바뀌니까), 압력은 매 걸음.
+   - 조용한 덩어리는 '굳은 몸'(통째로 돌고 움직임)으로 바꿔 계산을 아낌. 무언가 닿으면 다시 알갱이로 깨어남.
+*/
+const RE_KM = 6371, TU_S = 805.5, VU = 7.9098, RHOU = 23.094, EU = 6.2565e7, ME_KG = 5.972e24, MMOON = 0.0123;
+const MATS = [   // 머나건 상태 방정식 P = K0/n·((ρ/ρ0)^n − 1), 실제 값에 가깝게
+  { key: 'fe', name: '철', rho0: 7.8 / RHOU, K0: 165 / 1443, n: 5, gam: 0.5, cv: 600, melt: 1810, col: [0.78, 0.6, 0.34] },
+  { key: 'rock', name: '암석', rho0: 3.3 / RHOU, K0: 128 / 1443, n: 4, gam: 0.5, cv: 1100, melt: 1600, col: [0.62, 0.36, 0.24] },
+  { key: 'water', name: '물', rho0: 1.0 / RHOU, K0: 2.2 / 1443, n: 7, gam: 0.5, cv: 4180, melt: 273, col: [0.18, 0.42, 0.85] },
+  { key: 'ice', name: '얼음', rho0: 0.93 / RHOU, K0: 9 / 1443, n: 4, gam: 0.5, cv: 2100, melt: 273, col: [0.8, 0.9, 1.0] },
+];
+const MR0 = new Float64Array(MATS.map(m => m.rho0)), MK0 = new Float64Array(MATS.map(m => m.K0)), MNN = new Float64Array(MATS.map(m => m.n)), MGM = new Float64Array(MATS.map(m => m.gam));
+const MC2 = new Float64Array(MATS.map(m => m.K0 / m.rho0));
+const MCV = new Float64Array(MATS.map(m => EU / m.cv));   // u(에너지 단위) → 올라간 온도(K)
+const eosRho = (L, P) => MR0[L] * Math.pow(1 + MNN[L] * Math.max(P, 0) / MK0[L], 1 / MNN[L]);
+const ETA = 1.15, EPSF = 0.45, THETA = 0.85, LINK = 1.5, LEAF = 10;
+const ALPHA = 1.0, BETA = 2.0; let CFL = 0.4;
+
+function makeSim(CAP) {
+  const S = { CAP, N: 0, t: 0, dt: 1e-3, frozen: [], steps: 0, nPairs: 0, NA: 0, lost: 0, gEvery: 0, gk: 0, dtB: 0, K: 1 };
+  const X = S.X = new Float64Array(CAP), Y = S.Y = new Float64Array(CAP), Z = S.Z = new Float64Array(CAP);
+  const VX = S.VX = new Float64Array(CAP), VY = S.VY = new Float64Array(CAP), VZ = S.VZ = new Float64Array(CAP);
+  const AX = S.AX = new Float64Array(CAP), AY = S.AY = new Float64Array(CAP), AZ = S.AZ = new Float64Array(CAP);   // 압력 가속도
+  const GX = S.GX = new Float64Array(CAP), GY = S.GY = new Float64Array(CAP), GZ = S.GZ = new Float64Array(CAP);   // 중력 가속도
+  const MS = S.MS = new Float64Array(CAP), HH = S.HH = new Float64Array(CAP);
+  const RHO = S.RHO = new Float64Array(CAP), PR = S.PR = new Float64Array(CAP), CS = S.CS = new Float64Array(CAP);
+  const U = S.U = new Float64Array(CAP), DU = S.DU = new Float64Array(CAP);
+  const MT = S.MT = new Uint8Array(CAP), LB = S.LB = new Uint16Array(CAP), CR = S.CR = new Uint8Array(CAP * 3);
+  const T0 = S.T0 = new Float32Array(CAP), FZ = S.FZ = new Int32Array(CAP).fill(-1);
+  const LX = S.LX = new Float64Array(CAP), LY = S.LY = new Float64Array(CAP), LZ = S.LZ = new Float64Array(CAP);
+  const BI = S.BI = new Int32Array(CAP).fill(-1), NB = S.NB = new Uint16Array(CAP), VS = new Float64Array(CAP);
+  const CM = S.CM = new Float64Array(CAP), CN = S.CN = new Int32Array(CAP), TOUCH = new Int32Array(CAP).fill(-1);
+  const ACT = S.ACT = new Int32Array(CAP);
+  let NA = 0;
+  S.damp = 0;   // 가라앉히기(행성 만들 때)
+  S.prof = { pairs: 0, sph: 0, grav: 0, n: 0, ng: 0 };
+  S.radialGrav = false;
+
+  /* ---- 칸 나누기: 칸 번호로 정렬해서 메모리를 차례로 읽음 ---- */
+  let HB = 1 << 12, HM = HB - 1, START = new Int32Array(HB + 1);
+  const GRID = new Int32Array(CAP), BK = new Int32Array(CAP);
+  const SID = new Int32Array(CAP), SX = new Float64Array(CAP), SY = new Float64Array(CAP), SZ = new Float64Array(CAP), SH = new Float64Array(CAP);
+  const SCX = new Int32Array(CAP), SCY = new Int32Array(CAP), SCZ = new Int32Array(CAP), SF = new Uint8Array(CAP);
+  const TXa = new Int32Array(CAP), TYa = new Int32Array(CAP), TZa = new Int32Array(CAP);
+  let NG = 0;
+
+  /* ---- 짝 목록 ---- */
+  let PC = 1 << 18;
+  let PI = new Int32Array(PC), PJ = new Int32Array(PC), PRR = new Float64Array(PC), PEX = new Float64Array(PC), PEY = new Float64Array(PC), PEZ = new Float64Array(PC), PW = new Float64Array(PC), PD = new Float64Array(PC);
+  let NP = 0;
+  function growPairs() {
+    const n = PC * 2;
+    const g = (A, T) => { const b = new T(n); b.set(A); return b; };
+    PI = g(PI, Int32Array); PJ = g(PJ, Int32Array); PRR = g(PRR, Float64Array); PEX = g(PEX, Float64Array); PEY = g(PEY, Float64Array); PEZ = g(PEZ, Float64Array); PW = g(PW, Float64Array); PD = g(PD, Float64Array);
+    PC = n;
+  }
+
+  /* ---- 굳은 몸 ---- */
+  function bodyPosSync(b) {   // 굳은 몸의 알갱이 자리·속도 다시 계산
+    const R = b.Rm, P = b.P, V = b.V, w = b.W, idx = b.idx;
+    for (let k = 0; k < idx.length; k++) {
+      const p = idx[k], lx = LX[p], ly = LY[p], lz = LZ[p];
+      const rx = R[0] * lx + R[1] * ly + R[2] * lz, ry = R[3] * lx + R[4] * ly + R[5] * lz, rz = R[6] * lx + R[7] * ly + R[8] * lz;
+      X[p] = P[0] + rx; Y[p] = P[1] + ry; Z[p] = P[2] + rz;
+      VX[p] = V[0] + w[1] * rz - w[2] * ry; VY[p] = V[1] + w[2] * rx - w[0] * rz; VZ[p] = V[2] + w[0] * ry - w[1] * rx;
+    }
+  }
+  S.syncFrozen = function () { for (const b of S.frozen) bodyPosSync(b); };
+  S.bodyPosSync = bodyPosSync;
+  function rotStep(b, dt) {   // Rm ← 회전(ω dt)·Rm
+    const w = b.W, a = Math.hypot(w[0], w[1], w[2]); if (a < 1e-12) return;
+    const ang = a * dt; b.gAng = (b.gAng || 0) + ang; const x = w[0] / a, y = w[1] / a, z = w[2] / a, c = Math.cos(ang), s = Math.sin(ang), t = 1 - c;
+    const r = [t * x * x + c, t * x * y - s * z, t * x * z + s * y, t * x * y + s * z, t * y * y + c, t * y * z - s * x, t * x * z - s * y, t * y * z + s * x, t * z * z + c];
+    const m = b.Rm, o = new Float64Array(9);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) o[i * 3 + j] = r[i * 3] * m[j] + r[i * 3 + 1] * m[3 + j] + r[i * 3 + 2] * m[6 + j];
+    if ((S.steps & 63) === 0) {   // 가끔 바로 세우기
+      let l = Math.hypot(o[0], o[3], o[6]); o[0] /= l; o[3] /= l; o[6] /= l;
+      const d = o[0] * o[1] + o[3] * o[4] + o[6] * o[7]; o[1] -= d * o[0]; o[4] -= d * o[3]; o[7] -= d * o[6];
+      l = Math.hypot(o[1], o[4], o[7]); o[1] /= l; o[4] /= l; o[7] /= l;
+      o[2] = o[3] * o[7] - o[6] * o[4]; o[5] = o[6] * o[1] - o[0] * o[7]; o[8] = o[0] * o[4] - o[3] * o[1];
+    }
+    b.Rm = o;
+  }
+  // 알갱이 묶음(idx)을 굳은 몸으로 만들기
+  S.freeze = function (idx, rec) {
+    let M = 0, cx = 0, cy = 0, cz = 0, vx = 0, vy = 0, vz = 0, hmax = 0;
+    for (const p of idx) { const m = MS[p]; M += m; cx += m * X[p]; cy += m * Y[p]; cz += m * Z[p]; vx += m * VX[p]; vy += m * VY[p]; vz += m * VZ[p]; if (HH[p] > hmax) hmax = HH[p]; }
+    cx /= M; cy /= M; cz /= M; vx /= M; vy /= M; vz /= M;
+    let Lx = 0, Ly = 0, Lz = 0, Ixx = 0, Iyy = 0, Izz = 0, Ixy = 0, Ixz = 0, Iyz = 0, rmax = 0;
+    for (const p of idx) {
+      const m = MS[p], rx = X[p] - cx, ry = Y[p] - cy, rz = Z[p] - cz, ux = VX[p] - vx, uy = VY[p] - vy, uz = VZ[p] - vz;
+      Lx += m * (ry * uz - rz * uy); Ly += m * (rz * ux - rx * uz); Lz += m * (rx * uy - ry * ux);
+      Ixx += m * (ry * ry + rz * rz); Iyy += m * (rx * rx + rz * rz); Izz += m * (rx * rx + ry * ry); Ixy -= m * rx * ry; Ixz -= m * rx * rz; Iyz -= m * ry * rz;
+      const r = Math.hypot(rx, ry, rz); if (r > rmax) rmax = r;
+    }
+    const w = solve3([Ixx, Ixy, Ixz, Ixy, Iyy, Iyz, Ixz, Iyz, Izz], [Lx, Ly, Lz]);
+    const wl = Math.hypot(w[0], w[1], w[2]), Ll = Math.hypot(Lx, Ly, Lz);
+    const Isc = wl > 1e-9 ? Ll / wl : (Ixx + Iyy + Izz) / 3;
+    const b = rec || {};
+    Object.assign(b, { M, P: [cx, cy, cz], V: [vx, vy, vz], AG: [0, 0, 0], F: [0, 0, 0], Tq: [0, 0, 0], L: [Lx, Ly, Lz], W: wl > 1e-9 ? [Lx / Isc, Ly / Isc, Lz / Isc] : [0, 0, 0], I: Isc, Rm: new Float64Array([1, 0, 0, 0, 1, 0, 0, 0, 1]), idx: Int32Array.from(idx), hmax, rmax, R: rmax + 1.1 * hmax, frozenAt: S.t });
+    const slot = S.frozen.length; S.frozen.push(b);
+    for (const p of idx) { LX[p] = X[p] - cx; LY[p] = Y[p] - cy; LZ[p] = Z[p] - cz; FZ[p] = slot; GX[p] = GY[p] = GZ[p] = 0; AX[p] = AY[p] = AZ[p] = 0; }
+    S.dirty = true; listOK = false;
+    return b;
+  };
+  function reslot() { S.frozen.forEach((b, s) => { for (const p of b.idx) FZ[p] = s; }); }
+  S.wake = function (b) {
+    const s = S.frozen.indexOf(b); if (s < 0) return;
+    bodyPosSync(b);
+    const ax = b.AG[0], ay = b.AG[1], az = b.AG[2];
+    for (const p of b.idx) { FZ[p] = -1; GX[p] = ax; GY[p] = ay; GZ[p] = az; AX[p] = AY[p] = AZ[p] = 0; DU[p] = 0; }
+    S.frozen.splice(s, 1); reslot(); b.wokeAt = S.t; b.frozen = false;
+    S.dirty = true; listOK = false;
+    if (S.onWake) S.onWake(b);
+  };
+  S.reslot = reslot;
+  function absorb(p, b) {   // 알갱이 하나를 굳은 몸에 붙이기
+    const m = MS[p], M = b.M, M2 = M + m;
+    const P = b.P, V = b.V;
+    const nP = [(M * P[0] + m * X[p]) / M2, (M * P[1] + m * Y[p]) / M2, (M * P[2] + m * Z[p]) / M2];
+    const nV = [(M * V[0] + m * VX[p]) / M2, (M * V[1] + m * VY[p]) / M2, (M * V[2] + m * VZ[p]) / M2];
+    const L = b.L.slice();
+    const d = [P[0] - nP[0], P[1] - nP[1], P[2] - nP[2]], dv = [V[0] - nV[0], V[1] - nV[1], V[2] - nV[2]];
+    L[0] += M * (d[1] * dv[2] - d[2] * dv[1]); L[1] += M * (d[2] * dv[0] - d[0] * dv[2]); L[2] += M * (d[0] * dv[1] - d[1] * dv[0]);
+    const r = [X[p] - nP[0], Y[p] - nP[1], Z[p] - nP[2]], u = [VX[p] - nV[0], VY[p] - nV[1], VZ[p] - nV[2]];
+    L[0] += m * (r[1] * u[2] - r[2] * u[1]); L[1] += m * (r[2] * u[0] - r[0] * u[2]); L[2] += m * (r[0] * u[1] - r[1] * u[0]);
+    const R = b.Rm, sx = nP[0] - P[0], sy = nP[1] - P[1], sz = nP[2] - P[2];
+    const lx = R[0] * sx + R[3] * sy + R[6] * sz, ly = R[1] * sx + R[4] * sy + R[7] * sz, lz = R[2] * sx + R[5] * sy + R[8] * sz;
+    for (const q of b.idx) { LX[q] -= lx; LY[q] -= ly; LZ[q] -= lz; }
+    LX[p] = R[0] * r[0] + R[3] * r[1] + R[6] * r[2]; LY[p] = R[1] * r[0] + R[4] * r[1] + R[7] * r[2]; LZ[p] = R[2] * r[0] + R[5] * r[1] + R[8] * r[2];
+    const rr = Math.hypot(r[0], r[1], r[2]);
+    b.I += (2 / 3) * m * rr * rr; b.M = M2; b.P = nP; b.V = nV; b.L = L; b.W = [L[0] / b.I, L[1] / b.I, L[2] / b.I];
+    if (HH[p] > b.hmax) b.hmax = HH[p];
+    b.rmax = Math.max(b.rmax, rr); b.R = b.rmax + 1.1 * b.hmax;
+    const ni = new Int32Array(b.idx.length + 1); ni.set(b.idx); ni[b.idx.length] = p; b.idx = ni;
+    FZ[p] = S.frozen.indexOf(b); BI[p] = b.id; GX[p] = GY[p] = GZ[p] = 0; AX[p] = AY[p] = AZ[p] = 0;
+    b.absorbed = (b.absorbed || 0) + m; listOK = false;
+  }
+
+  /* ---- 짝 찾기 + SPH ---- */
+  function collectActive() {
+    NA = 0; const N = S.N;
+    for (let i = 0; i < N; i++) if (FZ[i] < 0 && MS[i] > 0) ACT[NA++] = i;
+    S.NA = NA;
+  }
+  /* 짝 목록은 여유(SKIN)를 두고 만들어서, 알갱이가 그 절반만큼 움직이기 전까지 다시 쓰고(베를레 목록),
+     칸은 빽빽하면 3차원 배열, 멀리 흩어지면 해시를 씀. 반쪽 껍질(13칸)만 봐서 짝마다 한 번만 만남. */
+  const SKIN = 0.4;
+  const RX0 = new Float64Array(CAP), RY0 = new Float64Array(CAP), RZ0 = new Float64Array(CAP);
+  let listOK = false, skAbs = 0, hmxG = 0, abx0 = 0, aby0 = 0, abz0 = 0, abx1 = 0, aby1 = 0, abz1 = 0;
+  S.invalidate = () => { listOK = false; };
+  S.listBuilds = 0;
+  const HALF = [];
+  for (let dz = -1; dz <= 1; dz++) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dz > 0 || (dz === 0 && dy > 0) || (dz === 0 && dy === 0 && dx > 0)) HALF.push([dx, dy, dz]);
+  function activeBox() {
+    let x0 = 1e30, y0 = 1e30, z0 = 1e30, x1 = -1e30, y1 = -1e30, z1 = -1e30;
+    for (let k = 0; k < NA; k++) { const i = ACT[k], x = X[i], y = Y[i], z = Z[i]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+    abx0 = x0; aby0 = y0; abz0 = z0; abx1 = x1; aby1 = y1; abz1 = z1;
+  }
+  function nearBox(b, m) { const P = b.P; return !(P[0] + m < abx0 || P[0] - m > abx1 || P[1] + m < aby0 || P[1] - m > aby1 || P[2] + m < abz0 || P[2] - m > abz1); }
+  function needRebuild() {
+    if (!listOK) return true;
+    const lim2 = 0.25 * skAbs * skAbs;
+    for (let k = 0; k < NA; k++) { const i = ACT[k], dx = X[i] - RX0[i], dy = Y[i] - RY0[i], dz = Z[i] - RZ0[i]; if (dx * dx + dy * dy + dz * dz > lim2) return true; }
+    activeBox();
+    for (const b of S.frozen) {
+      if (b.inGrid) { const d = Math.hypot(b.P[0] - b.gP0[0], b.P[1] - b.gP0[1], b.P[2] - b.gP0[2]) + (b.gAng || 0) * b.rmax; if (d > 0.5 * skAbs) return true; }
+      else if (nearBox(b, 2 * Math.max(hmxG, b.hmax) + skAbs + b.rmax)) return true;
+    }
+    return false;
+  }
+  let DC = 1 << 16, DSTART = new Int32Array(DC + 1);
+  function gridMembers() {   // 움직이는 알갱이(앞) + 가까운 굳은 몸 알갱이(뒤) → GRID
+    NG = 0; activeBox();
+    let hA = 0;
+    for (let k = 0; k < NA; k++) { const i = ACT[k]; GRID[NG++] = i; if (HH[i] > hA) hA = HH[i]; }
+    let hF = 0;
+    for (const b of S.frozen) {
+      if (!nearBox(b, 2 * Math.max(hA, b.hmax) * (1 + SKIN) + b.rmax)) { b.inGrid = false; continue; }
+      b.inGrid = true; b.gP0 = b.P.slice(); b.gAng = 0; bodyPosSync(b); if (b.hmax > hF) hF = b.hmax;
+      for (const p of b.idx) GRID[NG++] = p;
+    }
+    hmxG = Math.max(hA, hF); skAbs = SKIN * hmxG;
+  }
+  function buildList() {
+    NP = 0; NG = 0; listOK = true; S.listBuilds++;
+    if (!NA) return;
+    gridMembers();
+    const cell = 2 * hmxG + skAbs, ic = 1 / cell;
+    let x0 = 1e30, y0 = 1e30, z0 = 1e30, x1 = -1e30, y1 = -1e30, z1 = -1e30;
+    for (let k = 0; k < NG; k++) { const i = GRID[k], x = X[i], y = Y[i], z = Z[i]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+    const nx = Math.floor((x1 - x0) * ic) + 1, ny = Math.floor((y1 - y0) * ic) + 1, nz = Math.floor((z1 - z0) * ic) + 1;
+    const ncell = nx * ny * nz;
+    const dense = ncell <= Math.max(8 * NG, 1 << 16) && ncell < 6e6;
+    let starts, nb;
+    if (dense) {
+      if (ncell + 1 > DC) { DC = ncell + 1; DSTART = new Int32Array(DC + 1); }
+      starts = DSTART; nb = ncell; starts.fill(0, 0, ncell + 1);
+      for (let k = 0; k < NG; k++) {
+        const i = GRID[k];
+        let ix = Math.floor((X[i] - x0) * ic), iy = Math.floor((Y[i] - y0) * ic), iz = Math.floor((Z[i] - z0) * ic);
+        if (ix >= nx) ix = nx - 1; if (iy >= ny) iy = ny - 1; if (iz >= nz) iz = nz - 1;
+        const c = ix + nx * (iy + ny * iz); BK[k] = c; starts[c + 1]++;
+        TXa[k] = ix; TYa[k] = iy; TZa[k] = iz;
+      }
+    } else {
+      let want = 1 << 12; while (want < NG * 2) want <<= 1;
+      if (want !== HB) { HB = want; HM = HB - 1; START = new Int32Array(HB + 1); }
+      starts = START; nb = HB; starts.fill(0);
+      for (let k = 0; k < NG; k++) {
+        const i = GRID[k], ix = Math.floor(X[i] * ic), iy = Math.floor(Y[i] * ic), iz = Math.floor(Z[i] * ic);
+        const h = (Math.imul(ix, 73856093) ^ Math.imul(iy, 19349663) ^ Math.imul(iz, 83492791)) & HM;
+        BK[k] = h; starts[h + 1]++; TXa[k] = ix; TYa[k] = iy; TZa[k] = iz;
+      }
+    }
+    for (let c = 0; c < nb; c++) starts[c + 1] += starts[c];
+    const fillp = starts.slice(0, nb);
+    for (let k = 0; k < NG; k++) {
+      const i = GRID[k], q = fillp[BK[k]]++;
+      SID[q] = i; SX[q] = X[i]; SY[q] = Y[i]; SZ[q] = Z[i]; SH[q] = HH[i]; SF[q] = FZ[i] >= 0 ? 1 : 0;
+      SCX[q] = TXa[k]; SCY[q] = TYa[k]; SCZ[q] = TZa[k];
+    }
+    const sk = skAbs;
+    if (dense) {
+      for (let q = 0; q < NG; q++) {
+        const fq = SF[q], cx = SCX[q], cy = SCY[q], cz = SCZ[q], c = cx + nx * (cy + ny * cz);
+        const xq = SX[q], yq = SY[q], zq = SZ[q], hq = SH[q];
+        for (let o = -1; o < 13; o++) {
+          let s0, e;
+          if (o < 0) { s0 = q + 1; e = starts[c + 1]; }
+          else {
+            const d = HALF[o], gx = cx + d[0], gy = cy + d[1], gz = cz + d[2];
+            if (gx < 0 || gy < 0 || gz < 0 || gx >= nx || gy >= ny || gz >= nz) continue;
+            const g = gx + nx * (gy + ny * gz); s0 = starts[g]; e = starts[g + 1];
+          }
+          for (let s = s0; s < e; s++) {
+            if (fq && SF[s]) continue;
+            const rc = (hq + SH[s]) + sk, ex = xq - SX[s], ey = yq - SY[s], ez = zq - SZ[s];
+            if (ex * ex + ey * ey + ez * ez >= rc * rc) continue;
+            if (NP >= PC) growPairs();
+            if (fq) { PI[NP] = SID[s]; PJ[NP] = SID[q]; } else { PI[NP] = SID[q]; PJ[NP] = SID[s]; }
+            NP++;
+          }
+        }
+      }
+    } else {
+      for (let q = 0; q < NG; q++) {
+        if (SF[q]) continue;
+        const cx = SCX[q], cy = SCY[q], cz = SCZ[q], xq = SX[q], yq = SY[q], zq = SZ[q], hq = SH[q];
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+          const gx = cx + dx, gy = cy + dy, gz = cz + dz;
+          const h = (Math.imul(gx, 73856093) ^ Math.imul(gy, 19349663) ^ Math.imul(gz, 83492791)) & HM, e = starts[h + 1];
+          for (let s = starts[h]; s < e; s++) {
+            if (SCX[s] !== gx || SCY[s] !== gy || SCZ[s] !== gz || s === q) continue;
+            if (!SF[s] && s < q) continue;
+            const rc = (hq + SH[s]) + sk, ex = xq - SX[s], ey = yq - SY[s], ez = zq - SZ[s];
+            if (ex * ex + ey * ey + ez * ez >= rc * rc) continue;
+            if (NP >= PC) growPairs();
+            PI[NP] = SID[q]; PJ[NP] = SID[s]; NP++;
+          }
+        }
+      }
+    }
+    for (let k = 0; k < NA; k++) { const i = ACT[k]; RX0[i] = X[i]; RY0[i] = Y[i]; RZ0[i] = Z[i]; }
+    S.nPairs = NP;
+  }
+  function sph() {
+    for (const b of S.frozen) if (b.inGrid) bodyPosSync(b);
+    for (let k = 0; k < NA; k++) { const i = ACT[k], h = HH[i]; RHO[i] = MS[i] / (Math.PI * h * h * h); NB[i] = 0; TOUCH[i] = -1; AX[i] = AY[i] = AZ[i] = 0; DU[i] = 0; }
+    for (let n = 0; n < NP; n++) {
+      const i = PI[n], j = PJ[n];
+      const ex = X[i] - X[j], ey = Y[i] - Y[j], ez = Z[i] - Z[j], r2 = ex * ex + ey * ey + ez * ez, hij = 0.5 * (HH[i] + HH[j]);
+      if (r2 >= 4 * hij * hij || r2 === 0) { PD[n] = 0; continue; }
+      const r = Math.sqrt(r2), qq = r / hij, sig = 1 / (Math.PI * hij * hij * hij);
+      let w, dw;
+      if (qq < 1) { w = sig * (1 - 1.5 * qq * qq + 0.75 * qq * qq * qq); dw = sig / hij * (-3 * qq + 2.25 * qq * qq); }
+      else { const t = 2 - qq; w = sig * 0.25 * t * t * t; dw = -sig / hij * 0.75 * t * t; }
+      PRR[n] = r; PEX[n] = ex / r; PEY[n] = ey / r; PEZ[n] = ez / r; PD[n] = dw;
+      RHO[i] += MS[j] * w; NB[i]++;
+      if (FZ[j] < 0) { RHO[j] += MS[i] * w; NB[j]++; }
+    }
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k], mt = MT[i], rho = RHO[i], x = rho / MR0[mt], g = MGM[mt], u = U[i] > 0 ? U[i] : 0;
+      let pc = 0, c2 = MC2[mt];
+      if (x > 1) { const xn = Math.pow(x, MNN[mt] - 1); pc = MK0[mt] / MNN[mt] * (xn * x - 1); c2 *= xn; }
+      PR[i] = pc + g * rho * u;
+      CS[i] = Math.sqrt(c2 + g * (g + 1) * u);
+      VS[i] = 0;
+    }
+    for (const b of S.frozen) { b.F[0] = b.F[1] = b.F[2] = 0; b.Tq[0] = b.Tq[1] = b.Tq[2] = 0; }
+    const F = S.frozen;
+    for (let n = 0; n < NP; n++) {
+      const dw = PD[n]; if (dw === 0) continue;
+      const i = PI[n], j = PJ[n], ex = PEX[n], ey = PEY[n], ez = PEZ[n], r = PRR[n];
+      const ri = RHO[i], rj = RHO[j], pi = PR[i] / (ri * ri), pj = PR[j] / (rj * rj);
+      const wv = (VX[i] - VX[j]) * ex + (VY[i] - VY[j]) * ey + (VZ[i] - VZ[j]) * ez;
+      let PIv = 0;
+      if (wv < 0) {
+        const hij = 0.5 * (HH[i] + HH[j]), cbar = 0.5 * (CS[i] + CS[j]);
+        const mu = hij * wv * r / (r * r + 0.01 * hij * hij);
+        PIv = (-ALPHA * cbar * mu + BETA * mu * mu) / (0.5 * (ri + rj));
+      }
+      const vs = CS[i] + CS[j] - 3 * (wv < 0 ? wv : 0);
+      if (vs > VS[i]) VS[i] = vs;
+      const f = (pi + pj + PIv) * dw;          // dw<0 → 서로 밀어냄
+      const mi = MS[i], mj = MS[j];
+      AX[i] -= mj * f * ex; AY[i] -= mj * f * ey; AZ[i] -= mj * f * ez;
+      const ui = U[i];
+      DU[i] += mj * ((ui > 0 ? MGM[MT[i]] * ui / ri : 0) + 0.5 * PIv) * dw * wv;
+      const fz = FZ[j];
+      if (fz < 0) {
+        AX[j] += mi * f * ex; AY[j] += mi * f * ey; AZ[j] += mi * f * ez;
+        const uj = U[j];
+        DU[j] += mi * ((uj > 0 ? MGM[MT[j]] * uj / rj : 0) + 0.5 * PIv) * dw * wv;
+        if (vs > VS[j]) VS[j] = vs;
+      } else {
+        const b = F[fz], Fx = mj * mi * f * ex, Fy = mj * mi * f * ey, Fz = mj * mi * f * ez;   // j(굳은 몸)이 받는 힘
+        b.F[0] += Fx; b.F[1] += Fy; b.F[2] += Fz;
+        const rx = X[j] - b.P[0], ry = Y[j] - b.P[1], rz = Z[j] - b.P[2];
+        b.Tq[0] += ry * Fz - rz * Fy; b.Tq[1] += rz * Fx - rx * Fz; b.Tq[2] += rx * Fy - ry * Fx;
+        if (r < 1.25 * 0.5 * (HH[i] + HH[j])) TOUCH[i] = fz;
+        if (wv < 0) U[j] += 0.25 * mi * PIv * dw * wv * S.dt;   // 닿은 곳도 조금 데움(보기용)
+      }
+    }
+  }
+
+  /* ---- 중력: 바네스-헛 나무 + 묶음 걷기 ---- */
+  let NCAP = 1 << 14, NN = 0;
+  let ncx, ncy, ncz, nhs, nm, nmx, nmy, nmz, ndl, nsk, nst, ncn;
+  function allocNodes(n) {
+    const o = { ncx, ncy, ncz, nhs, nm, nmx, nmy, nmz, ndl, nsk, nst, ncn };
+    ncx = new Float64Array(n); ncy = new Float64Array(n); ncz = new Float64Array(n); nhs = new Float64Array(n); nm = new Float64Array(n);
+    nmx = new Float64Array(n); nmy = new Float64Array(n); nmz = new Float64Array(n); ndl = new Float64Array(n);
+    nsk = new Int32Array(n); nst = new Int32Array(n); ncn = new Int32Array(n);
+    if (o.ncx) { ncx.set(o.ncx); ncy.set(o.ncy); ncz.set(o.ncz); nhs.set(o.nhs); nm.set(o.nm); nmx.set(o.nmx); nmy.set(o.nmy); nmz.set(o.nmz); ndl.set(o.ndl); nsk.set(o.nsk); nst.set(o.nst); ncn.set(o.ncn); }
+    NCAP = n;
+  }
+  allocNodes(NCAP);
+  const PERM = new Int32Array(CAP), TMP = new Int32Array(CAP), OCT = new Uint8Array(CAP), CNT = new Int32Array(8 * 64);
+  const QX = new Float64Array(CAP), QY = new Float64Array(CAP), QZ = new Float64Array(CAP), QM = new Float64Array(CAP), QE = new Float64Array(CAP);
+  const LEAVES = [];
+  function buildNode(s, e, cx, cy, cz, hs, dep) {
+    if (NN >= NCAP) allocNodes(NCAP * 2);
+    const id = NN++;
+    ncx[id] = cx; ncy[id] = cy; ncz[id] = cz; nhs[id] = hs;
+    if (e - s <= LEAF || dep >= 40) {
+      let M = 0, mx = 0, my = 0, mz = 0;
+      for (let k = s; k < e; k++) { const p = PERM[k], m = MS[p]; M += m; mx += m * X[p]; my += m * Y[p]; mz += m * Z[p]; }
+      nm[id] = M; if (M > 0) { nmx[id] = mx / M; nmy[id] = my / M; nmz[id] = mz / M; } else { nmx[id] = cx; nmy[id] = cy; nmz[id] = cz; }
+      nst[id] = s; ncn[id] = e - s; nsk[id] = NN;
+      ndl[id] = Math.hypot(nmx[id] - cx, nmy[id] - cy, nmz[id] - cz);
+      LEAVES.push(id);
+      return id;
+    }
+    const c0 = dep * 8; for (let o = 0; o < 8; o++) CNT[c0 + o] = 0;
+    for (let k = s; k < e; k++) { const p = PERM[k], o = (X[p] > cx ? 1 : 0) | (Y[p] > cy ? 2 : 0) | (Z[p] > cz ? 4 : 0); OCT[k] = o; CNT[c0 + o]++; }
+    const off = [s, 0, 0, 0, 0, 0, 0, 0]; for (let o = 1; o < 8; o++) off[o] = off[o - 1] + CNT[c0 + o - 1];
+    const st = off.slice();
+    for (let k = s; k < e; k++) TMP[off[OCT[k]]++] = PERM[k];
+    for (let k = s; k < e; k++) PERM[k] = TMP[k];
+    const h2 = hs * 0.5; let M = 0, mx = 0, my = 0, mz = 0;
+    for (let o = 0; o < 8; o++) {
+      const n = (o === 7 ? e : st[o + 1]) - st[o]; if (!n) continue;
+      const c = buildNode(st[o], st[o] + n, cx + (o & 1 ? h2 : -h2), cy + (o & 2 ? h2 : -h2), cz + (o & 4 ? h2 : -h2), h2, dep + 1);
+      M += nm[c]; mx += nm[c] * nmx[c]; my += nm[c] * nmy[c]; mz += nm[c] * nmz[c];
+    }
+    nm[id] = M; if (M > 0) { nmx[id] = mx / M; nmy[id] = my / M; nmz[id] = mz / M; } else { nmx[id] = cx; nmy[id] = cy; nmz[id] = cz; }
+    ndl[id] = Math.hypot(nmx[id] - cx, nmy[id] - cy, nmz[id] - cz);
+    nst[id] = s; ncn[id] = -1; nsk[id] = NN;
+    return id;
+  }
+  let NL = new Int32Array(4096), PLs = new Int32Array(4096);
+  function gravity() {
+    NN = 0; LEAVES.length = 0; if (!NA) return;
+    let x0 = 1e30, y0 = 1e30, z0 = 1e30, x1 = -1e30, y1 = -1e30, z1 = -1e30;
+    for (let k = 0; k < NA; k++) { const i = ACT[k]; PERM[k] = i; const x = X[i], y = Y[i], z = Z[i]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+    const hs = 0.5 * Math.max(x1 - x0, y1 - y0, z1 - z0) * 1.0001 + 1e-6;
+    buildNode(0, NA, 0.5 * (x0 + x1), 0.5 * (y0 + y1), 0.5 * (z0 + z1), hs, 0);
+    for (let k = 0; k < NA; k++) { const p = PERM[k]; QX[k] = X[p]; QY[k] = Y[p]; QZ[k] = Z[p]; QM[k] = MS[p]; const e = EPSF * HH[p]; QE[k] = e * e; }
+    const it = 1 / THETA;
+    for (const L of LEAVES) {
+      const s0 = nst[L], e0 = s0 + ncn[L];
+      // 묶음의 가운데와 반지름
+      let gx0 = 1e30, gy0 = 1e30, gz0 = 1e30, gx1 = -1e30, gy1 = -1e30, gz1 = -1e30;
+      for (let k = s0; k < e0; k++) { const x = QX[k], y = QY[k], z = QZ[k]; if (x < gx0) gx0 = x; if (x > gx1) gx1 = x; if (y < gy0) gy0 = y; if (y > gy1) gy1 = y; if (z < gz0) gz0 = z; if (z > gz1) gz1 = z; }
+      const gcx = 0.5 * (gx0 + gx1), gcy = 0.5 * (gy0 + gy1), gcz = 0.5 * (gz0 + gz1), grr = 0.5 * Math.hypot(gx1 - gx0, gy1 - gy0, gz1 - gz0);
+      let nn = 0, np = 0, n = 0;
+      while (n < NN) {
+        const dx = nmx[n] - gcx, dy = nmy[n] - gcy, dz = nmz[n] - gcz, d = Math.sqrt(dx * dx + dy * dy + dz * dz) - grr;
+        const lim = 2 * nhs[n] * it + ndl[n];
+        if (d > lim) { if (nn >= NL.length) { const t = new Int32Array(NL.length * 2); t.set(NL); NL = t; } NL[nn++] = n; n = nsk[n]; }
+        else if (ncn[n] >= 0) { if (np >= PLs.length) { const t = new Int32Array(PLs.length * 2); t.set(PLs); PLs = t; } PLs[np++] = n; n = nsk[n]; }
+        else n++;
+      }
+      for (let k = s0; k < e0; k++) {
+        const xi = QX[k], yi = QY[k], zi = QZ[k], e2i = QE[k];
+        let ax = 0, ay = 0, az = 0;
+        for (let a = 0; a < nn; a++) {
+          const c = NL[a], dx = nmx[c] - xi, dy = nmy[c] - yi, dz = nmz[c] - zi, r2 = dx * dx + dy * dy + dz * dz + e2i, inv = 1 / Math.sqrt(r2), f = nm[c] * inv * inv * inv;
+          ax += f * dx; ay += f * dy; az += f * dz;
+        }
+        for (let a = 0; a < np; a++) {
+          const c = PLs[a], s = nst[c], e = s + ncn[c];
+          for (let q = s; q < e; q++) {
+            if (q === k) continue;
+            const dx = QX[q] - xi, dy = QY[q] - yi, dz = QZ[q] - zi, r2 = dx * dx + dy * dy + dz * dz + 0.5 * (e2i + QE[q]), inv = 1 / Math.sqrt(r2), f = QM[q] * inv * inv * inv;
+            ax += f * dx; ay += f * dy; az += f * dz;
+          }
+        }
+        const p = PERM[k]; GX[p] += ax; GY[p] += ay; GZ[p] += az;
+      }
+    }
+  }
+  // 공 모양 하나일 때: 안쪽 질량만으로 끌어당김(만들 때 가라앉히기용, 아주 빠름)
+  const RORD = new Float64Array(CAP);
+  function radialGravity() {
+    let M = 0, cx = 0, cy = 0, cz = 0;
+    for (let k = 0; k < NA; k++) { const i = ACT[k], m = MS[i]; M += m; cx += m * X[i]; cy += m * Y[i]; cz += m * Z[i]; }
+    cx /= M; cy /= M; cz /= M;
+    const ord = Array.from(ACT.subarray(0, NA));
+    for (const i of ord) RORD[i] = Math.hypot(X[i] - cx, Y[i] - cy, Z[i] - cz);
+    ord.sort((a, b) => RORD[a] - RORD[b]);
+    let m = 0;
+    for (const i of ord) {
+      const r = RORD[i], e = EPSF * HH[i], me = m + 0.5 * MS[i]; m += MS[i];
+      const f = me / Math.pow(r * r + e * e, 1.5);
+      GX[i] -= f * (X[i] - cx); GY[i] -= f * (Y[i] - cy); GZ[i] -= f * (Z[i] - cz);
+    }
+  }
+  // 굳은 몸 ↔ 알갱이, 굳은 몸 ↔ 굳은 몸 (점 질량)
+  function frozenGravity() {
+    const F = S.frozen, nf = F.length; if (!nf) return;
+    for (const b of F) { b.AG[0] = b.AG[1] = b.AG[2] = 0; }
+    for (const b of F) {
+      const M = b.M, px = b.P[0], py = b.P[1], pz = b.P[2], rc = 0.8 * b.rmax, rc3 = rc * rc * rc;
+      let bx = 0, by = 0, bz = 0;
+      for (let k = 0; k < NA; k++) {
+        const i = ACT[k], dx = px - X[i], dy = py - Y[i], dz = pz - Z[i], r2 = dx * dx + dy * dy + dz * dz, r = Math.sqrt(r2);
+        const f = r > rc ? M / (r2 * r) : M / rc3;
+        GX[i] += f * dx; GY[i] += f * dy; GZ[i] += f * dz;
+        const g = f * MS[i] / M; bx -= g * dx; by -= g * dy; bz -= g * dz;
+      }
+      b.AG[0] += bx; b.AG[1] += by; b.AG[2] += bz;
+    }
+    for (let a = 0; a < nf; a++) for (let c = a + 1; c < nf; c++) {
+      const A = F[a], B = F[c], dx = B.P[0] - A.P[0], dy = B.P[1] - A.P[1], dz = B.P[2] - A.P[2], r2 = dx * dx + dy * dy + dz * dz, r = Math.sqrt(r2);
+      const rs = Math.max(r, 0.5 * (A.rmax + B.rmax)), f = 1 / (rs * rs * Math.max(r, 1e-9));
+      A.AG[0] += B.M * f * dx; A.AG[1] += B.M * f * dy; A.AG[2] += B.M * f * dz;
+      B.AG[0] -= A.M * f * dx; B.AG[1] -= A.M * f * dy; B.AG[2] -= A.M * f * dz;
+    }
+  }
+  /* ---- 공간 순서(모턴 순서)로 GRID 정렬: 이웃이 메모리에서도 가까워져 빨라짐 ---- */
+  let MK = new Uint32Array(0), MK2 = new Uint32Array(0), MI2 = new Int32Array(0), MCNT = new Int32Array(1 << 11);
+  const spread = v => { v &= 1023; v = (v | (v << 16)) & 0x030000FF; v = (v | (v << 8)) & 0x0300F00F; v = (v | (v << 4)) & 0x030C30C3; v = (v | (v << 2)) & 0x09249249; return v; };
+  function mortonSort(a, b) {
+    const n = b - a; if (n < 64) return;
+    if (MK.length < n) { MK = new Uint32Array(n); MK2 = new Uint32Array(n); MI2 = new Int32Array(n); }
+    let x0 = 1e30, y0 = 1e30, z0 = 1e30, x1 = -1e30, y1 = -1e30, z1 = -1e30;
+    for (let k = a; k < b; k++) { const i = GRID[k], x = X[i], y = Y[i], z = Z[i]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+    const sc = 1023.99 / Math.max(x1 - x0, y1 - y0, z1 - z0, 1e-9);
+    const keys = MK, idx = GRID.subarray(a, b);
+    for (let k = 0; k < n; k++) { const i = idx[k]; keys[k] = (spread((X[i] - x0) * sc) | (spread((Y[i] - y0) * sc) << 1) | (spread((Z[i] - z0) * sc) << 2)) >>> 0; }
+    // 기수 정렬 (10비트씩 3번)
+    let kA = keys, kB = MK2, iA = idx, iB = MI2;
+    for (let sh = 0; sh < 30; sh += 10) {
+      MCNT.fill(0, 0, 1025);
+      for (let k = 0; k < n; k++) MCNT[((kA[k] >>> sh) & 1023) + 1]++;
+      for (let c = 0; c < 1024; c++) MCNT[c + 1] += MCNT[c];
+      for (let k = 0; k < n; k++) { const d = MCNT[(kA[k] >>> sh) & 1023]++; kB[d] = kA[k]; iB[d] = iA[k]; }
+      const tk = kA; kA = kB; kB = tk; const ti = iA; iA = iB; iB = ti;
+    }
+    if (iA !== idx) idx.set(iA.subarray(0, n));
+  }
+  /* ---- 워커 몇 개가 제일 빠른지 스스로 재기: 4·6·8·10·12개를 몇 걸음씩 써 보고 고름 ---- */
+  function autoTune(P, na) {
+    if (P.fixedUse) return;
+    let T = P.tune;
+    if (!T || (T.done && (na > T.na * 2 || na < T.na / 2))) {
+      const c = [4, 6, 8, 10, 12].filter(x => x <= P.n); if (!c.length) c.push(P.n);
+      T = P.tune = { c, i: 0, res: [], acc: 0, n: 0, na, done: c.length < 2 };
+      if (T.done) { P.use = c[0]; return; }
+    }
+    if (T.done) return;
+    if (T.n >= 4) { T.res[T.i] = T.acc / T.n; T.i++; T.acc = 0; T.n = 0; }
+    if (T.i >= T.c.length) { let b = 0; for (let k = 1; k < T.c.length; k++) if (T.res[k] < T.res[b]) b = k; P.use = T.c[b]; T.done = true; T.best = P.use; return; }
+    P.use = T.c[T.i];
+  }
+  /* ---- 여러 코어로 압력·중력 계산 ---- */
+  let pg = null, pMode = false;
+  S.links = null; S.lastPool = false;
+  async function poolSph(wantG, wantL) {
+    const P = POOL;
+    const rebuild = !listOK || !pMode || needRebuild();
+    if (rebuild) {
+      listOK = true; pMode = true; S.listBuilds++;
+      gridMembers();
+      mortonSort(0, NA); mortonSort(NA, NG);   // 가까운 알갱이끼리 메모리에서도 가깝게
+      let cx = 0, cy = 0, cz = 0;
+      for (let k = 0; k < NA; k++) { const i = ACT[k]; cx += X[i]; cy += Y[i]; cz += Z[i]; }
+      const ref = [cx / NA, cy / NA, cz / NA];
+      autoTune(P, NA);
+      const wn = Math.min(P.use || P.n, P.n, Math.max(1, Math.floor(NA / 600)));
+      // 조각 크기: 이웃 수 가중 × 워커 빠르기(느린 코어엔 적게)
+      if (!P.speed || P.speed.length < P.n) P.speed = new Float64Array(P.n).fill(1);
+      let spSum = 0; for (let k = 0; k < wn; k++) spSum += P.speed[k];
+      let tot = 0; for (let g = 0; g < NA; g++) tot += NB[GRID[g]] + 4;
+      const slices = [], wts = []; let acc = 0, st0 = 0, cut = tot * P.speed[0] / spSum, wk = 0;
+      for (let g = 0; g < NA; g++) {
+        const w = NB[GRID[g]] + 4; acc += w; wk += w;
+        if (slices.length < wn - 1 && acc >= cut) { slices.push([st0, g + 1]); wts.push(wk); wk = 0; st0 = g + 1; cut += tot * P.speed[slices.length] / spSum; }
+      }
+      if (st0 < NA) { slices.push([st0, NA]); wts.push(wk); } else if (slices.length) { slices[slices.length - 1][1] = NA; }
+      const nF = NG - NA, H32 = new Float32Array(NG), M32 = new Float32Array(NG), MT8 = new Uint8Array(NG), FZ16 = new Int16Array(NG);
+      const FRHO = new Float32Array(nF), FPR = new Float32Array(nF), FCS = new Float32Array(nF);
+      for (let g = 0; g < NG; g++) {
+        const i = GRID[g]; H32[g] = HH[i]; M32[g] = MS[i]; MT8[g] = MT[i]; FZ16[g] = FZ[i];
+        if (g >= NA) { FRHO[g - NA] = RHO[i]; FPR[g - NA] = PR[i]; FCS[g - NA] = CS[i]; }
+      }
+      pg = { NG, NA, grid: GRID.slice(0, NG), slices, wts, ref, cell: 2 * hmxG + skAbs, sk: skAbs, st: { H: H32, M: M32, MT: MT8, FZ: FZ16, FRHO, FPR, FCS } };
+      for (let k = 0; k < NA; k++) { const i = ACT[k]; RX0[i] = X[i]; RY0[i] = Y[i]; RZ0[i] = Z[i]; }
+    } else for (const b of S.frozen) if (b.inGrid) bodyPosSync(b);
+    const T = S.pt || (S.pt = { pack: 0, A: 0, mid: 0, B: 0, un: 0, n: 0, rb: 0 }), tq0 = performance.now(); if (rebuild) T.rb++;
+    const nG = pg.NG, nA = pg.NA, grid = pg.grid, ref = pg.ref, sl = pg.slices, last = sl.length - 1;
+    const buf = new Float32Array(6 * nG + nA);
+    for (let g = 0; g < nG; g++) {
+      const i = grid[g], o = 3 * g, v = 3 * nG + 3 * g;
+      buf[o] = X[i] - ref[0]; buf[o + 1] = Y[i] - ref[1]; buf[o + 2] = Z[i] - ref[2];
+      buf[v] = VX[i]; buf[v + 1] = VY[i]; buf[v + 2] = VZ[i];
+    }
+    for (let g = 0; g < nA; g++) buf[6 * nG + g] = U[grid[g]];
+    const tq1 = performance.now();
+    const resA = await Promise.all(sl.map((s, k) => {
+      const b = k === last ? buf : buf.slice(), m = { t: 'A', buf: b };
+      if (rebuild) m.st = Object.assign({ NG: nG, NA: nA, a0: s[0], a1: s[1], sk: pg.sk, cell: pg.cell }, pg.st);
+      return P.run(k, m, [b.buffer]);
+    }));
+    const tq2 = performance.now();
+    T.wb = (T.wb || 0) + Math.max(...resA.map(r => r.tb)); T.wd = (T.wd || 0) + Math.max(...resA.map(r => r.td)); T.cand = resA.reduce((a, r) => a + r.cand, 0);
+    const rhoA = new Float32Array(nA);
+    sl.forEach((s, k) => {
+      const r = resA[k].rho, nb = resA[k].nb; rhoA.set(r, s[0]);
+      for (let q = 0; q < s[1] - s[0]; q++) { const i = grid[s[0] + q]; RHO[i] = r[q]; NB[i] = nb[q]; }
+    });
+    for (let g = 0; g < nA; g++) {   // 굳힐 때 쓸 압력·음속도 여기서 계산
+      const i = grid[g], mt = MT[i], rho = RHO[i], x = rho / MR0[mt], gm = MGM[mt], u = U[i] > 0 ? U[i] : 0;
+      let pc = 0, c2 = MC2[mt];
+      if (x > 1) { const xn = Math.pow(x, MNN[mt] - 1); pc = MK0[mt] / MNN[mt] * (xn * x - 1); c2 *= xn; }
+      PR[i] = pc + gm * rho * u; CS[i] = Math.sqrt(c2 + gm * (gm + 1) * u);
+    }
+    const F = S.frozen, nf = F.length, bp = new Float64Array(nf * 3);
+    F.forEach((b, k) => { bp[k * 3] = b.P[0] - ref[0]; bp[k * 3 + 1] = b.P[1] - ref[1]; bp[k * 3 + 2] = b.P[2] - ref[2]; b.F[0] = b.F[1] = b.F[2] = 0; b.Tq[0] = b.Tq[1] = b.Tq[2] = 0; });
+    const tq3 = performance.now();
+    const resB = await Promise.all(sl.map((s, k) => { const r = k === last ? rhoA : rhoA.slice(); return P.run(k, { t: 'B', rho: r, nf, bp, grav: wantG, links: wantL }, [r.buffer]); }));
+    const tq4 = performance.now();
+    if (P.tune && !P.tune.done) { P.tune.acc += (tq4 - tq0) / Math.max(1, nA); P.tune.n++; }
+    // 워커 빠르기 배우기(일 ÷ 걸린 시간)
+    sl.forEach((s, k) => { const tm = (resA[k].td || 0) + (resB[k].tf || 0); if (tm > 0.3 && pg.wts[k] > 0) { const sp = pg.wts[k] / tm, old = P.speed[k]; P.speed[k] = old === 1 ? sp : 0.85 * old + 0.15 * sp; } });
+    T.wf = (T.wf || 0) + Math.max(...resB.map(r => r.tf)); if (wantG) { T.wg = (T.wg || 0) + Math.max(...resB.map(r => r.tg || 0)); T.ng = (T.ng || 0) + 1; }
+    const linkParts = [];
+    sl.forEach((s, k) => {
+      const R = resB[k];
+      for (let q = 0; q < s[1] - s[0]; q++) {
+        const i = grid[s[0] + q];
+        AX[i] = R.ax[q]; AY[i] = R.ay[q]; AZ[i] = R.az[q]; DU[i] = R.du[q]; VS[i] = R.vs[q]; TOUCH[i] = R.touch[q];
+        if (wantG) { GX[i] = R.gx[q]; GY[i] = R.gy[q]; GZ[i] = R.gz[q]; }
+      }
+      for (let b = 0; b < nf; b++) { const f = F[b], o = b * 6; f.F[0] += R.fb[o]; f.F[1] += R.fb[o + 1]; f.F[2] += R.fb[o + 2]; f.Tq[0] += R.fb[o + 3]; f.Tq[1] += R.fb[o + 4]; f.Tq[2] += R.fb[o + 5]; }
+      if (wantL && R.links) linkParts.push(R.links);
+    });
+    if (wantL) {
+      let n = 0; for (const L of linkParts) n += L.length;
+      const out = new Int32Array(n); let o = 0;
+      for (const L of linkParts) for (let q = 0; q < L.length; q++) out[o++] = grid[L[q]];
+      S.links = out;
+    }
+    S.nPairs = 0;
+    const tq5 = performance.now(); T.pack += tq1 - tq0; T.A += tq2 - tq1; T.mid += tq3 - tq2; T.B += tq4 - tq3; T.un += tq5 - tq4; T.n++; T.wn = sl.length;
+  }
+  async function sphA(wantG, wantL) {
+    collectActive();
+    const t0 = performance.now();
+    let treeDone = false;
+    S.links = null;
+    const P = NA >= POOL_MIN ? makePool() : null;
+    if (P && !P.broken) {
+      try { await poolSph(wantG, wantL); treeDone = wantG; S.lastPool = true; }
+      catch (e) { console.error(e); P.broken = true; pMode = false; listOK = false; if (needRebuild()) buildList(); sph(); S.lastPool = false; }
+    } else {
+      if (pMode) { pMode = false; listOK = false; }
+      if (needRebuild()) buildList(); sph(); S.lastPool = false;
+    }
+    if (S.damp > 0) for (let k = 0; k < NA; k++) { const i = ACT[k]; AX[i] -= S.damp * VX[i]; AY[i] -= S.damp * VY[i]; AZ[i] -= S.damp * VZ[i]; }
+    S.prof.sph += performance.now() - t0; S.prof.n++;
+    return treeDone;
+  }
+  function gravFinish(treeDone) {
+    const t0 = performance.now();
+    if (!treeDone) { for (let k = 0; k < NA; k++) { const i = ACT[k]; GX[i] = GY[i] = GZ[i] = 0; } if (S.radialGrav) radialGravity(); else gravity(); }
+    frozenGravity();
+    S.prof.grav += performance.now() - t0; S.prof.ng++;
+  }
+  S.forcesA = async function () { const td = await sphA(!S.radialGrav, false); gravFinish(td); S.dirty = false; S.gk = 0; };
+  S.nextDtA = async function () { if (S.dirty) await S.forcesA(); return S.gk === 0 ? chooseDt() : S.dtB; };
+  S.stepA = async function (dtWant, wantLinks) {
+    if (S.dirty) await S.forcesA();
+    const F = S.frozen;
+    if (S.gk === 0) {
+      S.dtB = dtWant; S.K = NA > 0 ? (S.gEvery > 0 ? S.gEvery : Math.max(1, Math.min(16, Math.round(0.06 / dtWant)))) : 1;
+      const H = 0.5 * S.K * S.dtB;
+      for (let k = 0; k < NA; k++) { const i = ACT[k]; VX[i] += GX[i] * H; VY[i] += GY[i] * H; VZ[i] += GZ[i] * H; }
+      for (const b of F) for (let c = 0; c < 3; c++) b.V[c] += b.AG[c] * H;
+    }
+    const dt = S.dtB, h = 0.5 * dt;
+    S.dt = dt;
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k]; VX[i] += AX[i] * h; VY[i] += AY[i] * h; VZ[i] += AZ[i] * h;
+      U[i] += DU[i] * h; if (U[i] < 0) U[i] = 0;
+      X[i] += VX[i] * dt; Y[i] += VY[i] * dt; Z[i] += VZ[i] * dt;
+    }
+    for (const b of F) {
+      for (let c = 0; c < 3; c++) { b.V[c] += b.F[c] / b.M * h; b.L[c] += b.Tq[c] * h; }
+      b.W = [b.L[0] / b.I, b.L[1] / b.I, b.L[2] / b.I];
+      for (let c = 0; c < 3; c++) b.P[c] += b.V[c] * dt;
+      rotStep(b, dt);
+    }
+    const wantG = S.gk + 1 >= S.K;
+    const td = await sphA(wantG && !S.radialGrav, !!wantLinks);
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k]; VX[i] += AX[i] * h; VY[i] += AY[i] * h; VZ[i] += AZ[i] * h;
+      U[i] += DU[i] * h; if (U[i] < 0) U[i] = 0;
+    }
+    for (const b of F) { for (let c = 0; c < 3; c++) { b.V[c] += b.F[c] / b.M * h; b.L[c] += b.Tq[c] * h; } b.W = [b.L[0] / b.I, b.L[1] / b.I, b.L[2] / b.I]; }
+    S.t += dt; S.steps++; S.gk++;
+    if (S.gk >= S.K) {
+      gravFinish(wantG ? td : false); const H = 0.5 * S.K * S.dtB;
+      for (let k = 0; k < NA; k++) { const i = ACT[k]; VX[i] += GX[i] * H; VY[i] += GY[i] * H; VZ[i] += GZ[i] * H; }
+      for (const b of F) for (let c = 0; c < 3; c++) b.V[c] += b.AG[c] * H;
+      S.gk = 0;
+    }
+    contacts();
+  };
+  function sphForces() {
+    collectActive();
+    const t0 = performance.now(); if (needRebuild()) buildList(); const t1 = performance.now(); sph(); const t2 = performance.now();
+    if (S.damp > 0) for (let k = 0; k < NA; k++) { const i = ACT[k]; AX[i] -= S.damp * VX[i]; AY[i] -= S.damp * VY[i]; AZ[i] -= S.damp * VZ[i]; }
+    const pf = S.prof; pf.pairs += t1 - t0; pf.sph += t2 - t1; pf.n++;
+  }
+  function gravForces() {
+    collectActive();
+    const t0 = performance.now();
+    for (let k = 0; k < NA; k++) { const i = ACT[k]; GX[i] = GY[i] = GZ[i] = 0; }
+    if (S.radialGrav) radialGravity(); else gravity();
+    frozenGravity();
+    S.prof.grav += performance.now() - t0; S.prof.ng++;
+  }
+  S.forces = function () { sphForces(); gravForces(); S.dirty = false; S.gk = 0; };
+
+  function chooseDt() {
+    let dt = S.dtMax || 0.5;
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k], h = HH[i];
+      if (NB[i] > 0 && VS[i] > 0) { const d = CFL * h / VS[i]; if (d < dt) dt = d; }
+      const ax = AX[i] + GX[i], ay = AY[i] + GY[i], az = AZ[i] + GZ[i], a = Math.sqrt(ax * ax + ay * ay + az * az);
+      if (a > 0) { const d = 0.3 * Math.sqrt(h / a); if (d < dt) dt = d; }
+    }
+    const F = S.frozen;
+    for (const b of F) {
+      for (let k = 0; k < NA; k++) {   // 다가오는 알갱이가 한 번에 뚫고 들어가지 않게
+        const i = ACT[k], dx = X[i] - b.P[0], dy = Y[i] - b.P[1], dz = Z[i] - b.P[2], r = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        const gap = r - b.R - HH[i];
+        const vr = -((VX[i] - b.V[0]) * dx + (VY[i] - b.V[1]) * dy + (VZ[i] - b.V[2]) * dz) / (r || 1);
+        if (vr > 0) { const d = 0.5 * Math.max(gap, HH[i]) / vr; if (d < dt) dt = d; }
+      }
+      for (const c of F) {
+        if (c === b) continue;
+        const dx = c.P[0] - b.P[0], dy = c.P[1] - b.P[1], dz = c.P[2] - b.P[2], r = Math.hypot(dx, dy, dz);
+        const gap = r - b.R - c.R;
+        const vr = -((c.V[0] - b.V[0]) * dx + (c.V[1] - b.V[1]) * dy + (c.V[2] - b.V[2]) * dz) / (r || 1);
+        if (vr > 0) { const d = 0.4 * Math.max(gap, 0.3 * Math.min(b.hmax, c.hmax)) / vr; if (d < dt) dt = d; }
+        const orb = 0.015 * Math.sqrt(r * r * r / (b.M + c.M)); if (orb < dt) dt = orb;
+      }
+    }
+    return Math.max(dt, 1e-6);
+  }
+  S.chooseDt = chooseDt;
+
+  /* ---- 한 걸음: 압력은 매번, 중력은 gEvery 걸음마다 한 번에 (RESPA) ---- */
+  S.dirty = true;
+  S.step = function (dtWant) {
+    if (S.dirty) S.forces();
+    const F = S.frozen;
+    if (S.gk === 0) {
+      S.dtB = dtWant; S.K = NA > 0 ? (S.gEvery > 0 ? S.gEvery : Math.max(1, Math.min(16, Math.round(0.06 / dtWant)))) : 1;
+      const H = 0.5 * S.K * S.dtB;
+      for (let k = 0; k < NA; k++) { const i = ACT[k]; VX[i] += GX[i] * H; VY[i] += GY[i] * H; VZ[i] += GZ[i] * H; }
+      for (const b of F) for (let c = 0; c < 3; c++) b.V[c] += b.AG[c] * H;
+    }
+    const dt = S.dtB, h = 0.5 * dt;
+    S.dt = dt;
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k]; VX[i] += AX[i] * h; VY[i] += AY[i] * h; VZ[i] += AZ[i] * h;
+      U[i] += DU[i] * h; if (U[i] < 0) U[i] = 0;
+      X[i] += VX[i] * dt; Y[i] += VY[i] * dt; Z[i] += VZ[i] * dt;
+    }
+    for (const b of F) {
+      for (let c = 0; c < 3; c++) { b.V[c] += b.F[c] / b.M * h; b.L[c] += b.Tq[c] * h; }
+      b.W = [b.L[0] / b.I, b.L[1] / b.I, b.L[2] / b.I];
+      for (let c = 0; c < 3; c++) b.P[c] += b.V[c] * dt;
+      rotStep(b, dt);
+    }
+    sphForces();
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k]; VX[i] += AX[i] * h; VY[i] += AY[i] * h; VZ[i] += AZ[i] * h;
+      U[i] += DU[i] * h; if (U[i] < 0) U[i] = 0;
+    }
+    for (const b of F) { for (let c = 0; c < 3; c++) { b.V[c] += b.F[c] / b.M * h; b.L[c] += b.Tq[c] * h; } b.W = [b.L[0] / b.I, b.L[1] / b.I, b.L[2] / b.I]; }
+    S.t += dt; S.steps++; S.gk++;
+    if (S.gk >= S.K) {
+      gravForces(); const H = 0.5 * S.K * S.dtB;
+      for (let k = 0; k < NA; k++) { const i = ACT[k]; VX[i] += GX[i] * H; VY[i] += GY[i] * H; VZ[i] += GZ[i] * H; }
+      for (const b of F) for (let c = 0; c < 3; c++) b.V[c] += b.AG[c] * H;
+      S.gk = 0;
+    }
+    contacts();
+  };
+  // 다음 걸음 길이(중력 묶음 안에서는 같은 길이)
+  S.nextDt = function () { if (S.dirty) S.forces(); return S.gk === 0 ? chooseDt() : S.dtB; };
+
+  /* ---- 닿음: 굳은 몸 깨우기 / 작은 알갱이 붙이기 ---- */
+  function contacts() {
+    const F = S.frozen; if (!F.length) return;
+    const wakeSet = new Set();
+    for (let a = 0; a < F.length; a++) for (let c = a + 1; c < F.length; c++) {
+      const A = F[a], B = F[c], r = Math.hypot(B.P[0] - A.P[0], B.P[1] - A.P[1], B.P[2] - A.P[2]);
+      if (r < A.R + B.R) { wakeSet.add(A); wakeSet.add(B); if (S.onImpact) S.onImpact(A, B); }
+      else {   // 로슈 한계: 큰 몸 가까이 온 작은 몸은 깨워서 찢어지게
+        const big = A.M > B.M ? A : B, sm = big === A ? B : A;
+        if (big.M > 3 * sm.M && sm.idx.length > 30 && periapsis(big, sm) > big.R + sm.R) {
+          const rhoB = big.M / (4.18879 * big.rmax ** 3), rhoS = sm.M / (4.18879 * Math.max(sm.rmax, 1e-6) ** 3);
+          if (r < 2.5 * big.rmax * Math.cbrt(rhoB / rhoS)) { wakeSet.add(sm); if (S.onRoche) S.onRoche(sm, big); }
+        }
+      }
+    }
+    const absorbList = [];
+    for (let k = 0; k < NA; k++) {
+      const i = ACT[k], fz = TOUCH[i]; if (fz < 0) continue;
+      const b = F[fz]; if (!b || wakeSet.has(b)) continue;
+      const cm = CM[i] || MS[i], cn = CN[i] || 1;
+      if (cn > 4 && cm >= 0.002 * b.M && !(S.wakeVeto && S.wakeVeto(b, i, cm))) { wakeSet.add(b); if (S.onTouch) S.onTouch(b, i, cm); continue; }
+      const rx = X[i] - b.P[0], ry = Y[i] - b.P[1], rz = Z[i] - b.P[2], w = b.W;   // 몸 겉면과 거의 같이 움직이면 붙임
+      const sx = b.V[0] + w[1] * rz - w[2] * ry, sy = b.V[1] + w[2] * rx - w[0] * rz, sz = b.V[2] + w[0] * ry - w[1] * rx;
+      const dv = Math.hypot(VX[i] - sx, VY[i] - sy, VZ[i] - sz), ve = Math.sqrt(2 * b.M / Math.max(b.rmax, 1e-6));
+      if (dv < 0.25 * ve + 0.02) absorbList.push(i, fz);
+    }
+    let changed = false;
+    for (let n = 0; n < absorbList.length; n += 2) { const b = F[absorbList[n + 1]]; if (b && !wakeSet.has(b) && FZ[absorbList[n]] < 0) { absorb(absorbList[n], b); changed = true; } }
+    if (wakeSet.size) { for (const b of wakeSet) S.wake(b); changed = true; }
+    if (changed) S.dirty = true;
+  }
+
+  /* ---- 덩어리 찾기 (친구의 친구) ---- */
+  const UF = new Int32Array(CAP);
+  function find(a) { while (UF[a] !== a) { UF[a] = UF[UF[a]]; a = UF[a]; } return a; }
+  S.clumps = function () {
+    collectActive();
+    for (let k = 0; k < NA; k++) UF[ACT[k]] = ACT[k];
+    if (S.links) { const L = S.links; for (let n = 0; n < L.length; n += 2) { const i = L[n], j = L[n + 1]; if (FZ[i] >= 0 || FZ[j] >= 0) continue; const a = find(i), b = find(j); if (a !== b) { if (a < b) UF[b] = a; else UF[a] = b; } } }
+    else for (let n = 0; n < NP; n++) {
+      const i = PI[n], j = PJ[n]; if (PD[n] === 0 || FZ[j] >= 0 || FZ[i] >= 0) continue;
+      if (PRR[n] < LINK * 0.5 * (HH[i] + HH[j])) { const a = find(i), b = find(j); if (a !== b) { if (a < b) UF[b] = a; else UF[a] = b; } }
+    }
+    const groups = new Map();
+    for (let k = 0; k < NA; k++) { const i = ACT[k], r = find(i); let g = groups.get(r); if (!g) groups.set(r, g = []); g.push(i); }
+    const out = [];
+    for (const g of groups.values()) {
+      let M = 0; for (const p of g) M += MS[p];
+      for (const p of g) { CM[p] = M; CN[p] = g.length; }
+      out.push({ idx: g, M });
+    }
+    return out;
+  };
+
+  /* ---- 알갱이 넣기·빼기 ---- */
+  S.add = function (n) { const s = S.N; if (s + n > CAP) throw new Error('알갱이가 너무 많습니다'); S.N += n; for (let i = s; i < s + n; i++) { FZ[i] = -1; BI[i] = -1; CM[i] = 0; CN[i] = 0; U[i] = 0; DU[i] = 0; AX[i] = AY[i] = AZ[i] = 0; GX[i] = GY[i] = GZ[i] = 0; } S.dirty = true; listOK = false; return s; };
+  S.compact = function () {   // 지워진 알갱이(MS=0) 빼고 앞으로 당기기
+    const N = S.N, map = new Int32Array(N); let w = 0;
+    const arrs = [X, Y, Z, VX, VY, VZ, AX, AY, AZ, GX, GY, GZ, MS, HH, RHO, PR, CS, U, DU, MT, LB, T0, FZ, LX, LY, LZ, BI, NB, CM, CN];
+    for (let i = 0; i < N; i++) {
+      if (MS[i] > 0) {
+        map[i] = w;
+        if (w !== i) { for (const A of arrs) A[w] = A[i]; CR[w * 3] = CR[i * 3]; CR[w * 3 + 1] = CR[i * 3 + 1]; CR[w * 3 + 2] = CR[i * 3 + 2]; }
+        w++;
+      } else map[i] = -1;
+    }
+    S.N = w;
+    for (const b of S.frozen) { const ni = []; for (const p of b.idx) if (map[p] >= 0) ni.push(map[p]); b.idx = Int32Array.from(ni); }
+    S.dirty = true; listOK = false; S.links = null;
+    return map;
+  };
+  S.collectActive = collectActive;
+  S.clear = function () { listOK = false; S.N = 0; S.frozen.length = 0; S.t = 0; S.dirty = true; NA = 0; S.NA = 0; NP = 0; S.gk = 0; };
+  return S;
+}
+function periapsis(A, B) {   // 두 몸 궤도의 가장 가까운 거리
+  const r = [B.P[0] - A.P[0], B.P[1] - A.P[1], B.P[2] - A.P[2]], v = [B.V[0] - A.V[0], B.V[1] - A.V[1], B.V[2] - A.V[2]], mu = A.M + B.M;
+  const rl = Math.hypot(r[0], r[1], r[2]), v2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+  const hx = r[1] * v[2] - r[2] * v[1], hy = r[2] * v[0] - r[0] * v[2], hz = r[0] * v[1] - r[1] * v[0], h2 = hx * hx + hy * hy + hz * hz;
+  const E = 0.5 * v2 - mu / rl, e = Math.sqrt(Math.max(0, 1 + 2 * E * h2 / (mu * mu)));
+  return h2 / mu / (1 + e);
+}
+function solve3(A, b) {   // 3x3 풀기 (가우스)
+  const m = [[A[0], A[1], A[2], b[0]], [A[3], A[4], A[5], b[1]], [A[6], A[7], A[8], b[2]]];
+  for (let c = 0; c < 3; c++) {
+    let p = c; for (let r = c + 1; r < 3; r++) if (Math.abs(m[r][c]) > Math.abs(m[p][c])) p = r;
+    [m[c], m[p]] = [m[p], m[c]]; if (Math.abs(m[c][c]) < 1e-14) return [0, 0, 0];
+    for (let r = 0; r < 3; r++) if (r !== c) { const f = m[r][c] / m[c][c]; for (let k = c; k < 4; k++) m[r][k] -= f * m[c][k]; }
+  }
+  return [m[0][3] / m[0][0], m[1][3] / m[1][1], m[2][3] / m[2][2]];
+}
+
+/* ===================== 행성 만들기: 정역학 평형 + 껍질 배치 + 가라앉히기 ===================== */
+function structure(M, fe, wat, iceOcean) {
+  const Mfe = M * fe, Mw = M * wat, Mr = M - Mfe - Mw;
+  const lay = m => m < Mfe ? 0 : (m < Mfe + Mr ? 1 : (iceOcean ? 3 : 2));
+  const Vu = Mfe / MR0[0] + Mr / MR0[1] + Mw / MR0[iceOcean ? 3 : 2];
+  const Rg = Math.cbrt(Vu / 4.18879);
+  function integ(Pc, rec) {
+    const NS = 1500, dr = Rg * 1.2 / NS;
+    let r = 1e-6 * Rg, m = 0, P = Pc;
+    const out = rec ? { r: [0], m: [0], rho: [], P: [Pc], L: [] } : null;
+    const L0 = lay(0);
+    if (out) { out.rho.push(eosRho(L0, Pc)); out.L.push(L0); }
+    for (let s = 0; s < NS * 4; s++) {
+      const L = lay(m), rho = eosRho(L, P);
+      const dm1 = 4 * Math.PI * r * r * rho * dr, dP1 = -m * rho / (r * r) * dr;
+      const r2 = r + dr * 0.5, m2 = m + dm1 * 0.5, P2 = P + dP1 * 0.5, L2 = lay(m2), rho2 = eosRho(L2, P2);
+      const dm = 4 * Math.PI * r2 * r2 * rho2 * dr, dP = -m2 * rho2 / (r2 * r2) * dr;
+      if (P + dP <= 0) { const f = P / Math.max(-dP, 1e-30); r += dr * f; m += dm * f; P = 0; if (out) { out.r.push(r); out.m.push(m); out.P.push(0); const Lz = lay(Math.min(m, M * 0.99999)); out.rho.push(MR0[Lz]); out.L.push(Lz); } break; }
+      r += dr; m += dm; P += dP;
+      if (out) { const Lm = lay(m); out.r.push(r); out.m.push(m); out.P.push(P); out.rho.push(eosRho(Lm, P)); out.L.push(Lm); }
+      if (m > M * 4) break;
+    }
+    return rec ? out : m;
+  }
+  let lo = 0, hi = 0.5 * M * M / (Rg ** 4) + 1e-9;
+  for (let k = 0; k < 60 && integ(hi) < M; k++) hi *= 2;
+  for (let k = 0; k < 60; k++) { const mid = 0.5 * (lo + hi); if (integ(mid) < M) lo = mid; else hi = mid; }
+  const st = integ(0.5 * (lo + hi), true);
+  st.R = st.r[st.r.length - 1]; st.M = M; st.Pc = 0.5 * (lo + hi); st.lay = lay;
+  return st;
+}
+function interpM(st, m) {   // 질량 → 반지름, 밀도
+  const a = st.m; let lo = 0, hi = a.length - 1;
+  if (m <= 0) return { r: 0, rho: st.rho[0] };
+  if (m >= a[hi]) return { r: st.r[hi], rho: st.rho[hi] };
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (a[mid] < m) lo = mid; else hi = mid; }
+  const f = (m - a[lo]) / Math.max(a[hi] - a[lo], 1e-30);
+  return { r: st.r[lo] + (st.r[hi] - st.r[lo]) * f, rho: st.rho[lo] + (st.rho[hi] - st.rho[lo]) * f };
+}
+function interpM2(st, r) {   // 반지름 → 안쪽 질량
+  const a = st.r; let lo = 0, hi = a.length - 1;
+  if (r >= a[hi]) return st.m[hi];
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (a[mid] < r) lo = mid; else hi = mid; }
+  const f = (r - a[lo]) / Math.max(a[hi] - a[lo], 1e-30);
+  return st.m[lo] + (st.m[hi] - st.m[lo]) * f;
+}
+function randRot(rnd) {   // 무작위 회전 행렬
+  const u1 = rnd(), u2 = rnd(), u3 = rnd();
+  const x = Math.sqrt(1 - u1) * Math.sin(2 * Math.PI * u2), y = Math.sqrt(1 - u1) * Math.cos(2 * Math.PI * u2), z = Math.sqrt(u1) * Math.sin(2 * Math.PI * u3), w = Math.sqrt(u1) * Math.cos(2 * Math.PI * u3);
+  return [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w), 2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w), 2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)];
+}
+// 알갱이 n개로 행성 하나 만들기 → 가운데 (0,0,0), 멈춘 상태
+async function buildBody(spec, n, rnd, relaxSteps) {
+  const st = structure(spec.M, spec.fe, spec.wat, spec.ice);
+  const mp = spec.M / n, pts = [];
+  let m = 0;
+  const ga = Math.PI * (3 - Math.sqrt(5));
+  while (m < spec.M - mp * 0.5) {
+    const a = interpM(st, m), s = Math.cbrt(mp / a.rho);
+    const mOut = interpM2(st, a.r + s);
+    let nk = Math.max(1, Math.round((mOut - m) / mp));
+    if (m + nk * mp > spec.M) nk = Math.max(1, Math.round((spec.M - m) / mp));
+    const mid = interpM(st, m + nk * mp * 0.5), Lm = st.lay(m + nk * mp * 0.5);
+    const R = randRot(rnd), rr = (nk === 1 && m === 0) ? 0 : mid.r;
+    for (let k = 0; k < nk; k++) {
+      const z = 1 - (2 * k + 1) / nk, rad = Math.sqrt(Math.max(0, 1 - z * z)), ph = k * ga;
+      const ux = rad * Math.cos(ph), uy = rad * Math.sin(ph), uz = z;
+      pts.push({ x: (R[0] * ux + R[1] * uy + R[2] * uz) * rr, y: (R[3] * ux + R[4] * uy + R[5] * uz) * rr, z: (R[6] * ux + R[7] * uy + R[8] * uz) * rr, L: Lm, rho: mid.rho });
+    }
+    m += nk * mp;
+  }
+  const N = pts.length, sim = makeSim(N + 8);
+  sim.add(N);
+  for (let i = 0; i < N; i++) {
+    const p = pts[i];
+    sim.X[i] = p.x; sim.Y[i] = p.y; sim.Z[i] = p.z; sim.MS[i] = spec.M / N; sim.MT[i] = p.L;
+    sim.HH[i] = ETA * Math.cbrt((spec.M / N) / p.rho);
+  }
+  sim.radialGrav = true; sim.gEvery = 1;
+  const tdyn = Math.sqrt(st.R ** 3 / spec.M);
+  const steps = relaxSteps == null ? 60 : relaxSteps;
+  sim.damp = 3 / tdyn;
+  for (let s = 0; s < steps; s++) {
+    const dt = Math.min(await sim.nextDtA(), 0.08 * tdyn);
+    await sim.stepA(dt);
+    for (let i = 0; i < N; i++) sim.U[i] = 0;
+    if (s % 10 === 9) for (let i = 0; i < N; i++) { sim.VX[i] *= 0.3; sim.VY[i] *= 0.3; sim.VZ[i] *= 0.3; }
+  }
+  sim.damp = 0;
+  let cx = 0, cy = 0, cz = 0; for (let i = 0; i < N; i++) { cx += sim.X[i]; cy += sim.Y[i]; cz += sim.Z[i]; }
+  cx /= N; cy /= N; cz /= N;
+  const out = { N, mp: spec.M / N, x: new Float64Array(N), y: new Float64Array(N), z: new Float64Array(N), h: new Float64Array(N), mat: new Uint8Array(N), rho: new Float64Array(N), P: new Float64Array(N), cs: new Float64Array(N), nb: new Uint16Array(N), rf: new Float32Array(N), Rst: st.R, st, prof: sim.prof };
+  let rmax = 0, vres = 0;
+  for (let i = 0; i < N; i++) {
+    out.x[i] = sim.X[i] - cx; out.y[i] = sim.Y[i] - cy; out.z[i] = sim.Z[i] - cz; out.h[i] = sim.HH[i]; out.mat[i] = sim.MT[i];
+    out.rho[i] = sim.RHO[i]; out.P[i] = sim.PR[i]; out.cs[i] = sim.CS[i]; out.nb[i] = sim.NB[i];
+    const r = Math.hypot(out.x[i], out.y[i], out.z[i]); if (r > rmax) rmax = r; out.rf[i] = r;
+    vres += sim.VX[i] ** 2 + sim.VY[i] ** 2 + sim.VZ[i] ** 2;
+  }
+  for (let i = 0; i < N; i++) out.rf[i] /= rmax;
+  out.R = rmax; out.vres = Math.sqrt(vres / N);
+  return out;
+}
+
+/* ===================== 여러 코어로 나눠 계산하기 (워커) =====================
+   컴퓨터 두뇌(코어)마다 워커 하나. 알갱이를 조각으로 나눠 각자 자기 조각의 이웃·밀도·힘·중력을 계산.
+   한 걸음 = 1회차(자리·속도·열 보냄 → 밀도) + 2회차(밀도 보냄 → 힘·중력). 받는 쪽은 복사 없이 넘겨받음. */
+function workerMain() {
+  let NG = 0, NA = 0, a0 = 0, a1 = 0, sk = 0, cell = 1, NS = 0;
+  let H, Mm, MT, FZ, FRHO, FPR, FCS;
+  let POS, VEL, UA;
+  let RHO = new Float64Array(0), PR = new Float64Array(0), CS = new Float64Array(0);
+  let NBS = new Int32Array(1), NBL = new Int32Array(1 << 16);
+  function growNB() { const b = new Int32Array(NBL.length * 2); b.set(NBL); NBL = b; }
+  onmessage = e => { try { const d = e.data; if (d.t === 'A') roundA(d); else if (d.t === 'B') roundB(d); } catch (er) { postMessage({ err: String(er && er.stack || er) }); } };
+
+  /* 짝은 한 번만: 내 조각 안의 두 알갱이는 번호가 작은 쪽만 짝을 기억하고 양쪽에 같이 더함.
+     다른 조각·굳은 몸 알갱이와의 짝은 내 쪽에만 더함(그쪽은 그쪽 워커가 계산). */
+  let RL = new Float64Array(0), NL2 = new Int32Array(0);
+  function roundA(d) {
+    if (d.st) {
+      const s = d.st; NG = s.NG; NA = s.NA; a0 = s.a0; a1 = s.a1; sk = s.sk; cell = s.cell; NS = a1 - a0;
+      H = s.H; Mm = s.M; MT = s.MT; FZ = s.FZ; FRHO = s.FRHO; FPR = s.FPR; FCS = s.FCS;
+      if (RHO.length < NG) { RHO = new Float64Array(NG); PR = new Float64Array(NG); CS = new Float64Array(NG); }
+      if (RL.length < NS) { RL = new Float64Array(NS); NL2 = new Int32Array(NS); }
+    }
+    const b = d.buf; POS = b.subarray(0, 3 * NG); VEL = b.subarray(3 * NG, 6 * NG); UA = b.subarray(6 * NG, 6 * NG + NA);
+    const w0 = performance.now();
+    if (d.st) buildList();
+    const w1 = performance.now();
+    for (let k = 0; k < NS; k++) { const g = a0 + k, h = H[g]; RL[k] = Mm[g] / (Math.PI * h * h * h); NL2[k] = 0; }
+    for (let k = 0; k < NS; k++) {
+      const g = a0 + k, h = H[g], xg = POS[3 * g], yg = POS[3 * g + 1], zg = POS[3 * g + 2], mg = Mm[g];
+      let r0 = 0, n = 0;
+      for (let q = NBS[k], e = NBS[k + 1]; q < e; q++) {
+        const j = NBL[q], ex = xg - POS[3 * j], ey = yg - POS[3 * j + 1], ez = zg - POS[3 * j + 2], r2 = ex * ex + ey * ey + ez * ez, hij = 0.5 * (h + H[j]);
+        if (r2 >= 4 * hij * hij || r2 === 0) continue;
+        const ih = 1 / hij, qq = Math.sqrt(r2) * ih, sig = 0.3183098861837907 * ih * ih * ih;
+        const w = qq < 1 ? sig * (1 - 1.5 * qq * qq + 0.75 * qq * qq * qq) : sig * 0.25 * (2 - qq) * (2 - qq) * (2 - qq);
+        r0 += Mm[j] * w; n++;
+        if (j >= a0 && j < a1) { const kj = j - a0; RL[kj] += mg * w; NL2[kj]++; }
+      }
+      RL[k] += r0; NL2[k] += n;
+    }
+    const rho = new Float32Array(NS), nb = new Uint16Array(NS);
+    for (let k = 0; k < NS; k++) { rho[k] = RL[k]; nb[k] = NL2[k] > 65535 ? 65535 : NL2[k]; }
+    postMessage({ rho, nb, tb: w1 - w0, td: performance.now() - w1, cand: NBS[NS] }, [rho.buffer, nb.buffer]);
+  }
+
+  // 이웃 목록: 내 조각 둘레의 알갱이만, 칸은 반 크기로 잘게 나누고 알갱이마다 닿을 수 있는 칸만 봄(헛검사 줄이기)
+  function buildList() {
+    if (NBS.length < NS + 1) NBS = new Int32Array(NS + 1);
+    if (NS <= 0) { NBS[0] = 0; return; }
+    let hmx = 0; for (let g = 0; g < NG; g++) if (H[g] > hmx) hmx = H[g];
+    let x0 = 1e30, y0 = 1e30, z0 = 1e30, x1 = -1e30, y1 = -1e30, z1 = -1e30;
+    for (let g = a0; g < a1; g++) { const x = POS[3 * g], y = POS[3 * g + 1], z = POS[3 * g + 2]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+    const mg = 2 * hmx + sk;
+    x0 -= mg; y0 -= mg; z0 -= mg; x1 += mg; y1 += mg; z1 += mg;
+    const cs = 0.5 * mg, ic = 1 / cs;
+    let nIn = 0; const IN = new Int32Array(NG);
+    for (let g = 0; g < NG; g++) { const x = POS[3 * g], y = POS[3 * g + 1], z = POS[3 * g + 2]; if (x >= x0 && x <= x1 && y >= y0 && y <= y1 && z >= z0 && z <= z1) IN[nIn++] = g; }
+    const nx = Math.floor((x1 - x0) * ic) + 1, ny = Math.floor((y1 - y0) * ic) + 1, nz = Math.floor((z1 - z0) * ic) + 1, ncell = nx * ny * nz;
+    const dense = ncell <= Math.max(64 * nIn, 1 << 16) && ncell < 8e6;
+    const ox = dense ? x0 : 0, oy = dense ? y0 : 0, oz = dense ? z0 : 0;
+    let nb, HM = 0;
+    if (dense) nb = ncell; else { nb = 1 << 10; while (nb < nIn * 2) nb <<= 1; HM = nb - 1; }
+    const START = new Int32Array(nb + 1), BK = new Int32Array(nIn), CX = new Int32Array(NG), CY = new Int32Array(NG), CZ = new Int32Array(NG);
+    for (let t = 0; t < nIn; t++) {
+      const g = IN[t];
+      let ix = Math.floor((POS[3 * g] - ox) * ic), iy = Math.floor((POS[3 * g + 1] - oy) * ic), iz = Math.floor((POS[3 * g + 2] - oz) * ic), c;
+      if (dense) { if (ix >= nx) ix = nx - 1; if (iy >= ny) iy = ny - 1; if (iz >= nz) iz = nz - 1; c = ix + nx * (iy + ny * iz); }
+      else c = (Math.imul(ix, 73856093) ^ Math.imul(iy, 19349663) ^ Math.imul(iz, 83492791)) & HM;
+      BK[t] = c; CX[g] = ix; CY[g] = iy; CZ[g] = iz; START[c + 1]++;
+    }
+    for (let c = 0; c < nb; c++) START[c + 1] += START[c];
+    const fill = START.slice(0, nb), SID = new Int32Array(nIn);
+    for (let t = 0; t < nIn; t++) SID[fill[BK[t]]++] = IN[t];
+    let n = 0;
+    for (let k = 0; k < NS; k++) {
+      const g = a0 + k, hg = H[g], xg = POS[3 * g], yg = POS[3 * g + 1], zg = POS[3 * g + 2], cx = CX[g], cy = CY[g], cz = CZ[g];
+      const rg = hg + hmx + sk, rg2 = rg * rg, reach = Math.min(2, Math.ceil(rg * ic));
+      const fx = xg - ox - cx * cs, fy = yg - oy - cy * cs, fz = zg - oz - cz * cs;   // 칸 안에서의 자리
+      NBS[k] = n;
+      for (let dz = -reach; dz <= reach; dz++) {
+        const gz2 = dz > 0 ? (dz * cs - fz) : dz < 0 ? (fz - (dz + 1) * cs) : 0, gz = cz + dz;
+        if (gz2 * gz2 > rg2) continue;
+        for (let dy = -reach; dy <= reach; dy++) {
+          const gy2 = dy > 0 ? (dy * cs - fy) : dy < 0 ? (fy - (dy + 1) * cs) : 0, gy = cy + dy, gyz = gz2 * gz2 + gy2 * gy2;
+          if (gyz > rg2) continue;
+          for (let dx = -reach; dx <= reach; dx++) {
+            const gx2 = dx > 0 ? (dx * cs - fx) : dx < 0 ? (fx - (dx + 1) * cs) : 0, gx = cx + dx;
+            if (gyz + gx2 * gx2 > rg2) continue;
+            let c;
+            if (dense) { if (gx < 0 || gy < 0 || gz < 0 || gx >= nx || gy >= ny || gz >= nz) continue; c = gx + nx * (gy + ny * gz); }
+            else c = (Math.imul(gx, 73856093) ^ Math.imul(gy, 19349663) ^ Math.imul(gz, 83492791)) & HM;
+            for (let s = START[c], e = START[c + 1]; s < e; s++) {
+              const j = SID[s]; if (j === g) continue;
+              if (j >= a0 && j < a1 && j < g) continue;            // 내 조각 안 짝은 한 번만
+              if (!dense && (CX[j] !== gx || CY[j] !== gy || CZ[j] !== gz)) continue;
+              const rc = hg + H[j] + sk, ex = xg - POS[3 * j], ey = yg - POS[3 * j + 1], ez = zg - POS[3 * j + 2];
+              if (ex * ex + ey * ey + ez * ez >= rc * rc) continue;
+              if (n >= NBL.length) growNB();
+              NBL[n++] = j;
+            }
+          }
+        }
+      }
+    }
+    NBS[NS] = n;
+  }
+
+  function roundB(d) {
+    const w0 = performance.now();
+    const rA = d.rho;
+    for (let g = 0; g < NA; g++) {
+      const rho = rA[g], mt = MT[g], x = rho / MR0[mt], gm = MGM[mt], u = UA[g] > 0 ? UA[g] : 0;
+      let pc = 0, c2 = MC2[mt];
+      if (x > 1) { const xn = Math.pow(x, MNN[mt] - 1); pc = MK0[mt] / MNN[mt] * (xn * x - 1); c2 *= xn; }
+      RHO[g] = rho; PR[g] = pc + gm * rho * u; CS[g] = Math.sqrt(c2 + gm * (gm + 1) * u);
+    }
+    for (let g = NA; g < NG; g++) { RHO[g] = FRHO[g - NA]; PR[g] = FPR[g - NA]; CS[g] = FCS[g - NA]; }
+    const nf = d.nf, BP = d.bp, fb = new Float64Array(nf * 6);
+    const ax = new Float32Array(NS), ay = new Float32Array(NS), az = new Float32Array(NS), du = new Float32Array(NS), vs = new Float32Array(NS), touch = new Int16Array(NS).fill(-1);
+    const AXL = new Float64Array(NS), AYL = new Float64Array(NS), AZL = new Float64Array(NS), DUL = new Float64Array(NS), VSL = new Float64Array(NS);
+    for (let k = 0; k < NS; k++) {
+      const g = a0 + k, ri = RHO[g], pi = PR[g] / (ri * ri), mi = Mm[g], vxg = VEL[3 * g], vyg = VEL[3 * g + 1], vzg = VEL[3 * g + 2], cg = CS[g], hg = H[g];
+      const ug = UA[g], th = ug > 0 ? MGM[MT[g]] * ug / ri : 0;
+      let sx = 0, sy = 0, sz = 0, su = 0, sv = VSL[k], to = -1;
+      const xg = POS[3 * g], yg = POS[3 * g + 1], zg = POS[3 * g + 2];
+      for (let q = NBS[k], e = NBS[k + 1]; q < e; q++) {
+        const j = NBL[q], dx = xg - POS[3 * j], dy = yg - POS[3 * j + 1], dz = zg - POS[3 * j + 2], r2 = dx * dx + dy * dy + dz * dz, hh = 0.5 * (hg + H[j]);
+        if (r2 >= 4 * hh * hh || r2 === 0) continue;
+        const r = Math.sqrt(r2), ir = 1 / r, ex = dx * ir, ey = dy * ir, ez = dz * ir, ih = 1 / hh, qq = r * ih, sgm = 0.3183098861837907 * ih * ih * ih * ih;
+        const dw = qq < 1 ? sgm * (-3 * qq + 2.25 * qq * qq) : -sgm * 0.75 * (2 - qq) * (2 - qq);
+        const rj = RHO[j], pj = PR[j] / (rj * rj), cj = CS[j];
+        const wv = (vxg - VEL[3 * j]) * ex + (vyg - VEL[3 * j + 1]) * ey + (vzg - VEL[3 * j + 2]) * ez;
+        let PIv = 0;
+        if (wv < 0) { const mu = hh * wv * r / (r2 + 0.01 * hh * hh); PIv = (-ALPHA * 0.5 * (cg + cj) * mu + BETA * mu * mu) / (0.5 * (ri + rj)); }
+        const v = cg + cj - 3 * (wv < 0 ? wv : 0); if (v > sv) sv = v;
+        const f = (pi + pj + PIv) * dw, mj = Mm[j];
+        sx -= mj * f * ex; sy -= mj * f * ey; sz -= mj * f * ez;
+        su += mj * (th + 0.5 * PIv) * dw * wv;
+        if (j >= a0 && j < a1) {   // 같은 조각: 반대쪽도 여기서
+          const kj = j - a0, uj = UA[j], thj = uj > 0 ? MGM[MT[j]] * uj / rj : 0;
+          AXL[kj] += mi * f * ex; AYL[kj] += mi * f * ey; AZL[kj] += mi * f * ez;
+          DUL[kj] += mi * (thj + 0.5 * PIv) * dw * wv;
+          if (v > VSL[kj]) VSL[kj] = v;
+        } else {
+          const fz = FZ[j];
+          if (fz >= 0) {
+            const Fx = mi * mj * f * ex, Fy = mi * mj * f * ey, Fz = mi * mj * f * ez, o = fz * 6;
+            const rx = POS[3 * j] - BP[fz * 3], ry = POS[3 * j + 1] - BP[fz * 3 + 1], rz = POS[3 * j + 2] - BP[fz * 3 + 2];
+            fb[o] += Fx; fb[o + 1] += Fy; fb[o + 2] += Fz; fb[o + 3] += ry * Fz - rz * Fy; fb[o + 4] += rz * Fx - rx * Fz; fb[o + 5] += rx * Fy - ry * Fx;
+            if (r < 1.25 * hh) to = fz;
+          }
+        }
+      }
+      AXL[k] += sx; AYL[k] += sy; AZL[k] += sz; DUL[k] += su; VSL[k] = sv; touch[k] = to;
+    }
+    for (let k = 0; k < NS; k++) { ax[k] = AXL[k]; ay[k] = AYL[k]; az[k] = AZL[k]; du[k] = DUL[k]; vs[k] = VSL[k]; }
+    const out = { ax, ay, az, du, vs, touch, fb }, tr = [ax.buffer, ay.buffer, az.buffer, du.buffer, vs.buffer, touch.buffer, fb.buffer];
+    out.tf = performance.now() - w0;
+    if (d.grav) { const g0 = performance.now(); const G = gravity(); out.tg = performance.now() - g0; out.gx = G[0]; out.gy = G[1]; out.gz = G[2]; tr.push(G[0].buffer, G[1].buffer, G[2].buffer); }
+    if (d.links) {
+      let L = new Int32Array(Math.max(64, NS * 8)), nl = 0;
+      for (let k = 0; k < NS; k++) {
+        const g = a0 + k;
+        for (let q = NBS[k], e = NBS[k + 1]; q < e; q++) {
+          const j = NBL[q]; if (j >= NA || j <= g) continue;
+          const dx = POS[3 * g] - POS[3 * j], dy = POS[3 * g + 1] - POS[3 * j + 1], dz = POS[3 * g + 2] - POS[3 * j + 2], lk = LINK * 0.5 * (H[g] + H[j]);
+          if (dx * dx + dy * dy + dz * dz < lk * lk) { if (nl + 2 > L.length) { const t = new Int32Array(L.length * 2); t.set(L); L = t; } L[nl++] = g; L[nl++] = j; }
+        }
+      }
+      out.links = L.subarray(0, nl).slice(); tr.push(out.links.buffer);
+    }
+    postMessage(out, tr);
+  }
+
+  /* 중력: 움직이는 알갱이 모두로 나무를 만들고 내 조각만 계산 */
+  let NC = 1 << 14, NN = 0, ncx, ncy, ncz, nhs, nm, nmx, nmy, nmz, ndl, nsk, nst, ncn;
+  function alloc(n) {
+    const o = [ncx, ncy, ncz, nhs, nm, nmx, nmy, nmz, ndl, nsk, nst, ncn];
+    ncx = new Float64Array(n); ncy = new Float64Array(n); ncz = new Float64Array(n); nhs = new Float64Array(n); nm = new Float64Array(n);
+    nmx = new Float64Array(n); nmy = new Float64Array(n); nmz = new Float64Array(n); ndl = new Float64Array(n); nsk = new Int32Array(n); nst = new Int32Array(n); ncn = new Int32Array(n);
+    if (o[0]) { [ncx, ncy, ncz, nhs, nm, nmx, nmy, nmz, ndl, nsk, nst, ncn].forEach((A, k) => A.set(o[k])); }
+    NC = n;
+  }
+  alloc(NC);
+  let PERM = new Int32Array(0), TMP = new Int32Array(0), OCT = new Uint8Array(0);
+  const CNT = new Int32Array(8 * 64), LEAVES = [];
+  function buildNode(s, e, cx, cy, cz, hs, dep) {
+    if (NN >= NC) alloc(NC * 2);
+    const id = NN++;
+    ncx[id] = cx; ncy[id] = cy; ncz[id] = cz; nhs[id] = hs;
+    if (e - s <= LEAF || dep >= 40) {
+      let M = 0, mx = 0, my = 0, mz = 0;
+      for (let k = s; k < e; k++) { const p = PERM[k], m = Mm[p]; M += m; mx += m * POS[3 * p]; my += m * POS[3 * p + 1]; mz += m * POS[3 * p + 2]; }
+      nm[id] = M; if (M > 0) { nmx[id] = mx / M; nmy[id] = my / M; nmz[id] = mz / M; } else { nmx[id] = cx; nmy[id] = cy; nmz[id] = cz; }
+      nst[id] = s; ncn[id] = e - s; nsk[id] = NN; ndl[id] = Math.hypot(nmx[id] - cx, nmy[id] - cy, nmz[id] - cz);
+      LEAVES.push(id); return id;
+    }
+    const c0 = dep * 8; for (let o = 0; o < 8; o++) CNT[c0 + o] = 0;
+    for (let k = s; k < e; k++) { const p = PERM[k], o = (POS[3 * p] > cx ? 1 : 0) | (POS[3 * p + 1] > cy ? 2 : 0) | (POS[3 * p + 2] > cz ? 4 : 0); OCT[k] = o; CNT[c0 + o]++; }
+    const off = [s, 0, 0, 0, 0, 0, 0, 0]; for (let o = 1; o < 8; o++) off[o] = off[o - 1] + CNT[c0 + o - 1];
+    const st = off.slice();
+    for (let k = s; k < e; k++) TMP[off[OCT[k]]++] = PERM[k];
+    for (let k = s; k < e; k++) PERM[k] = TMP[k];
+    const h2 = hs * 0.5; let M = 0, mx = 0, my = 0, mz = 0;
+    for (let o = 0; o < 8; o++) {
+      const n = (o === 7 ? e : st[o + 1]) - st[o]; if (!n) continue;
+      const c = buildNode(st[o], st[o] + n, cx + (o & 1 ? h2 : -h2), cy + (o & 2 ? h2 : -h2), cz + (o & 4 ? h2 : -h2), h2, dep + 1);
+      M += nm[c]; mx += nm[c] * nmx[c]; my += nm[c] * nmy[c]; mz += nm[c] * nmz[c];
+    }
+    nm[id] = M; if (M > 0) { nmx[id] = mx / M; nmy[id] = my / M; nmz[id] = mz / M; } else { nmx[id] = cx; nmy[id] = cy; nmz[id] = cz; }
+    ndl[id] = Math.hypot(nmx[id] - cx, nmy[id] - cy, nmz[id] - cz); nst[id] = s; ncn[id] = -1; nsk[id] = NN;
+    return id;
+  }
+  let NL = new Int32Array(4096), PL = new Int32Array(4096);
+  function gravity() {
+    const gx = new Float32Array(NS), gy = new Float32Array(NS), gz = new Float32Array(NS);
+    if (PERM.length < NA) { PERM = new Int32Array(NA); TMP = new Int32Array(NA); OCT = new Uint8Array(NA); }
+    let x0 = 1e30, y0 = 1e30, z0 = 1e30, x1 = -1e30, y1 = -1e30, z1 = -1e30;
+    for (let g = 0; g < NA; g++) { PERM[g] = g; const x = POS[3 * g], y = POS[3 * g + 1], z = POS[3 * g + 2]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+    NN = 0; LEAVES.length = 0;
+    buildNode(0, NA, 0.5 * (x0 + x1), 0.5 * (y0 + y1), 0.5 * (z0 + z1), 0.5 * Math.max(x1 - x0, y1 - y0, z1 - z0) * 1.0001 + 1e-6, 0);
+    const it = 1 / THETA;
+    for (const Lf of LEAVES) {
+      const s0 = nst[Lf], e0 = s0 + ncn[Lf];
+      let any = false; for (let k = s0; k < e0; k++) { const p = PERM[k]; if (p >= a0 && p < a1) { any = true; break; } }
+      if (!any) continue;
+      let gx0 = 1e30, gy0 = 1e30, gz0 = 1e30, gx1 = -1e30, gy1 = -1e30, gz1 = -1e30;
+      for (let k = s0; k < e0; k++) { const p = PERM[k], x = POS[3 * p], y = POS[3 * p + 1], z = POS[3 * p + 2]; if (x < gx0) gx0 = x; if (x > gx1) gx1 = x; if (y < gy0) gy0 = y; if (y > gy1) gy1 = y; if (z < gz0) gz0 = z; if (z > gz1) gz1 = z; }
+      const gcx = 0.5 * (gx0 + gx1), gcy = 0.5 * (gy0 + gy1), gcz = 0.5 * (gz0 + gz1), grr = 0.5 * Math.hypot(gx1 - gx0, gy1 - gy0, gz1 - gz0);
+      let nn = 0, np = 0, n = 0;
+      while (n < NN) {
+        const dx = nmx[n] - gcx, dy = nmy[n] - gcy, dz = nmz[n] - gcz, dd = Math.sqrt(dx * dx + dy * dy + dz * dz) - grr;
+        if (dd > 2 * nhs[n] * it + ndl[n]) { if (nn >= NL.length) { const t = new Int32Array(NL.length * 2); t.set(NL); NL = t; } NL[nn++] = n; n = nsk[n]; }
+        else if (ncn[n] >= 0) { if (np >= PL.length) { const t = new Int32Array(PL.length * 2); t.set(PL); PL = t; } PL[np++] = n; n = nsk[n]; }
+        else n++;
+      }
+      for (let k = s0; k < e0; k++) {
+        const p = PERM[k]; if (p < a0 || p >= a1) continue;
+        const xi = POS[3 * p], yi = POS[3 * p + 1], zi = POS[3 * p + 2], ei = EPSF * H[p], e2i = ei * ei;
+        let ax = 0, ay = 0, az = 0;
+        for (let a = 0; a < nn; a++) {
+          const c = NL[a], dx = nmx[c] - xi, dy = nmy[c] - yi, dz = nmz[c] - zi, r2 = dx * dx + dy * dy + dz * dz + e2i, inv = 1 / Math.sqrt(r2), f = nm[c] * inv * inv * inv;
+          ax += f * dx; ay += f * dy; az += f * dz;
+        }
+        for (let a = 0; a < np; a++) {
+          const c = PL[a], s = nst[c], e = s + ncn[c];
+          for (let q = s; q < e; q++) {
+            const o = PERM[q]; if (o === p) continue;
+            const ej = EPSF * H[o], dx = POS[3 * o] - xi, dy = POS[3 * o + 1] - yi, dz = POS[3 * o + 2] - zi, r2 = dx * dx + dy * dy + dz * dz + 0.5 * (e2i + ej * ej), inv = 1 / Math.sqrt(r2), f = Mm[o] * inv * inv * inv;
+            ax += f * dx; ay += f * dy; az += f * dz;
+          }
+        }
+        gx[p - a0] = ax; gy[p - a0] = ay; gz[p - a0] = az;
+      }
+    }
+    return [gx, gy, gz];
+  }
+}
+
+/* 워커 모음 만들기: 실패하면 null(그때는 한 코어로 계산) */
+let POOL_MIN = 2200;   // 움직이는 알갱이가 이보다 적으면 한 코어가 더 빠름
+let POOL = null;
+function makePool() {
+  if (POOL !== null) return POOL;
+  try {
+    if (typeof Worker === 'undefined' || typeof Blob === 'undefined') throw new Error('no worker');
+    const nCore = navigator.hardwareConcurrency || 4, n = Math.max(1, Math.min(12, nCore - 2));
+    if (n < 2) throw new Error('one core');
+    const consts = `'use strict';const MR0=new Float64Array(${JSON.stringify(Array.from(MR0))}),MK0=new Float64Array(${JSON.stringify(Array.from(MK0))}),MNN=new Float64Array(${JSON.stringify(Array.from(MNN))}),MGM=new Float64Array(${JSON.stringify(Array.from(MGM))}),MC2=new Float64Array(${JSON.stringify(Array.from(MC2))});const ALPHA=${ALPHA},BETA=${BETA},LINK=${LINK},THETA=${THETA},EPSF=${EPSF},LEAF=${LEAF};\n`;
+    const url = URL.createObjectURL(new Blob([consts + '(' + workerMain.toString() + ')();'], { type: 'text/javascript' }));
+    const ws = [];
+    for (let k = 0; k < n; k++) ws.push(new Worker(url));
+    POOL = {
+      n, ws, broken: false,
+      run(k, msg, tr) {
+        return new Promise((res, rej) => {
+          const w = ws[k];
+          w.onmessage = e => { if (e.data && e.data.err) { POOL.broken = true; rej(new Error('계산 워커: ' + e.data.err)); } else res(e.data); };
+          w.onerror = e => { POOL.broken = true; rej(new Error('계산 워커 오류: ' + (e.message || ''))); };
+          w.postMessage(msg, tr || []);
+        });
+      }
+    };
+  } catch (e) { POOL = false; }
+  return POOL;
+}
+
+/* ===================== 행성 종류 · 겉모습 ===================== */
+function h3(x, y, z) { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return v - Math.floor(v); }
+function vn3(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z); let fx = x - ix, fy = y - iy, fz = z - iz;
+  fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz);
+  const a = lerp(lerp(h3(ix, iy, iz), h3(ix + 1, iy, iz), fx), lerp(h3(ix, iy + 1, iz), h3(ix + 1, iy + 1, iz), fx), fy);
+  const b = lerp(lerp(h3(ix, iy, iz + 1), h3(ix + 1, iy, iz + 1), fx), lerp(h3(ix, iy + 1, iz + 1), h3(ix + 1, iy + 1, iz + 1), fx), fy);
+  return lerp(a, b, fz);
+}
+function fbm3(x, y, z, o) { let s = 0, a = 0.5, f = 1, n = 0; for (let k = 0; k < o; k++) { s += a * vn3(x * f + k * 17.3, y * f - k * 9.1, z * f + k * 5.7); n += a; a *= 0.5; f *= 2.03; } return s / n; }
+const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const hexc = h => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+const SURF = {
+  earth(x, y, z, sd) {
+    const lat = Math.abs(y), n = fbm3(x * 1.7 + sd, y * 1.7, z * 1.7, 5), cl = fbm3(x * 3.1 - sd, y * 5.2, z * 3.1, 4);
+    let c;
+    if (n > 0.535) { const d = fbm3(x * 4 + 3, y * 4, z * 4, 3); c = lat < 0.35 && d > 0.55 ? hexc('#b59a62') : mix3(hexc('#3f6b2e'), hexc('#7d7448'), clamp((n - 0.54) * 6, 0, 1)); }
+    else c = mix3(hexc('#0e2f63'), hexc('#1f5a99'), clamp((n - 0.35) * 5, 0, 1));
+    if (lat > 0.88 - 0.05 * n) c = hexc('#e8eef2');
+    if (cl > 0.58) c = mix3(c, [0.93, 0.95, 0.97], clamp((cl - 0.58) * 5, 0, 0.85));
+    return c;
+  },
+  proto(x, y, z, sd) {
+    const n = fbm3(x * 2 + sd, y * 2, z * 2, 5), cr = Math.abs(fbm3(x * 6, y * 6 + sd, z * 6, 3) - 0.5);
+    let c = mix3(hexc('#2b2a2c'), hexc('#4e4640'), n);
+    if (cr < 0.025) c = mix3(c, hexc('#ff6a1a'), 0.8);
+    return c;
+  },
+  theia(x, y, z, sd) {
+    const n = fbm3(x * 2.4 + sd, y * 2.4, z * 2.4, 5);
+    let c = mix3(hexc('#5b4033'), hexc('#8a6a52'), n);
+    if (fbm3(x * 7, y * 7, z * 7 + sd, 2) > 0.66) c = mix3(c, hexc('#2c2422'), 0.6);
+    return c;
+  },
+  mars(x, y, z, sd) {
+    const n = fbm3(x * 2 + sd, y * 2, z * 2, 5), lat = Math.abs(y);
+    let c = mix3(hexc('#8e3c1f'), hexc('#c4693a'), n);
+    if (fbm3(x * 1.3, y * 1.3 + 4, z * 1.3, 4) < 0.42) c = mix3(c, hexc('#4e2c22'), 0.55);
+    if (lat > 0.93) c = hexc('#efe6dc');
+    return c;
+  },
+  venus(x, y, z, sd) { const n = fbm3(x * 1.2 + sd, y * 6, z * 1.2, 4); return mix3(hexc('#c9a85f'), hexc('#efdcae'), n); },
+  mercury(x, y, z, sd) {
+    const n = fbm3(x * 3 + sd, y * 3, z * 3, 5), cr = fbm3(x * 9, y * 9, z * 9 + sd, 2);
+    let c = mix3(hexc('#6d6762'), hexc('#a59c93'), n); if (cr > 0.68) c = mix3(c, hexc('#d8d2c8'), 0.6); return c;
+  },
+  moon(x, y, z, sd) {
+    const n = fbm3(x * 2.5 + sd, y * 2.5, z * 2.5, 5), m = fbm3(x * 1.2, y * 1.2 + 2, z * 1.2, 4);
+    let c = mix3(hexc('#7e7c78'), hexc('#b8b5ad'), n); if (m < 0.43) c = mix3(c, hexc('#4a4a4c'), 0.75); return c;
+  },
+  pluto(x, y, z, sd) {
+    const n = fbm3(x * 2 + sd, y * 2, z * 2, 5);
+    let c = mix3(hexc('#a7764e'), hexc('#d8b48c'), n);
+    const lon = Math.atan2(z, x), lat = y;
+    if (Math.abs(lat) < 0.35 && Math.cos(lon - 2.6) < 0.2 && n < 0.6) c = mix3(c, hexc('#3d2219'), 0.8);   // 어두운 띠
+    const hx = Math.cos(lon - 0.3), hy = lat - 0.15;                                          // 하트 모양 밝은 들판
+    if (hx > 0.82 - 0.35 * Math.abs(hy) && Math.abs(hy) < 0.45) c = mix3(c, hexc('#f4ece0'), 0.9);
+    return c;
+  },
+  charon(x, y, z, sd) { const n = fbm3(x * 2.5 + sd, y * 2.5, z * 2.5, 4); let c = mix3(hexc('#7d7a77'), hexc('#a9a6a1'), n); if (y > 0.75) c = mix3(c, hexc('#5a2e22'), 0.75); return c; },
+  europa(x, y, z, sd) {
+    const n = fbm3(x * 2 + sd, y * 2, z * 2, 4), l = Math.abs(fbm3(x * 5, y * 5 + sd, z * 5, 3) - 0.5);
+    let c = mix3(hexc('#d9cfbd'), hexc('#efe9de'), n); if (l < 0.03) c = mix3(c, hexc('#8a5a3a'), 0.75); return c;
+  },
+  ceres(x, y, z, sd) { const n = fbm3(x * 3 + sd, y * 3, z * 3, 4); let c = mix3(hexc('#4f4c49'), hexc('#77736e'), n); if (h3(Math.round(x * 9), Math.round(y * 9), Math.round(z * 9)) > 0.985) c = hexc('#f2f2ee'); return c; },
+  ocean(x, y, z, sd) { const n = fbm3(x * 2 + sd, y * 2, z * 2, 4), cl = fbm3(x * 3 - sd, y * 5, z * 3, 4); let c = mix3(hexc('#08306b'), hexc('#1b5fa8'), n); if (cl > 0.57) c = mix3(c, [0.95, 0.96, 0.98], clamp((cl - 0.57) * 5, 0, 0.9)); return c; },
+  super(x, y, z, sd) { const n = fbm3(x * 1.8 + sd, y * 1.8, z * 1.8, 5); let c = n > 0.56 ? mix3(hexc('#6c5a3c'), hexc('#a08960'), (n - 0.56) * 4) : mix3(hexc('#1c3a52'), hexc('#2d5b6e'), n * 2 - 0.5); if (Math.abs(y) > 0.9) c = hexc('#dfe7ea'); return c; },
+  custom(x, y, z, sd, t) {
+    const a = hexc(t.c1 || '#7a6a5a'), b = hexc(t.c2 || '#c8b090'), p = t.pat || 'spot';
+    if (p === 'band') return mix3(a, b, fbm3(x * 1.2 + sd, y * 7, z * 1.2, 4));
+    if (p === 'land') { const n = fbm3(x * 1.8 + sd, y * 1.8, z * 1.8, 5); return n > 0.53 ? b : a; }
+    return mix3(a, b, fbm3(x * 2.5 + sd, y * 2.5, z * 2.5, 5));
+  }
+};
+const TYPES = [
+  { key: 'earth', name: '지구', M: 1, fe: 0.325, wat: 0, ice: false, Ts: 288, day: 23.93, tilt: 23.4, surf: 'earth', desc: '우리가 사는 행성. 무게의 3분의 1이 철 핵입니다.' },
+  { key: 'proto', name: '원시 지구', M: 0.9, fe: 0.3, wat: 0, ice: false, Ts: 900, day: 0, tilt: 0, surf: 'proto', desc: '약 45억 년 전, 달이 생기기 전의 지구. 지금보다 조금 가볍고 뜨겁습니다.' },
+  { key: 'theia', name: '테이아', M: 0.11, fe: 0.3, wat: 0, ice: false, Ts: 400, day: 0, tilt: 0, surf: 'theia', desc: '원시 지구에 부딪혀 달을 만들었다고 생각되는 화성만 한 행성. 지금은 남아 있지 않습니다.' },
+  { key: 'mars', name: '화성', M: 0.107, fe: 0.24, wat: 0, ice: false, Ts: 210, day: 24.6, tilt: 25.2, surf: 'mars', desc: '붉은 행성. 지구 무게의 약 10분의 1입니다.' },
+  { key: 'venus', name: '금성', M: 0.815, fe: 0.31, wat: 0, ice: false, Ts: 737, day: 0, tilt: 0, surf: 'venus', desc: '두꺼운 구름에 덮인 뜨거운 행성. 아주 느리게 거꾸로 돕니다.' },
+  { key: 'mercury', name: '수성', M: 0.0553, fe: 0.7, wat: 0, ice: false, Ts: 440, day: 0, tilt: 0, surf: 'mercury', desc: '철 핵이 무게의 70%나 되는 작은 행성. 옛날 큰 충돌로 겉이 벗겨졌다는 생각이 있습니다.' },
+  { key: 'moon', name: '달', M: 0.0123, fe: 0.015, wat: 0, ice: false, Ts: 250, day: 0, tilt: 0, surf: 'moon', desc: '지구의 위성. 철이 아주 적어서 지구의 겉 부분으로 만들어졌다고 생각됩니다.' },
+  { key: 'pluto', name: '명왕성', M: 0.00218, fe: 0, wat: 0.33, ice: true, Ts: 40, day: 153.3, tilt: 120, surf: 'pluto', desc: '얼음과 암석으로 된 왜소 행성. 하트 모양 얼음 들판이 있습니다.' },
+  { key: 'charon', name: '카론', M: 0.000255, fe: 0, wat: 0.4, ice: true, Ts: 53, day: 0, tilt: 0, surf: 'charon', desc: '명왕성의 큰 위성. 명왕성 무게의 8분의 1이나 됩니다.' },
+  { key: 'europa', name: '유로파', M: 0.008, fe: 0.12, wat: 0.08, ice: true, Ts: 102, day: 0, tilt: 0, surf: 'europa', desc: '목성의 위성. 얼음 껍질 아래에 바다가 있습니다.' },
+  { key: 'ceres', name: '세레스', M: 0.000157, fe: 0, wat: 0.25, ice: true, Ts: 168, day: 9.07, tilt: 4, surf: 'ceres', desc: '소행성대에서 가장 큰 천체. 소금이 하얗게 빛나는 곳이 있습니다.' },
+  { key: 'ocean', name: '바다 행성', M: 1, fe: 0.25, wat: 0.25, ice: false, Ts: 300, day: 20, tilt: 10, surf: 'ocean', desc: '무게의 4분의 1이 물인 행성(상상). 다른 별 둘레에서 이런 행성이 발견될 거라 생각됩니다.' },
+  { key: 'super', name: '슈퍼 지구', M: 5, fe: 0.33, wat: 0, ice: false, Ts: 400, day: 30, tilt: 15, surf: 'super', desc: '지구보다 5배 무거운 암석 행성(상상). 다른 별 둘레에 많이 있습니다.' },
+];
+let customTypes = [];
+const allTypes = () => TYPES.concat(customTypes);
+const typeBy = k => allTypes().find(t => t.key === k) || TYPES[0];
+function surfColor(t, x, y, z, sd) { const f = SURF[t.surf] || SURF.custom; return f(x, y, z, sd, t); }
+const INNER = [[0.62, 0.52, 0.42], [0.42, 0.19, 0.11], [0.12, 0.32, 0.66], [0.72, 0.82, 0.92]];   // 속 색(철·암석·물·얼음)
+
+/* ===================== 세계 ===================== */
+const QUALITY = [{ n: 1500, name: '빠름' }, { n: 3000, name: '보통' }, { n: 6000, name: '정밀' }, { n: 12000, name: '아주 정밀' }, { n: 25000, name: '최고' }, { n: 50000, name: '극한' }];
+const LABELC = ['#9cc8ff', '#ffc58a', '#a8e6b8', '#f5a3c7', '#d4b8ff', '#ffe08a', '#8fe3e0', '#ff9f8f', '#c9e58f', '#b7c3ff', '#ffcfa8', '#9ff0c0'];
+// 기억 공간: 컴퓨터는 26만 알, 핸드폰·기억이 적은 기기는 10만 알까지
+const BIGMEM = (typeof navigator === 'undefined') || ((navigator.deviceMemory || 8) >= 8 && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || ''));
+const MAXP = BIGMEM ? 260000 : 100000;
+const QMAX = BIGMEM ? QUALITY.length - 1 : 3;
+const W = {
+  S: makeSim(MAXP), bodies: new Map(), nextId: 1, origins: [], playing: true, speed: 0.45, hold: false,
+  quality: 2, debris: { n: 0, bound: 0, esc: 0, boundN: 0 }, lost: 0, collisions: [], pieceSeq: 1, moonSeq: 1,
+  lastAna: 0, anaSteps: 0, shake: 0, flash: 0, simRate: 0, events: [], ghosts: [],
+};
+const builtCache = new Map();
+function seedRand(s) { let a = s >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+async function getBuilt(t, M, n) {
+  const key = [t.fe, t.wat, t.ice ? 1 : 0, M.toPrecision(5), n].join('|');
+  let b = builtCache.get(key);
+  if (!b) {
+    b = await buildBody({ M, fe: t.fe, wat: t.wat, ice: !!t.ice }, n, seedRand(n * 7 + 3), n > 20000 ? 50 : 60);
+    builtCache.set(key, b);
+    let tot = 0; for (const v of builtCache.values()) tot += v.N;
+    while (builtCache.size > 1 && tot > 400000) { const k = builtCache.keys().next().value; tot -= builtCache.get(k).N; builtCache.delete(k); }
+  }
+  return b;
+}
+// 알갱이 수: 장면에서 제일 무거운 것 기준으로, 작은 것은 조금 더 촘촘히
+function particlesFor(M, Mref) { const NE = QUALITY[W.quality].n; return Math.round(clamp(NE * Math.pow(M / Math.max(Mref, M), 0.65), 300, NE * 2.5)); }
+function maxBodyMass() { let m = 0; for (const b of W.bodies.values()) if (b.M > m) m = b.M; return m; }
+function totalParticles() { return W.S.N; }
+function tempCore(M, Ts) { return Ts + 5500 * Math.pow(M, 0.45); }
+
+/* 행성 하나 우주에 놓기. o: {type, M, pos, vel, name, n, day(시간), axis([x,y,z]), sd} */
+async function spawnBody(o) {
+  const t = typeof o.type === 'string' ? typeBy(o.type) : o.type;
+  const M = o.M || t.M;
+  const n = o.n || particlesFor(M, Math.max(maxBodyMass(), o.Mref || 0));
+  const S = W.S;
+  if (S.N + n > MAXP - 100) throw new Error('알갱이가 너무 많습니다. 몇 개를 지우거나 정밀도를 낮추세요.');
+  const B = await getBuilt(t, M, n), N = B.N;
+  if (S.N + N > MAXP - 100) throw new Error('알갱이가 너무 많습니다. 몇 개를 지우거나 정밀도를 낮추세요.');
+  const s0 = S.add(N);
+  const col = o.col || LABELC[(W.nextId - 1) % LABELC.length];
+  const name = o.name || t.name;
+  const lab = W.origins.length; W.origins.push({ name, col, M, type: t.key });
+  // 자전축: 기본은 위(+y)에서 기울기만큼 눕힘
+  const tilt = (o.tilt != null ? o.tilt : (t.tilt || 0)) * Math.PI / 180;
+  let ax = o.axis ? V.norm(o.axis) : [Math.sin(tilt), Math.cos(tilt), 0];
+  // 몸 좌표(y=북극) → 세계: y축을 ax로 돌리는 회전 + 축 둘레 무작위 돌림
+  const rnd = seedRand(o.sd != null ? o.sd : (W.nextId * 977 + 13));
+  const spinA = rnd() * TAU;
+  const Rm = rotFromY(ax, spinA);
+  const day = o.day != null ? o.day : (t.day || 0);
+  const wmag = day > 0 ? TAU / (day * 3600 / TU_S) : 0;
+  const w = V.mul(ax, wmag * (o.retro ? -1 : 1));
+  const Tc = tempCore(M, t.Ts), sd = (o.sd != null ? o.sd : W.nextId) * 1.37;
+  const Rb = B.R, surfR = 1 - 1.7 * Math.cbrt(4.18879 / N);
+  const pos = o.pos || [0, 0, 0], vel = o.vel || [0, 0, 0];
+  for (let k = 0; k < N; k++) {
+    const p = s0 + k, lx = B.x[k], ly = B.y[k], lz = B.z[k];
+    const rx = Rm[0] * lx + Rm[1] * ly + Rm[2] * lz, ry = Rm[3] * lx + Rm[4] * ly + Rm[5] * lz, rz = Rm[6] * lx + Rm[7] * ly + Rm[8] * lz;
+    S.X[p] = pos[0] + rx; S.Y[p] = pos[1] + ry; S.Z[p] = pos[2] + rz;
+    S.VX[p] = vel[0] + w[1] * rz - w[2] * ry; S.VY[p] = vel[1] + w[2] * rx - w[0] * rz; S.VZ[p] = vel[2] + w[0] * ry - w[1] * rx;
+    S.MS[p] = B.mp; S.HH[p] = B.h[k]; S.MT[p] = B.mat[k]; S.LB[p] = lab; S.U[p] = 0;
+    S.RHO[p] = B.rho[k]; S.PR[p] = B.P[k]; S.CS[p] = B.cs[k]; S.NB[p] = B.nb[k];
+    const rf = B.rf[k];
+    S.T0[p] = Tc + (t.Ts - Tc) * rf * rf;
+    let c;
+    if (rf > surfR) { const l = Math.hypot(lx, ly, lz) || 1; c = surfColor(t, lx / l, ly / l, lz / l, sd); }
+    else { c = INNER[B.mat[k]]; const v = 0.88 + 0.24 * h3(k, sd, 1.3); c = [c[0] * v, c[1] * v, c[2] * v]; }
+    S.CR[p * 3] = clamp(c[0] * 255, 0, 255); S.CR[p * 3 + 1] = clamp(c[1] * 255, 0, 255); S.CR[p * 3 + 2] = clamp(c[2] * 255, 0, 255);
+  }
+  const idx = new Int32Array(N); for (let k = 0; k < N; k++) idx[k] = s0 + k;
+  const rec = { id: W.nextId++, name, col, kind: 'planet', type: t.key, born: S.t, lab, spin0: V.norm(w[0] || w[1] || w[2] ? w : ax), fe0: t.fe, M0: M };
+  S.freeze(idx, rec);
+  for (const p of idx) S.BI[p] = rec.id;
+  rec.frozen = true; rec.n = N; rec.quietT = 0; rec.everFrozen = true; rec.rhoRef = M / (4.18879 * rec.rmax ** 3);
+  W.bodies.set(rec.id, rec);
+  return rec;
+}
+function rotFromY(ax, spin) {   // 몸의 y축을 ax로 보내는 회전(축 둘레 spin만큼 돌림)
+  const y = V.norm(ax), t0 = Math.abs(y[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0];
+  let x = V.norm(V.cross(t0, y)); let z = V.cross(x, y);
+  const c = Math.cos(spin), s = Math.sin(spin);
+  const x2 = V.add(V.mul(x, c), V.mul(z, s)), z2 = V.sub(V.mul(z, c), V.mul(x, s));
+  return [x2[0], y[0], z2[0], x2[1], y[1], z2[1], x2[2], y[2], z2[2]];
+}
+function removeBody(b) {
+  const S = W.S;
+  if (b.frozen) { const s = S.frozen.indexOf(b); if (s >= 0) { S.frozen.splice(s, 1); S.reslot(); } }
+  for (const p of b.idx) { S.MS[p] = 0; S.FZ[p] = -1; }
+  W.bodies.delete(b.id);
+  S.compact(); refreshIdx();
+}
+function clearWorld() {
+  W.S.clear(); W.bodies.clear(); W.origins.length = 0; W.nextId = 1; W.collisions.length = 0; W.pieceSeq = 1; W.moonSeq = 1;
+  W.debris = { n: 0, bound: 0, esc: 0, boundN: 0 }; W.lost = 0; W.events.length = 0;
+  W.lastAna = 0; W.anaSteps = 0; W.ghosts.length = 0; W.shake = 0; W.flash = 0;
+}
+function refreshIdx() {   // 몸마다 알갱이 목록 다시 모으기(BI 기준)
+  const S = W.S, lists = new Map();
+  for (let i = 0; i < S.N; i++) { const id = S.BI[i]; if (id < 0) continue; let l = lists.get(id); if (!l) lists.set(id, l = []); l.push(i); }
+  for (const [id, b] of W.bodies) { const l = lists.get(id); if (!l || !l.length) { if (b.frozen) { const s = S.frozen.indexOf(b); if (s >= 0) { S.frozen.splice(s, 1); S.reslot(); } } W.bodies.delete(id); continue; } if (!b.frozen) b.idx = Int32Array.from(l); b.n = l.length; }
+}
+
+/* ===================== 분석: 덩어리 찾기 · 이름 이어 주기 · 굳히기 · 사건 ===================== */
+const MINB = 12;
+function bodyCOM(b) {
+  const S = W.S; let M = 0, x = 0, y = 0, z = 0, vx = 0, vy = 0, vz = 0;
+  for (const p of b.idx) { const m = S.MS[p]; M += m; x += m * S.X[p]; y += m * S.Y[p]; z += m * S.Z[p]; vx += m * S.VX[p]; vy += m * S.VY[p]; vz += m * S.VZ[p]; }
+  return { M, P: [x / M, y / M, z / M], V: [vx / M, vy / M, vz / M] };
+}
+function analyze(dtAna) {
+  const S = W.S;
+  const cl = S.clumps();
+  // 이전 몸(움직이는 것)의 알갱이가 어디로 갔나
+  const big = cl.filter(c => c.idx.length >= MINB);
+  ringFilter(big);
+  for (let k = big.length - 1; k >= 0; k--) if (big[k].ring) big.splice(k, 1);
+  const best = new Map();   // id → {c, m}
+  const contrib = big.map(c => { const m = new Map(); for (const p of c.idx) { const id = S.BI[p]; if (id >= 0) m.set(id, (m.get(id) || 0) + S.MS[p]); } return m; });
+  big.forEach((c, k) => { for (const [id, m] of contrib[k]) { const o = best.get(id); if (!o || m > o.m) best.set(id, { c: k, m }); } });
+  const taken = new Map();
+  big.forEach((c, k) => {
+    let pick = -1, pm = 0;
+    for (const [id, m] of contrib[k]) { const o = best.get(id); if (o && o.c === k && m > pm) { const b = W.bodies.get(id); if (b && !b.frozen) { pick = id; pm = m; } } }
+    c.id = pick; if (pick >= 0) taken.set(pick, k);
+  });
+  // 사라진 몸: 합쳐졌거나 부서짐
+  for (const [id, b] of [...W.bodies]) {
+    if (b.frozen || taken.has(id)) continue;
+    const o = best.get(id);
+    if (o) {
+      const into = big[o.c];
+      if (into.id >= 0 && into.id !== id) { const tgt = W.bodies.get(into.id); W.bodies.delete(id); onMerged(b, tgt); continue; }
+    }
+    W.bodies.delete(id); onDestroyed(b);
+  }
+  // 새 몸에 이름 붙이기
+  let Mbig = null; for (const b of W.bodies.values()) if (b.frozen && (!Mbig || b.M > Mbig.M)) Mbig = b;
+  for (const c of big) {
+    let M = 0, x = 0, y = 0, z = 0, vx = 0, vy = 0, vz = 0;
+    for (const p of c.idx) { const m = S.MS[p]; M += m; x += m * S.X[p]; y += m * S.Y[p]; z += m * S.Z[p]; vx += m * S.VX[p]; vy += m * S.VY[p]; vz += m * S.VZ[p]; }
+    c.M = M; c.P = [x / M, y / M, z / M]; c.V = [vx / M, vy / M, vz / M];
+    if (!Mbig || M > Mbig.M) Mbig = c;
+  }
+  for (const c of big) {
+    let b = c.id >= 0 ? W.bodies.get(c.id) : null;
+    if (!b) {
+      const gb = reviveGhost(c);
+      if (gb) { b = gb; b.frozen = false; W.bodies.set(b.id, b); c.id = b.id; if (b.M > 0.002 && !(b.reviveT > S.t - 15)) logEv(b.name + J(b.name, '이', '가') + ' 부딪힌 뒤 다시 떨어져 나왔습니다'); b.reviveT = S.t; }
+    }
+    if (!b) {
+      const host = Mbig && Mbig !== c ? Mbig : null;
+      const bound = host && host.M > 3 * c.M && orbitE(c.P, c.V, host.P, host.V, host.M + c.M) < 0;
+      const name = bound ? '위성 ' + (W.moonSeq++) : '조각 ' + (W.pieceSeq++);
+      b = { id: W.nextId++, name, col: LABELC[(W.nextId - 2) % LABELC.length], kind: bound ? 'moon' : 'piece', born: S.t, quietT: 0, frozen: false, newborn: true };
+      W.bodies.set(b.id, b); c.id = b.id;
+
+    }
+    for (const p of c.idx) S.BI[p] = b.id;
+    b.idx = Int32Array.from(c.idx); b.n = c.idx.length; b.M = c.M; b.P = c.P; b.V = c.V; b.frozen = false;
+  }
+  // 파편(작은 덩어리)
+  let dn = 0, db = 0, de = 0, dbn = 0;
+  const host = biggestBody();
+  const lost = [];
+  for (const c of cl) {
+    if (c.idx.length >= MINB && !c.ring) continue;
+    for (const p of c.idx) {
+      S.BI[p] = -1; dn++;
+      if (host) {
+        const rx = S.X[p] - host.P[0], ry = S.Y[p] - host.P[1], rz = S.Z[p] - host.P[2], r = Math.hypot(rx, ry, rz);
+        const e = 0.5 * ((S.VX[p] - host.V[0]) ** 2 + (S.VY[p] - host.V[1]) ** 2 + (S.VZ[p] - host.V[2]) ** 2) - host.M / r;
+        if (e < 0) { db += S.MS[p]; dbn++; } else { de += S.MS[p]; if (r > 400) lost.push(p); }
+      }
+    }
+  }
+  W.debris = { n: dn, bound: db, esc: de, boundN: dbn };
+  // 아주 멀리 날아간 알갱이는 지움
+  if (lost.length > 0) { for (const p of lost) { W.lost += S.MS[p]; S.MS[p] = 0; } S.compact(); refreshIdx(); }
+  // 굳히기
+  for (const b of [...W.bodies.values()]) {
+    if (b.frozen || !b.idx || b.n < MINB) continue;
+    if (quietCheck(b, dtAna)) {
+      S.freeze(b.idx, b); b.frozen = true; b.quietT = 0; for (const p of b.idx) S.BI[p] = b.id;
+      if (!b.everFrozen && b.kind !== 'planet') {
+        const host = biggestBody(), bound = host && host !== b && orbitE(b.P, b.V, host.P, host.V, host.M + b.M) < 0;
+        if (bound && b.kind === 'piece') { b.kind = 'moon'; if (/^조각 /.test(b.name)) b.name = '위성 ' + (W.moonSeq++); }
+        if (b.M > 0.0003) logEv((bound ? '새 위성이 생겼습니다: ' : '새 덩어리가 굳었습니다: ') + b.name + ' (' + fmtMassShort(b.M) + ')');
+        if (typeof onNewBody === 'function') onNewBody(b, bound);
+      }
+      b.everFrozen = true;
+    }
+  }
+  for (const b of W.bodies.values()) if (b.frozen) { b.n = b.idx.length; }
+  settleGhosts();
+  rocheWatch();
+  diskDamp(dtAna);
+  coolDown(dtAna);
+  checkCollisions();
+  dexScan();
+}
+/* ---- 로슈 한계 ---- */
+function radiusOf(b) {   // 굳은 몸은 가장 바깥, 움직이는 몸은 고르게 찬 공 크기
+  if (b.frozen) return b.rmax;
+  if (b._Ra && b._Rt === W.S.t) return b._Ra;
+  const S = W.S; let M = 0, x = 0, y = 0, z = 0;
+  for (const p of b.idx) { const m = S.MS[p]; M += m; x += m * S.X[p]; y += m * S.Y[p]; z += m * S.Z[p]; }
+  x /= M; y /= M; z /= M; let rr = 0;
+  for (const p of b.idx) rr += S.MS[p] * ((S.X[p] - x) ** 2 + (S.Y[p] - y) ** 2 + (S.Z[p] - z) ** 2);
+  b._Ra = Math.sqrt(rr / M) * 1.29; b._Rt = S.t; return b._Ra;
+}
+const ROCK_RHO = 3.3 / RHOU;
+function rocheDist(host, rhoM) {   // 물렁한(유체) 위성의 로슈 한계 = 2.44 × 행성 반지름 × (행성 밀도 ÷ 위성 밀도)^(1/3)
+  const R = radiusOf(host), rhoH = host.M / (4.18879 * R * R * R);
+  return 2.44 * R * Math.cbrt(rhoH / (rhoM || ROCK_RHO));
+}
+function shapeOf(b) {   // 가장 긴 축 ÷ 가장 짧은 축 (공이면 1)
+  const S = W.S; let M = 0, x = 0, y = 0, z = 0;
+  for (const p of b.idx) { const m = S.MS[p]; M += m; x += m * S.X[p]; y += m * S.Y[p]; z += m * S.Z[p]; }
+  x /= M; y /= M; z /= M;
+  let xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0;
+  for (const p of b.idx) { const m = S.MS[p], dx = S.X[p] - x, dy = S.Y[p] - y, dz = S.Z[p] - z; xx += m * dx * dx; yy += m * dy * dy; zz += m * dz * dz; xy += m * dx * dy; xz += m * dx * dz; yz += m * dy * dz; }
+  xx /= M; yy /= M; zz /= M; xy /= M; xz /= M; yz /= M;
+  const q = (xx + yy + zz) / 3, p1 = xy * xy + xz * xz + yz * yz, p2 = (xx - q) ** 2 + (yy - q) ** 2 + (zz - q) ** 2 + 2 * p1;
+  if (p2 < 1e-30) return 1;
+  const pp = Math.sqrt(p2 / 6), a = (xx - q) / pp, d = (yy - q) / pp, f = (zz - q) / pp, bxy = xy / pp, bxz = xz / pp, byz = yz / pp;
+  const det = a * (d * f - byz * byz) - bxy * (bxy * f - byz * bxz) + bxz * (bxy * byz - d * bxz);
+  const phi = Math.acos(clamp(det / 2, -1, 1)) / 3;
+  const e1 = q + 2 * pp * Math.cos(phi), e3 = q + 2 * pp * Math.cos(phi + 2 * PI / 3);
+  return Math.sqrt(Math.max(e1, 1e-30) / Math.max(e3, 1e-30));
+}
+function hostOf() {   // 가장 무거운 몸(굳었든 움직이든)
+  let h = null; for (const b of W.bodies.values()) if (b.P && (!h || b.M > h.M)) h = b; return h;
+}
+function ringFilter(big) {   // 행성을 빙 둘러싼(무게 중심이 행성 가까이인) 덩어리 = 고리
+  const S = W.S; let host = null;
+  for (const b of W.bodies.values()) if (b.frozen && (!host || b.M > host.M)) host = b;
+  for (const c of big) { let M = 0; for (const p of c.idx) M += S.MS[p]; c.Mq = M; }
+  for (const c of big) if (host && c.Mq > host.M) return;   // 가장 큰 것이 움직이는 덩어리면 건너뜀
+  if (!host) return;
+  const P = host.P, Rh = host.rmax;
+  for (const c of big) {
+    if (c.Mq > host.M / 3) continue;
+    let x = 0, y = 0, z = 0, rm = 0;
+    for (const p of c.idx) { const m = S.MS[p]; x += m * S.X[p]; y += m * S.Y[p]; z += m * S.Z[p]; rm += m * Math.hypot(S.X[p] - P[0], S.Y[p] - P[1], S.Z[p] - P[2]); }
+    x /= c.Mq; y /= c.Mq; z /= c.Mq; rm /= c.Mq;
+    const dc = Math.hypot(x - P[0], y - P[1], z - P[2]);
+    if (rm > 1.1 * Rh && dc < 0.6 * rm) c.ring = true;
+  }
+}
+function rocheWatch() {   // 로슈 한계 안으로 들어간 횟수 세기, 늘어난 정도 알리기
+  const host = hostOf(); W.roche = null; if (!host) return;
+  let near = null, nd = 1e9;
+  for (const b of W.bodies.values()) {
+    if (b === host || !b.P || !b.idx || b.n < MINB || b.M > host.M / 3) continue;
+    if (!b.rhoRef) b.rhoRef = b.frozen ? b.M / (4.18879 * b.rmax ** 3) : ROCK_RHO;
+    const rd = rocheDist(host, b.rhoRef), d = V.len(V.sub(b.P, host.P));
+    if (d / rd < nd) { nd = d / rd; near = { b, rd }; }
+    const inside = d < rd, loud = b.kind === 'planet' || b.M >= 0.002;
+    if (inside && !b.inRoche && loud) {
+      b.rochePass = (b.rochePass || 0) + 1;
+      logEv(b.name + J(b.name, '이', '가') + ' ' + host.name + '의 로슈 한계 안으로 들어갔습니다 (' + b.rochePass + '번째)', true);
+      unlock('roche');
+    }
+    b.inRoche = inside;
+    if (b.rochePass && !b.frozen && loud) {
+      const el = shapeOf(b); b.elong = el;
+      for (const k of [2, 4, 8]) if (el >= k && (b.elongLog || 0) < k) { b.elongLog = k; logEv(b.name + J(b.name, '이', '가') + ' 끌어당기는 힘 차이 때문에 ' + k + '배 넘게 길게 늘어났습니다'); }
+    }
+  }
+  if (near && nd < 1.8) W.roche = { host: host.id, rd: near.rd, moon: near.b.id };
+}
+function orbitE(P, Vv, HP, HV, Mt) { const r = Math.hypot(P[0] - HP[0], P[1] - HP[1], P[2] - HP[2]); return 0.5 * ((Vv[0] - HV[0]) ** 2 + (Vv[1] - HV[1]) ** 2 + (Vv[2] - HV[2]) ** 2) - Mt / r; }
+function biggestBody() { let m = null; for (const b of W.bodies.values()) if (!m || b.M > m.M) m = b; return m; }
+function quietCheck(b, dtAna) {
+  const S = W.S; let M = 0, cx = 0, cy = 0, cz = 0, vx = 0, vy = 0, vz = 0;
+  for (const p of b.idx) { const m = S.MS[p]; M += m; cx += m * S.X[p]; cy += m * S.Y[p]; cz += m * S.Z[p]; vx += m * S.VX[p]; vy += m * S.VY[p]; vz += m * S.VZ[p]; }
+  cx /= M; cy /= M; cz /= M; vx /= M; vy /= M; vz /= M;
+  let Lx = 0, Ly = 0, Lz = 0, Ixx = 0, Iyy = 0, Izz = 0, Ixy = 0, Ixz = 0, Iyz = 0, rr = 0;
+  for (const p of b.idx) {
+    const m = S.MS[p], rx = S.X[p] - cx, ry = S.Y[p] - cy, rz = S.Z[p] - cz, ux = S.VX[p] - vx, uy = S.VY[p] - vy, uz = S.VZ[p] - vz;
+    Lx += m * (ry * uz - rz * uy); Ly += m * (rz * ux - rx * uz); Lz += m * (rx * uy - ry * ux);
+    Ixx += m * (ry * ry + rz * rz); Iyy += m * (rx * rx + rz * rz); Izz += m * (rx * rx + ry * ry); Ixy -= m * rx * ry; Ixz -= m * rx * rz; Iyz -= m * ry * rz;
+    rr += m * (rx * rx + ry * ry + rz * rz);
+  }
+  const w = solve3([Ixx, Ixy, Ixz, Ixy, Iyy, Iyz, Ixz, Iyz, Izz], [Lx, Ly, Lz]);
+  let dev = 0;
+  for (const p of b.idx) {
+    const rx = S.X[p] - cx, ry = S.Y[p] - cy, rz = S.Z[p] - cz;
+    const ex = S.VX[p] - vx - (w[1] * rz - w[2] * ry), ey = S.VY[p] - vy - (w[2] * rx - w[0] * rz), ez = S.VZ[p] - vz - (w[0] * ry - w[1] * rx);
+    dev += S.MS[p] * (ex * ex + ey * ey + ez * ez);
+  }
+  dev = Math.sqrt(dev / M);
+  const Rr = Math.sqrt(rr / M) * 1.29, ve = Math.sqrt(2 * M / Rr), tdyn = Math.sqrt(Rr ** 3 / M);
+  b.dev = dev / ve; b.W = w;
+  // 큰 몸의 로슈 한계 안이면 굳히지 않음
+  for (const o of W.bodies.values()) {
+    if (o === b || !o.P || o.M < 3 * M) continue;
+    const d = Math.hypot(o.P[0] - cx, o.P[1] - cy, o.P[2] - cz), Ro = o.rmax || Math.cbrt(o.M) * 1.0;
+    if (d < 2.6 * Ro * Math.cbrt((o.M / Ro ** 3) / (M / Rr ** 3))) { b.quietT = 0; return false; }
+  }
+  if (b.rochePass && b.elong > 1.6) { b.quietT = 0; return false; }   // 길게 늘어난 위성은 굳히지 않음
+  if (dev < 0.04 * ve) b.quietT += dtAna; else b.quietT = 0;
+  return b.quietT > 1.5 * tdyn;
+}
+/* 원반 다듬기: 실제 원반은 빽빽해서 알갱이끼리 계속 부딪혀 궤도가 둥글고 납작해짐.
+   알갱이 수가 적은 이 계산에서는 그 효과를 직접 넣음(각운동량은 그대로, 위아래·안팎 흔들림만 줄임). */
+function diskDamp(dt) {
+  const S = W.S, host = biggestBody(); if (!host || !host.frozen || dt <= 0) return;
+  const N = S.N, P = host.P, Vh = host.V, M = host.M;
+  // 원반 면: 파편 각운동량 합의 방향
+  let Lx = 0, Ly = 0, Lz = 0; const list = [];
+  for (let i = 0; i < N; i++) {
+    if (S.FZ[i] >= 0 || S.BI[i] >= 0 || S.MS[i] <= 0) continue;
+    const rx = S.X[i] - P[0], ry = S.Y[i] - P[1], rz = S.Z[i] - P[2], vx = S.VX[i] - Vh[0], vy = S.VY[i] - Vh[1], vz = S.VZ[i] - Vh[2];
+    const r = Math.hypot(rx, ry, rz); if (r > 60 * host.rmax) continue;
+    if (0.5 * (vx * vx + vy * vy + vz * vz) - M / r >= 0) continue;
+    const m = S.MS[i]; Lx += m * (ry * vz - rz * vy); Ly += m * (rz * vx - rx * vz); Lz += m * (rx * vy - ry * vx); list.push(i);
+  }
+  if (!list.length) return;
+  const nL = V.norm([Lx, Ly, Lz]);
+  for (const i of list) {
+    const rx = S.X[i] - P[0], ry = S.Y[i] - P[1], rz = S.Z[i] - P[2], r = Math.hypot(rx, ry, rz);
+    const tau = 3 * TAU * Math.sqrt(r * r * r / M), f = 1 - Math.exp(-dt / tau);
+    let vx = S.VX[i] - Vh[0], vy = S.VY[i] - Vh[1], vz = S.VZ[i] - Vh[2];
+    const ux = rx / r, uy = ry / r, uz = rz / r, vr = vx * ux + vy * uy + vz * uz;
+    vx -= f * vr * ux; vy -= f * vr * uy; vz -= f * vr * uz;                    // 안팎 흔들림 줄이기
+    const vn = vx * nL[0] + vy * nL[1] + vz * nL[2];
+    vx -= f * vn * nL[0]; vy -= f * vn * nL[1]; vz -= f * vn * nL[2];        // 위아래 흔들림 줄이기
+    S.VX[i] = vx + Vh[0]; S.VY[i] = vy + Vh[1]; S.VZ[i] = vz + Vh[2];
+  }
+}
+function coolDown(dt) {   // 겉이 식음(보기용 + 열 압력이 줄어 다시 뭉침)
+  const S = W.S, N = S.N;
+  const kS = Math.exp(-dt / 25), kI = Math.exp(-dt / 600);
+  for (let i = 0; i < N; i++) { if (S.U[i] <= 0) continue; S.U[i] *= S.NB[i] < 28 ? kS : kI; }
+}
+
+/* ===================== 사건 기록 ===================== */
+function logEv(msg, warn) { W.events.push({ t: W.S.t, msg, warn: !!warn }); if (W.events.length > 60) W.events.shift(); if (typeof onLog === 'function') onLog(msg, warn); }
+function onMerged(b, into) { W.ghosts.push({ b, into, t: W.S.t, kind: 'merge' }); }
+function onDestroyed(b) { W.ghosts.push({ b, into: null, t: W.S.t, kind: 'gone' }); }
+function settleGhosts() {   // 합쳐짐·부서짐은 잠깐 기다렸다가 확정(스치고 다시 떨어져 나올 수 있으니까)
+  const t = W.S.t;
+  for (let k = W.ghosts.length - 1; k >= 0; k--) {
+    const g = W.ghosts[k];
+    if (!g.logged && t - g.t >= 4) {   // 4시간 단위쯤 지나면 알림, 25 단위까지는 다시 떨어져 나오면 되살림
+      g.logged = true;
+      const into = g.into && W.bodies.get(g.into.id) ? g.into : (g.into ? biggestBody() : null);
+      if (g.kind === 'merge') reallyMerged(g.b, into); else reallyDestroyed(g.b);
+    }
+    if (t - g.t > 25) W.ghosts.splice(k, 1);
+  }
+}
+function reviveGhost(c) {   // 새 덩어리의 반 넘게가 얼마 전 사라진 행성의 재료면 그 행성으로 되살림
+  const S = W.S, org = new Map(); let M = 0;
+  for (const p of c.idx) { const m = S.MS[p]; M += m; org.set(S.LB[p], (org.get(S.LB[p]) || 0) + m); }
+  for (let k = 0; k < W.ghosts.length; k++) {
+    const g = W.ghosts[k], b = g.b;
+    if (b.lab == null || (org.get(b.lab) || 0) < 0.5 * M || M < 0.3 * b.M) continue;
+    W.ghosts.splice(k, 1); return b;
+  }
+  return null;
+}
+function reallyMerged(b, into) { if (b.M > 0.002 && into && (b.kind === 'planet' || b.everFrozen)) logEv(b.name + J(b.name, '이', '가') + ' ' + into.name + J(into.name, '과', '와') + ' 합쳐졌습니다'); if (typeof onBodyGone === 'function') onBodyGone(b, into); }
+function reallyDestroyed(b) { if (b.M > 0.002 && (b.kind === 'planet' || b.everFrozen)) logEv(b.name + J(b.name, '이', '가') + ' 부서져 파편이 되었습니다', true); if (typeof onBodyGone === 'function') onBodyGone(b, null); }
+function hasBatchim(w) { const c = w.charCodeAt(w.length - 1); if (c >= 0xac00 && c <= 0xd7a3) return (c - 0xac00) % 28 !== 0; return /[0-9]$/.test(w) ? '013678'.includes(w.slice(-1)) : false; }
+function J(w, a, b) { return hasBatchim(w) ? a : b; }
+W.S.onImpact = function (A, B) {
+  const dv = V.sub(B.V, A.V), d = V.sub(B.P, A.P), v = V.len(dv);
+  const cosA = Math.abs(V.dot(dv, d)) / (v * V.len(d) + 1e-12), ang = Math.acos(clamp(cosA, 0, 1)) * 180 / PI;
+  const big = A.M >= B.M ? A : B, sm = big === A ? B : A;
+  const key = Math.min(A.id, B.id) + '-' + Math.max(A.id, B.id);
+  if (W.collisions.some(c => c.key === key && W.S.t - c.t < 8)) return;
+  { const bg = A.M >= B.M ? A : B, sm = bg === A ? B : A;   // 로슈 한계에서 찢긴 작은 위성 조각이 떨어지는 건 충돌이 아님
+    if (sm.rochePass && sm.M < 0.02 * bg.M) { if (!sm.rainLog) { sm.rainLog = true; logEv(sm.name + '에서 떨어져 나온 조각이 ' + bg.name + '에 떨어지고 있습니다'); } return; } }
+  const rec = { key, t: W.S.t, a: big.id, b: sm.id, an: big.name, bn: sm.name, Ma: big.M, Mb: sm.M, v: v * VU, ang, done: false, fe0: big.fe0 || 0.3, labA: big.lab, labB: sm.lab };
+  W.collisions.push(rec);
+  logEv(big.name + J(big.name, '과', '와') + ' ' + sm.name + J(sm.name, '이', '가') + ' 부딪혔습니다 · 초속 ' + numK(v * VU, 1) + ' km · 각도 ' + Math.round(ang) + '°', true);
+  const E = 0.5 * big.M * sm.M / (big.M + sm.M) * v * v;   // 충돌 에너지(단위)
+  W.shake = Math.min(1, W.shake + 0.25 + Math.min(0.6, Math.log10(1 + E * 400) * 0.3)); W.flash = Math.min(1, W.flash + 0.5);
+  if (typeof onImpactFx === 'function') onImpactFx(rec, A, B);
+  unlock('impact');
+  if (rec.v >= 30) unlock('fast');
+};
+W.S.onTouch = function (b, i, cm) {   // 움직이는 덩어리가 굳은 몸에 닿음
+  const o = W.bodies.get(W.S.BI[i]);
+  if (!o || o === b || !o.P || cm < 0.01 * b.M) return;
+  const key = Math.min(o.id, b.id) + '-' + Math.max(o.id, b.id);
+  if (W.collisions.some(c => c.key === key && W.S.t - c.t < 8)) return;
+  W.S.onImpact(b, o);
+};
+W.S.onRoche = function (sm, big) { };
+// 로슈 한계에서 찢긴 위성의 가는 조각이 행성에 닿을 때는 행성을 깨우지 않음(조각만 겉에 떨어져 붙음)
+W.S.wakeVeto = function (b, i, cm) {
+  const o = W.bodies.get(W.S.BI[i]);
+  if (o && o !== b && o.rochePass && cm < 0.05 * b.M) { if (!o.rainLog) { o.rainLog = true; logEv(o.name + '에서 떨어져 나온 조각이 ' + b.name + '에 떨어지고 있습니다'); } return true; }
+  return false;
+};   // 횟수·알림은 rocheWatch에서
+function checkCollisions() {
+  const t = W.S.t;
+  for (const c of W.collisions) {
+    if (c.done || t < c.t + 10) continue;
+    c.done = true;
+    const A = W.bodies.get(c.a), B = W.bodies.get(c.b), tot = c.Ma + c.Mb;
+    let Mbig = 0; for (const b of W.bodies.values()) if (b.M > Mbig) Mbig = b.M;
+    let msg = '';
+    if (A && B && B.M > 0.3 * c.Mb) {
+      const e = orbitE(B.P, B.V, A.P, A.V, A.M + B.M);
+      if (e > 0) { msg = '충돌 결과: 스치고 지나감 — ' + B.name + J(B.name, '은', '는') + ' 부딪힌 뒤 다시 날아갔습니다'; unlock('hitrun'); }
+      else msg = '충돌 결과: 두 천체가 서로 붙잡혀 다시 부딪힐 것 같습니다';
+    } else if (A && A.M > 0.85 * tot) { msg = '충돌 결과: 하나로 합쳐짐 — ' + A.name + ' 질량 ' + fmtMassShort(A.M); unlock('merge'); }
+    else if (Mbig < 0.5 * tot) { msg = '충돌 결과: 산산조각 — 가장 큰 덩어리가 원래 질량의 ' + Math.round(Mbig / tot * 100) + '%뿐입니다'; unlock('shatter'); }
+    else msg = '충돌 결과: 일부가 합쳐지고 파편이 많이 생김';
+    logEv(msg);
+    if (typeof onCollisionResult === 'function') onCollisionResult(c, msg);
+  }
+}
+
+/* ===================== 몸 정보 ===================== */
+function bodyInfo(b) {
+  const S = W.S; if (!b || !b.idx) return null;
+  let M = 0; const comp = [0, 0, 0, 0], org = new Map(); let hot = 0, Tsum = 0, vap = 0, wat = 0, rmax = 0, rr = 0;
+  const c = b.frozen ? b.P : bodyCOM(b).P;
+  for (const p of b.idx) {
+    const m = S.MS[p], mt = S.MT[p]; M += m; comp[mt] += m; org.set(S.LB[p], (org.get(S.LB[p]) || 0) + m);
+    const T = S.T0[p] + S.U[p] * MCV[mt]; Tsum += m * T; if (T > MATS[mt].melt) hot += m;
+    if (mt >= 2) { wat += m; if (T > 373) vap += m; }
+    const r = Math.hypot(S.X[p] - c[0], S.Y[p] - c[1], S.Z[p] - c[2]); if (r > rmax) rmax = r; rr += m * r * r;
+  }
+  const Rb = Math.sqrt(rr / M) * 1.29;   // 고르게 찬 공이라 치면 반지름
+  return { M, comp: comp.map(x => x / M), org, Tm: Tsum / M, molten: hot / M, R: Math.min(Rb, rmax), wat, vap };
+}
+function spinOf(b) {   // 자전 각속도 벡터
+  if (b.frozen) return b.W;
+  return b.W || [0, 0, 0];
+}
+
+/* ===================== 겨누기 · 장면 놓기 도우미 ===================== */
+// 두 몸이 정해진 속도·각도로 부딪히도록, 지금 거리에서의 상대 속도 구하기 (두 몸 문제)
+function aimVelocity(r0, Rc, Mt, vimp, angDeg) {
+  const th = angDeg * PI / 180, h = Rc * vimp * Math.sin(th);
+  const E = 0.5 * vimp * vimp - Mt / Rc;
+  const v0 = Math.sqrt(Math.max(1e-9, 2 * (E + Mt / r0)));
+  const vt = Math.min(h / r0, v0 * 0.999), vr = -Math.sqrt(Math.max(0, v0 * v0 - vt * vt));
+  return { v0, vr, vt };
+}
+// 장면: 과녁(A)을 원점, 충돌체(B)를 거리 d만큼 떨어뜨려 놓고 겨누기
+function sceneImpact(A, B, vKms, ang, dist, opt) {
+  opt = opt || {};
+  const Mt = A.M + B.M, Rc = A.R0 + B.R0, vimp = vKms / VU;
+  const ve = Math.sqrt(2 * Mt / Rc);
+  const r0 = dist || Rc * 3.2;
+  const a = aimVelocity(r0, Rc, Mt, Math.max(vimp, ve * 1.0001), ang);
+  // 상대 위치: +x 방향에 B, 속도는 -x(다가옴) + -z(옆)
+  const rel = [r0, 0, 0], vrel = [a.vr, 0, -a.vt];
+  const fA = B.M / Mt, fB = A.M / Mt;
+  return { posA: V.mul(rel, -fA), velA: V.mul(vrel, -fA), posB: V.mul(rel, fB), velB: V.mul(vrel, fB) };
+}
+
+/* ===================== 시간 흐르게 하기 ===================== */
+// T(시간 단위)만큼, 또는 budget(ms)이 다 될 때까지 계산. 실제로 간 시간을 돌려줌
+async function stepOnce() {   // 한 걸음 + 가끔 분석
+  const S = W.S, t0 = S.t;
+  const dt = await S.nextDtA();
+  const due = W.anaSteps + 1 >= 12 || S.t + dt - W.lastAna > 0.4;
+  await S.stepA(dt, due);
+  W.anaSteps++;
+  // 이번 걸음 끝에 깨어나거나 붙은 알갱이가 있으면 연결 짝이 옛것이라 분석은 다음 걸음에
+  if (due && !S.dirty && (S.links || !S.lastPool)) { analyze(S.t - W.lastAna); W.lastAna = S.t; W.anaSteps = 0; }
+  return S.t - t0;
+}
+async function advance(T, budget) {
+  const S = W.S, t0 = performance.now(), start = S.t, target = S.t + T;
+  while (S.t < target && performance.now() - t0 < budget) await stepOnce();
+  return S.t - start;
+}
+
+/* ===================== 그리기 (WebGL2) ===================== */
+const glc = document.getElementById('gl'), ovc = document.getElementById('ov'), ov = ovc.getContext('2d');
+const gl = glc.getContext('webgl2', { antialias: true, alpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
+if (!gl) fatal('이 브라우저에서는 3D 그림(WebGL2)을 쓸 수 없습니다.<br>크롬이나 엣지 최신 버전에서 열어 주세요.');
+const M4 = {
+  persp(fy, a, n, f) { const t = 1 / Math.tan(fy / 2), nf = 1 / (n - f); return new Float64Array([t / a, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) * nf, -1, 0, 0, 2 * f * n * nf, 0]); },
+  look(e, c, u) {
+    const z = V.norm(V.sub(e, c)), x = V.norm(V.cross(u, z)), y = V.cross(z, x);
+    return new Float64Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -V.dot(x, e), -V.dot(y, e), -V.dot(z, e), 1]);
+  },
+  mul(a, b) { const o = new Float64Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; },
+  inv(m) {
+    const a00 = m[0], a01 = m[1], a02 = m[2], a03 = m[3], a10 = m[4], a11 = m[5], a12 = m[6], a13 = m[7],
+      a20 = m[8], a21 = m[9], a22 = m[10], a23 = m[11], a30 = m[12], a31 = m[13], a32 = m[14], a33 = m[15];
+    const b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10, b02 = a00 * a13 - a03 * a10, b03 = a01 * a12 - a02 * a11,
+      b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12, b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30,
+      b08 = a20 * a33 - a23 * a30, b09 = a21 * a32 - a22 * a31, b10 = a21 * a33 - a23 * a31, b11 = a22 * a33 - a23 * a32;
+    let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06; if (!det) return new Float64Array(16); det = 1 / det;
+    return new Float64Array([
+      (a11 * b11 - a12 * b10 + a13 * b09) * det, (a02 * b10 - a01 * b11 - a03 * b09) * det, (a31 * b05 - a32 * b04 + a33 * b03) * det, (a22 * b04 - a21 * b05 - a23 * b03) * det,
+      (a12 * b08 - a10 * b11 - a13 * b07) * det, (a00 * b11 - a02 * b08 + a03 * b07) * det, (a32 * b02 - a30 * b05 - a33 * b01) * det, (a20 * b05 - a22 * b02 + a23 * b01) * det,
+      (a10 * b10 - a11 * b08 + a13 * b06) * det, (a01 * b08 - a00 * b10 - a03 * b06) * det, (a30 * b04 - a31 * b02 + a33 * b00) * det, (a21 * b02 - a20 * b04 - a23 * b00) * det,
+      (a11 * b07 - a10 * b09 - a12 * b06) * det, (a00 * b09 - a01 * b07 + a02 * b06) * det, (a31 * b01 - a30 * b03 - a32 * b00) * det, (a20 * b03 - a21 * b01 + a22 * b00) * det]);
+  }
+};
+function compile(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('셰이더: ' + gl.getShaderInfoLog(s)); return s; }
+function program(vs, fs) {
+  const p = gl.createProgram(); gl.attachShader(p, compile(gl.VERTEX_SHADER, vs)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('셰이더 연결: ' + gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name.replace('[0]', '')] = gl.getUniformLocation(p, a.name); }
+  return { p, u };
+}
+const BB_GLSL = `
+vec3 bb(float T){ // 뜨거운 물체가 내는 빛 색(흑체)
+  float t = clamp((T - 700.0) / 5300.0, 0.0, 1.0);
+  vec3 c = mix(vec3(0.55, 0.04, 0.0), vec3(1.0, 0.35, 0.03), smoothstep(0.0, 0.25, t));
+  c = mix(c, vec3(1.0, 0.72, 0.32), smoothstep(0.2, 0.5, t));
+  c = mix(c, vec3(1.0, 0.95, 0.85), smoothstep(0.5, 1.0, t));
+  return c;
+}
+float glowI(float T){ return pow(clamp((T - 750.0) / 2600.0, 0.0, 1.0), 1.4); }`;
+const VS_P = `#version 300 es
+layout(location=0) in vec2 aC;
+layout(location=1) in vec4 iP;   // 자리, 반지름
+layout(location=2) in vec4 iA;   // 색, 온도
+layout(location=3) in vec4 iB;   // 몸 가운데, 매끈하게
+uniform mat4 uV, uP; uniform vec4 uCut; uniform float uCutOn, uRad;
+out vec2 vUv; out vec3 vCol; out float vT; out vec3 vCv; out float vR; out vec3 vBc; out float vSm;
+void main(){
+  if (uCutOn > 0.5 && dot(iP.xyz, uCut.xyz) > uCut.w) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  vec4 cv = uV * vec4(iP.xyz, 1.0);
+  float r = iP.w * uRad;
+  if (cv.z > -r * 1.5 || r > -cv.z * 0.45) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }   // 카메라에 너무 가까운 알갱이는 안 그림(화면을 다 덮어 느려짐)
+  vec3 pv = cv.xyz + vec3(aC * r * 1.06, 0.0);
+  gl_Position = uP * vec4(pv, 1.0);
+  vUv = aC * 1.06; vCol = iA.rgb; vT = iA.a; vCv = cv.xyz; vR = r;
+  vBc = (uV * vec4(iB.xyz, 1.0)).xyz; vSm = iB.w;
+}`;
+const FS_P = `#version 300 es
+precision highp float;
+in vec2 vUv; in vec3 vCol; in float vT; in vec3 vCv; in float vR; in vec3 vBc; in float vSm;
+uniform mat4 uP; uniform vec3 uSun; uniform float uMode, uEmis;
+out vec4 o;
+${BB_GLSL}
+void main(){
+  float d2 = dot(vUv, vUv); if (d2 > 1.0) discard;
+  vec3 n = vec3(vUv, sqrt(1.0 - d2));
+  vec3 p = vCv + n * vR;
+  vec4 cp = uP * vec4(p, 1.0); gl_FragDepth = cp.z / cp.w * 0.5 + 0.5;
+  vec3 N = n;
+  if (vSm > 0.0) { vec3 rn = normalize(p - vBc); N = normalize(mix(n, rn, vSm)); }
+  float dif = max(dot(N, uSun), 0.0);
+  float amb = 0.035 + 0.05 * (0.5 + 0.5 * N.y);
+  vec3 c;
+  if (uMode > 1.5 && uMode < 2.5) c = vCol * (0.55 + 0.45 * dif);                 // 온도 보기: 스스로 빛남
+  else c = vCol * (amb + dif * vec3(1.0, 0.97, 0.92) * 1.05);
+  if (uEmis > 0.0) c += bb(vT) * glowI(vT) * 1.6 * uEmis;
+  float rim = pow(1.0 - n.z, 3.0) * 0.06; c += rim * vCol;
+  o = vec4(c, 1.0);
+}`;
+const VS_G = `#version 300 es
+layout(location=0) in vec2 aC;
+layout(location=1) in vec4 iP;
+layout(location=2) in vec4 iA;
+uniform mat4 uV, uP; uniform vec4 uCut; uniform float uCutOn, uRad;
+out vec2 vUv; out float vT;
+${BB_GLSL}
+void main(){
+  float g = glowI(iA.a);
+  if (g <= 0.01 || (uCutOn > 0.5 && dot(iP.xyz, uCut.xyz) > uCut.w)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  vec4 cv = uV * vec4(iP.xyz, 1.0);
+  if (cv.z > -iP.w * uRad * 4.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  float r = iP.w * uRad * (2.2 + 1.6 * g);
+  cv.z += iP.w * uRad * 1.2;
+  gl_Position = uP * vec4(cv.xyz + vec3(aC * r, 0.0), 1.0);
+  vUv = aC; vT = iA.a;
+}`;
+const FS_G = `#version 300 es
+precision highp float;
+in vec2 vUv; in float vT; uniform float uGlow;
+out vec4 o;
+${BB_GLSL}
+void main(){
+  float d2 = dot(vUv, vUv); if (d2 > 1.0) discard;
+  float a = exp(-d2 * 3.2) * glowI(vT) * uGlow;
+  o = vec4(bb(vT) * a, 1.0);
+}`;
+const VS_FULL = `#version 300 es
+const vec2 P[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+out vec2 vN;
+void main(){ vN = P[gl_VertexID]; gl_Position = vec4(P[gl_VertexID], 0.9999, 1.0); }`;
+const FS_SKY = `#version 300 es
+precision highp float;
+in vec2 vN; uniform mat4 uInv; uniform vec3 uSunW; uniform float uStars;
+out vec4 o;
+float h(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+void main(){
+  vec4 a = uInv * vec4(vN, 1.0, 1.0); vec3 d = normalize(a.xyz / a.w);
+  vec3 c = vec3(0.004, 0.006, 0.012);
+  // 은하수 띠
+  float band = exp(-pow(dot(d, normalize(vec3(0.3, 0.85, 0.42))) * 3.2, 2.0));
+  c += vec3(0.020, 0.022, 0.032) * band * uStars;
+  // 별
+  vec3 q = d * 260.0; vec3 id = floor(q); vec3 f = fract(q) - 0.5;
+  float s = h(id); float m = smoothstep(0.985, 1.0, s);
+  float st = m * smoothstep(0.32, 0.0, length(f)) * uStars;
+  vec3 sc = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.85, 0.7), h(id + 3.1));
+  c += sc * st * (0.5 + 1.5 * h(id + 7.7));
+  // 해
+  float sd = max(dot(d, uSunW), 0.0);
+  c += vec3(1.0, 0.9, 0.75) * (pow(sd, 1800.0) * 6.0 + pow(sd, 60.0) * 0.06);
+  o = vec4(c, 1.0);
+}`;
+let pP, pG, pSky;
+try { pP = program(VS_P, FS_P); pG = program(VS_G, FS_G); pSky = program(VS_FULL, FS_SKY); } catch (e) { fatal('3D 그림 준비 실패: ' + e.message); }
+const quadVbo = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadVbo); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const instVbo = gl.createBuffer();
+const IFL = 12; let instCap = 0, inst = new Float32Array(0);
+const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+gl.bindBuffer(gl.ARRAY_BUFFER, quadVbo); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+gl.bindBuffer(gl.ARRAY_BUFFER, instVbo);
+for (let k = 0; k < 3; k++) { gl.enableVertexAttribArray(1 + k); gl.vertexAttribPointer(1 + k, 4, gl.FLOAT, false, IFL * 4, k * 16); gl.vertexAttribDivisor(1 + k, 1); }
+gl.bindVertexArray(null);
+const emptyVao = gl.createVertexArray();
+
+let scrW = 0, scrH = 0, cssW = 0, cssH = 0, dpr = 1;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cssW = Math.max(1, window.innerWidth); cssH = Math.max(1, window.innerHeight);
+  scrW = Math.round(cssW * dpr); scrH = Math.round(cssH * dpr);
+  glc.width = scrW; glc.height = scrH; ovc.width = Math.round(cssW * dpr); ovc.height = Math.round(cssH * dpr);
+}
+window.addEventListener('resize', resize);
+
+/* ---- 카메라 ---- */
+const cam = { t: [0, 0, 0], yaw: 0.6, pitch: 0.42, dist: 8, fov: 45 * PI / 180, mode: 'com', follow: null, goal: null };
+let VIEW, PROJ, VP, INVVP, EYE = [0, 0, 0], pxScale = 1, pxCss = 1;
+const SUNW = V.norm([-0.75, 0.32, 0.58]);
+function comAll() {
+  let M = 0; const p = [0, 0, 0];
+  for (const b of W.bodies.values()) { if (!b.P) continue; M += b.M; for (let k = 0; k < 3; k++) p[k] += b.P[k] * b.M; }
+  return M > 0 ? V.mul(p, 1 / M) : null;
+}
+function updateCam(rdt) {
+  let aim = null;
+  if (cam.mode === 'follow') { const b = cam.follow && W.bodies.get(cam.follow); if (b && b.P) aim = b.P; else { cam.mode = 'com'; cam.follow = null; } }
+  if (cam.mode === 'com') aim = comAll();
+  if (aim) { const k = 1 - Math.exp(-rdt * 5); for (let i = 0; i < 3; i++) cam.t[i] += (aim[i] - cam.t[i]) * k; }
+  if (cam.goal) { const k = 1 - Math.exp(-rdt * 4); cam.dist *= Math.pow(cam.goal / cam.dist, k); if (Math.abs(Math.log(cam.goal / cam.dist)) < 0.01) cam.goal = null; }
+}
+function computeMatrices() {
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const off = [cp * Math.sin(cam.yaw), sp, cp * Math.cos(cam.yaw)];
+  let t = cam.t.slice(); EYE = V.add(t, V.mul(off, cam.dist));
+  if (W.shake > 0.01 && view.shake) { const s = W.shake * W.shake * cam.dist * 0.006, j = [(Math.random() - .5) * s, (Math.random() - .5) * s, (Math.random() - .5) * s]; EYE = V.add(EYE, j); t = V.add(t, j); }
+  VIEW = M4.look(EYE, t, [0, 1, 0]);
+  PROJ = M4.persp(cam.fov, scrW / scrH, cam.dist * 0.01, cam.dist * 400);
+  VP = M4.mul(PROJ, VIEW); INVVP = M4.inv(VP);
+  pxScale = scrH / (2 * Math.tan(cam.fov / 2)); pxCss = pxScale / dpr;
+}
+function proj(p) {
+  const m = VP, x = p[0], y = p[1], z = p[2];
+  const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+  if (cw <= cam.dist * 0.01) return null;
+  return [(cx / cw * 0.5 + 0.5) * cssW, (0.5 - cy / cw * 0.5) * cssH, cw];
+}
+function unproj(x, y, z) { const m = INVVP; const X = m[0] * x + m[4] * y + m[8] * z + m[12], Y = m[1] * x + m[5] * y + m[9] * z + m[13], Z = m[2] * x + m[6] * y + m[10] * z + m[14], Wv = m[3] * x + m[7] * y + m[11] * z + m[15]; return [X / Wv, Y / Wv, Z / Wv]; }
+function rayAt(sx, sy) { const nx = sx / cssW * 2 - 1, ny = 1 - sy / cssH * 2; const a = unproj(nx, ny, -1), b = unproj(nx, ny, 0.5); return { o: EYE.slice(), d: V.norm(V.sub(b, a)) }; }
+function planeHit(sx, sy) {   // 카메라 과녁 높이의 평면과 만나는 점
+  const { o, d } = rayAt(sx, sy); const py = cam.t[1];
+  if (Math.abs(d[1]) > 1e-4) { const s = (py - o[1]) / d[1]; if (s > 0 && s < cam.dist * 30) return V.add(o, V.mul(d, s)); }
+  return V.add(o, V.mul(d, cam.dist));
+}
+function fitView(instant) {
+  const bs = [...W.bodies.values()].filter(b => b.P); if (!bs.length) return;
+  const c = comAll(); let r = 0;
+  for (const b of bs) r = Math.max(r, V.len(V.sub(b.P, c)) + (b.rmax || bodyRadius(b)) * 1.6);
+  const d = clamp(r / Math.sin(cam.fov / 2) * 1.05, 0.3, 4000);
+  cam.mode = 'com'; cam.follow = null;
+  if (instant) { cam.dist = d; cam.t = c.slice(); cam.goal = null; } else cam.goal = d;
+}
+function bodyRadius(b) { if (b.frozen) return b.rmax; if (b._R && W.S.t - b._Rt < 0.5) return b._R; const inf = bodyInfo(b); b._R = inf ? inf.R : 0.1; b._Rt = W.S.t; return b._R; }
+
+/* ---- 알갱이 색 ---- */
+const MATCOL = [[0.86, 0.66, 0.3], [0.62, 0.38, 0.27], [0.2, 0.48, 0.95], [0.82, 0.92, 1.0]];
+function heatCol(T) {   // 온도 보기 색
+  const s = [[200, [0.08, 0.12, 0.45]], [600, [0.1, 0.45, 0.8]], [1200, [0.15, 0.75, 0.4]], [2000, [0.95, 0.85, 0.2]], [3500, [1, 0.45, 0.1]], [6000, [0.9, 0.1, 0.1]], [12000, [1, 1, 1]]];
+  if (T <= s[0][0]) return s[0][1];
+  for (let k = 1; k < s.length; k++) if (T < s[k][0]) { const f = (T - s[k - 1][0]) / (s[k][0] - s[k - 1][0]); return mix3(s[k - 1][1], s[k][1], f); }
+  return s[s.length - 1][1];
+}
+const view = { mode: 0, cut: false, names: true, grid: true, pred: false, axes: false, stars: true, glow: 0.8, smooth: 0.55, shake: true, roche: false };
+let cutPlane = [0, 0, 1, 0];
+/* 알갱이 자리는 '기준점'에서 잰 값으로 올림. 계산이 한 걸음도 안 갔으면(멈춤·카메라만 돌림) 다시 안 올림 */
+let instOrigin = [0, 0, 0], instKey = '';
+function fillInstances() {
+  const S = W.S, N = S.N;
+  if (V.len(V.sub(cam.t, instOrigin)) > 100) { instOrigin = cam.t.slice(); instKey = ''; }
+  const key = S.steps + '|' + N + '|' + S.frozen.length + '|' + W.bodies.size + '|' + view.mode + '|' + view.smooth + '|' + W.origins.length + '|' + S.t;
+  if (key === instKey) return N;
+  instKey = key;
+  if (instCap < N) { instCap = Math.max(N, instCap * 2, 4096); inst = new Float32Array(instCap * IFL); gl.bindBuffer(gl.ARRAY_BUFFER, instVbo); gl.bufferData(gl.ARRAY_BUFFER, inst.byteLength, gl.DYNAMIC_DRAW); }
+  S.syncFrozen();
+  // 몸 가운데(매끈한 빛)
+  const cen = new Map();
+  for (const b of W.bodies.values()) {
+    if (!b.P || b.n < 60) continue;
+    const P = b.frozen ? b.P : (b.P = bodyCOM(b).P);
+    cen.set(b.id, P);
+  }
+  const cx = instOrigin[0], cy = instOrigin[1], cz = instOrigin[2];
+  const mode = view.mode, LBC = W.origins.map(o => hexc(o.col));
+  for (let i = 0; i < N; i++) {
+    const o = i * IFL, mt = S.MT[i], T = S.T0[i] + S.U[i] * MCV[mt];
+    inst[o] = S.X[i] - cx; inst[o + 1] = S.Y[i] - cy; inst[o + 2] = S.Z[i] - cz; inst[o + 3] = S.HH[i] * 0.6;
+    let r, g, b2;
+    if (mode === 0) { r = S.CR[i * 3] / 255; g = S.CR[i * 3 + 1] / 255; b2 = S.CR[i * 3 + 2] / 255; if (mt >= 2 && T > 380) { const f = clamp((T - 380) / 900, 0, 0.8); r += (0.92 - r) * f; g += (0.94 - g) * f; b2 += (0.97 - b2) * f; } }
+    else if (mode === 1) { const c = MATCOL[mt]; r = c[0]; g = c[1]; b2 = c[2]; }
+    else if (mode === 2) { const c = heatCol(T); r = c[0]; g = c[1]; b2 = c[2]; }
+    else { const c = LBC[S.LB[i]] || [0.7, 0.7, 0.7]; r = c[0]; g = c[1]; b2 = c[2]; }
+    inst[o + 4] = r; inst[o + 5] = g; inst[o + 6] = b2; inst[o + 7] = mode === 1 || mode === 3 ? 0 : T;
+    const P = cen.get(S.BI[i]);
+    if (P && view.smooth > 0) { inst[o + 8] = P[0] - cx; inst[o + 9] = P[1] - cy; inst[o + 10] = P[2] - cz; inst[o + 11] = view.smooth; }
+    else { inst[o + 8] = inst[o]; inst[o + 9] = inst[o + 1]; inst[o + 10] = inst[o + 2]; inst[o + 11] = 0; }
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, instVbo); gl.bufferSubData(gl.ARRAY_BUFFER, 0, inst, 0, N * IFL);
+  return N;
+}
+let shotWanted = null;
+function render() {
+  computeMatrices();
+  // 카메라 과녁을 원점으로 옮긴 행렬(정밀도)
+  const N = fillInstances();
+  const Vt = M4.mul(VIEW, new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, instOrigin[0], instOrigin[1], instOrigin[2], 1]));
+  const V32 = new Float32Array(Vt), P32 = new Float32Array(PROJ);
+  gl.viewport(0, 0, scrW, scrH);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.clearColor(0, 0, 0, 1); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  // 하늘
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+  gl.useProgram(pSky.p);
+  const VR = VIEW.slice(); VR[12] = VR[13] = VR[14] = 0;
+  gl.uniformMatrix4fv(pSky.u.uInv, false, new Float32Array(M4.inv(M4.mul(PROJ, VR))));
+  gl.uniform3fv(pSky.u.uSunW, SUNW); gl.uniform1f(pSky.u.uStars, view.stars ? 1 : 0);
+  gl.bindVertexArray(emptyVao); gl.drawArrays(gl.TRIANGLES, 0, 3);
+  if (N) {
+    // 자르기 면: 과녁을 지나고 카메라 쪽을 향함
+    const dv = V.norm(V.sub(EYE, cam.t)); cutPlane = [dv[0], dv[1], dv[2], V.dot(dv, V.sub(cam.t, instOrigin))];
+    const sunV = [Vt[0] * SUNW[0] + Vt[4] * SUNW[1] + Vt[8] * SUNW[2], Vt[1] * SUNW[0] + Vt[5] * SUNW[1] + Vt[9] * SUNW[2], Vt[2] * SUNW[0] + Vt[6] * SUNW[1] + Vt[10] * SUNW[2]];
+    gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.depthFunc(gl.LESS); gl.disable(gl.BLEND);
+    gl.useProgram(pP.p);
+    gl.uniformMatrix4fv(pP.u.uV, false, V32); gl.uniformMatrix4fv(pP.u.uP, false, P32);
+    gl.uniform4fv(pP.u.uCut, cutPlane); gl.uniform1f(pP.u.uCutOn, view.cut ? 1 : 0); gl.uniform1f(pP.u.uRad, 1);
+    gl.uniform3fv(pP.u.uSun, sunV); gl.uniform1f(pP.u.uMode, view.mode); gl.uniform1f(pP.u.uEmis, view.mode === 0 ? 1 : 0);
+    gl.bindVertexArray(vao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, N);
+    if (view.mode === 0 && view.glow > 0) {
+      gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+      gl.useProgram(pG.p);
+      gl.uniformMatrix4fv(pG.u.uV, false, V32); gl.uniformMatrix4fv(pG.u.uP, false, P32);
+      gl.uniform4fv(pG.u.uCut, cutPlane); gl.uniform1f(pG.u.uCutOn, view.cut ? 1 : 0); gl.uniform1f(pG.u.uRad, 1); gl.uniform1f(pG.u.uGlow, view.glow * 0.35);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, N);
+      gl.disable(gl.BLEND); gl.depthMask(true);
+    }
+    gl.bindVertexArray(null);
+  }
+  if (shotWanted) { const f = shotWanted; shotWanted = null; try { f(glc); } catch (e) { } }
+  drawOverlay();
+}
+
+/* ===================== 화면 · 조작 ===================== */
+const $ = id => document.getElementById(id);
+function showErr(e) { const el = $('err'); el.style.display = 'block'; el.textContent = '오류: ' + (e && e.message || e); console.error(e); clearTimeout(showErr.t); showErr.t = setTimeout(() => el.style.display = 'none', 9000); }
+function toast(msg) { const d = document.createElement('div'); d.textContent = msg; $('toast').appendChild(d); setTimeout(() => { d.style.transition = 'opacity .6s'; d.style.opacity = 0; setTimeout(() => d.remove(), 700); }, 3200); }
+function busy(msg) { const b = $('busy'); if (msg) { b.textContent = msg; b.style.display = 'block'; } else b.style.display = 'none'; }
+function onLog(msg, warn) {
+  const d = document.createElement('div'); if (warn) d.className = 'w';
+  d.innerHTML = '<i>' + fmtTime(W.S.t) + '</i>'; d.appendChild(document.createTextNode(msg));
+  const L = $('log'); L.appendChild(d); while (L.children.length > 6) L.firstChild.remove();
+  setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 1100); }, 14000);
+}
+
+/* ---- 소리 ---- */
+let muted = false;
+const sfx = {
+  ctx: null,
+  unlock() { if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+  boom(power) {
+    if (muted || !this.ctx) return; const c = this.ctx, t = c.currentTime, len = 0.8 + power * 2.2;
+    const buf = c.createBuffer(1, Math.floor(c.sampleRate * len), c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.2);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(260 + 500 * power, t); f.frequency.exponentialRampToValueAtTime(40, t + len);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 + 0.4 * power, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(f); f.connect(g); g.connect(c.destination); src.start(t);
+    const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(28, t + len * 0.8);
+    const g2 = c.createGain(); g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(0.35 * (0.4 + power), t + 0.05); g2.gain.exponentialRampToValueAtTime(0.0001, t + len * 0.8);
+    o.connect(g2); g2.connect(c.destination); o.start(t); o.stop(t + len);
+  },
+  tone(f0, f1, dur, vol, type) {
+    if (muted || !this.ctx) return; const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+  },
+  place() { this.tone(180, 90, 0.25, 0.18, 'triangle'); },
+  dex() { this.tone(660, 990, 0.18, 0.12, 'sine'); setTimeout(() => this.tone(880, 1320, 0.3, 0.1, 'sine'), 120); }
+};
+
+/* ---- 저장 ---- */
+const SKEY = 'planetImpact_v1';
+let dex = {};
+function save() {
+  try { localStorage.setItem(SKEY, JSON.stringify({ dex, customTypes, view: { mode: view.mode, names: view.names, grid: view.grid, pred: view.pred, axes: view.axes, stars: view.stars, glow: view.glow, smooth: view.smooth, shake: view.shake, roche: view.roche }, quality: W.quality, muted, speedIdx: speedIdx })); } catch (e) { }
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SKEY) || 'null'); if (!d) return;
+    dex = d.dex || {}; customTypes = d.customTypes || [];
+    if (d.view) Object.assign(view, d.view);
+    if (d.quality != null) W.quality = clamp(d.quality, 0, QUALITY.length - 1);
+    muted = !!d.muted; if (d.speedIdx != null) speedIdx = d.speedIdx;
+  } catch (e) { }
+}
+
+/* ---- 도감 ---- */
+const DEX = [
+  { k: 'impact', n: '첫 충돌', d: '행성끼리 부딪혔습니다. 행성 크기의 충돌은 태양계가 생길 때 아주 흔했습니다.' },
+  { k: 'merge', n: '하나로 합쳐짐', d: '부딪힌 두 행성이 하나가 되었습니다. 지구도 이런 충돌을 여러 번 겪으며 커졌습니다.' },
+  { k: 'hitrun', n: '스치고 지나감', d: '부딪힌 뒤 작은 쪽이 다시 날아갔습니다. 과학자들은 이런 충돌이 아주 흔했다고 봅니다.' },
+  { k: 'shatter', n: '산산조각', d: '가장 큰 덩어리가 원래 무게의 절반도 안 남았습니다. 행성을 부수려면 엄청난 속도가 필요합니다.' },
+  { k: 'fast', n: '초고속 충돌', d: '초속 30 km보다 빠르게 부딪혔습니다. 지구가 해를 도는 속도와 비슷합니다.' },
+  { k: 'roche', n: '로슈 한계', d: '작은 천체가 큰 행성의 로슈 한계 안으로 들어갔습니다. 행성 쪽과 반대쪽을 끌어당기는 힘이 달라서 길게 늘어나고, 여러 번 들어가면 찢어집니다.' },
+  { k: 'disk', n: '파편 원반', d: '부서진 조각들이 행성 둘레를 돌고 있습니다. 달은 이런 원반에서 생겼다고 생각됩니다.' },
+  { k: 'ring', n: '고리', d: '로슈 한계 안쪽을 도는 파편은 뭉치지 못하고 고리가 됩니다. 토성 고리도 로슈 한계 안에 있습니다.' },
+  { k: 'moon', n: '위성 탄생', d: '파편이 뭉쳐 새 위성이 생겼습니다.' },
+  { k: 'bigmoon', n: '큰 위성', d: '달의 절반보다 무거운 위성이 생겼습니다. 지구의 달은 행성에 비해 아주 큰 위성입니다.' },
+  { k: 'moonmix', n: '부딪힌 천체로 만든 위성', d: '새 위성의 절반 넘게가 부딪혀 온 천체의 재료입니다. 테이아 충돌 이야기에서 중요한 문제입니다.' },
+  { k: 'binary', n: '쌍둥이 행성', d: '비슷한 크기의 두 천체가 서로를 돌고 있습니다. 명왕성과 카론이 이렇습니다.' },
+  { k: 'stripped', n: '겉이 벗겨짐', d: '충돌로 암석 겉이 날아가서 철 핵만 많이 남은 행성입니다. 수성이 이렇게 생겼다는 생각이 있습니다.' },
+  { k: 'magma', n: '마그마 바다', d: '행성의 절반 넘게가 녹았습니다. 달이 생긴 직후 지구도 녹은 바위 바다로 덮여 있었습니다.' },
+  { k: 'steam', n: '바다가 끓음', d: '물과 얼음의 많은 부분이 끓어 수증기가 되었습니다.' },
+  { k: 'tilt', n: '자전축이 누움', d: '충돌로 자전축이 60° 넘게 기울었습니다. 천왕성은 98° 기울어 옆으로 누워서 돕니다.' },
+  { k: 'fastspin', n: '아주 빠른 자전', d: '충돌 뒤 하루가 4시간보다 짧아졌습니다. 달이 생긴 직후 지구의 하루는 5시간쯤이었습니다.' },
+];
+function unlock(k) {
+  if (dex[k]) return;
+  const e = DEX.find(x => x.k === k); if (!e) return;
+  dex[k] = { t: Date.now(), img: null };
+  toast('충돌 도감에 새로 기록: ' + e.n); sfx.dex();
+  shotWanted = cv => { try { const c = document.createElement('canvas'); c.width = 320; c.height = 180; const x = c.getContext('2d'); const a = cv.width / cv.height, ta = 16 / 9; let sw = cv.width, sh = cv.height, sx = 0, sy = 0; if (a > ta) { sw = sh * ta; sx = (cv.width - sw) / 2; } else { sh = sw / ta; sy = (cv.height - sh) / 2; } x.drawImage(cv, sx, sy, sw, sh, 0, 0, 320, 180); dex[k].img = c.toDataURL('image/jpeg', 0.72); save(); } catch (er) { } };
+  save(); updateDexBtn();
+}
+function updateDexBtn() { $('bDex').textContent = '충돌 도감 ' + Object.keys(dex).length + '/' + DEX.length; }
+function openDex() {
+  $('dexCount').textContent = Object.keys(dex).length + ' / ' + DEX.length + ' 발견';
+  $('dexGrid').innerHTML = DEX.map(e => { const d = dex[e.k]; return d ? `<div class="dc"><div class="im">${d.img ? `<img src="${d.img}">` : '사진 없음'}</div><b>${e.n}</b><p>${e.d}</p><i>${new Date(d.t).toLocaleDateString('ko-KR')}</i></div>` : `<div class="dc lock"><div class="im">아직 못 봄</div><b>???</b><p>${e.n.replace(/[^ ]/g, '?').slice(0, 6)}</p></div>`; }).join('');
+  $('dexM').classList.add('show');
+}
+// 분석할 때마다 도감 조건 살피기
+let ringT = 0;
+function dexScan() {
+  const S = W.S, host = biggestBody(); if (!host) return;
+  const hit = W.collisions.length > 0;
+  // 원반·고리
+  W.ring = null;
+  if (host.frozen) {
+    if (hit && W.debris.bound > Math.max(MMOON * 0.5, host.M * 0.005) && W.debris.boundN >= 20) unlock('disk');
+    let inR = 0, rs = 0; const rr = rocheDist(host, ROCK_RHO);
+    for (let i = 0; i < S.N; i++) {
+      if (S.BI[i] >= 0 || S.MS[i] <= 0) continue;
+      const r = Math.hypot(S.X[i] - host.P[0], S.Y[i] - host.P[1], S.Z[i] - host.P[2]);
+      if (r > host.rmax * 1.15 && r < rr * 1.05) { inR++; rs += r; }
+    }
+    ringT = inR >= 50 ? ringT + 1 : 0;
+    if (inR >= 30) W.ring = { host: host.id, n: inR, r: rs / inR };
+    if (ringT > 10) {
+      if (!dex.ring) logEv('고리가 생겼습니다: 알갱이 ' + numK(inR) + '개가 ' + host.name + '의 로슈 한계 안을 돌고 있습니다');
+      unlock('ring');
+    }
+  }
+  for (const b of W.bodies.values()) {
+    if (!b.frozen || !b.idx) continue;
+    const inf = bodyInfo(b);
+    // 위성
+    if (b !== host && b.kind === 'moon' && b.M < 0.3 * host.M && hit) {
+      if (orbitE(b.P, b.V, host.P, host.V, host.M + b.M) < 0) {
+        unlock('moon'); if (b.M >= 0.5 * MMOON) unlock('bigmoon');
+        const c = W.collisions[W.collisions.length - 1];
+        if (c && c.labB != null && (inf.org.get(c.labB) || 0) > 0.5 * inf.M) unlock('moonmix');
+      }
+    }
+    // 쌍둥이
+    if (b !== host && b.M >= 0.1 * host.M && hit && (b.lastHit || b.kind !== 'planet')) { const d = V.len(V.sub(b.P, host.P)); if (d > 1.5 * (b.R + host.R) && orbitE(b.P, b.V, host.P, host.V, host.M + b.M) < 0) unlock('binary'); }
+    if (!hit) continue;
+    if (b.M > 0.005 && inf.comp[0] >= 0.5 && b.fe0 != null && inf.comp[0] >= 1.4 * Math.max(b.fe0, 0.05) && b.M < 0.95 * b.M0) unlock('stripped');
+    if (b.M > 0.01 && inf.molten > 0.5) unlock('magma');
+    const w = b.W ? V.len(b.W) : 0;
+    if (b.M > 0.03 && w > 0) {
+      const day = TAU / w * TU_S / 3600;
+      if (day < 4) unlock('fastspin');
+      const ax = V.norm(b.W), tilt = Math.acos(clamp(ax[1], -1, 1)) * 180 / PI;
+      if (tilt > 60 && day < 200 && b.lastHit) unlock('tilt');
+    }
+  }
+  // 바다가 끓음
+  let wm = 0, vm = 0;
+  for (let i = 0; i < S.N; i++) { const mt = S.MT[i]; if (mt < 2) continue; wm += S.MS[i]; if (S.T0[i] + S.U[i] * MCV[mt] > 380) vm += S.MS[i]; }
+  if (wm > 0 && vm > 0.4 * wm && hit) unlock('steam');
+}
+function onImpactFx(rec, A, B) {
+  A.lastHit = B.lastHit = W.S.t;
+  const E = 0.5 * rec.Ma * rec.Mb / (rec.Ma + rec.Mb) * (rec.v / VU) ** 2;
+  sfx.boom(clamp(Math.log10(1 + E * 300) * 0.5, 0.1, 1));
+}
+function onNewBody(b, bound) { }
+function onBodyGone(b, into) { if (sel === b.id) selectBody(into ? into.id : null); }
+function onCollisionResult(c, msg) { toast(msg.replace('충돌 결과: ', '')); }
+
+/* ---- 행성 고르기(왼쪽) ---- */
+let curType = 'earth', curMass = 1, curDay = 23.93;
+const massToV = m => Math.round((Math.log10(m) + 4) / 5 * 1000), vToMass = v => Math.pow(10, -4 + 5 * v / 1000);
+const dayToV = d => d <= 0 ? 0 : Math.round(1 + 99 * Math.log(d / 2) / Math.log(100)), vToDay = v => v <= 0 ? 0 : 2 * Math.pow(100, (v - 1) / 99);
+function planetPic(cv, t, opt) {
+  const x = cv.getContext('2d'), w = cv.width, h = cv.height, img = x.createImageData(w, h), d = img.data;
+  const L = V.norm([-0.55, 0.45, 0.7]), R = w * 0.46, sd = 1.37, tilt = (t.tilt || 0) * PI / 180 * 0.5;
+  const ct = Math.cos(tilt), st = Math.sin(tilt);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const px = (i + 0.5 - w / 2) / R, py = -(j + 0.5 - h / 2) / R, r2 = px * px + py * py, o = (j * w + i) * 4;
+    if (r2 > 1) { d[o + 3] = 0; continue; }
+    const pz = Math.sqrt(1 - r2);
+    const bx = px * ct + py * st, by = -px * st + py * ct, bz = pz;   // 축 기울기만큼
+    const c = surfColor(t, bx, by, bz, sd);
+    const l = Math.max(0, px * L[0] + py * L[1] + pz * L[2]), s = 0.08 + 1.0 * l;
+    const a = r2 > 0.96 ? (1 - r2) / 0.04 : 1;
+    d[o] = clamp(c[0] * s * 255, 0, 255); d[o + 1] = clamp(c[1] * s * 255, 0, 255); d[o + 2] = clamp(c[2] * s * 255, 0, 255); d[o + 3] = 255 * a;
+  }
+  x.clearRect(0, 0, w, h); x.putImageData(img, 0, 0);
+}
+function buildTypeGrid() {
+  const g = $('types'); g.innerHTML = '';
+  for (const t of allTypes()) {
+    const d = document.createElement('div'); d.className = 'tc' + (t.key === curType ? ' on' : ''); d.title = t.name;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 56; d.appendChild(cv);
+    const s = document.createElement('span'); s.textContent = t.name; d.appendChild(s);
+    d.onclick = () => { curType = t.key; curMass = t.M; curDay = t.day || 0; syncLeft(); g.querySelectorAll('.tc').forEach(e => e.classList.remove('on')); d.classList.add('on'); };
+    g.appendChild(d); planetPic(cv, t);
+  }
+  const n = document.createElement('div'); n.className = 'tc new'; n.innerHTML = '<b>+</b>새 행성'; n.onclick = () => openEditor(null); g.appendChild(n);
+}
+let statTimer = 0;
+function syncLeft() {
+  const t = typeBy(curType);
+  $('tName').textContent = t.name; $('tDesc').textContent = t.desc || '';
+  $('tEdit').innerHTML = t.key[0] === 'c' && customTypes.includes(t) ? '<button id="tEditB">고치기</button>' : '';
+  if ($('tEditB')) $('tEditB').onclick = () => openEditor(t);
+  $('rMass').value = massToV(curMass); $('vMass').textContent = fmtMassShort(curMass);
+  $('rDay').value = dayToV(curDay); $('vDay').textContent = curDay > 0 ? numK(curDay, curDay < 10 ? 1 : 0) + '시간' : '안 돎';
+  clearTimeout(statTimer); statTimer = setTimeout(updateStat, 60);
+}
+function updateStat() {
+  const t = typeBy(curType), st = structure(curMass, t.fe, t.wat, !!t.ice), R = st.R, rho = curMass / (4.18879 * R ** 3) * RHOU;
+  const n = particlesFor(curMass, Math.max(maxBodyMass(), curMass));
+  const comp = [t.fe, 1 - t.fe - t.wat, t.wat];
+  $('vInfo').innerHTML = `지름 <b>${numK(Math.round(2 * R * RE_KM))} km</b> · 밀도 <b>${numK(rho, 2)} g/cm³</b><br>질량 <b>${fmtKg(curMass)}</b><br>철 ${Math.round(comp[0] * 100)}% · 암석 ${Math.round(comp[1] * 100)}%${t.wat ? ' · ' + (t.ice ? '얼음 ' : '물 ') + Math.round(comp[2] * 100) + '%' : ''} · 알갱이 ${numK(n)}개<br>탈출 속도 <b>초속 ${numK(Math.sqrt(2 * curMass / R) * VU, 1)} km</b>`;
+  W.placeR = R;
+}
+
+/* ---- 놓기 · 던지기 ---- */
+let placeMode = false, placeHover = null, placeDrag = null;
+const THROW_T = 4;   // 끈 길이 ÷ 이 시간 = 던지는 속도
+function setPlace(on) { placeMode = on; $('bPlace').classList.toggle('on', on); $('bPlace').textContent = on ? '놓기 취소 (Esc)' : '우주에 놓기'; if (!on) { placeHover = null; placeDrag = null; W.hold = false; } updateHint(); }
+function doPlace(pos, vel) {
+  const t = typeBy(curType), M = curMass, day = curDay;
+  busy(t.name + ' 만드는 중… (알갱이를 쌓고 있습니다)');
+  whenIdle(async () => {
+    W.building = true;
+    try {
+      const b = await spawnBody({ type: t, M, pos, vel, day, name: uniqueName(t.name) });
+      sfx.place(); logEv(b.name + J(b.name, '을', '를') + ' 놓았습니다' + (V.len(vel) > 0 ? ' · 초속 ' + numK(V.len(vel) * VU, 1) + ' km로 던짐' : ''));
+      selectBody(b.id);
+      if (W.bodies.size === 1) { cam.t = b.P.slice(); cam.goal = b.rmax * 7; }
+    } catch (e) { showErr(e); }
+    W.building = false; busy(null); updateHint(); updateStat();
+  });
+}
+/* 계산하는 중에는 행성을 넣고 빼지 않음: 걸음이 끝난 뒤에 함 */
+let pumping = false;
+const idleQ = [];
+function whenIdle(fn) { idleQ.push(fn); if (!pumping && !W.building) runIdle(); }
+let idleRunning = false;
+async function runIdle() {
+  if (idleRunning) return; idleRunning = true;
+  while (idleQ.length && !pumping) { const f = idleQ.shift(); try { await f(); } catch (e) { showErr(e); } }
+  idleRunning = false;
+}
+async function physPump() {
+  if (pumping || W.building || idleRunning) return;
+  pumping = true;
+  const t0 = performance.now();
+  try {
+    while (W.playing && !W.hold && W.bodies.size && W.debt > 0 && !idleQ.length && performance.now() - t0 < 24) {
+      const used = await stepOnce();
+      W.debt -= used; rateSim += used;
+    }
+  } catch (e) { showErr(e); }
+  pumping = false;
+  if (idleQ.length) runIdle();
+}
+function uniqueName(base) { const names = new Set([...W.bodies.values()].map(b => b.name)); if (!names.has(base)) return base; for (let k = 2; ; k++) if (!names.has(base + ' ' + k)) return base + ' ' + k; }
+
+/* ---- 앞으로 갈 길 (점 질량으로 미리 계산) ---- */
+function predict(extra, T) {
+  const bs = [...W.bodies.values()].filter(b => b.P && b.M > 0).map(b => ({ id: b.id, M: b.M, R: b.frozen ? b.rmax : bodyRadius(b), P: b.P.slice(), V: b.V.slice(), pts: [b.P.slice()] }));
+  if (extra) bs.push({ id: -1, M: extra.M, R: extra.R, P: extra.P.slice(), V: extra.V.slice(), pts: [extra.P.slice()] });
+  const n = bs.length; if (!n) return { paths: [], hit: null };
+  let t = 0, hit = null; const acc = () => { for (const a of bs) a.A = [0, 0, 0]; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const a = bs[i], b = bs[j], d = V.sub(b.P, a.P), r = Math.max(V.len(d), 0.5 * (a.R + b.R)), f = 1 / (r * r * r); for (let k = 0; k < 3; k++) { a.A[k] += b.M * f * d[k]; b.A[k] -= a.M * f * d[k]; } } };
+  acc(); let step = 0;
+  while (t < T && step < 4000) {
+    let dt = T / 300;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const a = bs[i], b = bs[j], r = V.len(V.sub(b.P, a.P)), v = V.len(V.sub(b.V, a.V)) + 1e-6; dt = Math.min(dt, 0.08 * Math.max(r - a.R - b.R, 0.05 * (a.R + b.R)) / v + 0.002, 0.02 * Math.sqrt(r ** 3 / (a.M + b.M))); }
+    for (const a of bs) for (let k = 0; k < 3; k++) { a.V[k] += a.A[k] * dt * 0.5; a.P[k] += a.V[k] * dt; }
+    acc(); for (const a of bs) for (let k = 0; k < 3; k++) a.V[k] += a.A[k] * dt * 0.5;
+    t += dt; step++;
+    if (step % 4 === 0) for (const a of bs) a.pts.push(a.P.slice());
+    if (!hit) for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const a = bs[i], b = bs[j], d = V.sub(b.P, a.P), r = V.len(d);
+      if (r < (a.R + b.R) * 0.98) {
+        const dv = V.sub(b.V, a.V), v = V.len(dv), ang = Math.acos(clamp(Math.abs(V.dot(dv, d)) / (v * r + 1e-12), 0, 1)) * 180 / PI;
+        hit = { t, a: a.id, b: b.id, v, ang, P: V.add(a.P, V.mul(d, a.R / r)) };
+      }
+    }
+    if (hit && t > hit.t + 0.2) break;
+  }
+  for (const a of bs) a.pts.push(a.P.slice());
+  return { paths: bs, hit };
+}
+let predCache = null, predAt = 0;
+function updateThrowPred(force) {
+  if (!placeDrag) return;
+  const now = performance.now(); if (!force && now - placeDrag.pt < 60) return; placeDrag.pt = now;
+  const R = W.placeR || 1;
+  placeDrag.pred = predict({ M: curMass, R, P: placeDrag.p0, V: placeDrag.vel }, 40);
+}
+
+/* ---- 고르기 · 오른쪽 창 ---- */
+let sel = null;
+function selectBody(id) {
+  sel = id; const b = id != null ? W.bodies.get(id) : null;
+  $('right').style.display = b ? 'block' : 'none';
+  if (b) { fillTargets(); setAimDefault(); }
+  updateInfo();
+}
+function fillTargets() {
+  const b = W.bodies.get(sel); if (!b) return;
+  const s = $('iTarget'), prev = s.value; s.innerHTML = '';
+  const others = [...W.bodies.values()].filter(o => o !== b && o.n >= MINB).sort((a, c) => c.M - a.M);
+  for (const o of others) { const op = document.createElement('option'); op.value = o.id; op.textContent = o.name; s.appendChild(op); }
+  if (prev && others.some(o => String(o.id) === prev)) s.value = prev;
+  $('aGo').disabled = $('aStop').disabled = !others.length;
+}
+function aimTarget() { return W.bodies.get(+$('iTarget').value); }
+function mutualEsc(a, b) { const Ra = a.frozen ? a.rmax : bodyRadius(a), Rb = b.frozen ? b.rmax : bodyRadius(b); return Math.sqrt(2 * (a.M + b.M) / (Ra + Rb)) * VU; }
+const spdToV = v => Math.round(Math.log(v / 0.5) / Math.log(200) * 1000), vToSpd = v => 0.5 * Math.pow(200, v / 1000);
+function setAimDefault() {
+  const b = W.bodies.get(sel), t = aimTarget();
+  const v = b && t ? Math.max(1, mutualEsc(b, t) * 1.02) : 10;
+  $('aSpeed').value = spdToV(v); if (!$('aAng').dataset.touched) $('aAng').value = 45; syncAim();
+}
+function syncAim() {
+  const v = vToSpd(+$('aSpeed').value), ang = +$('aAng').value;
+  $('avSpeed').textContent = '초속 ' + numK(v, v < 10 ? 1 : 0) + ' km'; $('avAng').textContent = ang + '°' + (ang < 10 ? ' 정면' : ang > 65 ? ' 스치기' : '');
+  const b = W.bodies.get(sel), t = aimTarget();
+  if (b && t) {
+    const ve = mutualEsc(b, t);
+    $('aimInfo').innerHTML = `둘의 탈출 속도는 초속 ${numK(ve, 1)} km입니다. 이보다 느리게는 부딪힐 수 없습니다(끌어당기는 힘 때문에 빨라짐).` + (v < ve ? ' 지금 값은 탈출 속도로 맞춰집니다.' : '');
+  } else $('aimInfo').textContent = '과녁이 될 다른 행성이 없습니다.';
+}
+function setBodyVel(b, nv) {   // 몸 전체 속도 바꾸기
+  const S = W.S;
+  if (b.frozen) { b.V = nv.slice(); }
+  else { const c = bodyCOM(b), dv = V.sub(nv, c.V); for (const p of b.idx) { S.VX[p] += dv[0]; S.VY[p] += dv[1]; S.VZ[p] += dv[2]; } }
+  S.dirty = true;
+}
+function aimAt(b, t, vKms, ang) {
+  const Pb = b.frozen ? b.P : bodyCOM(b).P, Pt = t.frozen ? t.P : bodyCOM(t).P, Vt = t.frozen ? t.V : bodyCOM(t).V;
+  const d = V.sub(Pb, Pt), r0 = V.len(d), Rb = b.frozen ? b.rmax : bodyRadius(b), Rt = t.frozen ? t.rmax : bodyRadius(t), Rc = Rb + Rt;
+  if (r0 < Rc * 1.05) { toast('너무 가까워서 겨눌 수 없습니다'); return false; }
+  const Mt = b.M + t.M, ve = Math.sqrt(2 * Mt / Rc), vimp = Math.max(vKms / VU, ve * 1.001);
+  const a = aimVelocity(r0, Rc, Mt, vimp, ang);
+  const dh = V.norm(d); let e = V.cross([0, 1, 0], dh); if (V.len(e) < 0.1) e = V.cross([1, 0, 0], dh); e = V.norm(e);
+  const vrel = V.add(V.mul(dh, a.vr), V.mul(e, a.vt));   // 과녁에 대한 상대 속도
+  setBodyVel(b, V.add(Vt, vrel));
+  predCache = null;
+  return true;
+}
+
+function updateInfo() {
+  const b = sel != null ? W.bodies.get(sel) : null;
+  if (!b) { $('right').style.display = 'none'; return; }
+  const inf = bodyInfo(b); if (!inf) return;
+  $('iName').innerHTML = `<i style="background:${b.col}"></i>`; $('iName').appendChild(document.createTextNode(b.name));
+  const R = inf.R, rho = inf.M / (4.18879 * R ** 3) * RHOU;
+  const c = inf.comp, cols = MATCOL.map(x => `rgb(${x.map(v => Math.round(v * 255)).join(',')})`);
+  const bar = `<div class="bar">${c.map((f, k) => f > 0.002 ? `<i style="width:${f * 100}%;background:${cols[k]}"></i>` : '').join('')}</div>`;
+  const compTxt = ['철', '암석', '물', '얼음'].map((n, k) => c[k] > 0.002 ? n + ' ' + numK(c[k] * 100, c[k] < 0.1 ? 1 : 0) + '%' : '').filter(x => x).join(' · ');
+  const org = [...inf.org.entries()].sort((a, d) => d[1] - a[1]).slice(0, 3).map(([l, m]) => { const o = W.origins[l]; return o ? `<span style="color:${o.col}">${o.name}</span> ${Math.round(m / inf.M * 100)}%` : ''; }).join(' · ');
+  const w = b.W ? V.len(b.W) : 0, day = w > 1e-6 ? TAU / w * TU_S / 3600 : 0, tilt = w > 1e-6 ? Math.acos(clamp(b.W[1] / w, -1, 1)) * 180 / PI : 0;
+  const com = comAll() || [0, 0, 0];
+  const Vb = b.frozen ? b.V : (bodyCOM(b).V);
+  let vcm = [0, 0, 0], Mt = 0; for (const o of W.bodies.values()) if (o.V) { Mt += o.M; vcm = V.add(vcm, V.mul(o.V, o.M)); } if (Mt) vcm = V.mul(vcm, 1 / Mt);
+  const host = biggestBody();
+  let orbit = '';
+  if (host && host !== b && host.P) {
+    const Pb = b.frozen ? b.P : bodyCOM(b).P, e = orbitE(Pb, Vb, host.P, host.V, host.M + b.M), r = V.len(V.sub(Pb, host.P));
+    orbit = `<tr><td>${host.name}까지</td><td>${numK(Math.round(r * RE_KM))} km · ${e < 0 ? '붙잡혀 돎' : '멀어지는 중'}</td></tr>`;
+  }
+  $('iTable').innerHTML =
+    `<tr><td>질량</td><td>${fmtMassShort(inf.M)}<br><span style="color:var(--dim)">${fmtKg(inf.M)}</span></td></tr>` +
+    `<tr><td>지름</td><td>약 ${numK(Math.round(2 * R * RE_KM))} km · 밀도 ${numK(rho, 1)} g/cm³</td></tr>` +
+    `<tr><td>재료</td><td>${compTxt}${bar}</td></tr>` +
+    `<tr><td>처음 행성</td><td>${org}</td></tr>` +
+    `<tr><td>평균 온도</td><td>${numK(Math.round(inf.Tm - 273))} °C · 녹은 부분 ${Math.round(inf.molten * 100)}%</td></tr>` +
+    `<tr><td>자전</td><td>${day > 0 && day < 5000 ? '하루 ' + numK(day, day < 10 ? 1 : 0) + '시간 · 축 기울기 ' + Math.round(tilt) + '°' : '거의 안 돎'}</td></tr>` +
+    `<tr><td>속도</td><td>초속 ${numK(V.len(V.sub(Vb, vcm)) * VU, 1)} km</td></tr>` + orbit +
+    (b.rochePass ? `<tr><td>로슈 한계</td><td>안으로 ${b.rochePass}번 들어감${b.inRoche ? ' · 지금 안에 있음' : ''}</td></tr>` : '') +
+    (!b.frozen && b.idx && b.idx.length >= MINB ? (() => { const el = shapeOf(b); return el > 1.25 ? `<tr><td>모양</td><td>${numK(el, 1)}배 길쭉함</td></tr>` : ''; })() : '') +
+    `<tr><td>알갱이</td><td>${numK(b.n || b.idx.length)}개 · ${b.frozen ? '굳어서 통째로 움직임' : '알갱이가 움직이는 중'}</td></tr>`;
+  $('iFollow').classList.toggle('on', cam.mode === 'follow' && cam.follow === b.id);
+}
+
+/* ---- 장면(불러오기) ---- */
+const PRESETS = [
+  { n: '달이 생긴 충돌 (테이아)', async f() { const A = sp('proto', { name: '원시 지구' }), B = sp('theia', { M: 0.13 }); await hitScene(A, B, 10, 50); } },
+  { n: '빠르게 도는 지구와 작은 천체', async f() { const A = sp('proto', { name: '원시 지구', day: 2.4, tilt: 0 }), B = sp('theia', { M: 0.05, name: '작은 천체' }); await hitScene(A, B, 20, 30); } },
+  { n: '수성의 겉이 벗겨진 충돌', async f() { const A = sp('mercury', { M: 0.124, name: '원시 수성', fe: 0.32, day: 0 }), B = sp('theia', { M: 0.021, name: '충돌체' }); await hitScene(A, B, 20, 5); } },
+  { n: '화성 북쪽의 큰 충돌', async f() { const A = sp('mars'), B = sp('moon', { M: 0.0023, name: '충돌체' }); await hitScene(A, B, 6, 45); } },
+  { n: '명왕성과 카론이 생긴 충돌', async f() { const A = sp('pluto', { M: 0.0016, name: '원시 명왕성', day: 0 }), B = sp('charon', { M: 0.00086, name: '원시 카론' }); await hitScene(A, B, 1.0, 58); } },
+  { n: '얼음 거인이 옆으로 눕는 충돌', async f() { const A = sp('ice', { M: 13, name: '원시 천왕성', day: 17, tilt: 0 }), B = sp('ice', { M: 2.5, name: '충돌체' }); await hitScene(A, B, 24, 38, true); } },
+  { n: '똑같은 두 행성 정면 충돌', async f() { const A = sp('earth', { day: 0 }), B = sp('earth', { name: '지구 2', day: 0 }); await hitScene(A, B, 12, 0); } },
+  { n: '화성 두 개가 스치기', async f() { const A = sp('mars', { day: 0 }), B = sp('mars', { name: '화성 2', day: 0 }); await hitScene(A, B, 5.6, 62); } },
+  { n: '지구 산산조각 (초속 45 km)', async f() { const A = sp('earth', { day: 0 }), B = sp('earth', { name: '지구 2', day: 0 }); await hitScene(A, B, 45, 10); } },
+  { n: '바다 행성에 부딪힘', async f() { const A = sp('ocean'), B = sp('mars', { name: '충돌체' }); await hitScene(A, B, 14, 35); } },
+  { n: '로슈 한계를 여러 번 지나는 달 (고리)', async f() { await rocheScene(); } },
+];
+const ICE_GIANT = { key: 'ice', name: '얼음 거인', M: 13, fe: 0.08, wat: 0.62, ice: true, Ts: 70, day: 17, tilt: 0, surf: 'custom', c1: '#6fa9c9', c2: '#bfe3ee', pat: 'band', desc: '' };
+let sceneMref = 1;
+function sp(type, o) {
+  o = o || {};
+  let t = type === 'ice' ? ICE_GIANT : typeBy(type);
+  if (o.fe != null) t = Object.assign({}, t, { fe: o.fe });
+  return { t, M: o.M || t.M, name: o.name || t.name, day: o.day, tilt: o.tilt };
+}
+// 지구 둘레를 길쭉하게 도는 달: 가장 가까울 때만 로슈 한계 안(0.95배)으로 잠깐 들어감
+// → 들어갈 때마다 조금씩 더 늘어나다(1.3배→1.7배→2.8배→8배) 4번째쯤 찢어져 고리가 됨(2026-11-15 시험)
+async function rocheScene() {
+  const E = await spawnBody({ type: 'earth', pos: [0, 0, 0], vel: [0, 0, 0], tilt: 0 });
+  const mt = typeBy('moon'), nm = Math.round(clamp(QUALITY[W.quality].n * 0.4, 600, 20000));
+  const Rm = structure(mt.M, mt.fe, mt.wat, false).R, rhoM = mt.M / (4.18879 * Rm ** 3);
+  const rd = rocheDist(E, rhoM), q = (window.RQ || 0.95) * rd, Q = (window.RQQ || 2.6) * rd, Mt = E.M + mt.M;
+  const e = (Q - q) / (Q + q), p = 2 * q * Q / (q + Q), f = -110 * PI / 180, inc = 12 * PI / 180;   // 가까운 점 110° 전에서 시작
+  const r = p / (1 + e * Math.cos(f)), vr = Math.sqrt(Mt / p) * e * Math.sin(f), vt = Math.sqrt(Mt / p) * (1 + e * Math.cos(f));
+  const e1 = [1, 0, 0], e2 = [0, Math.sin(inc), -Math.cos(inc)];
+  const rel = V.add(V.mul(e1, r * Math.cos(f)), V.mul(e2, r * Math.sin(f)));
+  const vrel = V.add(V.mul(e1, vr * Math.cos(f) - vt * Math.sin(f)), V.mul(e2, vr * Math.sin(f) + vt * Math.cos(f)));
+  const m = await spawnBody({ type: mt, pos: V.mul(rel, E.M / Mt), vel: V.mul(vrel, E.M / Mt), n: nm, day: 0, name: '달' });
+  E.P = V.mul(rel, -mt.M / Mt); E.V = V.mul(vrel, -mt.M / Mt); W.S.dirty = true; W.S.syncFrozen();
+  view.roche = true; applyViewUI(); setSpeed(4);   // 가까이 갈 때까지 기다리지 않게 1초에 3시간
+  return [E, m];
+}
+async function hitScene(A, B, vKms, ang, vertical) {
+  const Mref = Math.max(A.M, B.M);
+  const RA = structure(A.M, A.t.fe, A.t.wat, !!A.t.ice).R, RB = structure(B.M, B.t.fe, B.t.wat, !!B.t.ice).R;
+  const sc = sceneImpact({ M: A.M, R0: RA * 1.02 }, { M: B.M, R0: RB * 1.02 }, vKms, ang, (RA + RB) * 3.4);
+  if (vertical) for (const k of ['posA', 'velA', 'posB', 'velB']) { const v = sc[k]; sc[k] = [v[0], -v[2], 0]; }   // 위아래 면에서 부딪혀 자전축을 눕힘
+  const a = await spawnBody({ type: A.t, M: A.M, name: A.name, pos: sc.posA, vel: sc.velA, day: A.day, tilt: A.tilt, Mref });
+  const b = await spawnBody({ type: B.t, M: B.M, name: B.name, pos: sc.posB, vel: sc.velB, day: B.day, tilt: B.tilt, Mref });
+  return [a, b];
+}
+function loadPreset(i) {
+  const p = PRESETS[i]; if (!p) return Promise.resolve();
+  busy('장면 준비 중… (행성을 알갱이로 쌓고 있습니다)');
+  return new Promise(done => whenIdle(async () => {
+    W.building = true;
+    try {
+      clearWorld(); selectBody(null); setPlace(false);
+      await p.f();
+      fitView(true); cam.dist *= 1.2; cam.yaw = 0.35; cam.pitch = 0.55;
+      W.playing = true; $('bPlay').textContent = '일시정지';
+      logEv('장면: ' + p.n);
+    } catch (e) { showErr(e); }
+    W.building = false; busy(null); updateHint(); updateStat(); done();
+  }));
+}
+
+/* ---- 새 행성 만들기(편집기) ---- */
+let edT = null, edOrig = null;
+const ED_ROWS = [
+  { k: 'M', n: '질량', min: 0, max: 1000, to: v => vToMass(v), from: m => massToV(m), fmt: m => fmtMassShort(m) },
+  { k: 'fe', n: '철 핵', min: 0, max: 90, to: v => v / 100, from: x => Math.round(x * 100), fmt: x => Math.round(x * 100) + '%' },
+  { k: 'wat', n: '물·얼음', min: 0, max: 70, to: v => v / 100, from: x => Math.round(x * 100), fmt: x => Math.round(x * 100) + '%' },
+  { k: 'Ts', n: '겉 온도', min: 30, max: 1000, to: v => v, from: x => Math.round(x), fmt: x => Math.round(x - 273) + ' °C' },
+  { k: 'day', n: '하루', min: 0, max: 100, to: v => vToDay(v), from: d => dayToV(d), fmt: d => d > 0 ? numK(d, d < 10 ? 1 : 0) + '시간' : '안 돎' },
+];
+function openEditor(t) {
+  edOrig = t; edT = t ? Object.assign({}, t) : { key: 'c' + Date.now().toString(36), name: '새 행성', M: 0.5, fe: 0.3, wat: 0.1, ice: false, Ts: 300, day: 20, tilt: 0, surf: 'custom', c1: '#3b5b7a', c2: '#c9b38a', pat: 'land', desc: '직접 만든 행성' };
+  $('edTitle').textContent = t ? t.name + ' 고치기' : '새 행성 만들기';
+  $('edDel').style.display = t ? '' : 'none';
+  const rows = $('edRows'); rows.innerHTML = '';
+  for (const r of ED_ROWS) {
+    const d = document.createElement('div'); d.className = 'row';
+    d.innerHTML = `<label>${r.n}</label><input type="range" min="${r.min}" max="${r.max}" step="1"><output></output>`;
+    const inp = d.querySelector('input'), out = d.querySelector('output');
+    inp.value = r.from(edT[r.k]); out.textContent = r.fmt(edT[r.k]);
+    inp.oninput = () => { edT[r.k] = r.to(+inp.value); if (edT.fe + edT.wat > 0.95) { if (r.k === 'fe') edT.wat = 0.95 - edT.fe; else edT.fe = 0.95 - edT.wat; } out.textContent = r.fmt(edT[r.k]); edDraw(); };
+    rows.appendChild(d);
+  }
+  const seg = (lab, key, opts) => { const d = document.createElement('div'); d.className = 'row'; d.innerHTML = `<label>${lab}</label><div class="seg" style="grid-column:span 2">${opts.map(o => `<button data-v="${o[0]}">${o[1]}</button>`).join('')}</div>`; d.querySelectorAll('button').forEach(b => { b.classList.toggle('on', String(edT[key]) === b.dataset.v); b.onclick = () => { edT[key] = b.dataset.v === 'true' ? true : b.dataset.v === 'false' ? false : b.dataset.v; d.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); edDraw(); }; }); rows.appendChild(d); };
+  seg('물 상태', 'ice', [['false', '바다(물)'], ['true', '얼음']]);
+  seg('무늬', 'pat', [['land', '대륙'], ['spot', '얼룩'], ['band', '줄무늬']]);
+  for (const [k, n] of [['c1', '색 1'], ['c2', '색 2']]) { const d = document.createElement('div'); d.className = 'row'; d.innerHTML = `<label>${n}</label><input type="color" value="${edT[k]}" style="grid-column:span 2">`; d.querySelector('input').oninput = e => { edT[k] = e.target.value; edDraw(); }; rows.appendChild(d); }
+  $('edM').classList.add('show'); edDraw();
+}
+function edDraw() {
+  planetPic($('edCv'), edT);
+  const st = structure(edT.M, edT.fe, edT.wat, !!edT.ice), R = st.R, rho = edT.M / (4.18879 * R ** 3) * RHOU;
+  $('edStat').innerHTML = `지름 ${numK(Math.round(2 * R * RE_KM))} km · 밀도 ${numK(rho, 2)} g/cm³<br>암석 ${Math.round((1 - edT.fe - edT.wat) * 100)}%`;
+}
+function closeEditor() { $('edM').classList.remove('show'); }
+function saveEditor() {
+  const name = (prompt('행성 이름을 지어 주세요', edT.name) || '').trim(); if (!name) return;
+  edT.name = name.slice(0, 16);
+  if (edOrig) Object.assign(edOrig, edT); else customTypes.push(edT);
+  curType = edT.key; curMass = edT.M; curDay = edT.day; save(); buildTypeGrid(); syncLeft(); closeEditor();
+}
+
+/* ---- 겹쳐 그리기(이름·길·격자) ---- */
+function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p; return (f < 2 ? 1 : f < 5 ? 2 : 5) * p; }
+function line3(c, pts) { let on = false; c.beginPath(); for (const p of pts) { const q = proj(p); if (!q) { on = false; continue; } if (on) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); on = true; } c.stroke(); }
+function drawOverlay() {
+  const c = ov; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, cssW, cssH);
+  if (W.flash > 0.01 && view.shake) { c.fillStyle = `rgba(255,220,180,${W.flash * 0.12})`; c.fillRect(0, 0, cssW, cssH); }
+  const com = comAll() || cam.t;
+  // 바닥 격자
+  if (view.grid && W.bodies.size) {
+    const step = niceStep(cam.dist / 4) , n = 8, y = com[1];
+    c.strokeStyle = 'rgba(200,180,160,0.07)'; c.lineWidth = 1;
+    const ox = Math.round(cam.t[0] / step) * step, oz = Math.round(cam.t[2] / step) * step;
+    for (let k = -n; k <= n; k++) { line3(c, [[ox + k * step, y, oz - n * step], [ox + k * step, y, oz + n * step]]); line3(c, [[ox - n * step, y, oz + k * step], [ox + n * step, y, oz + k * step]]); }
+  }
+  // 앞으로 갈 길
+  let pred = null;
+  if (placeDrag && placeDrag.pred) pred = placeDrag.pred;
+  else if (view.pred || (sel != null && aimPreview)) {
+    const now = performance.now();
+    if (!predCache || now - predAt > 400) { predCache = predict(null, 30); predAt = now; }
+    pred = predCache;
+  }
+  if (pred) {
+    c.setLineDash([5, 5]); c.lineWidth = 1.2;
+    for (const p of pred.paths) { const b = W.bodies.get(p.id); c.strokeStyle = (b ? b.col : '#ffc48a') + 'aa'; line3(c, p.pts); }
+    c.setLineDash([]);
+    if (pred.hit) {
+      const q = proj(pred.hit.P);
+      if (q) {
+        c.strokeStyle = '#ff9a4d'; c.lineWidth = 1.5; c.beginPath(); c.arc(q[0], q[1], 9, 0, TAU); c.stroke();
+        c.fillStyle = '#ffd2a8'; c.font = '12px "Malgun Gothic",sans-serif'; c.textAlign = 'left';
+        c.fillText(`충돌 예상 · ${fmtTime(pred.hit.t)} 뒤 · 초속 ${numK(pred.hit.v * VU, 1)} km · ${Math.round(pred.hit.ang)}°`, q[0] + 14, q[1] - 6);
+      }
+    }
+  }
+  // 놓을 자리
+  const pp = placeDrag ? placeDrag.p0 : placeHover;
+  if (placeMode && pp) {
+    const q = proj(pp), R = W.placeR || 1;
+    if (q) {
+      const rp = Math.max(4, R * pxCss / q[2]);
+      c.strokeStyle = 'rgba(255,196,138,0.8)'; c.setLineDash([4, 4]); c.beginPath(); c.arc(q[0], q[1], rp, 0, TAU); c.stroke(); c.setLineDash([]);
+      if (placeDrag && placeDrag.moved) {
+        const q2 = proj(placeDrag.p1); if (q2) { c.strokeStyle = '#ffc48a'; c.lineWidth = 2; c.beginPath(); c.moveTo(q[0], q[1]); c.lineTo(q2[0], q2[1]); c.stroke(); c.lineWidth = 1; c.fillStyle = '#ffe2c8'; c.font = '12px "Malgun Gothic",sans-serif'; c.fillText('초속 ' + numK(V.len(placeDrag.vel) * VU, 1) + ' km', q2[0] + 8, q2[1] + 4); }
+      }
+    }
+  }
+  // 이름, 자전축, 로슈 한계
+  for (const b of W.bodies.values()) {
+    if (!b.P || (b.n || 0) < MINB) continue;
+    const q = proj(b.P); if (!q) continue;
+    const R = b.frozen ? b.rmax : bodyRadius(b), rp = R * pxCss / q[2];
+    const isSel = b.id === sel;
+    if (isSel) { c.strokeStyle = b.col; c.lineWidth = 1.2; c.globalAlpha = 0.8; c.beginPath(); c.arc(q[0], q[1], rp * 1.18 + 6, 0, TAU); c.stroke(); c.globalAlpha = 1; }
+    if ((view.axes || isSel) && b.W && V.len(b.W) > 1e-5) {
+      const ax = V.norm(b.W), p1 = V.add(b.P, V.mul(ax, R * 1.6)), p2 = V.sub(b.P, V.mul(ax, R * 1.6));
+      c.strokeStyle = 'rgba(160,210,255,0.75)'; c.lineWidth = 1.2; line3(c, [p2, p1]);
+      const qn = proj(p1); if (qn) { c.fillStyle = '#a0d2ff'; c.font = '10px Consolas,monospace'; c.fillText('N', qn[0] + 3, qn[1] - 3); }
+    }
+    const showR = (W.roche && W.roche.host === b.id) || (view.roche && b === hostOf());
+    if (showR && b.M > 0.0005) {
+      const rd = W.roche && W.roche.host === b.id ? W.roche.rd : rocheDist(b, ROCK_RHO), rp2 = rd * pxCss / q[2];
+      if (rp2 > 6 && rp2 < 5000) {
+        c.strokeStyle = 'rgba(255,120,110,0.55)'; c.lineWidth = 1.2; c.setLineDash([4, 6]); c.beginPath(); c.arc(q[0], q[1], rp2, 0, TAU); c.stroke(); c.setLineDash([]);
+        c.fillStyle = 'rgba(255,150,140,0.85)'; c.font = '11px "Malgun Gothic",sans-serif'; c.textAlign = 'center';
+        c.fillText('로슈 한계 · ' + numK(Math.round(rd * RE_KM)) + ' km', q[0], q[1] - rp2 - 6); c.textAlign = 'left';
+      }
+    }
+    if (W.ring && W.ring.host === b.id && view.names) {
+      const f = V.norm(V.sub(cam.t, EYE)), rt = V.norm(V.cross(f, [0, 1, 0]));
+      const qr = proj(V.add(b.P, V.mul(rt, W.ring.r)));
+      if (qr) { c.fillStyle = '#ffd9a8'; c.font = '12px "Malgun Gothic",sans-serif'; c.textAlign = 'left'; c.fillText('고리 · 알갱이 ' + numK(W.ring.n) + '개', qr[0] + 8, qr[1] + 16); }
+    }
+    if (view.names && (b.M > 0.0002 || isSel)) {
+      const x = q[0] + Math.min(rp, 300) * 0.72 + 6, y = q[1] - Math.min(rp, 300) * 0.72 - 6;
+      c.strokeStyle = b.col + '88'; c.lineWidth = 1; c.beginPath(); c.moveTo(q[0] + Math.min(rp, 300) * 0.68, q[1] - Math.min(rp, 300) * 0.68); c.lineTo(x, y); c.stroke();
+      c.font = (isSel ? '600 ' : '') + '12px "Malgun Gothic",sans-serif'; c.textAlign = 'left'; c.fillStyle = b.col;
+      c.fillText(b.name, x + 3, y - 2);
+      c.font = '10.5px Consolas,"Malgun Gothic",monospace'; c.fillStyle = 'rgba(220,210,200,0.7)';
+      c.fillText(fmtMassShort(b.M) + (b.frozen ? '' : ' · 움직이는 중'), x + 3, y + 11);
+    }
+  }
+  drawScale();
+}
+let scaleLast = '';
+function drawScale() {
+  const kmPerPx = cam.dist * RE_KM / pxCss, km = niceStep(kmPerPx * 110), px = km / kmPerPx;
+  const t = numK(km) + ' km'; if (t !== scaleLast) { $('scaleT').textContent = t; scaleLast = t; }
+  $('scaleB').style.width = px.toFixed(0) + 'px';
+}
+function updateLegend() {
+  const L = $('legend');
+  if (view.mode === 1) L.innerHTML = ['철', '암석', '물', '얼음'].map((n, k) => `<i style="background:rgb(${MATCOL[k].map(v => v * 255 | 0)})"></i>${n}`).join('');
+  else if (view.mode === 2) L.innerHTML = [[200, '-70°C'], [1200, '930°C'], [2000, '1,700°C'], [3500, '3,200°C'], [6000, '5,700°C']].map(([T, s]) => `<i style="background:rgb(${heatCol(T).map(v => v * 255 | 0)})"></i>${s}`).join('');
+  else if (view.mode === 3) L.innerHTML = W.origins.slice(-6).map(o => `<i style="background:${o.col}"></i>${o.name}`).join('');
+  else L.innerHTML = '';
+}
+
+/* ---- 위 줄 ---- */
+const SPEEDS = [['1초에 1분', 60], ['1초에 5분', 300], ['1초에 20분', 1200], ['1초에 1시간', 3600], ['1초에 3시간', 10800], ['1초에 12시간', 43200], ['1초에 1일', 86400], ['1초에 5일', 432000]];
+let speedIdx = 2;
+function setSpeed(i) { speedIdx = clamp(i, 0, SPEEDS.length - 1); W.speed = SPEEDS[speedIdx][1] / TU_S; $('sSpeed').value = speedIdx; }
+let aimPreview = false;
+function updateHint() {
+  let h = '';
+  if (placeMode) h = placeDrag ? '놓으면 이 방향으로 던집니다. 끈 길이가 길수록 빠릅니다.' : '화면을 누르면 그 자리에 놓입니다. 누른 채 끌면 던집니다. (Esc 취소)';
+  else if (!W.bodies.size) h = "왼쪽에서 행성을 고르고 '우주에 놓기'를 누르세요. 위의 장면 목록에서 실제 충돌 장면도 불러올 수 있습니다.";
+  $('hint').textContent = h;
+}
+function closePops() { $('viewPop').classList.remove('show'); $('bView').classList.remove('on'); }
+function applyViewUI() {
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', +b.dataset.m === view.mode));
+  $('cCut').checked = view.cut; $('cNames').checked = view.names; $('cGrid').checked = view.grid; $('cPred').checked = view.pred; $('cAxes').checked = view.axes; $('cStars').checked = view.stars; $('cShake').checked = view.shake; $('cRoche').checked = view.roche;
+  $('rGlow').value = Math.round(view.glow * 100); $('vGlow').textContent = Math.round(view.glow * 100);
+  $('rSmooth').value = Math.round(view.smooth * 100); $('vSmooth').textContent = Math.round(view.smooth * 100);
+  $('bSound').textContent = muted ? '소리 끔' : '소리 켬';
+  updateLegend();
+}
+function bindUI() {
+  const ss = $('sSpeed'); SPEEDS.forEach(([n], i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; ss.appendChild(o); });
+  ss.onchange = () => { setSpeed(+ss.value); save(); };
+  const sp2 = $('sPreset'); sp2.innerHTML = '<option value="">실제 장면 불러오기…</option>' + PRESETS.map((p, i) => `<option value="${i}">${p.n}</option>`).join('');
+  sp2.onchange = () => { const v = sp2.value; sp2.value = ''; if (v !== '') loadPreset(+v); };
+  const sq = $('sQual'); QUALITY.forEach((q, i) => { if (i > QMAX) return; const o = document.createElement('option'); o.value = i; o.textContent = q.name + ' (지구 하나 ' + numK(q.n) + '알)'; sq.appendChild(o); });
+  sq.value = W.quality; sq.onchange = () => { W.quality = +sq.value; save(); updateStat(); toast('정밀도는 새로 놓는 행성부터 적용됩니다'); };
+  $('bPlay').onclick = () => { W.playing = !W.playing; $('bPlay').textContent = W.playing ? '일시정지' : '재생'; };
+  $('bFit').onclick = () => fitView(false);
+  $('bClear').onclick = () => { if (!W.bodies.size || confirm('모든 행성을 지울까요?')) whenIdle(() => { clearWorld(); selectBody(null); updateHint(); updateStat(); }); };
+  $('bView').onclick = e => { e.stopPropagation(); const p = $('viewPop'), on = !p.classList.contains('show'); p.classList.toggle('show', on); $('bView').classList.toggle('on', on); const r = $('bView').getBoundingClientRect(); p.style.left = Math.min(r.left, window.innerWidth - 280) + 'px'; };
+  $('viewPop').addEventListener('pointerdown', e => e.stopPropagation());
+  document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => { view.mode = +b.dataset.m; applyViewUI(); save(); });
+  const chk = (id, k) => $(id).onchange = () => { view[k] = $(id).checked; save(); applyViewUI(); };
+  chk('cCut', 'cut'); chk('cNames', 'names'); chk('cGrid', 'grid'); chk('cPred', 'pred'); chk('cAxes', 'axes'); chk('cStars', 'stars'); chk('cShake', 'shake'); chk('cRoche', 'roche');
+  $('rGlow').oninput = () => { view.glow = $('rGlow').value / 100; $('vGlow').textContent = $('rGlow').value; save(); };
+  $('rSmooth').oninput = () => { view.smooth = $('rSmooth').value / 100; $('vSmooth').textContent = $('rSmooth').value; save(); };
+  $('bDex').onclick = openDex; $('dexClose').onclick = () => $('dexM').classList.remove('show');
+  $('bSound').onclick = () => { muted = !muted; applyViewUI(); save(); };
+  $('bPanels').onclick = () => document.body.classList.toggle('hidepanels');
+  $('bHelp').onclick = () => $('helpM').classList.add('show'); $('helpClose').onclick = () => $('helpM').classList.remove('show');
+  document.querySelectorAll('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m) m.classList.remove('show'); }));
+  $('rMass').oninput = () => { curMass = vToMass(+$('rMass').value); syncLeft(); };
+  $('rDay').oninput = () => { curDay = vToDay(+$('rDay').value); syncLeft(); };
+  $('bPlace').onclick = () => setPlace(!placeMode);
+  $('iClose').onclick = () => selectBody(null);
+  $('iFollow').onclick = () => { const b = W.bodies.get(sel); if (!b) return; if (cam.mode === 'follow' && cam.follow === b.id) { cam.mode = 'com'; cam.follow = null; } else { cam.mode = 'follow'; cam.follow = b.id; } updateInfo(); };
+  const rename = () => { const b = W.bodies.get(sel); if (!b) return; const n = (prompt('새 이름', b.name) || '').trim(); if (n) { b.name = n.slice(0, 16); const o = W.origins[b.lab]; if (o && b.kind === 'planet') o.name = b.name; updateInfo(); fillTargets(); } };
+  $('iRename').onclick = rename; $('iName').onclick = rename;
+  $('iDel').onclick = () => { const b = W.bodies.get(sel); if (b) whenIdle(() => { if (W.bodies.get(b.id)) removeBody(b); selectBody(null); updateStat(); }); };
+  $('iTarget').onchange = () => { setAimDefault(); predCache = null; };
+  $('aSpeed').oninput = syncAim; $('aAng').oninput = () => { $('aAng').dataset.touched = 1; syncAim(); };
+  document.querySelectorAll('[data-ang]').forEach(b => b.onclick = () => { $('aAng').value = b.dataset.ang; $('aAng').dataset.touched = 1; syncAim(); });
+  $('aGo').onclick = () => whenIdle(() => { const b = W.bodies.get(sel), t = aimTarget(); if (b && t && aimAt(b, t, vToSpd(+$('aSpeed').value), +$('aAng').value)) { toast(b.name + J(b.name, '을', '를') + ' ' + t.name + '에 겨눴습니다'); aimPreview = true; setTimeout(() => aimPreview = false, 6000); } });
+  $('aStop').onclick = () => whenIdle(() => { const b = W.bodies.get(sel), t = aimTarget(); if (b && t) { setBodyVel(b, t.frozen ? t.V : bodyCOM(t).V); toast(b.name + J(b.name, '이', '가') + ' 멈췄습니다. 서로 끌어당겨 천천히 다가갑니다'); predCache = null; } });
+  $('edClose').onclick = closeEditor; $('edCancel').onclick = closeEditor; $('edSave').onclick = saveEditor;
+  $('edDel').onclick = () => { if (!edOrig) return; customTypes = customTypes.filter(t => t !== edOrig); if (curType === edOrig.key) { curType = 'earth'; curMass = 1; curDay = 23.93; } save(); buildTypeGrid(); syncLeft(); closeEditor(); };
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
+    if (e.code === 'Space') { e.preventDefault(); $('bPlay').click(); }
+    else if (e.code === 'Escape') { setPlace(false); closePops(); document.querySelectorAll('.modal').forEach(m => m.classList.remove('show')); }
+    else if (e.code === 'Delete') $('iDel').click();
+    else if (e.code === 'KeyF') $('iFollow').click();
+    else if (e.code === 'KeyH') $('bPanels').click();
+    else if (e.code === 'KeyC') { view.cut = !view.cut; applyViewUI(); }
+  });
+  document.addEventListener('pointerdown', () => closePops());
+}
+
+/* ---- 마우스 · 손가락 ---- */
+const ptrs = new Map(); let gest = null, lastClick = { t: 0, id: null };
+function panBy(dx, dy) {
+  const s = cam.dist * 2 * Math.tan(cam.fov / 2) / cssH;
+  const f = V.norm(V.sub(cam.t, EYE)), r = V.norm(V.cross(f, [0, 1, 0])), u = V.cross(r, f);
+  cam.t = V.add(cam.t, V.add(V.mul(r, -dx * s), V.mul(u, dy * s))); cam.mode = 'free'; cam.follow = null;
+}
+function pickAt(sx, sy) {
+  let best = null, bd = 1e9;
+  for (const b of W.bodies.values()) {
+    if (!b.P || (b.n || 0) < MINB) continue;
+    const q = proj(b.P); if (!q) continue;
+    const R = b.frozen ? b.rmax : bodyRadius(b), lim = Math.max(18, R * pxCss / q[2] * 1.05);
+    const d = Math.hypot(q[0] - sx, q[1] - sy);
+    if (d < lim && d / lim < bd) { bd = d / lim; best = b; }
+  }
+  return best;
+}
+function clickAt(sx, sy) {
+  const b = pickAt(sx, sy), now = performance.now();
+  if (b && lastClick.id === b.id && now - lastClick.t < 420) { cam.mode = 'follow'; cam.follow = b.id; const R = b.frozen ? b.rmax : bodyRadius(b); if (cam.dist > R * 14) cam.goal = R * 6; }
+  lastClick = { t: now, id: b ? b.id : null };
+  selectBody(b ? b.id : null);
+}
+glc.addEventListener('pointerdown', e => {
+  sfx.unlock(); try { glc.setPointerCapture(e.pointerId); } catch (er) { }
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); closePops();
+  if (ptrs.size === 2) {
+    if (placeDrag) { placeDrag = null; W.hold = false; }
+    const [a, b] = [...ptrs.values()]; gest = { kind: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; return;
+  }
+  if (ptrs.size > 2) return;
+  if (placeMode && e.button === 0) { const p = planeHit(e.clientX, e.clientY); placeDrag = { p0: p, p1: p, vel: [0, 0, 0], moved: false, sx: e.clientX, sy: e.clientY, pred: null, pt: 0 }; W.hold = true; updateThrowPred(true); updateHint(); return; }
+  gest = { kind: (e.button === 2 || e.button === 1 || e.shiftKey) ? 'pan' : 'rot', lx: e.clientX, ly: e.clientY, moved: 0 };
+});
+glc.addEventListener('pointermove', e => {
+  if (placeMode && !placeDrag && ptrs.size <= 1) placeHover = planeHit(e.clientX, e.clientY);
+  const p = ptrs.get(e.pointerId); if (!p) return; p.x = e.clientX; p.y = e.clientY;
+  if (gest && gest.kind === 'pinch' && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    cam.dist = clamp(cam.dist * gest.d / Math.max(d, 1), 0.05, 5000); cam.goal = null;
+    if (Math.hypot(cx - gest.cx, cy - gest.cy) > 0.5) panBy(cx - gest.cx, cy - gest.cy);
+    gest.d = d; gest.cx = cx; gest.cy = cy; return;
+  }
+  if (placeDrag) {
+    const q = planeHit(e.clientX, e.clientY); placeDrag.p1 = q;
+    if (Math.hypot(e.clientX - placeDrag.sx, e.clientY - placeDrag.sy) > 8) placeDrag.moved = true;
+    placeDrag.vel = placeDrag.moved ? V.mul(V.sub(q, placeDrag.p0), 1 / THROW_T) : [0, 0, 0];
+    updateThrowPred(false); return;
+  }
+  if (!gest) return;
+  const dx = e.clientX - gest.lx, dy = e.clientY - gest.ly; gest.lx = e.clientX; gest.ly = e.clientY; gest.moved += Math.abs(dx) + Math.abs(dy);
+  if (gest.kind === 'rot') { cam.yaw -= dx * 0.006; cam.pitch = clamp(cam.pitch + dy * 0.006, -1.5, 1.5); }
+  else panBy(dx, dy);
+});
+function ptrUp(e) {
+  const had = ptrs.has(e.pointerId); ptrs.delete(e.pointerId);
+  if (gest && gest.kind === 'pinch') { if (ptrs.size < 2) gest = null; return; }
+  if (placeDrag) { const pd = placeDrag; placeDrag = null; W.hold = false; setPlace(false); doPlace(pd.p0, pd.vel); return; }
+  if (gest && gest.kind === 'rot' && gest.moved < 6 && had) clickAt(e.clientX, e.clientY);
+  gest = null;
+}
+glc.addEventListener('pointerup', ptrUp);
+glc.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); gest = null; if (placeDrag) { placeDrag = null; W.hold = false; } });
+glc.addEventListener('pointerleave', () => { if (!placeDrag) placeHover = null; });
+glc.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist * Math.exp(e.deltaY * 0.0012), 0.05, 5000); cam.goal = null; }, { passive: false });
+glc.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ===================== 돌아가기 ===================== */
+let lastT = performance.now(), uiT = 0, rateAcc = 0, rateT = 0, rateSim = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  try {
+    const rdt = Math.min(0.05, Math.max(0, (now - lastT) / 1000)); lastT = now;
+    if (W.playing && !W.hold && W.bodies.size && !W.building) W.debt = Math.min((W.debt || 0) + W.speed * rdt, W.speed * 0.2);
+    else W.debt = 0;
+    rateT += rdt;
+    physPump();
+    W.shake = Math.max(0, W.shake - rdt * 1.4); W.flash = Math.max(0, W.flash - rdt * 1.6);
+    updateCam(rdt); render();
+    uiT += rdt;
+    if (uiT > 0.25) {
+      uiT = 0;
+      const lag = rateT > 0 ? rateSim / rateT : 0; rateSim = 0; rateT = 0;
+      const want = W.speed, txt = fmtTime(W.S.t);
+      const slow = W.playing && W.bodies.size && lag < want * 0.8;
+      $('tTime').innerHTML = txt + (slow ? `<small>계산이 따라가는 빠르기: 1초에 ${fmtTime(lag) || '1분 미만'}</small>` : '');
+      if (sel != null) updateInfo();
+      if (view.mode === 3) updateLegend();
+    }
+  } catch (e) { showErr(e); }
+}
+window.__dbg = { W, cam, view, loadPreset, sp, hitScene, render, spawnBody, advance, stepOnce, whenIdle, get pumping() { return pumping; }, get pool() { return POOL; }, setPoolMin(n) { POOL_MIN = n; }, setCFL(c) { CFL = c; }, setPoolUse(n) { const P = makePool(); if (P) { P.use = n; P.fixedUse = true; } }, analyze, predict, aimAt, fitView, selectBody, bodyInfo, openDex, openEditor, unlock, dex: () => dex, setSpeed, clearWorld };
+load(); buildTypeGrid(); syncLeft(); bindUI(); setSpeed(speedIdx); applyViewUI(); updateDexBtn(); updateHint(); resize();
+requestAnimationFrame(frame);
+
+</script>
+<script src="../track.js" defer></script>
+</body>
+</html>
