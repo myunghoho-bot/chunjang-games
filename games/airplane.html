@@ -526,6 +526,8 @@ const PLANES=[
   {id:'b747', name:'B747',       cls:'L', eng:4, len:71, hgt:6.4, pax:350, hump:1, mount:'wing'},
   {id:'b737', name:'B737',       cls:'M', eng:2, len:39, hgt:3.8, pax:150, mount:'wing'},
   {id:'b777', name:'B777',       cls:'L', eng:2, len:74, hgt:6.2, pax:300, mount:'wing'},
+  {id:'a345', name:'A340-500',   cls:'L', eng:4, len:68, hgt:5.6, pax:313, mount:'wing', fence:1, ctrGear:1},  // 초장거리형 — 동체 가운데 바퀴 다리
+  {id:'a346', name:'A340-600',   cls:'L', eng:4, len:75, hgt:5.6, pax:380, mount:'wing', fence:1, ctrGear:1},  // -500보다 7m 길다 (한때 세계에서 제일 긴 여객기)
   {id:'a359', name:'A350-900',   cls:'L', eng:2, len:67, hgt:5.9, pax:315, mount:'wing', mask:1, winglet:1},
   {id:'a351', name:'A350-1000',  cls:'L', eng:2, len:74, hgt:5.9, pax:370, mount:'wing', mask:1, winglet:1, bogie6:1},  // -900보다 7m 길고 주바퀴가 6개
   {id:'dc10', name:'DC-10',      cls:'L', eng:3, len:55, hgt:6.0, pax:270, mount:'tri'},
@@ -582,7 +584,7 @@ const PLANES=[
 const AIRLINES=[
   {id:'hj',    name:'HJ항공',       body:'#f6f5f1', tail:'#2F6B4F', stripe:'#2F6B4F', text:'#2F6B4F', all:1, ic:'✈️'},
   {id:'lh',    name:'루프트한자',   body:'#f4f5f7', tail:'#0a1e5e', stripe:'#ffce00', text:'#0a1e5e', ic:'🦢',
-    fleet:['b747','b737','b777','b747f','a380','vfw614','a359']},
+    fleet:['b747','b737','b777','b747f','a380','vfw614','a359','a346']},
   {id:'ke',    name:'대한항공',     body:'#cfe4f0', tail:'#79b6d4', stripe:'#79b6d4', text:'#1c4c6b', ic:'🌀',
     fleet:['b747','b777','b737','dc10','b777f','b747f','a380','a359']},
   {id:'jin',   name:'진에어',       body:'#f6f7f2', tail:'#95c11f', stripe:'#95c11f', text:'#5c7a12', ic:'🦋',
@@ -600,9 +602,9 @@ const AIRLINES=[
   {id:'af',    name:'공군',         body:'#d7ddd6', tail:'#3a4a3f', stripe:'#5f7a5f', text:'#2a3a2f', ic:'🎖️',
     fleet:['e707','il76ml','il76t','c130','c400','c230','atr42r','f14','f22','b2','tu95']},
   {id:'emir',  name:'에미레이트',   body:'#f5f2ea', tail:'#d71921', stripe:'#c8a24a', text:'#d71921', ic:'🌙',
-    fleet:['b747','b777','a300','a330f','a380']},
+    fleet:['b747','b777','a300','a330f','a380','a345']},
   {id:'sia',   name:'싱가포르항공', body:'#f3f0e6', tail:'#0a2a5e', stripe:'#c9a24a', text:'#0a2a5e', ic:'🦁',
-    fleet:['b747','b777','a300','md11','a380','a359']},
+    fleet:['b747','b777','a300','md11','a380','a359','a345']},
   {id:'afr',   name:'에어프랑스',   body:'#f4f6f8', tail:'#00205b', stripe:'#e2001a', text:'#00205b', ic:'🗼',
     fleet:['a300','b777','b737','conni','conc','comet','a380','a359','a351']},
   {id:'klm',   name:'KLM',          body:'#e7f1f8', tail:'#00a1de', stripe:'#ffffff', text:'#0a3d62', ic:'👑',
@@ -1215,6 +1217,16 @@ function drawPlane(c,cx,cy,sc,P,A,o){
     c.closePath(); c.fill();
     c.strokeStyle='rgba(60,80,95,.3)'; c.lineWidth=1; c.stroke();
   }
+  if(P.fence){ // A340: 날개 끝에 위아래로 선 작은 날개(윙팁 펜스)
+    c.fillStyle='#cfd6dc';
+    c.beginPath();
+    c.moveTo(cx-0.2435*L,cy+Hh*0.845);
+    c.lineTo(cx-0.2570*L,cy+Hh*0.851);
+    c.lineTo(cx-0.2545*L,cy+Hh*1.075);
+    c.lineTo(cx-0.2420*L,cy+Hh*1.069);
+    c.closePath(); c.fill();
+    c.strokeStyle='rgba(60,80,95,.3)'; c.lineWidth=1; c.stroke();
+  }
   // 아반티: 코 근처에 붙은 작은 앞날개(카나드) — 그래서 날개가 3개
   if(P.canard){
     c.fillStyle='#dde2e7';
@@ -1470,9 +1482,10 @@ function drawPlane(c,cx,cy,sc,P,A,o){
     c.strokeStyle='#55636e'; c.lineWidth=Math.max(1.5,wr*0.4);
     c.fillStyle='#222b32';
     const gy=cy+Hh/2;
-    const mains=P.bogie6                                   // A350-1000: 무거워서 주바퀴 축이 3줄
+    let mains=P.bogie6                                     // A350-1000: 무거워서 주바퀴 축이 3줄
       ?[[cx-0.14*L,1.15],[cx-0.14*L+wr*2.3,1.15],[cx-0.14*L+wr*4.6,1.15]]
       :[[cx-0.10*L,1.15],[cx-0.10*L+wr*2.4,1.15]];
+    if(P.ctrGear)mains=mains.concat([[cx-0.015*L,1.10],[cx-0.015*L+wr*2.2,1.10]]);  // A340-500/600: 동체 한가운데 바퀴 다리가 하나 더
     [[P.droop?r-0.32*L:r-0.20*L,1]].concat(mains).forEach(w=>{
       c.beginPath(); c.moveTo(w[0],gy-2); c.lineTo(w[0],gy+wr*1.6*w[1]); c.stroke();
       c.beginPath(); c.arc(w[0],gy+wr*1.6*w[1],wr,0,7); c.fill();
@@ -1581,6 +1594,12 @@ const DEX={
   b777:{s:'엔진 2개로 대륙을 건너는 대형기',
     l:'엔진이 2개뿐인데도 300명 넘게 태우고 대양을 횡단한다. 엔진 흡입구 지름이 B737의 동체 굵기와 비슷할 정도로 크다. 종이 도면 없이 처음부터 끝까지 컴퓨터로만 설계한 최초의 여객기이기도 하다.',
     f:'엔진 하나가 정지해도 남은 하나로 몇 시간을 더 비행할 수 있도록 인증받았기 때문에 태평양 횡단이 가능하다.'},
+  a345:{s:'엔진 4개로 가장 멀리 날던 초장거리기',
+    l:'A340 가족 가운데 가장 멀리 나는 형식이다. 동체를 짧게 줄인 대신 그만큼 연료를 더 실어, 한때 세계에서 가장 긴 정기 노선을 중간에 내리지 않고 날았다. 무거운 연료를 싣고도 뜰 수 있도록 동체 한가운데에 바퀴 다리가 하나 더 달려 있다.',
+    f:'싱가포르에서 미국 뉴욕까지 약 18시간을 쉬지 않고 날아간 적이 있다.'},
+  a346:{s:'한때 세계에서 가장 길었던 여객기',
+    l:'A340-500의 동체를 약 7m 늘린 형식으로, 한동안 세계에서 가장 긴 여객기였다. 길어진 무게를 견디려고 -500과 같은 가운데 바퀴 다리를 함께 쓴다. 엔진을 4개 달았지만, 지금은 엔진 2개로도 대양을 건널 수 있게 되면서 연료를 덜 먹는 쌍발기에 자리를 내주었다.',
+    f:'동체가 너무 길어서 이륙할 때 꼬리가 활주로에 닿지 않도록, 꼬리 밑에 감지 장치와 조종석에서 뒤를 보는 카메라를 달았다.'},
   a359:{s:'탄소 섬유로 만든 현대 쌍발 와이드바디',
     l:'동체와 날개의 절반 이상을 금속 대신 탄소 섬유 복합재로 만들어 같은 크기의 옛 기종보다 가볍다. 옆에서 보면 조종석 유리가 검은 띠처럼 뒤로 길게 이어져 있어 멀리서도 바로 알아볼 수 있다. 날개 끝은 꺾이지 않고 위로 부드럽게 휘어 올라간다. -900은 A350 가족의 기본형이다.',
     f:'기내 공기를 다른 기종보다 촘촘하게 유지해서 오래 타도 덜 피곤하도록 만들었다.'},
