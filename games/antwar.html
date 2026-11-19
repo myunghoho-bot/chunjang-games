@@ -294,7 +294,7 @@ const TUNE = {
   wetDepth: 1000,      // 지하수층(젖은 마사토) ≈ 4m
   wrockDepth: 1500,    // 풍화암 ≈ 6m, 바닥 바위 ≈ 11m
   digSand: 0.15, digWet: 0.25, digWrock: 3.4,   // 마사토·젖은 마사토·풍화암 한 칸 파는 시간(초). 마사토는 부슬부슬해서 아주 쉽게 파짐(2026-11-19 아이가 "마사토는 매우 팍 쉬움")
-  packDepth: 75,       // 이보다 깊은 곳(30cm 아래)에서 판 흙은 밖으로 안 나르고 벽에 다져 붙임
+  packDepth: 12,       // 이보다 깊은 곳(5cm 아래)에서 판 흙은 밖으로 안 나르고 벽에 다져 붙임(2026-11-19 "굴을 안판다고": 흙 나르는 왕복이 너무 많았음)
   helpMax: 4, helpBoost: 0.7,   // 한 칸을 같이 거드는 개미 최대 수 / 한 마리가 거들 때 빨라지는 정도
   shaftLen: 250,       // [깊이 파기] 한 번에 표시하는 세로 굴 길이(칸) = 1m
   dayLen: 240,         // 하루 길이(초)
@@ -1527,6 +1527,16 @@ function rebuildHash() {
     hNext[i] = hHead[k]; hHead[k] = i;
   }
 }
+function nearbyMate(a, r, pred) {   // 가까운 우리 개미 중 조건에 맞는 한 마리
+  const x0 = clamp(((a.x - r) / HB) | 0, 0, HWN - 1), x1 = clamp(((a.x + r) / HB) | 0, 0, HWN - 1);
+  const y0 = clamp(((a.y - r) / HB) | 0, 0, HHN - 1), y1 = clamp(((a.y + r) / HB) | 0, 0, HHN - 1);
+  let best = null, bd = r * r;
+  for (let by = y0; by <= y1; by++) for (let bx_ = x0; bx_ <= x1; bx_++) for (let i = hHead[by * HWN + bx_]; i !== -1; i = hNext[i]) {
+    const e = ants[i]; if (!e || e === a || !e.alive || e.c !== a.c || !pred(e)) continue;
+    const dx = e.x - a.x, dy = e.y - a.y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = e; }
+  }
+  return best;
+}
 function nearestEnemy(a, r) {
   let best = null, bd = r * r;
   const x0 = clamp(((a.x - r) / HB) | 0, 0, HWN - 1), x1 = clamp(((a.x + r) / HB) | 0, 0, HWN - 1);
@@ -1578,7 +1588,7 @@ function pickJob(a, col) {
   return null;
 }
 function digTime(t, col) { const m = SPECIES[col.sp].digMul / (col.digMode > 0 && col.vw > 0 ? 1 + col.digMode * Math.log10(1 + col.vw) * 0.25 : 1); return (t === HWOOD ? TUNE.digWood : t === SAND ? TUNE.digSand : t === WETS ? TUNE.digWet : t === WROCK ? TUNE.digWrock : t === LOAM ? TUNE.digLoam : t === CLAY ? TUNE.digClay : t === DIRT ? TUNE.digDirt : t === GRAVEL ? TUNE.digGravel : t === DEEP ? TUNE.digDeep : TUNE.digSoil) * m * (0.85 + Math.random() * 0.3); }
-const HELP = new Map();   // 칸 → 거드는 개미 수
+const HELP = new Map(), DIGC = new Map();   // 칸 → 거드는 개미 수 / 칸 → 지금 그 칸을 파는 개미
 function helpGoal(m) {
   return c => {
     for (const n of [c - 1, c + 1, c - GW, c + GW]) {
@@ -1736,6 +1746,7 @@ function idleJob(a, dt, col) {
 function digJob(a, dt, col) {
   const m = col.id + 1;
   if (a.sub === 'wait') { a.timer -= dt; if (a.timer <= 0) a.sub = 'find'; return; }   // 파는 자리가 날 때까지 기다림
+  if (a.sub === 'approach') { const r = followPath(a, dt); if (r === 'moving') return; a.path = null; a.sub = 'find'; return; }   // 파는 곳 가까이로 다가감
   if (a.sub === 'helpgo' || a.sub === 'help') {   // 거들기
     const c = a.tgt;
     if (typeof c !== 'number' || MARK[c] !== m || !canDig(T[c]) || !RES[c]) { stopHelp(a); a.tgt = null; a.sub = 'find'; a.path = null; return; }
@@ -1746,17 +1757,20 @@ function digJob(a, dt, col) {
     if (col.marks.size === 0 || col.digFailT > 0) { if (a.carryN > 0) { a.sub = 'haul'; a.path = null; } else endJob(a); return; }
     if (pathBudget <= 0 || nodeBudget <= 0) return;
     pathBudget--; goalOut = -1;
-    const p = bfs(cellOf(a), digGoal(m), 30000);
+    const p = bfs(cellOf(a), digGoal(m), a.digRetry ? 2500 : 30000);   // 기다리다 다시 찾을 때는 가까운 곳만(길찾기 몫을 아낌)
     if (!p) {
       if (gameT - (col.digActiveT || -99) < 6 && col.marks.size > 0) {   // 다른 개미가 파는 중 → 자리가 꽉 찬 것뿐: 옆에서 거들거나 잠깐 기다림
-        if (pathBudget > 0 && nodeBudget >= 3000 && gameT >= (a.helpT || 0)) { a.helpT = gameT + 3; pathBudget--; goalOut = -1; const hp = bfs(cellOf(a), helpGoal(m), Math.min(4000, nodeBudget)); if (hp && goalOut >= 0) { a.path = hp; a.pi = 0; a.tgt = goalOut; a.sub = 'helpgo'; return; } }   // 거들 곳 찾기도 예산 안에서, 3초에 한 번
-        a.sub = 'wait'; a.timer = 0.8 + Math.random() * 1.4; return;
+        if (pathBudget > 0 && nodeBudget >= 3000 && gameT >= (a.helpT || 0)) { a.helpT = gameT + 1.5; pathBudget--; goalOut = -1; const hp = bfs(cellOf(a), helpGoal(m), Math.min(400, nodeBudget)); if (hp && goalOut >= 0) { a.path = hp; a.pi = 0; a.tgt = goalOut; a.sub = 'helpgo'; return; }   // 거들 곳 찾기도 예산 안에서, 3초에 한 번
+          let dg = null, k = 0; for (const [c2, d2] of DIGC) { if (d2.alive && d2.c === a.c && d2.sub === 'digging' && d2.tgt === c2) { dg = d2; if (++k > 2 && Math.random() < 0.5) break; } }
+          if (dg && Math.abs(dg.x - a.x) + Math.abs(dg.y - a.y) > 10 * CELL && tryPath(a, cellOf(dg), 20000) > 0) { a.sub = 'approach'; return; }   // 가까이 없으면 파는 곳 쪽으로 걸어감
+        }
+        a.sub = 'wait'; a.digRetry = true; a.timer = 1.2 + Math.random() * 2.5; return;
       }
       col.digFailT = 3;
       if (col.isPlayer && col.marks.size && gameT - (col.failWarnT || -99) > 45 && [...col.marks].some(k => !RES[k])) { col.failWarnT = gameT; const k = col.marks.values().next().value; addLog('칠한 곳이 굴과 떨어져 있어서 일개미가 갈 수 없습니다. 굴에서 이어지게 칠하세요.', (k % GW) * CELL, ((k / GW) | 0) * CELL, 'bad'); }
       if (a.carryN > 0) { a.sub = 'haul'; a.path = null; } else endJob(a); return;
     }
-    a.path = p; a.pi = 0; a.tgt = goalOut; RES[goalOut] = a.id; a.sub = 'go'; col.digActiveT = gameT;
+    a.path = p; a.pi = 0; a.tgt = goalOut; RES[goalOut] = a.id; a.sub = 'go'; col.digActiveT = gameT; a.digRetry = false;
     return;
   }
   if (a.sub === 'go' || a.sub === 'digging') {
@@ -1765,24 +1779,31 @@ function digJob(a, dt, col) {
     if (a.sub === 'go') {
       const r = followPath(a, dt);
       if (r === 'blocked' || r === 'none') { RES[c] = 0; a.tgt = null; a.sub = 'find'; return; }
-      if (r === 'arrived') { a.sub = 'digging'; a.timer = digTime(T[c], col); faceCell(a, c); }
+      if (r === 'arrived') { a.sub = 'digging'; a.timer = digTime(T[c], col); faceCell(a, c); DIGC.set(c, a); }
       return;
     }
     a.timer -= dt * (1 + TUNE.helpBoost * Math.min(TUNE.helpMax, HELP.get(c) || 0));   // 거드는 개미가 많을수록 빨리
     if (inView(a.x, a.y) && Math.random() < dt * 4) { anchor(c); Juice.burst(AX, AY, 2, '#a07a4c', 25, 0.3, 1, 140); }
     if (a.timer > 0) return;
-    RES[c] = 0; col.marks.delete(c); col.digActiveT = gameT; HELP.delete(c);
+    RES[c] = 0; col.marks.delete(c); col.digActiveT = gameT; HELP.delete(c); DIGC.delete(c);
     setCell(c, TUN, m); col.cells.push(c); connectDiag(c, col); if (col.isPlayer) checkCave(c, col);
     if (col.isPlayer && inView(a.x, a.y)) sfx('dig', 0.08);
     if (((c / GW) | 0) - SURF0[c % GW] > TUNE.packDepth) {   // 깊은 곳: 흙을 벽에 다지고 바로 다음 칸
       a.tgt = null; const n2 = adjacentMark(cellOf(a), m);
-      if (n2 >= 0) { a.tgt = n2; RES[n2] = a.id; a.timer = digTime(T[n2], col); faceCell(a, n2); return; }
+      if (n2 >= 0) { a.tgt = n2; RES[n2] = a.id; a.timer = digTime(T[n2], col); faceCell(a, n2); DIGC.set(n2, a); return; }
+      const n3 = adjacentMark(c, m); if (n3 >= 0) { a.tgt = n3; RES[n3] = a.id; a.path = [cellOf(a), c]; a.pi = 0; a.sub = 'go'; return; }   // 방금 판 칸으로 한 걸음 들어가 이어 팜
       a.sub = a.carryN > 0 ? 'haul' : 'find'; a.path = null; return;
     }
     a.carryN++; a.carry = 'dirt'; a.tgt = null;
+    if (a.carryN >= TUNE.loadCells) {   // 흙이 다 찼으면 근처에서 기다리던 개미에게 넘김
+      const r2 = nearbyMate(a, 7 * CELL, b => b.job === 'dig' && (b.sub === 'wait' || b.sub === 'help') && !b.carry);
+      if (r2) { stopHelp(r2); r2.carry = 'dirt'; r2.carryN = a.carryN; r2.sub = 'haul'; r2.path = null; r2.tgt = null; a.carry = null; a.carryN = 0; }
+    }
     if (a.carryN < TUNE.loadCells) {
       const n = adjacentMark(cellOf(a), m);
-      if (n >= 0) { a.tgt = n; RES[n] = a.id; a.timer = digTime(T[n], col); faceCell(a, n); return; }
+      if (n >= 0) { a.tgt = n; RES[n] = a.id; a.timer = digTime(T[n], col); faceCell(a, n); DIGC.set(n, a); return; }
+      const n3 = adjacentMark(c, m); if (n3 >= 0) { a.tgt = n3; RES[n3] = a.id; a.path = [cellOf(a), c]; a.pi = 0; a.sub = 'go'; return; }
+      if (!a.carryN) { a.sub = 'find'; a.path = null; return; }
     }
     a.sub = 'haul'; a.path = null;
     return;
@@ -3810,7 +3831,7 @@ function markShaft(c) {
   if (!n) { addLog(stop ? `${stop}에 막혀서 더 팔 수 없습니다.` : '이미 파인 곳입니다. 세로 굴 끝(바닥)을 누르세요.'); return false; }
   p.everMarked = true; p.t1 = Math.min(p.t1, 0.15); p.digFailT = 0; sfx('click', 0);
   const cm = Math.round(n / 2 * TUNE.cmPerCell);
-  addLog(stop ? `깊이 파기: ${stop}에 막혀 ${cm}cm만 표시했습니다. 옆으로 비켜서 다시 누르세요.` : `깊이 파기: 아래로 ${cm}cm(1m) 세로 굴을 표시했습니다. 30cm보다 깊은 곳의 흙은 벽에 다져 붙여서 빨리 팝니다.`, x0 * CELL, (y0 + 20) * CELL, '');
+  addLog(stop ? `깊이 파기: ${stop}에 막혀 ${cm}cm만 표시했습니다. 옆으로 비켜서 다시 누르세요.` : `깊이 파기: 아래로 ${cm}cm(1m) 세로 굴을 표시했습니다. 5cm보다 깊은 곳의 흙은 벽에 다져 붙여서 빨리 팝니다.`, x0 * CELL, (y0 + 20) * CELL, '');
   return true;
 }
 function paintCell(c) {
