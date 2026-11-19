@@ -1749,7 +1749,7 @@ function digJob(a, dt, col) {
     const p = bfs(cellOf(a), digGoal(m), 30000);
     if (!p) {
       if (gameT - (col.digActiveT || -99) < 6 && col.marks.size > 0) {   // 다른 개미가 파는 중 → 자리가 꽉 찬 것뿐: 옆에서 거들거나 잠깐 기다림
-        if (pathBudget > 0 && nodeBudget > 0) { pathBudget--; goalOut = -1; const hp = bfs(cellOf(a), helpGoal(m), 8000); if (hp && goalOut >= 0) { a.path = hp; a.pi = 0; a.tgt = goalOut; a.sub = 'helpgo'; return; } }
+        if (pathBudget > 0 && nodeBudget >= 3000 && gameT >= (a.helpT || 0)) { a.helpT = gameT + 3; pathBudget--; goalOut = -1; const hp = bfs(cellOf(a), helpGoal(m), Math.min(4000, nodeBudget)); if (hp && goalOut >= 0) { a.path = hp; a.pi = 0; a.tgt = goalOut; a.sub = 'helpgo'; return; } }   // 거들 곳 찾기도 예산 안에서, 3초에 한 번
         a.sub = 'wait'; a.timer = 0.8 + Math.random() * 1.4; return;
       }
       col.digFailT = 3;
@@ -4266,7 +4266,16 @@ addEventListener('pagehide', () => saveGame());
 
 /* ===== 돌리기 ===== */
 let last = performance.now(), uiT = 0, saveT = 0, demoT = 0;
+// 자동 조절: 한 프레임 계산이 오래 걸리면 화면에서 움직이는 개미 수를 줄이고(남는 개미는 굴 안쪽으로), 여유가 생기면 다시 늘림
+let costEma = 0, capT = 0; const CAP_MAX = TUNE.simCap;
+function autoCap(cost, real) {
+  costEma = costEma * 0.95 + cost * 0.05; capT += real; if (capT < 3) return; capT = 0;
+  if (demo || !player) return;
+  if (costEma > 22 && TUNE.simCap > 400) TUNE.simCap -= 100;
+  else if (costEma < 11 && TUNE.simCap < CAP_MAX) TUNE.simCap = Math.min(CAP_MAX, TUNE.simCap + 100);
+}
 function loop(now) {
+  const c0 = performance.now();
   try {
     const real = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
     const dt = Juice.update(real);
@@ -4278,6 +4287,7 @@ function loop(now) {
     draw(now);
     uiT -= real; if (uiT <= 0) { uiT = 0.25; updateUI(); }
     saveT += real; if (saveT > TUNE.autoSaveEvery) { saveT = 0; saveGame(); }
+    autoCap(performance.now() - c0, real);
   } catch (e) { console.error(e); }
   requestAnimationFrame(loop);
 }
