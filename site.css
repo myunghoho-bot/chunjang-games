@@ -125,3 +125,22 @@ a{color:inherit}
 
 footer{border-top:1px solid var(--sauce-3);padding:22px 0 40px;color:var(--noodle-dim);font-size:14.5px}
 footer p{margin:0 0 4px}
+
+/* ── 바로가기 만들기(앱 설치)·오프라인 안내 ── */
+.nav .install{font:400 17px/1 var(--display);background:transparent;color:var(--noodle);border:2px solid var(--sauce-3);
+  border-radius:8px;padding:10px 14px 8px;cursor:pointer;margin-left:6px}
+.nav .install:hover{border-color:var(--danmuji);color:var(--onion)}
+.nav .install:disabled{opacity:.6;cursor:default}
+.nav .install[hidden]{display:none}
+dialog.help{max-width:min(520px,calc(100vw - 32px));border:0;border-radius:14px;padding:20px 22px;background:var(--sauce-2);color:var(--noodle);
+  box-shadow:0 0 0 3px var(--sign)}
+dialog.help::backdrop{background:rgba(10,6,3,.6)}
+dialog.help h3{margin:0 0 10px;font:400 24px/1.2 var(--display);color:var(--onion)}
+dialog.help p{margin:0 0 10px}
+dialog.help b{color:var(--danmuji);font-weight:400;font-family:var(--display)}
+dialog.help .saved{color:var(--cucumber)}
+dialog.help .note{font-size:14.5px;color:var(--noodle-dim)}
+dialog.help form{margin:14px 0 0;text-align:right}
+dialog.help .play{border:0;cursor:pointer}
+.offline{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:#3a2410;border:1px solid var(--sauce-3);color:var(--danmuji);max-width:46em}
+.offline[hidden]{display:none}

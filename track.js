@@ -9,6 +9,9 @@
     'monkey-clicker', 'dot-baseball', 'terraform', 'sapling3d', 'random-life', 'small-station', 'random-system', 'small-business', 'sandcastle', 'ssuksu', 'haiyen', 'stellar', 'dragon', 'cosmos', 'rocket', 'galaxy', 'airplane3d', 'impact', 'antwar', 'firewater'];
   window.CHUNJANG_BITS = BITS;
   if (location.protocol === 'file:') return;
+  // 오프라인 놀이: 어느 페이지로 들어와도 사이트 전체를 기기에 저장해 두는 sw.js를 켠다(2026-11-20)
+  if ('serviceWorker' in navigator && document.currentScript)
+    navigator.serviceWorker.register(new URL('sw.js', document.currentScript.src)).catch(() => {});
   if (navigator.webdriver || /bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)) return;
 
   const API = 'https://abacus.jasoncameron.dev';

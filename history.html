@@ -14,6 +14,10 @@
 <meta name="theme-color" content="#b5241c">
 <link rel="canonical" href="https://myunghoho-bot.github.io/chunjang-games/history.html">
 <link rel="icon" href="bowl.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="춘장게임즈">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
@@ -32,6 +36,7 @@
     <a href="./">게임 고르기</a>
     <a href="history.html" aria-current="page">역사관</a>
     <a href="ranking.html">랭킹</a>
+    <button type="button" class="install" id="install">바로가기 만들기</button>
     <p class="visits" id="visits" hidden></p>
   </nav>
 </header>
@@ -52,6 +57,7 @@
 
 <script src="counter.js"></script>
 <script src="track.js"></script>
+<script src="app.js"></script>
 <script src="games.js"></script>
 <script>
 const tl = document.getElementById('timeline');

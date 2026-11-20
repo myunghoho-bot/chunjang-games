@@ -1,0 +1,23 @@
+{
+  "name": "춘장게임즈",
+  "short_name": "춘장게임즈",
+  "description": "머릿속 상상을 그대로 만든 게임. 한 번 들어오면 인터넷이 없어도 할 수 있어요.",
+  "lang": "ko",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["minimal-ui", "standalone"],
+  "background_color": "#24160d",
+  "theme_color": "#b5241c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "역사관", "url": "history.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "랭킹", "url": "ranking.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
