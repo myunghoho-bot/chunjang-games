@@ -2514,9 +2514,11 @@ const TREE_INFO = {
   oak: ['참나무', '상처 난 줄기에서 꿀처럼 단 수액이 흘러나와 개미·장수풍뎅이·사슴벌레가 모입니다. 줄기 구멍에는 꼬리치레개미가 삽니다. 꼬리치레개미는 화가 나면 배(꼬리)를 하늘로 치켜듭니다.'],
   kaki: ['감나무', '가을에 주황색 감이 열립니다. 잘 익은 감은 아주 달아서 개미들이 좋아합니다.'],
   home: ['우리 집 참나무(높이 3m)', '꼬리치레개미(나무개미)는 참나무 같은 큰 나무의 썩은 구멍이나 껍질 밑에 굴을 만듭니다. 썩은 나무 속은 무르게 되어 개미가 갉아서 방을 넓힐 수 있고, 줄기 상처에서는 단 수액이 흘러나옵니다. 이 나무는 높이 3m, 밑동 굵기 약 13cm인 참나무입니다(다 자란 참나무는 20m가 넘습니다). 잎 한 장이 약 10cm라서 개미 몸길이의 20배가 넘고, 가을에는 도토리가 열립니다.'],
+  pine: ['소나무', '우리나라 숲에 가장 흔한 나무입니다. 잎이 바늘 모양이고 줄기에서 끈끈한 송진이 나옵니다. 불개미는 소나무 숲 땅에 떨어진 솔잎을 모아 큰 개미집 더미를 쌓습니다.'],
   rain: ['열대 나무', '중남미 열대 숲에는 나무가 빽빽하고 가지마다 잎이 무성합니다. 가위개미는 이런 잎을 잘라 굴로 나릅니다. 게임 속 나무는 진짜(30~50m)보다 아주 작게 줄였습니다.'],
   mul: ['뽕나무', '오디라는 작은 열매가 열립니다. 익으면 검붉은 색이 되고, 누에는 뽕잎을 먹고 자랍니다.'],
 };
+function forestGame() { return !!(cols[0] && cols[0].isPlayer); }   // 사람이 하는 판은 모두 숲(처음 화면 구경 판만 예전처럼)
 function leafGame() { return !!(cols[0] && cols[0].isPlayer && SPECIES[cols[0].sp] && SPECIES[cols[0].sp].leaf); }
 function computeTrees() {
   const r3 = mulberry32((seed ^ 0x9e3779b9) >>> 0), kinds = ['oak', 'kaki', 'mul'], start = Math.floor(r3() * 3);
@@ -2529,13 +2531,14 @@ function computeTrees() {
     for (let b = 0; b < 3; b++) br.push({ y: base - Math.round(h * (0.48 + b * 0.18)), dir: (b + i) % 2 ? 1 : -1, len: Math.round(5 + r3() * 5) });
     TREES.push({ id: i, kind, tx, w, base, h, br, cells: [], slots: [], walk: [], hole: -1, antT: 3 });
   }
-  if (leafGame()) {   // 2026-11-20 "숲이면 나뭇가지가 많고 나무도 많게": 열대 숲
-    const r6 = mulberry32((seed ^ 0x51ed270b) >>> 0), fk = ['rain', 'rain', 'rain', 'oak', 'kaki', 'mul'];
+  if (forestGame()) {   // 2026-11-20 "숲이면 나뭇가지가 많고 나무도 많게" → 2026-11-21 "다 숲으로"
+    const r6 = mulberry32((seed ^ 0x51ed270b) >>> 0), fk = leafGame() ? ['rain', 'rain', 'rain', 'oak', 'kaki', 'mul'] : ['oak', 'oak', 'pine', 'pine', 'kaki', 'mul'];
+    const hcol = cols.find(c => c.isPlayer && c.homeTree);
     TREES = [];
     let x = 6 + Math.floor(r6() * 8);
     while (x < GW - 10) {
       const kind = fk[Math.floor(r6() * fk.length)], w = 3 + Math.floor(r6() * 4), hr = r6(), nb = 4 + Math.floor(r6() * 4);
-      if (SITES.some(sx => x + w >= sx - 12 && x <= sx + 14)) { x += 5; continue; }   // 개미굴 입구 둘레는 비움
+      if (SITES.some(sx => x + w >= sx - 12 && x <= sx + 14) || (hcol && x + w >= hcol.ex - 40 && x <= hcol.ex + 40)) { x += 5; continue; }   // 개미굴 입구·집 참나무 둘레는 비움
       const base = SURF0[x], h = Math.min(base - 3, Math.round(18 + hr * hr * 55));
       const br = [];
       for (let b = 0; b < nb; b++) {
@@ -2584,7 +2587,7 @@ function plantTrees(safe) {
     else if (tr.kind === 'oak') {
       const y = tr.base - Math.round(tr.h * 0.35); tr.slots.push({ ci: y * GW + tr.tx - 1, kind: 'sap', t: 0 }, { ci: (y - 4) * GW + tr.tx + tr.w, kind: 'sap', t: 10 });
       tr.hole = (tr.base - Math.round(tr.h * 0.6)) * GW + tr.tx + 1;
-    } else if (tr.kind !== 'rain') {   // 열대 나무는 열매 없음
+    } else if (tr.kind !== 'rain' && tr.kind !== 'pine') {   // 열대 나무·소나무는 열매 없음
       for (const b of tr.br) for (const k of tr.kind === 'mul' ? [0.35, 0.65, 0.95] : [0.5, 0.95]) {
         const i = Math.max(1, Math.round(b.len * k)), x = b.dir > 0 ? tr.tx + tr.w - 1 + i : tr.tx - i, y = b.y - Math.floor(i / 3) + 1;
         tr.slots.push({ ci: y * GW + x, kind: tr.kind === 'mul' ? 'odi' : 'kaki', t: Math.random() * 30 });
@@ -3268,7 +3271,7 @@ function cloudSprite(rnd) {
   return c;
 }
 function genDecor(rnd) {
-  const dTop = leafGame() ? 116 : 44;
+  const dTop = forestGame() ? 116 : 44;
   decorY0 = (TUNE.sky - dTop) * CELL;
   decorCv = mk(PXW, (dTop + 8) * CELL); const g = decorCv.getContext('2d'); g.translate(0, -decorY0);
   const G1 = ramp(104, .38, .34, 5, .08, 12), G2 = ramp(82, .42, .40, 5, .08, 12);
@@ -3308,7 +3311,7 @@ function genDecor(rnd) {
   for (let x = 0; x < PXW; x += 2 + Math.floor(rnd() * 5)) { if (nearEnt(x)) continue; tufts.push({ x, h: 2 + Math.floor(rnd() * 4), c: G2[2 + Math.floor(rnd() * 2)], l: rnd() < 0.5 ? -1 : 1 }); }
   for (const tr of TREES) {   // 나뭇잎(개미 뒤쪽 배경)
     if (tr.dead) continue;
-    const LR = tr.kind === 'rain' ? ramp(128, .42, .27, 5, .07, 12) : tr.kind === 'oak' ? ramp(118, .36, .30, 5, .07, 12) : tr.kind === 'kaki' ? ramp(96, .40, .36, 5, .07, 12) : ramp(108, .38, .33, 5, .07, 12);
+    const LR = tr.kind === 'pine' ? ramp(150, .30, .23, 5, .06, 12) : tr.kind === 'rain' ? ramp(128, .42, .27, 5, .07, 12) : tr.kind === 'oak' ? ramp(118, .36, .30, 5, .07, 12) : tr.kind === 'kaki' ? ramp(96, .40, .36, 5, .07, 12) : ramp(108, .38, .33, 5, .07, 12);
     const blob = (x, y, r) => { for (let i = 0; i < 6; i++) shadeDisc(g, Math.round(x + (rnd() - 0.5) * r * 1.4), Math.round(y + (rnd() - 0.5) * r * 0.9), Math.round(r * (0.5 + rnd() * 0.4)), Math.round(r * (0.4 + rnd() * 0.3)), LR); };
     const topY = (tr.base - tr.h) * CELL, mid = (tr.tx + tr.w / 2) * CELL;
     if (tr.home) continue;   // 집 나무 잎은 drawHomeLeaves가 한 장씩 그림
@@ -3333,7 +3336,7 @@ function resize() {
   bx.imageSmoothingEnabled = false; ctx.imageSmoothingEnabled = false;
   clampCam();
 }
-function viewSkyRows() { return player && player.homeTree ? TUNE.sky : leafGame() ? 110 : 26; }   // 땅 위로 몇 칸까지 볼 수 있나
+function viewSkyRows() { return player && player.homeTree ? TUNE.sky : forestGame() ? 110 : 26; }   // 땅 위로 몇 칸까지 볼 수 있나
 function clampCam() {
   camX = BW >= PXW ? (PXW - BW) / 2 : clamp(camX, 0, PXW - BW);
   const minY = demo || !player ? SKYADD * CELL : (TUNE.sky - viewSkyRows()) * CELL;
@@ -3840,7 +3843,7 @@ function drawDepth() {
   g.font = '9px Galmuri11, sans-serif'; g.textBaseline = 'middle';
   const step = H < 300 ? 2 : 1;
   for (let m = 1; m <= 11; m++) { const y = Math.round(Y(sx + m * 250)); g.fillStyle = '#a49a8c'; g.fillRect(2 + bw, y, 3, 1); if (m % step === 0 || m === 11) g.fillText(m + 'm', 4 + bw + 2, y); }
-  if (!player.homeTree && leafGame()) for (let cm = 10; cm <= 40; cm += 10) { const y = Math.round(Y(sx - cm * 2.5)); g.fillStyle = '#a49a8c'; g.fillRect(2 + bw, y, 3, 1); g.fillText('+' + cm + 'cm', 4 + bw + 2, y); }
+  if (!player.homeTree && forestGame()) for (let cm = 10; cm <= 40; cm += 10) { const y = Math.round(Y(sx - cm * 2.5)); g.fillStyle = '#a49a8c'; g.fillRect(2 + bw, y, 3, 1); g.fillText('+' + cm + 'cm', 4 + bw + 2, y); }
   if (player.homeTree) for (let m = 1; m <= 3; m++) { const y = Math.round(Y(sx - m * 250)); g.fillStyle = '#a49a8c'; g.fillRect(2 + bw, y, 3, 1); g.fillText('+' + m + 'm', 4 + bw + 2, y); }
   g.fillStyle = '#93c45f'; g.fillRect(0, Math.round(Y(sx)), bw + 5, 2);
   if (gameT - deepT > 2) { deepT = gameT; let mx = 0; for (const c of player.cells) { const d = ((c / GW) | 0) - SURF0[c % GW]; if (d > mx) mx = d; } deepMax = mx; }
@@ -4218,7 +4221,7 @@ function saveGame() {
   if (demo || !player || !player.alive) return;
   try {
     const d = {
-      v: 3, gw: GW, gh: GH, sky: TUNE.sky, vVer: 2, caveVer: CAVE_VER, treeVer: 3, soilVer: 2, mudFree: [...mudFree], seed, t: gameT, foodT, victory: victoryShown, cam: [Math.round(camX), Math.round(camY)],
+      v: 3, gw: GW, gh: GH, sky: TUNE.sky, vVer: 2, caveVer: CAVE_VER, treeVer: 4, soilVer: 2, mudFree: [...mudFree], seed, t: gameT, foodT, victory: victoryShown, cam: [Math.round(camX), Math.round(camY)],
       T: rle(T), ROOM: rle(ROOM), OWN: rle(OWN), MARK: rle(MARK),
       cols: cols.map(c => ({ sp: c.sp, name: c.name, isPlayer: c.isPlayer, alive: c.alive, food: c.food, eggQueue: c.eggQueue, autoLay: c.autoLay, digShare: c.digShare, raidT: c.raidT, raidN: c.raidN, planI: c.planI, pending: c.pending, expandT: c.expandT, aiCap: c.aiCap, kills: c.kills, lost: c.lost, gathered: c.gathered, homeTree: !!c.homeTree, mulch: Math.round((c.mulch || 0) * 10) / 10, firstLeaf: !!c.firstLeaf, digMode: c.digMode || 0, vw: c.vw || 0, vs: c.vs || 0, vacc: c.vacc || 0, conqBy: c.conqBy, everMarked: c.everMarked, everAttacked: c.everAttacked, mound: c.mound, stolen: c.stolen, firstSoldier: !!c.firstSoldier, firstAphid: !!c.firstAphid, firstTrain: !!c.firstTrain, gen: c.gen || 1, lineage: c.lineage || null, lineNext: c.lineNext || 2, mutSeen: c.mutSeen || null, autoNest: !!c.autoNest, autoK: c.autoK || 0, seenPrey: !!c.seenPrey, aph: c.aphids ? [...c.aphids].filter(([k, v]) => v.arrived).map(([k]) => k) : [] })),
       ants: ants.filter(a => a.alive && a.job !== 'flee').map(a => [a.c, a.type[0], Math.round(a.x), Math.round(a.y), Math.round(a.hp), Math.round(a.born), a.lv || 0, Math.round(a.train || 0), (a.mut || []).join('|'), a.pname || '', a.lid || 0, Math.round(a.hurt || 0)]),
@@ -4274,7 +4277,7 @@ function loadGame(d) {
   if (deeper) loadNote = (loadNote ? loadNote + ' ' : '') + '땅이 11m까지 깊어졌습니다. 1.5m 아래 마사토, 4m 아래 지하수층(큰 물주머니), 6m 아래 풍화암이 있습니다. 왼쪽 깊이 막대를 누르면 그 깊이로 갑니다.';
   rebuildMud();
   if ((d.soilVer || 1) < 2) { for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) { const i = y * GW + x, t = T[i]; if (t === LOAM || t === SOIL || t === CLAY || t === GRAVEL || t === DEEP) T[i] = layerType(x, y); } loadNote = (loadNote ? loadNote + ' ' : '') + '땅이 진짜 비율로 바뀌었습니다. 맨 위 약 20cm는 부드러운 겉흙입니다.'; }
-  if (d.treeVer && d.treeVer < 3) { for (let i = 0; i < NCELL; i++) if (T[i] === WOOD || T[i] === HWOOD) T[i] = AIR; }   // 나무를 새(더 굵은) 모양으로
+  if (d.treeVer && d.treeVer < 4) { for (let i = 0; i < NCELL; i++) if (T[i] === WOOD || T[i] === HWOOD) T[i] = AIR; }   // 나무를 새(더 굵은) 모양으로
   computeTrees(); plantTrees(!d.treeVer);
   if (player && player.homeTree) ensureHomePassage(player);
   if (!d.treeVer) loadNote = (loadNote ? loadNote + ' ' : '') + '땅 위에 참나무·감나무·뽕나무가 자랐습니다. 꿀(수액)과 열매가 열리고, 참나무에는 나무개미가 삽니다.';
