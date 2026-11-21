@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>바둑 · 오목</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{height:100%;background:#16181a;color:#e9e5dc;font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#app{display:flex;width:100vw;height:100vh;height:100dvh}
+#boardWrap{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;background:radial-gradient(ellipse at 50% 42%,#2b2723 0%,#1c1c1d 55%,#141516 100%)}
+#cv{display:block;border-radius:4px;box-shadow:0 22px 48px rgba(0,0,0,.6),0 4px 10px rgba(0,0,0,.4);touch-action:none;cursor:pointer}
+#side{width:312px;flex:none;background:#1e2124;border-left:1px solid #2e3236;overflow-y:auto;padding:18px 16px 18px;display:flex;flex-direction:column;gap:13px}
+.brand{display:flex;align-items:baseline;gap:8px;padding-bottom:4px;border-bottom:1px solid #2e3236}
+.brand .t{font-family:"Batang","바탕","BatangChe","Nanum Myeongjo","Noto Serif KR",serif;font-size:25px;letter-spacing:3px;color:#efe6d3;padding-bottom:8px}
+.brand .sub{font-size:12px;color:#8c877d}
+.field{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:12px;color:#99948a;letter-spacing:.5px}
+.seg{display:flex;background:#15171a;border:1px solid #32363a;border-radius:8px;padding:3px;gap:3px}
+.seg button{flex:1;background:transparent;border:0;color:#bab5aa;font:inherit;font-size:14px;padding:8px 2px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.seg button.on{background:#c8a15a;color:#1a1611;font-weight:700}
+.seg button:hover:not(.on){background:#292d31}
+.note{font-size:12px;color:#8f8a80;line-height:1.55}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:38px;height:34px;border-radius:7px;border:1px solid #363b40;background:#2a2e32;color:#e2ddd2;font:inherit;font-size:18px;cursor:pointer}
+.stepper button:hover{background:#33383d}
+#hcVal{min-width:70px;text-align:center;font-size:15px}
+button.primary{background:#c8a15a;color:#1a1611;border:0;border-radius:8px;padding:12px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s,transform .1s}
+button.primary:hover{background:#d6b16c}
+button.primary:active{transform:translateY(1px)}
+button.ghost{background:transparent;border:1px solid #3a3f44;color:#d8d3c8;border-radius:8px;padding:10px;font:inherit;font-size:14px;cursor:pointer}
+button.ghost:hover{background:#262a2e}
+.rec{font-size:12.5px;color:#a5a095;border-top:1px solid #2e3236;padding-top:10px;line-height:1.75}
+.rec .rh{color:#8c877d;font-size:12px;margin-bottom:2px}
+.rec .row{display:flex;justify-content:space-between;gap:8px}
+.rec .row span:last-child{color:#d9d3c6;font-variant-numeric:tabular-nums}
+.info{font-size:12.5px;color:#a5a095}
+.player{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;background:#191b1e;border:1px solid #2b2f33;transition:border-color .2s,background .2s}
+.player.on{border-color:#c8a15a;background:#26231d}
+.stone{width:26px;height:26px;border-radius:50%;flex:none;box-shadow:1px 2px 3px rgba(0,0,0,.55)}
+.stone.b{background:radial-gradient(circle at 34% 30%,#7a7a7e 0,#2c2c2f 28%,#0b0b0c 70%,#050506 100%)}
+.stone.w{background:radial-gradient(circle at 34% 30%,#fff 0,#efede7 55%,#bbb5a8 100%)}
+.pn{flex:1;display:flex;flex-direction:column;gap:1px}
+.pn b{font-size:15px;font-weight:700}
+.who{font-size:12px;color:#99948a}
+.pc{font-size:13px;color:#cfc9bd;font-variant-numeric:tabular-nums}
+.status{font-size:13.5px;line-height:1.55;color:#ded9ce;background:#191b1e;border-radius:8px;padding:10px 12px;min-height:46px;border:1px solid #2b2f33}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btns button{background:#2a2e32;border:1px solid #363b40;color:#e2ddd2;border-radius:7px;padding:9px 4px;font:inherit;font-size:13.5px;cursor:pointer;transition:background .12s,border-color .12s}
+.btns button:hover:not(:disabled){background:#33383d}
+.btns button:disabled{opacity:.38;cursor:default}
+.btns button.tog.on{border-color:#c8a15a;color:#ebd29c}
+.btns button.warn{border-color:#c65a45;color:#f2b6a8;background:#3a2622}
+.box{background:#191b1e;border:1px solid #2b2f33;border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.box .h{font-size:12px;color:#99948a}
+.res{font-size:21px;font-weight:700;color:#efd9a5;letter-spacing:.5px}
+.res2{font-size:13px;color:#cfc9bd;margin-top:-4px}
+table.sc{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.sc th,table.sc td{padding:4px 6px;text-align:right;border-bottom:1px solid #2b2f33}
+table.sc th:first-child,table.sc td:first-child{text-align:left;color:#99948a;font-weight:400}
+table.sc tr:last-child td{border-bottom:0;font-weight:700;color:#efe6d3}
+table.sc th{color:#cfc9bd;font-weight:700}
+.row2{display:flex;gap:6px}
+.row2 button{flex:1}
+.nav{display:flex;align-items:center;gap:4px}
+.nav button{flex:1;background:#2a2e32;border:1px solid #363b40;color:#e2ddd2;border-radius:7px;padding:7px 0;font:inherit;font-size:13px;cursor:pointer}
+.nav button:hover{background:#33383d}
+.nav span{flex:1.6;text-align:center;font-size:12.5px;color:#cfc9bd;font-variant-numeric:tabular-nums}
+.moves{font-size:12px;color:#a5a095;display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;max-height:156px;overflow-y:auto;border-top:1px solid #2e3236;padding-top:8px;font-variant-numeric:tabular-nums}
+.moves div{white-space:nowrap}
+.moves .k{color:#6f6b63;margin-right:3px}
+.moves .last{color:#ebd29c}
+#toast{position:absolute;top:14px;left:50%;transform:translate(-50%,-8px);background:rgba(20,22,24,.94);border:1px solid #3a3f44;color:#eee;padding:7px 15px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap;z-index:5}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (orientation:portrait){
+  #app{flex-direction:column}
+  #boardWrap{flex:none;height:min(100vw,62vh)}
+  #side{width:auto;flex:1;border-left:0;border-top:1px solid #2e3236;padding:12px 14px}
+  .brand{display:none}
+}
+@media (orientation:landscape) and (max-height:540px){
+  #side{width:272px;padding:10px 10px;gap:8px}
+  .brand{display:none}
+  .player{padding:6px 10px}
+  .status{min-height:0;padding:7px 10px;font-size:12.5px}
+  .btns button{padding:7px 4px;font-size:12.5px}
+  .seg button{padding:6px 2px;font-size:13px}
+  .moves{max-height:90px}
+}
+</style>
+<script src="../mobile.js"></script>
+</head>
+<body>
+<div id="app">
+  <main id="boardWrap"><canvas id="cv"></canvas><div id="toast"></div></main>
+  <aside id="side">
+    <div class="brand"><span class="t">바둑 · 오목</span><span class="sub">19줄 판</span></div>
+
+    <section id="setupPane">
+      <div class="field" style="margin-bottom:12px"><div class="lab">종목</div>
+        <div class="seg" data-k="kind"><button data-v="go">바둑</button><button data-v="omok">오목</button></div></div>
+      <div class="field" style="margin-bottom:12px"><div class="lab">상대</div>
+        <div class="seg" data-k="vs"><button data-v="cpu">컴퓨터</button><button data-v="pvp">두 사람</button></div></div>
+      <div class="field cpuOnly" style="margin-bottom:12px"><div class="lab">컴퓨터 실력</div>
+        <div class="seg" data-k="level"><button data-v="0">초급</button><button data-v="1">중급</button><button data-v="2">고급</button></div></div>
+      <div class="field cpuOnly" style="margin-bottom:12px"><div class="lab">내 돌</div>
+        <div class="seg" data-k="color"><button data-v="black">흑 (먼저)</button><button data-v="white">백</button><button data-v="random">무작위</button></div></div>
+      <div class="field goOnly" style="margin-bottom:12px"><div class="lab">치석 (접바둑)</div>
+        <div class="stepper"><button id="hcMinus" aria-label="치석 줄이기">−</button><span id="hcVal">없음</span><button id="hcPlus" aria-label="치석 늘리기">+</button></div>
+        <div class="note" id="komiNote"></div></div>
+      <div class="field omokOnly" style="margin-bottom:12px"><div class="lab">오목 규칙</div>
+        <div class="seg" data-k="rule"><button data-v="free">자유</button><button data-v="no33">쌍삼 금지</button><button data-v="renju">렌주</button></div>
+        <div class="note" id="ruleNote"></div></div>
+      <div class="field" style="gap:8px">
+        <button class="primary" id="startBtn">대국 시작</button>
+        <button class="ghost" id="resumeBtn" hidden>진행 중인 대국으로 돌아가기</button>
+      </div>
+      <div class="rec" id="recBox" style="margin-top:14px"></div>
+    </section>
+
+    <section id="playPane" hidden style="display:flex;flex-direction:column;gap:10px">
+      <div class="info" id="gameInfo"></div>
+      <div class="player" id="pB"><span class="stone b"></span><div class="pn"><b>흑</b><span class="who"></span></div><div class="pc"></div></div>
+      <div class="player" id="pW"><span class="stone w"></span><div class="pn"><b>백</b><span class="who"></span></div><div class="pc"></div></div>
+      <div class="status" id="status"></div>
+
+      <div class="box" id="scoreBox" hidden>
+        <div class="h">계가</div>
+        <table class="sc" id="scoreTable"></table>
+        <div class="row2"><button class="primary" id="scoreOkBtn" style="padding:9px;font-size:14px">계가 확정</button><button class="ghost" id="scoreBackBtn" style="padding:9px">대국 계속</button></div>
+      </div>
+
+      <div class="box" id="resultBox" hidden>
+        <div class="h">대국 결과</div>
+        <div class="res" id="resText"></div>
+        <div class="res2" id="resSub"></div>
+        <table class="sc" id="resTable"></table>
+        <div class="h" style="margin-top:2px">수순 다시 보기</div>
+        <div class="nav"><button id="rvFirst">처음</button><button id="rvPrev">이전</button><span id="rvLabel"></span><button id="rvNext">다음</button><button id="rvLast">끝</button></div>
+        <div class="row2"><button class="primary" id="againBtn" style="padding:9px;font-size:14px">같은 설정으로 다시</button></div>
+      </div>
+
+      <div class="btns" id="playBtns">
+        <button id="undoBtn">무르기</button>
+        <button id="passBtn">한 수 쉼</button>
+        <button id="estBtn" class="tog">형세 판단</button>
+        <button id="resignBtn">기권</button>
+        <button id="numBtn" class="tog">수순 번호</button>
+        <button id="forbBtn" class="tog">금수 표시</button>
+        <button id="sndBtn" class="tog">소리</button>
+        <button id="newBtn">새 대국</button>
+      </div>
+      <div class="moves" id="moveList"></div>
+    </section>
+  </aside>
+</div>
+
+<script>
+'use strict';
+/* ===== 조절값: 숫자를 바꾸려면 여기만 고치면 됨 ===== */
+const TUNE = {
+  komi: 6.5,              // 덤(한국 규칙, 백에게)
+  handicapKomi: 0.5,      // 접바둑일 때 덤
+  aiDelayMin: 350,        // 컴퓨터가 두기 전 기다리는 시간(ms)
+  aiDelayMax: 850,
+  stoneSize: 0.955,       // 돌 지름(칸 비율)
+  stoneJitter: 0.035,     // 돌이 자리에서 살짝 비뚤어지는 정도(칸 비율)
+  dropMs: 120,            // 돌 놓는 움직임 시간(ms)
+  captureFadeMs: 280,     // 따낸 돌이 사라지는 시간(ms)
+  playouts: 140,          // 형세 판단·계가 때 끝까지 둬 보는 횟수
+  deadThreshold: 0.3,     // 이보다 상대 쪽으로 기울면 죽은 돌로 봄
+  goPassGain: 1.0,        // 컴퓨터가 한 수 쉬는 기준(얻는 값이 이보다 작으면)
+  goNoise: [9, 2.6, 0.7], // 실력별 바둑 수 흔들림(초급·중급·고급)
+  goMcFrom: 40,           // 이 수부터 컴퓨터가 끝까지 둬 보며 판단
+  goMcPlayouts: [30, 50, 80], // 실력별 끝까지 둬 보는 횟수
+  goSettled: 0.85,        // 이보다 확실한 자리는 이미 정해진 집으로 봄
+  goInflLate: 0.7,        // 30수 뒤 세력 점수 비중
+  goLocal: 2.0,           // 상대가 방금 둔 곳 가까이 받는 점수
+  omokNoise: [0.45, 0.08],// 실력별 오목 실수 확률(초급·중급)
+  omokVcfDepth: 12,       // 고급 오목: 연속 4로 이기는 길을 찾는 깊이
+  omokVctDepth: 4,        // 고급 오목: 4·3으로 몰아붙여 이기는 길을 찾는 깊이
+  vcfNodes: 4000,         // 연속 4 찾기 최대 계산량
+  volume: 0.55            // 소리 크기(0~1)
+};
+
+/* ===== 기본 ===== */
+const N = 19, NN = N*N, EMPTY = 0, BLACK = 1, WHITE = 2;
+const COLS = 'ABCDEFGHJKLMNOPQRST';
+const MARGIN = 1.18;
+const LV = ['초급','중급','고급'];
+const RULE_NAME = {free:'자유 규칙', no33:'쌍삼 금지', renju:'렌주 규칙'};
+const $ = s => document.querySelector(s);
+const cn = c => c===BLACK ? '흑' : '백';
+const NB = [], DG = [];
+for (let i=0;i<NN;i++){
+  const x=i%N, y=(i/N)|0, a=[], d=[];
+  if(x>0)a.push(i-1); if(x<N-1)a.push(i+1); if(y>0)a.push(i-N); if(y<N-1)a.push(i+N);
+  if(x>0&&y>0)d.push(i-N-1); if(x<N-1&&y>0)d.push(i-N+1); if(x>0&&y<N-1)d.push(i+N-1); if(x<N-1&&y<N-1)d.push(i+N+1);
+  NB.push(a); DG.push(d);
+}
+const inB = (x,y) => x>=0 && y>=0 && x<N && y<N;
+const coord = p => p<0 ? '쉼' : COLS[p%N] + (N - ((p/N)|0));
+const fmt = v => (Math.round(v*10)/10).toString();
+
+/* ===== 저장 ===== */
+const SAVE_KEY = 'badukomok-v1';
+function loadStore(){
+  try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if(s && s.v===1) return s; }catch(e){}
+  return {v:1, game:null, rec:{}, opt:{sound:true, nums:false, forb:true}, setup:null};
+}
+let store = loadStore();
+store.opt = Object.assign({sound:true, nums:false, forb:true}, store.opt||{});
+function saveStore(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(store)); }catch(e){} }
+let setup = Object.assign({kind:'go', vs:'cpu', level:1, color:'black', handicap:0, rule:'free'}, store.setup||{});
+
+/* ===================================================================
+   바둑 규칙
+   =================================================================== */
+const markS = new Int32Array(NN), markL = new Int32Array(NN); let mS=0, mL=0;
+function group(b,p){
+  const c=b[p]; mS++; mL++;
+  const st=[p]; markS[p]=mS; const stones=[], libs=[];
+  while(st.length){
+    const q=st.pop(); stones.push(q);
+    for(const r of NB[q]){
+      const v=b[r];
+      if(v===EMPTY){ if(markL[r]!==mL){ markL[r]=mL; libs.push(r); } }
+      else if(v===c && markS[r]!==mS){ markS[r]=mS; st.push(r); }
+    }
+  }
+  return {stones, libs, c};
+}
+// b를 직접 바꿈. 성공하면 {ok:true, captured, newKo}
+function goPlay(b,p,c,ko){
+  if(b[p]!==EMPTY) return {ok:false, reason:'occupied'};
+  if(p===ko) return {ok:false, reason:'ko'};
+  b[p]=c; const o=3-c, captured=[];
+  for(const r of NB[p]){
+    if(b[r]===o){ const g=group(b,r); if(g.libs.length===0){ for(const s of g.stones){ b[s]=EMPTY; captured.push(s); } } }
+  }
+  const my=group(b,p);
+  if(my.libs.length===0){ b[p]=EMPTY; return {ok:false, reason:'suicide'}; }
+  let newKo=-1;
+  if(captured.length===1 && my.stones.length===1 && my.libs.length===1) newKo=captured[0];
+  return {ok:true, captured, newKo};
+}
+function isOwnEye(b,p,c){
+  const nb=NB[p];
+  for(let i=0;i<nb.length;i++) if(b[nb[i]]!==c) return false;
+  let bad=0; const dg=DG[p];
+  for(let i=0;i<dg.length;i++) if(b[dg[i]]===3-c) bad++;
+  return nb.length<4 ? bad===0 : bad<=1;
+}
+function handicapPoints(n){
+  const P=(x,y)=>y*N+x;
+  const UR=P(15,3), LL=P(3,15), LR=P(15,15), UL=P(3,3), C=P(9,9), L=P(3,9), R=P(15,9), T=P(9,3), B=P(9,15);
+  const base=[UR,LL,LR,UL];
+  switch(n){
+    case 2: return [UR,LL]; case 3: return [UR,LL,LR]; case 4: return base;
+    case 5: return [...base,C]; case 6: return [...base,L,R]; case 7: return [...base,L,R,C];
+    case 8: return [...base,L,R,T,B]; case 9: return [...base,L,R,T,B,C];
+  }
+  return [];
+}
+
+/* ----- 축(사다리) 읽기 ----- */
+let ladN=0;
+function ladderCapturable(b,pt,att){ ladN=0; return ladCap(b,pt,att,0); }
+function escapeAfterAtari(b,pt,att){ ladN=0; return defEsc(b,pt,att,0); }
+function ladCap(b,pt,att,depth){            // 공격자 차례, pt 무리를 잡을 수 있나
+  if(++ladN>700 || depth>70) return false;
+  if(b[pt]===EMPTY) return true;
+  const g=group(b,pt), L=g.libs.length;
+  if(L===1) return true; if(L>2) return false;
+  const libs=g.libs.slice();
+  for(const a of libs){
+    const bb=b.slice(); const r=goPlay(bb,a,att,-1); if(!r.ok) continue;
+    if(bb[pt]===EMPTY) return true;
+    const g2=group(bb,pt); if(g2.libs.length!==1) continue;
+    if(!defEsc(bb,pt,att,depth+1)) return true;
+  }
+  return false;
+}
+function defEsc(b,pt,att,depth){             // 수비자 차례(단수 상태), 살아 나가나
+  if(++ladN>700 || depth>70) return true;
+  if(b[pt]===EMPTY) return false;
+  const d=3-att, g=group(b,pt);
+  if(g.libs.length>=2) return true;
+  const tried=new Set(), stones=g.stones.slice(), lib0=g.libs[0];
+  for(const s of stones) for(const r of NB[s]){
+    if(b[r]!==att) continue;
+    const ag=group(b,r); if(ag.libs.length!==1) continue;
+    const L=ag.libs[0]; if(tried.has(L)) continue; tried.add(L);
+    const bb=b.slice(); const res=goPlay(bb,L,d,-1);
+    if(res.ok){ const g2=group(bb,pt); if(g2.libs.length>=3) return true; if(g2.libs.length===2 && !ladCap(bb,pt,att,depth+1)) return true; }
+  }
+  const bb=b.slice(); const res=goPlay(bb,lib0,d,-1); if(!res.ok) return false;
+  const g2=group(bb,pt); if(g2.libs.length>=3) return true; if(g2.libs.length<=1) return false;
+  return !ladCap(bb,pt,att,depth+1);
+}
+
+/* ----- 세력 ----- */
+const K_INF=[0,18,9,4,1.5], OWN_K=20, OFFS=[];
+for(let dy=-4;dy<=4;dy++) for(let dx=-4;dx<=4;dx++){ const d=Math.abs(dx)+Math.abs(dy); if(d>=1&&d<=4) OFFS.push([dx,dy,d]); }
+function influence(b){
+  const f=new Float32Array(NN);
+  for(let p=0;p<NN;p++){
+    const v=b[p]; if(!v) continue; const s=v===BLACK?1:-1, x=p%N, y=(p/N)|0;
+    f[p]+=s*40;
+    for(const o of OFFS){ const i=x+o[0], j=y+o[1]; if(i<0||j<0||i>=N||j>=N) continue; f[j*N+i]+=s*K_INF[o[2]]; }
+  }
+  return f;
+}
+function inflGain(b,f,p,sgn){
+  const x=p%N, y=(p/N)|0; let g=0;
+  for(const o of OFFS){
+    const i=x+o[0], j=y+o[1]; if(i<0||j<0||i>=N||j>=N) continue; const q=j*N+i; if(b[q]) continue;
+    g += (Math.tanh((f[q]+sgn*K_INF[o[2]])/OWN_K) - Math.tanh(f[q]/OWN_K))*sgn;
+  }
+  const self=Math.tanh(f[p]/OWN_K)*sgn; if(self>0) g-=self;
+  return g;
+}
+
+/* ----- 바둑 컴퓨터 ----- */
+const LINE_EARLY=[-9,-4,3,3.4,1.4,0.5,0];
+function cornerBonus(b,x,y){
+  const cx = x<=6 ? 0 : x>=N-7 ? 1 : -1, cy = y<=6 ? 0 : y>=N-7 ? 1 : -1;
+  if(cx<0||cy<0) return 0;
+  const x0=cx?N-7:0, y0=cy?N-7:0;
+  for(let j=y0;j<y0+7;j++) for(let i=x0;i<x0+7;i++) if(b[j*N+i]) return 0;
+  const lx=Math.min(x,N-1-x), ly=Math.min(y,N-1-y);
+  const k=Math.min(lx,ly)*10+Math.max(lx,ly);
+  return ({33:6, 23:6.2, 22:3.5, 24:4, 34:4})[k]||0;
+}
+// 모양: 붙이기·젖히기·한 칸 뛰기는 좋게, 빈삼각·외톨이 돌은 나쁘게
+function shapeScore(b,p,c,mv){
+  const o=3-c, x=p%N, y=(p/N)|0;
+  let adjOwn=0, adjOpp=0, diagOwn=0, s=0;
+  for(const q of NB[p]){ if(b[q]===c) adjOwn++; else if(b[q]===o) adjOpp++; }
+  for(const q of DG[p]) if(b[q]===c) diagOwn++;
+  let jump=false;
+  for(const [dx,dy] of [[2,0],[-2,0],[0,2],[0,-2],[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]){
+    const i=x+dx, j=y+dy; if(!inB(i,j) || b[j*N+i]!==c) continue;
+    if(Math.abs(dx)===2&&dy===0 && b[y*N+x+dx/2]!==EMPTY) continue;
+    if(Math.abs(dy)===2&&dx===0 && b[(y+dy/2)*N+x]!==EMPTY) continue;
+    jump=true; break;
+  }
+  let near=false;
+  for(let dy=-2;dy<=2&&!near;dy++) for(let dx=-2;dx<=2;dx++){ const i=x+dx, j=y+dy; if(inB(i,j) && b[j*N+i]){ near=true; break; } }
+  if(adjOpp) s += 1.2 + ((adjOwn||diagOwn) ? 1.2 : 0);
+  if(!adjOwn && !adjOpp && (diagOwn || jump)) s += 1.0;
+  if(!near) s -= mv>=60 ? 2.5 : 1.2;
+  // 빈삼각
+  for(const [sx,sy] of [[0,0],[-1,0],[0,-1],[-1,-1]]){
+    const cells=[]; for(const [ax,ay] of [[0,0],[1,0],[0,1],[1,1]]){ const i=x+sx+ax, j=y+sy+ay; if(!inB(i,j)){ cells.length=0; break; } cells.push(j*N+i); }
+    if(cells.length!==4) continue;
+    let own=0, emp=0; for(const q of cells){ if(q===p) continue; if(b[q]===c) own++; else if(b[q]===EMPTY) emp++; }
+    if(own===2 && emp===1) s -= 2;
+  }
+  return s;
+}
+function goAI(G){
+  const b=G.board, c=G.toMove, o=3-c, lvl=G.level, mv=G.moves.length;
+  const sgn=c===BLACK?1:-1, f=influence(b);
+  const saveVal=new Float32Array(NN), seen=new Uint8Array(NN);
+  for(let p=0;p<NN;p++){
+    if(b[p]===c && !seen[p]){ const g=group(b,p); for(const s of g.stones) seen[s]=1; if(g.libs.length===1) saveVal[g.libs[0]]+=g.stones.length; }
+  }
+  const lastOpp = G.moves.length ? G.moves[G.moves.length-1] : -1;
+  const oppPassed = lastOpp===-1 && G.moves.length>0;
+  // 중반부터: 끝까지 둬 보고 이미 정해진 자리와 아직 다툼이 있는 자리를 가림
+  let own=null; const wE=Math.min(1,Math.max(0,(mv-TUNE.goMcFrom)/90));
+  if(mv>=TUNE.goMcFrom) own=mcOwnership(b,c,G.ko,TUNE.goMcPlayouts[lvl]);
+  const bb=new Int8Array(NN);
+  let best=-1e9, bestP=-1, bestBase=-1e9;
+  for(let p=0;p<NN;p++){
+    if(b[p]!==EMPTY || p===G.ko) continue;
+    if(isOwnEye(b,p,c)) continue;
+    bb.set(b);
+    const r=goPlay(bb,p,c,G.ko); if(!r.ok) continue;
+    const capN=r.captured.length;
+    const my=group(bb,p), L=my.libs.length, sz=my.stones.length;
+    let tact=0;
+    if(capN) tact += 10 + capN*8;
+    if(saveVal[p]>0){
+      if(L>=3) tact += 12 + 10*saveVal[p];
+      else if(L===2){ if(lvl===0 || !ladderCapturable(bb,p,o)) tact += 4 + 6*saveVal[p]; else tact -= 2; }
+    }
+    if(L===1 && capN===0) tact -= 20 + 12*sz;
+    else if(L===1 && sz>1) tact -= 6*sz;
+    else if(L===2 && lvl>=1 && sz>=2 && capN===0 && ladderCapturable(bb,p,o)) tact -= 6*sz;
+    const done=[];
+    for(const q of NB[p]){
+      if(bb[q]!==o) continue;
+      const og=group(bb,q); const key=Math.min(...og.stones); if(done.includes(key)) continue; done.push(key);
+      let lib=0; for(const l of og.libs) lib+=Math.tanh(f[l]/OWN_K)*(o===BLACK?1:-1);
+      const contested = (og.libs.length && lib/og.libs.length < -0.72) ? 0.2 : 1;
+      if(og.libs.length===1){
+        let v=4+3*og.stones.length;
+        if(lvl>=1 && !escapeAfterAtari(bb,q,c)) v += 8*og.stones.length;
+        tact += v*contested;
+      } else if(og.libs.length===2 && lvl>=2 && og.stones.length>=2 && ladderCapturable(bb,q,c)) tact += 4*og.stones.length*contested;
+    }
+    let s = tact + inflGain(b,f,p,sgn)*(mv<30 ? 1 : TUNE.goInflLate);
+    if(mv>=16) s += shapeScore(b,p,c,mv);
+    if(own){
+      const oc=own[p]*sgn;
+      if(tact<=0 && (oc>TUNE.goSettled || oc<-TUNE.goSettled)) continue;
+      let u=1-Math.abs(own[p]); for(const q of NB[p]) if(!b[q]) u+=0.35*(1-Math.abs(own[q]));
+      s += wE*u*3;
+    }
+    const x=p%N, y=(p/N)|0, line=Math.min(x,y,N-1-x,N-1-y);
+    if(mv<50) s += LINE_EARLY[Math.min(line,6)];
+    else if(line===0) s -= 1.5;
+    if(mv<40){
+      s += cornerBonus(b,x,y);
+      if(mv<16 && capN===0 && saveVal[p]===0){ for(const q of NB[p]) if(b[q]===o){ s-=2; break; } }
+    }
+    if(lvl>=1 && lastOpp>=0){ const lx=lastOpp%N, ly=(lastOpp/N)|0, dd=Math.abs(lx-x)+Math.abs(ly-y); if(dd<=2) s+=TUNE.goLocal; else if(dd<=3) s+=TUNE.goLocal*0.4; }
+    const base=s;
+    s += Math.random()*TUNE.goNoise[lvl];
+    if(base>bestBase) bestBase=base;
+    if(s>best){ best=s; bestP=p; }
+  }
+  if(bestP<0) return -1;
+  if(mv>60 && bestBase<TUNE.goPassGain) return -1;
+  if(oppPassed && mv>30 && bestBase<TUNE.goPassGain*2.5) return -1;
+  return bestP;
+}
+
+/* ----- 끝까지 둬 보기(형세·계가) ----- */
+const pm=new Int32Array(NN); let pmId=0;
+function hasLibFast(b,p){
+  const c=b[p]; pmId++; const st=[p]; pm[p]=pmId;
+  while(st.length){ const q=st.pop(); const nb=NB[q];
+    for(let i=0;i<nb.length;i++){ const r=nb[i], v=b[r]; if(v===EMPTY) return true; if(v===c && pm[r]!==pmId){ pm[r]=pmId; st.push(r); } } }
+  return false;
+}
+function removeGroupTo(b,p,list){
+  const c=b[p]; const st=[p]; b[p]=EMPTY; list.push(p); let n=1;
+  while(st.length){ const q=st.pop(); for(const r of NB[q]) if(b[r]===c){ b[r]=EMPTY; list.push(r); st.push(r); n++; } }
+  return n;
+}
+function playout(b0,toMove,ko,own){
+  const b=b0.slice(), empt=[];
+  for(let p=0;p<NN;p++) if(!b[p]) empt.push(p);
+  let c=toMove, passes=0, moves=0;
+  const maxM=NN*3;
+  while(passes<2 && moves<maxM){
+    let n=empt.length, played=-1;
+    while(n>0){
+      const k=(Math.random()*n)|0, p=empt[k];
+      if(b[p]===EMPTY && p!==ko && !isOwnEye(b,p,c)){
+        b[p]=c; const o=3-c; let cap=0, capPt=-1;
+        const nb=NB[p];
+        for(let i=0;i<nb.length;i++){ const r=nb[i]; if(b[r]===o && !hasLibFast(b,r)){ cap+=removeGroupTo(b,r,empt); capPt=r; } }
+        if(cap===0 && !hasLibFast(b,p)){ b[p]=EMPTY; }
+        else {
+          played=p;
+          empt[k]=empt[empt.length-1]; empt.pop();
+          ko=-1;
+          if(cap===1){ let single=true, libs=0; for(const r of nb){ if(b[r]===c) single=false; else if(b[r]===EMPTY) libs++; } if(single && libs===1) ko=capPt; }
+          break;
+        }
+      }
+      const t=empt[k]; empt[k]=empt[n-1]; empt[n-1]=t; n--;
+    }
+    if(played<0){ passes++; ko=-1; } else passes=0;
+    c=3-c; moves++;
+  }
+  for(let p=0;p<NN;p++){
+    const v=b[p];
+    if(v===BLACK) own[p]+=1; else if(v===WHITE) own[p]-=1;
+    else { let bl=0, wh=0; for(const r of NB[p]){ if(b[r]===BLACK) bl++; else if(b[r]===WHITE) wh++; } if(bl&&!wh) own[p]+=1; else if(wh&&!bl) own[p]-=1; }
+  }
+}
+function mcOwnership(b,toMove,ko,n){
+  const own=new Float32Array(NN);
+  for(let i=0;i<n;i++) playout(b,toMove,ko,own);
+  for(let p=0;p<NN;p++) own[p]/=n;
+  return own;
+}
+function deadFromOwn(b,own){
+  const dead=new Set(), seen=new Uint8Array(NN);
+  for(let p=0;p<NN;p++){
+    if(!b[p] || seen[p]) continue;
+    const g=group(b,p); let s=0; for(const q of g.stones){ seen[q]=1; s+=own[q]; } s/=g.stones.length;
+    if((b[p]===BLACK && s < -TUNE.deadThreshold) || (b[p]===WHITE && s > TUNE.deadThreshold)) for(const q of g.stones) dead.add(q);
+  }
+  return dead;
+}
+function territory(b,dead){
+  const bb=b.slice(); let dB=0, dW=0;
+  for(const p of dead){ if(bb[p]===BLACK) dB++; else if(bb[p]===WHITE) dW++; bb[p]=EMPTY; }
+  const owner=new Int8Array(NN), vis=new Uint8Array(NN); let tb=0, tw=0;
+  for(let p=0;p<NN;p++){
+    if(bb[p] || vis[p]) continue;
+    const region=[], st=[p]; let bord=0; vis[p]=1;
+    while(st.length){ const q=st.pop(); region.push(q); for(const r of NB[q]){ const v=bb[r]; if(v===EMPTY){ if(!vis[r]){ vis[r]=1; st.push(r); } } else bord|=v; } }
+    if(bord===BLACK){ for(const q of region) owner[q]=BLACK; tb+=region.length; }
+    else if(bord===WHITE){ for(const q of region) owner[q]=WHITE; tw+=region.length; }
+  }
+  return {owner, tb, tw, dB, dW};
+}
+function calcScore(){
+  const t=territory(G.board, G.dead||new Set());
+  const pB=G.captures[BLACK]+t.dW, pW=G.captures[WHITE]+t.dB;
+  return {owner:t.owner, tb:t.tb, tw:t.tw, pB, pW, komi:G.komi, sB:t.tb+pB, sW:t.tw+pW+G.komi};
+}
+
+/* ===================================================================
+   오목 규칙
+   =================================================================== */
+const DIRS=[[1,0],[0,1],[1,1],[1,-1]];
+function lineCount(b,x,y,dx,dy,c){
+  let n=1, i=x+dx, j=y+dy;
+  while(i>=0&&j>=0&&i<N&&j<N&&b[j*N+i]===c){ n++; i+=dx; j+=dy; }
+  i=x-dx; j=y-dy;
+  while(i>=0&&j>=0&&i<N&&j<N&&b[j*N+i]===c){ n++; i-=dx; j-=dy; }
+  return n;
+}
+const exactFor = (c,rule) => rule==='renju' && c===BLACK;
+function isFiveAt(b,p,c,ex){
+  const x=p%N, y=(p/N)|0;
+  for(const [dx,dy] of DIRS){ const n=lineCount(b,x,y,dx,dy,c); if(ex ? n===5 : n>=5) return true; }
+  return false;
+}
+function maxLine(b,p,c){ const x=p%N, y=(p/N)|0; let m=0; for(const [dx,dy] of DIRS) m=Math.max(m,lineCount(b,x,y,dx,dy,c)); return m; }
+// p에 c가 놓여 있을 때 한 방향의 4: 0 없음, 1 넉, 2 한 줄에 넉 둘, 3 열린 4
+function foursInDir(b,p,c,d,ex){
+  const x=p%N, y=(p/N)|0, dx=DIRS[d][0], dy=DIRS[d][1], ks=[];
+  for(let k=-4;k<=4;k++){
+    if(!k) continue; const i=x+dx*k, j=y+dy*k; if(!inB(i,j) || b[j*N+i]!==EMPTY) continue;
+    let ok=true; const st=k>0?1:-1;
+    for(let t=st;t!==k;t+=st){ if(b[(y+dy*t)*N+(x+dx*t)]!==c){ ok=false; break; } }
+    if(!ok) continue;
+    b[j*N+i]=c; const n=lineCount(b,i,j,dx,dy,c); b[j*N+i]=EMPTY;
+    if(ex ? n===5 : n>=5) ks.push(k);
+  }
+  if(!ks.length) return 0;
+  if(ks.length===2 && Math.abs(ks[0]-ks[1])===5) return 3;
+  return Math.min(2,ks.length);
+}
+function straightFour(b,x,y,dx,dy,c,ex,mustP){
+  let s=0; while(inB(x-dx*(s+1),y-dy*(s+1)) && b[(y-dy*(s+1))*N+x-dx*(s+1)]===c) s++;
+  let e=0; while(inB(x+dx*(e+1),y+dy*(e+1)) && b[(y+dy*(e+1))*N+x+dx*(e+1)]===c) e++;
+  if(s+e+1!==4) return false;
+  const mx=mustP%N, my=(mustP/N)|0; const t = dx ? (mx-x)/dx : (my-y)/dy;
+  if(t<-s || t>e) return false;
+  const ai=x-dx*(s+1), aj=y-dy*(s+1), bi=x+dx*(e+1), bj=y+dy*(e+1);
+  if(!inB(ai,aj) || !inB(bi,bj)) return false;
+  if(b[aj*N+ai]!==EMPTY || b[bj*N+bi]!==EMPTY) return false;
+  if(ex){
+    if(inB(ai-dx,aj-dy) && b[(aj-dy)*N+ai-dx]===c) return false;
+    if(inB(bi+dx,bj+dy) && b[(bj+dy)*N+bi+dx]===c) return false;
+  }
+  return true;
+}
+function openThreeInDir(b,p,c,d,rule,depth){
+  const x=p%N, y=(p/N)|0, dx=DIRS[d][0], dy=DIRS[d][1], ex=exactFor(c,rule);
+  for(let k=-4;k<=4;k++){
+    if(!k) continue; const i=x+dx*k, j=y+dy*k; if(!inB(i,j)) continue; const q=j*N+i; if(b[q]!==EMPTY) continue;
+    b[q]=c; const sf=straightFour(b,i,j,dx,dy,c,ex,p); b[q]=EMPTY;
+    if(sf){ if(depth<0 || depth>=2 || !forbidType(b,q,c,rule,depth+1)) return true; }
+  }
+  return false;
+}
+// 금수 종류: '' | '33' | '44' | '6'
+function forbidType(b,p,c,rule,depth){
+  depth=depth||0;
+  if(rule==='free' || b[p]!==EMPTY) return '';
+  if(rule==='renju' && c!==BLACK) return '';
+  const ex = rule==='renju';
+  b[p]=c; let res='';
+  if(isFiveAt(b,p,c,ex)) res='';
+  else if(ex && maxLine(b,p,c)>=6) res='6';
+  else {
+    let fours=0, threes=0;
+    for(let d=0;d<4;d++){
+      const f=foursInDir(b,p,c,d,ex);
+      if(f){ fours += (f===3?1:f); continue; }
+      if(openThreeInDir(b,p,c,d,rule,depth)) threes++;
+    }
+    if(ex && fours>=2) res='44';
+    else if(threes>=2) res='33';
+  }
+  b[p]=EMPTY; return res;
+}
+function winLineOf(b,p,c,ex){
+  const x=p%N, y=(p/N)|0;
+  for(const [dx,dy] of DIRS){
+    const n=lineCount(b,x,y,dx,dy,c);
+    if(ex ? n===5 : n>=5){
+      let s=0; while(inB(x-dx*(s+1),y-dy*(s+1)) && b[(y-dy*(s+1))*N+x-dx*(s+1)]===c) s++;
+      let e=0; while(inB(x+dx*(e+1),y+dy*(e+1)) && b[(y+dy*(e+1))*N+x+dx*(e+1)]===c) e++;
+      return [(y-dy*s)*N+(x-dx*s), (y+dy*e)*N+(x+dx*e)];
+    }
+  }
+  return null;
+}
+
+/* ----- 오목 컴퓨터 ----- */
+const WS=[0,1,5,28,90,0];
+function windowScore(b,x,y,dx,dy,c){
+  let s=0;
+  for(let st=-4;st<=0;st++){
+    let cnt=0, ok=true;
+    for(let t=st;t<st+5;t++){ const i=x+dx*t, j=y+dy*t; if(!inB(i,j)){ ok=false; break; } const v=b[j*N+i]; if(v===c) cnt++; else if(v!==EMPTY){ ok=false; break; } }
+    if(ok) s+=WS[cnt];
+  }
+  return s;
+}
+function analyze(b,p,c,rule){
+  const ex=exactFor(c,rule); b[p]=c;
+  const x=p%N, y=(p/N)|0;
+  let five=false, openFour=0, fours=0, threes=0, win=0;
+  for(let d=0;d<4;d++){
+    const dx=DIRS[d][0], dy=DIRS[d][1];
+    const n=lineCount(b,x,y,dx,dy,c); if(ex ? n===5 : n>=5) five=true;
+    const f=foursInDir(b,p,c,d,ex);
+    if(f===3){ openFour++; fours++; } else if(f) fours+=f;
+    else if(openThreeInDir(b,p,c,d,rule,-1)) threes++;
+    win+=windowScore(b,x,y,dx,dy,c);
+  }
+  b[p]=EMPTY;
+  return {five, openFour, fours, threes, win};
+}
+function omokScore(a){
+  if(a.five) return 1e9;
+  if(a.openFour || a.fours>=2) return 1e7;
+  if(a.fours && a.threes) return 5e6;
+  if(a.threes>=2) return 1e6;
+  let s=a.win; if(a.fours) s+=4000; if(a.threes) s+=3000;
+  return s;
+}
+function omokCandidates(b){
+  const near=new Uint8Array(NN); let any=false;
+  for(let p=0;p<NN;p++){
+    if(!b[p]) continue; any=true; const x=p%N, y=(p/N)|0;
+    for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){ const i=x+dx, j=y+dy; if(inB(i,j)) near[j*N+i]=1; }
+  }
+  if(!any) return [(N>>1)*N+(N>>1)];
+  const list=[]; for(let p=0;p<NN;p++) if(near[p] && !b[p]) list.push(p);
+  return list;
+}
+function nearOwn(b,c){
+  const near=new Uint8Array(NN);
+  for(let p=0;p<NN;p++){
+    if(b[p]!==c) continue; const x=p%N, y=(p/N)|0;
+    for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){ const i=x+dx, j=y+dy; if(inB(i,j)) near[j*N+i]=1; }
+  }
+  const list=[]; for(let p=0;p<NN;p++) if(near[p] && !b[p]) list.push(p);
+  return list;
+}
+function maybeFour(b,p,c){
+  const x=p%N, y=(p/N)|0;
+  for(const [dx,dy] of DIRS){
+    let cnt=0;
+    for(const sg of [1,-1]) for(let k=1;k<=4;k++){ const i=x+dx*k*sg, j=y+dy*k*sg; if(!inB(i,j)) break; const v=b[j*N+i]; if(v===c) cnt++; else if(v!==EMPTY) break; }
+    if(cnt>=3) return true;
+  }
+  return false;
+}
+function fourPoints(b,p,c,ex){
+  const pts=[];
+  for(let d=0;d<4;d++){
+    const x=p%N, y=(p/N)|0, dx=DIRS[d][0], dy=DIRS[d][1];
+    for(let k=-4;k<=4;k++){
+      if(!k) continue; const i=x+dx*k, j=y+dy*k; if(!inB(i,j)) continue; const q=j*N+i; if(b[q]) continue;
+      let ok=true; const st=k>0?1:-1; for(let t=st;t!==k;t+=st){ if(b[(y+dy*t)*N+(x+dx*t)]!==c){ ok=false; break; } }
+      if(!ok) continue;
+      b[q]=c; const n=lineCount(b,i,j,dx,dy,c); b[q]=EMPTY;
+      if((ex ? n===5 : n>=5) && !pts.includes(q)) pts.push(q);
+    }
+  }
+  return pts;
+}
+let vcfN=0;
+function vcf(b,c,rule,depth,deadline){
+  if(depth<=0 || ++vcfN>TUNE.vcfNodes || performance.now()>deadline) return -1;
+  const o=3-c, ex=exactFor(c,rule), exo=exactFor(o,rule);
+  for(const p of nearOwn(b,c)){
+    if(!maybeFour(b,p,c)) continue;
+    b[p]=c;
+    if(isFiveAt(b,p,c,ex)){ b[p]=EMPTY; return p; }
+    const fp=fourPoints(b,p,c,ex);
+    b[p]=EMPTY;
+    if(!fp.length) continue;
+    if(forbidType(b,p,c,rule)) continue;
+    b[p]=c;
+    let res=-1;
+    if(fp.length>=2) res=p;
+    else {
+      const q=fp[0];
+      if(forbidType(b,q,o,rule)) res=p;
+      else {
+        b[q]=o;
+        if(!isFiveAt(b,q,o,exo) && fourPoints(b,q,o,exo).length===0){
+          if(vcf(b,c,rule,depth-1,deadline)>=0) res=p;
+        }
+        b[q]=EMPTY;
+      }
+    }
+    b[p]=EMPTY;
+    if(res>=0) return res;
+  }
+  return -1;
+}
+// 3·4로 몰아붙여서 상대가 어떻게 막아도 이기는 수 찾기(두 수 앞)
+function fiveThreatOf(b,c,rule){
+  const ex=exactFor(c,rule);
+  for(const p of nearOwn(b,c)){ if(!maybeFour(b,p,c)) continue; b[p]=c; const f=isFiveAt(b,p,c,ex); b[p]=EMPTY; if(f) return p; }
+  return -1;
+}
+function hasWinningMove(b,c,rule){
+  let best=0;
+  for(const p of nearOwn(b,c)){
+    if(forbidType(b,p,c,rule)) continue;
+    const a=omokScore(analyze(b,p,c,rule));
+    if(a>best){ best=a; if(a>=1e9) return true; }
+  }
+  if(best<1e6) return false;
+  return fiveThreatOf(b,3-c,rule)<0;
+}
+// 막아야 할 자리: 4면 완성 자리, 열린 3이면 그 줄에서 3을 끊는 자리 + 상대가 4로 되받는 자리
+function defensesFor(b,t,c,rule){
+  const o=3-c, ex=exactFor(c,rule);
+  const fp=fourPoints(b,t,c,ex);
+  if(fp.length) return fp;
+  const res=new Set(), x=t%N, y=(t/N)|0;
+  for(let d=0;d<4;d++){
+    if(!openThreeInDir(b,t,c,d,rule,-1)) continue;
+    const dx=DIRS[d][0], dy=DIRS[d][1];
+    for(let k=-5;k<=5;k++){
+      const i=x+dx*k, j=y+dy*k; if(!inB(i,j)) continue; const q=j*N+i; if(b[q]) continue;
+      b[q]=o; const still=openThreeInDir(b,t,c,d,rule,-1); b[q]=EMPTY;
+      if(!still) res.add(q);
+    }
+  }
+  const exo=exactFor(o,rule);
+  for(const q of nearOwn(b,o)){
+    if(res.has(q) || !maybeFour(b,q,o)) continue;
+    b[q]=o; const f=fourPoints(b,q,o,exo).length>0; b[q]=EMPTY;
+    if(f) res.add(q);
+  }
+  return [...res];
+}
+function maybeThree(b,p,c){
+  const x=p%N, y=(p/N)|0;
+  for(const [dx,dy] of DIRS){
+    let cnt=0;
+    for(const sg of [1,-1]) for(let k=1;k<=4;k++){ const i=x+dx*k*sg, j=y+dy*k*sg; if(!inB(i,j)) break; const v=b[j*N+i]; if(v===c) cnt++; else if(v!==EMPTY) break; }
+    if(cnt>=2) return true;
+  }
+  return false;
+}
+// 4와 열린 3으로 계속 몰아붙여 이기는 길(c 차례). 찾으면 첫 수, 못 찾으면 -1
+let vctN=0, vctLimit=0;
+function vct(b,c,rule,depth,deadline){
+  if(depth<=0 || ++vctN>vctLimit || performance.now()>deadline) return -1;
+  const o=3-c, exo=exactFor(o,rule);
+  if(fiveThreatOf(b,o,rule)>=0) return -1;
+  const T=[];
+  for(const p of nearOwn(b,c)){
+    if(!maybeThree(b,p,c)) continue;
+    const inf=analyze(b,p,c,rule);
+    if(!(inf.five||inf.fours||inf.threes)) continue;
+    if(forbidType(b,p,c,rule)) continue;
+    if(inf.five || inf.openFour || inf.fours>=2) return p;
+    T.push({p, s:omokScore(inf)});
+  }
+  T.sort((u,v)=>v.s-u.s);
+  for(const t of T.slice(0,7)){
+    b[t.p]=c;
+    const D=defensesFor(b,t.p,c,rule);
+    let all=D.length>0;
+    for(const q of D){
+      if(forbidType(b,q,o,rule)) continue;
+      b[q]=o;
+      const ok = !isFiveAt(b,q,o,exo) && vct(b,c,rule,depth-1,deadline)>=0;
+      b[q]=EMPTY;
+      if(!ok){ all=false; break; }
+    }
+    b[t.p]=EMPTY;
+    if(all) return t.p;
+    if(vctN>vctLimit || performance.now()>deadline) return -1;
+  }
+  return -1;
+}
+function vctFind(b,c,rule,depth,ms,limit){ vctN=0; vctLimit=limit; return vct(b,c,rule,depth,performance.now()+ms); }
+function omokAI(G){
+  const b=G.board.slice(), c=G.toMove, o=3-c, rule=G.rule, lvl=G.level;
+  const list=[];
+  for(const p of omokCandidates(b)){
+    if(forbidType(b,p,c,rule)) continue;
+    const a=omokScore(analyze(b,p,c,rule));
+    const d=forbidType(b,p,o,rule) ? 0 : omokScore(analyze(b,p,o,rule));
+    const x=p%N, y=(p/N)|0;
+    list.push({p, a, d, s:a + d*0.9 - (Math.abs(x-9)+Math.abs(y-9))*0.3 + Math.random()*0.5});
+  }
+  if(!list.length) return -1;
+  list.sort((u,v)=>v.s-u.s);
+  const top=list[0];
+  if(lvl===0){
+    if(top.a>=1e9) return top.p;
+    if(top.d>=1e9 && Math.random()<0.85) return top.p;
+    if(Math.random()<TUNE.omokNoise[0]){ const k=Math.min(list.length,6); return list[(Math.random()*k)|0].p; }
+    if(Math.random()<0.3){ list.sort((u,v)=>v.a-u.a); return list[0].p; }
+    return top.p;
+  }
+  if(top.s>=9e8) return top.p;
+  if(lvl===1){
+    if(top.s<1e6 && Math.random()<TUNE.omokNoise[1]){
+      const lim=top.s-Math.abs(top.s)*0.15-0.5;
+      const near=list.filter(e=>e.s>=lim).slice(0,3);
+      if(near.length) return near[(Math.random()*near.length)|0].p;
+    }
+    return top.p;
+  }
+  vcfN=0;
+  const w=vcf(b,c,rule,TUNE.omokVcfDepth,performance.now()+220);
+  if(w>=0) return w;
+  const myWin=list.find(e=>e.a>=5e6); if(myWin) return myWin.p;
+  if(fiveThreatOf(b,o,rule)<0){ const tw=vctFind(b,c,rule,TUNE.omokVctDepth,200,3000); if(tw>=0) return tw; }
+  const K=Math.min(12,list.length); let bestP=top.p, bestV=-Infinity;
+  const until=performance.now()+650;
+  for(let i=0;i<K;i++){
+    const e=list[i]; b[e.p]=c;
+    let oppMax=0;
+    for(const q of omokCandidates(b)){ if(b[q] || forbidType(b,q,o,rule)) continue; const sc=omokScore(analyze(b,q,o,rule)); if(sc>oppMax) oppMax=sc; }
+    let danger = oppMax>=1e6 ? oppMax : 0;
+    if(!danger){ vcfN=0; if(vcf(b,o,rule,8,performance.now()+30)>=0) danger=5e6; }
+    if(!danger && performance.now()<until && fiveThreatOf(b,c,rule)<0 && vctFind(b,o,rule,TUNE.omokVctDepth,70,1500)>=0) danger=2e6;
+    b[e.p]=EMPTY;
+    const v=e.s - danger*1.2 - oppMax*0.3;
+    if(v>bestV){ bestV=v; bestP=e.p; }
+  }
+  return bestP;
+}
+
+/* ===================================================================
+   대국 진행
+   =================================================================== */
+let G=null, showPlay=false, aiTimer=null, msg='', viewAt=null, estOwn=null, estText='';
+let hover=-1, touchPend=-1, dirty=true, anims=[];
+
+function firstMover(g){ return (g.kind==='go' && g.handicap>=2) ? WHITE : BLACK; }
+function colorOfMove(i){ const f=firstMover(G); return i%2===0 ? f : 3-f; }
+
+function newGame(){
+  clearTimeout(aiTimer);
+  const human = setup.color==='black' ? BLACK : setup.color==='white' ? WHITE : (Math.random()<0.5?BLACK:WHITE);
+  const hc = setup.kind==='go' ? setup.handicap : 0;
+  G = {kind:setup.kind, vs:setup.vs, level:+setup.level, human, handicap:hc, rule:setup.rule,
+       komi: hc>0 ? TUNE.handicapKomi : TUNE.komi, moves:[], phase:'play', result:null, dead:null, undos:0};
+  rebuild();
+  msg=''; viewAt=null; estOwn=null; anims=[]; touchPend=-1;
+  showPlay=true; saveGame(); renderPanel(); dirty=true;
+  sndStone(0.5);
+  maybeAI();
+}
+function rebuild(){
+  G.board=new Int8Array(NN); G.captures=[0,0,0]; G.ko=-1; G.passes=0; G.win=null; G.winLine=null; G.forb=[];
+  if(G.kind==='go' && G.handicap>=2){ for(const p of handicapPoints(G.handicap)) G.board[p]=BLACK; }
+  G.toMove=firstMover(G);
+  G.positions=[G.board.slice()];
+  for(const m of G.moves) applyMove(m,true);
+  computeForb();
+}
+function applyMove(m,silent){
+  const c=G.toMove, o=3-c, out={win:false, full:false, captured:[]};
+  if(G.kind==='go'){
+    if(m<0){ G.passes++; G.ko=-1; }
+    else {
+      const r=goPlay(G.board,m,c,G.ko);
+      if(!r.ok){ console.warn('bad move', m, r.reason); }
+      else {
+        G.captures[c]+=r.captured.length; G.ko=r.newKo; G.passes=0; out.captured=r.captured;
+        if(!silent){
+          const now=performance.now();
+          anims.push({type:'drop', p:m, t0:now});
+          if(r.captured.length) anims.push({type:'cap', pts:r.captured, c:o, t0:now+60});
+        }
+      }
+    }
+  } else {
+    G.board[m]=c;
+    if(!silent) anims.push({type:'drop', p:m, t0:performance.now()});
+    const ex=exactFor(c,G.rule);
+    if(isFiveAt(G.board,m,c,ex)){ out.win=true; G.winLine=winLineOf(G.board,m,c,ex); }
+    else { let full=true; for(let p=0;p<NN;p++) if(!G.board[p]){ full=false; break; } out.full=full; }
+  }
+  G.toMove=o;
+  G.positions.push(G.board.slice());
+  if(!silent){
+    if(m>=0){ sndStone(1); if(out.captured.length) sndCapture(out.captured.length); }
+    else sndPass();
+  }
+  return out;
+}
+function commitMove(m){
+  if(!G || G.phase!=='play') return;
+  msg=''; estOwn=null; touchPend=-1; viewAt=null;
+  const c=G.toMove;
+  G.moves.push(m);
+  const info=applyMove(m,false);
+  if(G.kind==='go'){
+    if(m<0){
+      toast(`${cn(c)}이 한 수 쉬었습니다`);
+      if(G.passes>=2){ enterScoring(); }
+    }
+  } else {
+    if(info.win){ finish({winner:c, how:'five'}); }
+    else if(info.full){ finish({winner:0, how:'full'}); }
+  }
+  computeForb(); saveGame(); renderPanel(); dirty=true;
+  if(G.phase==='play') maybeAI();
+}
+function maybeAI(){
+  clearTimeout(aiTimer);
+  if(!G || G.vs!=='cpu' || G.phase!=='play' || G.toMove===G.human) return;
+  renderPanel();
+  const delay=TUNE.aiDelayMin + Math.random()*(TUNE.aiDelayMax-TUNE.aiDelayMin);
+  aiTimer=setTimeout(()=>{
+    try{
+      if(!G || G.phase!=='play' || G.toMove===G.human) return;
+      const m = G.kind==='go' ? goAI(G) : omokAI(G);
+      if(G.kind==='omok' && m<0){ finish({winner:0, how:'full'}); renderPanel(); return; }
+      commitMove(m);
+    }catch(e){ console.error(e); }
+  }, delay);
+}
+function computeForb(){
+  G.forb=[];
+  if(G.kind!=='omok' || G.rule==='free' || G.phase!=='play') return;
+  const c=G.toMove;
+  if(G.rule==='renju' && c!==BLACK) return;
+  if(G.vs==='cpu' && c!==G.human) return;
+  const b=G.board;
+  for(const p of omokCandidates(b)) if(!b[p] && forbidType(b,p,c,G.rule)) G.forb.push(p);
+}
+function onBoardClick(p){
+  if(!G || !showPlay || viewAt!==null) return;
+  if(G.phase==='score'){ toggleDead(p); return; }
+  if(G.phase!=='play') return;
+  if(G.vs==='cpu' && G.toMove!==G.human) return;
+  const c=G.toMove;
+  if(G.board[p]!==EMPTY) return;
+  if(G.kind==='go'){
+    const bb=G.board.slice(); const r=goPlay(bb,p,c,G.ko);
+    if(!r.ok){
+      if(r.reason==='ko'){ msg='패: 바로 되따낼 수 없습니다. 다른 곳에 한 수 둔 다음 따낼 수 있습니다.'; toast('패 — 바로 되따낼 수 없습니다'); }
+      else { msg='착수 금지: 두자마자 잡히는 자리(자충수)입니다.'; toast('착수 금지 자리입니다'); }
+      sndBad(); renderPanel(); return;
+    }
+  } else {
+    const f=forbidType(G.board,p,c,G.rule);
+    if(f){
+      const nm={'33':'3-3 (쌍삼)', '44':'4-4', '6':'6목 이상 (장목)'}[f];
+      msg=`금수: ${nm}입니다. 이 자리에는 둘 수 없습니다.`; toast(`금수 — ${nm}`); sndBad(); renderPanel(); return;
+    }
+  }
+  commitMove(p);
+}
+
+/* ----- 계가 ----- */
+function enterScoring(){
+  clearTimeout(aiTimer);
+  G.phase='score'; msg='계가 중입니다…'; G.dead=new Set(); G.score=calcScore();
+  renderPanel(); dirty=true;
+  setTimeout(()=>{
+    try{
+      if(!G || G.phase!=='score') return;
+      const own=mcOwnership(G.board, G.toMove, -1, TUNE.playouts);
+      G.dead=deadFromOwn(G.board, own); G.score=calcScore(); msg='';
+      saveGame(); renderPanel(); dirty=true;
+    }catch(e){ console.error(e); }
+  }, 40);
+}
+function toggleDead(p){
+  if(!G.board[p]) return;
+  const g=group(G.board,p); const on=G.dead.has(p);
+  for(const q of g.stones){ if(on) G.dead.delete(q); else G.dead.add(q); }
+  G.score=calcScore(); sndStone(0.35); saveGame(); renderPanel(); dirty=true;
+}
+function confirmScore(){
+  const s=G.score; const diff=s.sB-s.sW;
+  finish({winner: diff>0?BLACK : diff<0?WHITE : 0, how: diff===0?'draw':'score', margin:Math.abs(diff), score:s});
+}
+function resumeFromScore(){
+  G.phase='play'; G.dead=null; G.score=null; msg='';
+  if(G.vs==='cpu'){ while(G.moves.length){ const lc=colorOfMove(G.moves.length-1); G.moves.pop(); if(lc===G.human) break; } }
+  else if(G.moves.length) G.moves.pop();
+  rebuild(); saveGame(); renderPanel(); dirty=true; maybeAI();
+}
+
+/* ----- 끝내기 ----- */
+function finish(res){
+  clearTimeout(aiTimer);
+  G.phase='end'; G.result=res; msg='';
+  const key = G.kind+'-'+G.vs+(G.vs==='cpu' ? '-'+G.level : '');
+  const r = store.rec[key] || (G.vs==='cpu' ? {w:0,l:0,d:0} : {bw:0,ww:0,d:0});
+  if(!res.winner) r.d++;
+  else if(G.vs==='cpu'){ if(res.winner===G.human) r.w++; else r.l++; }
+  else { if(res.winner===BLACK) r.bw++; else r.ww++; }
+  store.rec[key]=r;
+  if(G.winLine) anims.push({type:'line', t0:performance.now()});
+  viewAt=null;
+  sndEnd();
+  saveGame(); renderPanel(); dirty=true;
+}
+function resign(){
+  if(!G || G.phase==='end') return;
+  const loser = G.vs==='cpu' ? G.human : G.toMove;
+  G.dead=null; G.score=null;
+  finish({winner:3-loser, how:'resign'});
+}
+function undo(){
+  if(!G || G.phase==='end' || !G.moves.length) return;
+  if(G.phase==='score'){ resumeFromScore(); return; }
+  clearTimeout(aiTimer);
+  if(G.vs==='cpu'){
+    while(G.moves.length){ const lc=colorOfMove(G.moves.length-1); G.moves.pop(); if(lc===G.human) break; }
+  } else G.moves.pop();
+  G.undos++; msg=''; estOwn=null; touchPend=-1;
+  rebuild(); saveGame(); renderPanel(); dirty=true; maybeAI();
+}
+function humanMoveCount(){
+  if(!G) return 0; if(G.vs!=='cpu') return G.moves.length;
+  let n=0; for(let i=0;i<G.moves.length;i++) if(colorOfMove(i)===G.human) n++; return n;
+}
+function saveGame(){
+  if(G){
+    store.game={kind:G.kind, vs:G.vs, level:G.level, human:G.human, handicap:G.handicap, rule:G.rule, komi:G.komi,
+      moves:G.moves.slice(), phase:G.phase, result:G.result ? {winner:G.result.winner, how:G.result.how, margin:G.result.margin||0, score:G.result.score?{tb:G.result.score.tb,tw:G.result.score.tw,pB:G.result.score.pB,pW:G.result.score.pW,komi:G.result.score.komi,sB:G.result.score.sB,sW:G.result.score.sW}:null} : null,
+      dead:G.dead ? [...G.dead] : null, undos:G.undos};
+  }
+  store.setup=setup; saveStore();
+}
+function loadGame(){
+  const s=store.game; if(!s || !Array.isArray(s.moves)) return false;
+  G={kind:s.kind, vs:s.vs, level:s.level|0, human:s.human, handicap:s.handicap|0, rule:s.rule||'free', komi:s.komi,
+     moves:s.moves.slice(), phase:'play', result:null, dead:null, undos:s.undos|0};
+  rebuild();
+  if(s.phase==='end' && s.result){ G.phase='end'; G.result=s.result; if(s.dead){ G.dead=new Set(s.dead); G.score=calcScore(); } }
+  else if(s.phase==='score'){ G.phase='score'; G.dead=new Set(s.dead||[]); G.score=calcScore(); }
+  return true;
+}
+
+/* ----- 형세 판단 ----- */
+function estimate(){
+  if(!G || G.kind!=='go' || G.phase!=='play') return;
+  if(estOwn){ estOwn=null; renderPanel(); dirty=true; return; }
+  msg='형세를 계산하는 중입니다…'; renderPanel();
+  setTimeout(()=>{
+    try{
+      const own=mcOwnership(G.board, G.toMove, G.ko, TUNE.playouts);
+      let b=0, w=0;
+      for(let p=0;p<NN;p++){
+        const v=G.board[p], o=own[p];
+        if(!v){ if(o>0.3) b++; else if(o<-0.3) w++; }
+        else if(v===BLACK && o<-0.3) w+=2;
+        else if(v===WHITE && o>0.3) b+=2;
+      }
+      b+=G.captures[BLACK]; w+=G.captures[WHITE]+G.komi;
+      const d=b-w;
+      estOwn=own;
+      msg = `형세: 흑 약 ${fmt(b)}집, 백 약 ${fmt(w)}집 (덤 포함). ` + (Math.abs(d)<1 ? '비슷합니다.' : `${d>0?'흑':'백'}이 약 ${fmt(Math.abs(d))}집 앞섭니다.`) + ' 끝까지 둬 본 결과로 짐작한 값입니다.';
+      renderPanel(); dirty=true;
+    }catch(e){ console.error(e); }
+  }, 30);
+}
+
+/* ===================================================================
+   소리
+   =================================================================== */
+let AC=null, noiseBuf=null;
+function ac(){
+  if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ AC=null; } }
+  if(AC && AC.state==='suspended') AC.resume();
+  if(AC && !noiseBuf){
+    const len=Math.floor(AC.sampleRate*0.06); noiseBuf=AC.createBuffer(1,len,AC.sampleRate);
+    const d=noiseBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,7);
+  }
+  return AC;
+}
+function tone(a,t,f0,f1,dur,vol,type){
+  const o=a.createOscillator(), g=a.createGain(); o.type=type||'sine';
+  o.frequency.setValueAtTime(f0,t); if(f1) o.frequency.exponentialRampToValueAtTime(f1,t+dur*0.7);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+dur+0.02);
+}
+function sndStone(k){
+  if(!store.opt.sound) return; const a=ac(); if(!a||!noiseBuf) return;
+  const t=a.currentTime+0.005, v=TUNE.volume*(k==null?1:k);
+  const src=a.createBufferSource(); src.buffer=noiseBuf;
+  const bp=a.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2300+Math.random()*600; bp.Q.value=1.4;
+  const g=a.createGain(); g.gain.value=v*1.5;
+  src.connect(bp); bp.connect(g); g.connect(a.destination); src.start(t);
+  tone(a,t,860+Math.random()*80,420,0.09,v*0.42);
+  tone(a,t,170,72,0.13,v*0.55);
+}
+function sndCapture(n){
+  if(!store.opt.sound) return;
+  for(let i=0;i<Math.min(n,5);i++) setTimeout(()=>sndStone(0.28), 150+i*75);
+}
+function sndPass(){ if(!store.opt.sound) return; const a=ac(); if(!a) return; tone(a,a.currentTime+0.01,520,0,0.18,TUNE.volume*0.12); }
+function sndBad(){ if(!store.opt.sound) return; const a=ac(); if(!a) return; tone(a,a.currentTime+0.01,150,120,0.14,TUNE.volume*0.18,'triangle'); }
+function sndEnd(){
+  if(!store.opt.sound) return; const a=ac(); if(!a) return; const t=a.currentTime+0.05, v=TUNE.volume*0.16;
+  tone(a,t,392,0,1.6,v); tone(a,t+0.18,587.3,0,1.8,v*0.8); tone(a,t+0.18,784,0,1.2,v*0.25);
+}
+
+/* ===================================================================
+   그리기
+   =================================================================== */
+const cv=$('#cv'), ctx=cv.getContext('2d');
+let DPR=1, S=0, cell=0, ox=0, oy=0, boardCv=null, woodTex=null, spB=null, spW=[], spSh=null, spSize=0;
+function hash01(a,b){ const h=Math.sin(a*12.9898+b*78.233)*43758.5453; return h-Math.floor(h); }
+function makeWood(size){
+  const c=document.createElement('canvas'); c.width=c.height=size; const g=c.getContext('2d');
+  const img=g.createImageData(size,size), d=img.data;
+  for(let y=0;y<size;y++){
+    const v=y/size;
+    for(let x=0;x<size;x++){
+      const u=x/size;
+      const w=u*44 + Math.sin(v*3.1+1.7)*0.32 + Math.sin(v*8.3+u*2.3)*0.09 + Math.sin(v*1.7+0.4)*0.35*Math.sin(u*2.2);
+      let gr=Math.sin(w*Math.PI*2)*0.5+0.5; gr=gr*gr; gr=gr*gr*gr;
+      const fine=Math.sin((u*170+Math.sin(v*21+u*4)*0.35)*Math.PI*2)*0.5+0.5;
+      const n=hash01(x,y);
+      let k=1 - gr*0.075 - fine*0.018 + (n-0.5)*0.02;
+      k *= 1 + 0.035*Math.sin(u*3.7+1.2) + 0.02*Math.sin(v*2.3+u*1.4);
+      const i=(y*size+x)*4; d[i]=228*k; d[i+1]=180*k; d[i+2]=110*k; d[i+3]=255;
+    }
+  }
+  g.putImageData(img,0,0); return c;
+}
+function buildBoard(){
+  const W=Math.max(1,Math.round(S*DPR));
+  boardCv=document.createElement('canvas'); boardCv.width=boardCv.height=W;
+  const g=boardCv.getContext('2d');
+  if(!woodTex) woodTex=makeWood(720);
+  g.imageSmoothingEnabled=true; g.drawImage(woodTex,0,0,W,W);
+  g.setTransform(DPR,0,0,DPR,0,0);
+  const vg=g.createRadialGradient(S*0.45,S*0.4,S*0.25,S/2,S/2,S*0.78);
+  vg.addColorStop(0,'rgba(255,230,180,0.06)'); vg.addColorStop(1,'rgba(70,35,5,0.20)');
+  g.fillStyle=vg; g.fillRect(0,0,S,S);
+  const lwD=Math.max(1,Math.round(cell*0.034*DPR)), off=(lwD%2)/2/DPR;
+  const snap=v=>Math.round(v*DPR)/DPR+off;
+  g.strokeStyle='rgba(30,19,8,0.86)'; g.lineWidth=lwD/DPR; g.beginPath();
+  const e=snap(ox+(N-1)*cell);
+  for(let i=0;i<N;i++){ const a=snap(ox+i*cell); g.moveTo(a,snap(oy)); g.lineTo(a,e); g.moveTo(snap(ox),a); g.lineTo(e,a); }
+  g.stroke();
+  g.lineWidth=lwD*2/DPR; g.strokeRect(snap(ox),snap(oy),e-snap(ox),e-snap(oy));
+  g.fillStyle='rgba(30,19,8,0.92)';
+  for(const x of [3,9,15]) for(const y of [3,9,15]){ g.beginPath(); g.arc(snap(ox+x*cell),snap(oy+y*cell),Math.max(1.8,cell*0.105),0,7); g.fill(); }
+  g.fillStyle='rgba(72,46,20,0.8)';
+  g.font=`600 ${Math.max(8,cell*0.34)}px "Malgun Gothic","Apple SD Gothic Neo",sans-serif`;
+  g.textAlign='center'; g.textBaseline='middle';
+  for(let i=0;i<N;i++){
+    const a=ox+i*cell;
+    g.fillText(COLS[i],a,oy-cell*0.74); g.fillText(COLS[i],a,oy+(N-1)*cell+cell*0.76);
+    g.fillText(String(N-i),ox-cell*0.78,a); g.fillText(String(N-i),ox+(N-1)*cell+cell*0.78,a);
+  }
+}
+function buildSprites(){
+  const R=cell*TUNE.stoneSize/2, pad=Math.ceil(R*0.4);
+  const sz=Math.max(4,Math.ceil((R*2+pad*2)*DPR)); spSize=sz/DPR;
+  const mk=fn=>{ const c=document.createElement('canvas'); c.width=c.height=sz; const g=c.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.translate(spSize/2,spSize/2); fn(g); return c; };
+  spSh=mk(g=>{
+    const gr=g.createRadialGradient(R*0.12,R*0.18,R*0.3,R*0.12,R*0.18,R*1.2);
+    gr.addColorStop(0,'rgba(25,14,4,0.5)'); gr.addColorStop(0.72,'rgba(25,14,4,0.26)'); gr.addColorStop(1,'rgba(25,14,4,0)');
+    g.fillStyle=gr; g.beginPath(); g.arc(R*0.12,R*0.18,R*1.2,0,7); g.fill();
+  });
+  spB=mk(g=>{
+    let gr=g.createRadialGradient(-R*0.38,-R*0.42,R*0.03,0,0,R*1.02);
+    gr.addColorStop(0,'#7c7c80'); gr.addColorStop(0.16,'#3d3d40'); gr.addColorStop(0.5,'#1a1a1c'); gr.addColorStop(1,'#060607');
+    g.fillStyle=gr; g.beginPath(); g.arc(0,0,R,0,7); g.fill();
+    gr=g.createRadialGradient(R*0.4,R*0.45,R*0.1,R*0.4,R*0.45,R*0.85);
+    gr.addColorStop(0,'rgba(140,140,150,0.12)'); gr.addColorStop(1,'rgba(140,140,150,0)');
+    g.fillStyle=gr; g.beginPath(); g.arc(0,0,R,0,7); g.fill();
+  });
+  spW=[0,1,2,3].map(v=>mk(g=>{
+    const gr=g.createRadialGradient(-R*0.32,-R*0.38,R*0.05,0,0,R*1.02);
+    gr.addColorStop(0,'#ffffff'); gr.addColorStop(0.5,'#f2f0ea'); gr.addColorStop(0.86,'#dbd7cd'); gr.addColorStop(1,'#bcb6a9');
+    g.fillStyle=gr; g.beginPath(); g.arc(0,0,R,0,7); g.fill();
+    g.save(); g.beginPath(); g.arc(0,0,R*0.96,0,7); g.clip(); g.rotate(v*0.85+0.35);
+    g.strokeStyle='rgba(150,138,120,0.12)'; g.lineWidth=Math.max(0.5,R*0.035);
+    for(let i=0;i<10;i++){ const yy=-R*1.05+i*R*0.23+v*R*0.05; g.beginPath(); g.moveTo(-R,yy); g.quadraticCurveTo(0,yy+R*0.2,R,yy); g.stroke(); }
+    g.restore();
+    g.strokeStyle='rgba(120,108,92,0.32)'; g.lineWidth=Math.max(0.5,R*0.03); g.beginPath(); g.arc(0,0,R-0.3,0,7); g.stroke();
+  }));
+}
+function resize(){
+  const r=$('#boardWrap').getBoundingClientRect();
+  const s=Math.max(220,Math.floor(Math.min(r.width,r.height)-14));
+  DPR=Math.min(2.5,window.devicePixelRatio||1);
+  S=s; cv.style.width=s+'px'; cv.style.height=s+'px';
+  cv.width=Math.round(s*DPR); cv.height=Math.round(s*DPR);
+  cell=s/(N-1+2*MARGIN); ox=oy=MARGIN*cell;
+  buildBoard(); buildSprites(); dirty=true;
+}
+let rzT=0; window.addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(resize,80); });
+
+const P = p => [ox+(p%N)*cell, oy+((p/N)|0)*cell];
+function jit(p,c){ const k=TUNE.stoneJitter*cell*2; return [(hash01(p,c)-0.5)*k, (hash01(c*7+1,p*3+2)-0.5)*k]; }
+function drawStone(p,c,alpha,scale,shadowExtra){
+  const [x0,y0]=P(p), [jx,jy]=jit(p,c), x=x0+jx, y=y0+jy;
+  const sz=spSize*(scale||1);
+  ctx.globalAlpha=alpha==null?1:alpha;
+  const se=shadowExtra||0;
+  ctx.drawImage(spSh, x-sz/2+se, y-sz/2+se*1.3, sz, sz);
+  ctx.drawImage(c===BLACK?spB:spW[(p*7)%4], x-sz/2, y-sz/2, sz, sz);
+  ctx.globalAlpha=1;
+}
+function viewIdx(){ return viewAt===null ? (G?G.moves.length:0) : viewAt; }
+function viewBoard(){
+  if(!G) return null;
+  if(viewAt===null) return G.board;
+  return G.positions[Math.min(viewAt,G.positions.length-1)];
+}
+function drawMarkSquare(p,c,size,alpha){
+  const [x,y]=P(p), h=cell*size/2;
+  ctx.globalAlpha=alpha;
+  ctx.fillStyle = c===BLACK ? '#151517' : '#f4f2ec';
+  ctx.strokeStyle = c===BLACK ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.35)';
+  ctx.lineWidth=Math.max(0.6,cell*0.025);
+  ctx.fillRect(x-h,y-h,h*2,h*2); ctx.strokeRect(x-h,y-h,h*2,h*2);
+  ctx.globalAlpha=1;
+}
+function draw(now){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,S,S);
+  if(boardCv) ctx.drawImage(boardCv,0,0,S,S);
+  if(!G || (!showPlay && G.phase==='end')) return;
+  const b=viewBoard(), k=viewIdx();
+  const R=cell*TUNE.stoneSize/2;
+  const scoring = (G.phase==='score' || (G.phase==='end' && G.result && G.result.how==='score')) && G.score && G.dead && viewAt===null;
+  // 집 표시(빈 자리)
+  if(scoring){
+    for(let p=0;p<NN;p++) if(!b[p] && G.score.owner[p]) drawMarkSquare(p,G.score.owner[p],0.34,0.9);
+  } else if(estOwn && viewAt===null){
+    for(let p=0;p<NN;p++) if(!b[p]){ const o=estOwn[p]; if(Math.abs(o)>0.2) drawMarkSquare(p,o>0?BLACK:WHITE,0.14+0.3*Math.min(1,Math.abs(o)),0.35+0.5*Math.abs(o)); }
+  }
+  // 움직이는 돌
+  const dropAt=new Map();
+  anims=anims.filter(a=>{
+    const t=now-a.t0;
+    if(a.type==='drop'){ if(t>TUNE.dropMs) return false; dropAt.set(a.p,Math.max(0,t)/TUNE.dropMs); return true; }
+    if(a.type==='cap') return t<TUNE.captureFadeMs;
+    if(a.type==='line') return t<600;
+    return false;
+  });
+  // 돌
+  for(let p=0;p<NN;p++){
+    const c=b[p]; if(!c) continue;
+    if(viewAt===null && dropAt.has(p)){ const q=dropAt.get(p), e=1-q; drawStone(p,c,0.75+0.25*q,1+0.14*e*e,R*0.3*e); continue; }
+    const dead = scoring && G.dead.has(p);
+    drawStone(p,c,dead?0.45:1);
+    if(dead) drawMarkSquare(p,3-c,0.34,0.95);
+  }
+  // 따낸 돌 사라짐
+  if(viewAt===null) for(const a of anims){
+    if(a.type!=='cap') continue; const t=now-a.t0; if(t<0){ for(const p of a.pts) drawStone(p,a.c,1); continue; }
+    const q=t/TUNE.captureFadeMs; for(const p of a.pts) drawStone(p,a.c,1-q,1-0.15*q);
+  }
+  // 형세: 죽어 보이는 돌
+  if(estOwn && viewAt===null && !scoring){
+    for(let p=0;p<NN;p++){ const c=b[p]; if(!c) continue; const o=estOwn[p]; if((c===BLACK&&o<-0.3)||(c===WHITE&&o>0.3)) drawMarkSquare(p,3-c,0.3,0.85); }
+  }
+  // 수순 번호
+  if(store.opt.nums){
+    const num=new Int16Array(NN);
+    for(let i=0;i<k;i++){ const m=G.moves[i]; if(m>=0) num[m]=i+1; }
+    for(let p=0;p<NN;p++){
+      if(!b[p] || !num[p] || colorOfMove(num[p]-1)!==b[p]) continue;
+      const [x0,y0]=P(p), [jx,jy]=jit(p,b[p]); const s=String(num[p]);
+      ctx.fillStyle = b[p]===BLACK ? '#f1ede4' : '#1b1b1d';
+      ctx.font=`700 ${cell*(s.length>=3?0.33:0.42)}px "Malgun Gothic",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(s,x0+jx,y0+jy+cell*0.02);
+    }
+  }
+  // 마지막 수
+  if(k>0){
+    const m=G.moves[k-1];
+    if(m>=0 && b[m] && !(store.opt.nums)){
+      const [x0,y0]=P(m), [jx,jy]=jit(m,b[m]);
+      ctx.strokeStyle = b[m]===BLACK ? 'rgba(240,236,226,0.95)' : 'rgba(25,25,27,0.9)';
+      ctx.lineWidth=Math.max(1.2,R*0.13); ctx.beginPath(); ctx.arc(x0+jx,y0+jy,R*0.42,0,7); ctx.stroke();
+    } else if(m>=0 && b[m] && store.opt.nums){
+      const [x0,y0]=P(m), [jx,jy]=jit(m,b[m]);
+      ctx.strokeStyle='rgba(200,80,55,0.95)'; ctx.lineWidth=Math.max(1.2,R*0.1); ctx.beginPath(); ctx.arc(x0+jx,y0+jy,R*0.86,0,7); ctx.stroke();
+    }
+  }
+  // 금수
+  if(viewAt===null && store.opt.forb && G.forb && G.forb.length){
+    ctx.strokeStyle='rgba(196,72,48,0.85)'; ctx.lineWidth=Math.max(1.2,cell*0.06); ctx.lineCap='round';
+    const h=cell*0.17;
+    for(const p of G.forb){ const [x,y]=P(p); ctx.beginPath(); ctx.moveTo(x-h,y-h); ctx.lineTo(x+h,y+h); ctx.moveTo(x+h,y-h); ctx.lineTo(x-h,y+h); ctx.stroke(); }
+    ctx.lineCap='butt';
+  }
+  // 오목 이긴 줄
+  if(G.winLine && G.phase==='end' && viewAt===null){
+    const la=anims.find(a=>a.type==='line'); const q=la ? Math.min(1,(now-la.t0)/450) : 1;
+    const [x1,y1]=P(G.winLine[0]), [x2,y2]=P(G.winLine[1]);
+    ctx.lineCap='round';
+    ctx.strokeStyle='rgba(200,161,90,0.35)'; ctx.lineWidth=cell*0.34;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1+(x2-x1)*q,y1+(y2-y1)*q); ctx.stroke();
+    ctx.strokeStyle='rgba(214,170,92,0.95)'; ctx.lineWidth=cell*0.1;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1+(x2-x1)*q,y1+(y2-y1)*q); ctx.stroke();
+    ctx.lineCap='butt';
+  }
+  // 놓을 자리 미리 보기
+  if(viewAt===null && G.phase==='play' && (G.vs==='pvp' || G.toMove===G.human)){
+    const tp = touchPend>=0 ? touchPend : hover;
+    if(tp>=0 && !b[tp]){
+      if(G.forb && G.forb.includes(tp)){
+        const [x,y]=P(tp), h=cell*0.22; ctx.strokeStyle='rgba(196,72,48,0.95)'; ctx.lineWidth=cell*0.08; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(x-h,y-h); ctx.lineTo(x+h,y+h); ctx.moveTo(x+h,y-h); ctx.lineTo(x-h,y+h); ctx.stroke(); ctx.lineCap='butt';
+      } else {
+        const [x0,y0]=P(tp), sz=spSize;
+        ctx.globalAlpha = touchPend>=0 ? 0.62 : 0.42;
+        ctx.drawImage(G.toMove===BLACK?spB:spW[(tp*7)%4], x0-sz/2, y0-sz/2, sz, sz);
+        ctx.globalAlpha=1;
+        if(touchPend>=0){ ctx.strokeStyle='rgba(214,170,92,0.95)'; ctx.lineWidth=Math.max(1.5,cell*0.06); ctx.beginPath(); ctx.arc(x0,y0,R*1.12,0,7); ctx.stroke(); }
+      }
+    }
+  }
+}
+function loop(now){
+  try{
+    if(dirty || anims.length){ draw(now||performance.now()); dirty=false; }
+  }catch(e){ console.error(e); }
+  requestAnimationFrame(loop);
+}
+
+/* ===================================================================
+   화면 글씨·버튼
+   =================================================================== */
+let toastT=0;
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2200); }
+function whoName(c){ if(G.vs==='cpu') return c===G.human ? '나' : `컴퓨터 (${LV[G.level]})`; return '사람'; }
+function gameInfoText(){
+  const a=[G.kind==='go'?'바둑':'오목', G.vs==='cpu'?`컴퓨터 ${LV[G.level]}`:'두 사람'];
+  if(G.kind==='go') a.push(G.handicap ? `${G.handicap}점 접바둑 · 덤 ${fmt(G.komi)}집` : `덤 ${fmt(G.komi)}집`);
+  else a.push(RULE_NAME[G.rule]);
+  return a.join(' · ');
+}
+function resultText(){
+  const r=G.result; if(!r) return '';
+  if(!r.winner) return r.how==='full' ? '무승부 (판이 가득 참)' : '무승부';
+  if(r.how==='score') return `${cn(r.winner)} ${fmt(r.margin)}집 승`;
+  if(r.how==='resign') return G.kind==='go' ? `${cn(r.winner)} 불계승` : `${cn(r.winner)} 승 (상대 기권)`;
+  if(r.how==='five') return `${cn(r.winner)} 승 (5목 완성)`;
+  return '';
+}
+function statusText(){
+  if(msg) return msg;
+  if(G.phase==='score') return '계가: 죽은 돌을 누르면 산 돌·죽은 돌 표시가 바뀝니다. 확인이 끝나면 계가 확정을 누르십시오.';
+  if(G.phase==='end'){
+    if(viewAt!==null && viewAt<G.moves.length) return `수순 다시 보기: 제 ${viewAt}수까지 표시 중입니다.`;
+    return `대국이 끝났습니다. ${resultText()}.`;
+  }
+  const n=G.moves.length, last=n?G.moves[n-1]:null;
+  if(G.vs==='cpu'){
+    if(G.toMove!==G.human) return '컴퓨터가 수를 읽고 있습니다.';
+    if(touchPend>=0) return '같은 자리를 한 번 더 누르면 돌을 놓습니다.';
+    if(G.kind==='go' && last===-1 && n>0) return '컴퓨터가 한 수 쉬었습니다. 더 둘 곳이 없으면 한 수 쉼을 눌러 계가합니다.';
+    return `내 차례입니다 (${cn(G.toMove)}). 제 ${n+1}수.`;
+  }
+  if(touchPend>=0) return '같은 자리를 한 번 더 누르면 돌을 놓습니다.';
+  if(G.kind==='go' && G.passes===1) return `${cn(3-G.toMove)}이 한 수 쉬었습니다. ${cn(G.toMove)}도 쉬면 계가합니다.`;
+  return `${cn(G.toMove)} 차례입니다. 제 ${n+1}수.`;
+}
+function scoreTableHTML(s){
+  return `<tr><th></th><th>흑</th><th>백</th></tr>
+  <tr><td>집</td><td>${s.tb}</td><td>${s.tw}</td></tr>
+  <tr><td>사석</td><td>${s.pB}</td><td>${s.pW}</td></tr>
+  <tr><td>덤</td><td>–</td><td>${fmt(s.komi)}</td></tr>
+  <tr><td>합계</td><td>${fmt(s.sB)}</td><td>${fmt(s.sW)}</td></tr>`;
+}
+function renderPanel(){
+  $('#setupPane').hidden=showPlay; $('#playPane').hidden=!showPlay;
+  if(!showPlay || !G){ renderSetup(); return; }
+  $('#gameInfo').textContent=gameInfoText();
+  for(const [id,c] of [['#pB',BLACK],['#pW',WHITE]]){
+    const el=$(id); el.classList.toggle('on', G.phase==='play' && G.toMove===c);
+    el.querySelector('.who').textContent=whoName(c);
+    el.querySelector('.pc').textContent = G.kind==='go' ? `사석 ${G.captures[c]}` : '';
+  }
+  $('#status').textContent=statusText();
+  const playing=G.phase==='play', myTurn=playing && (G.vs==='pvp' || G.toMove===G.human);
+  $('#undoBtn').hidden = G.phase==='end';
+  $('#undoBtn').disabled = !(humanMoveCount()>0 && G.phase!=='end');
+  $('#passBtn').hidden = G.kind!=='go' || G.phase==='end';
+  $('#passBtn').disabled = !myTurn;
+  $('#estBtn').hidden = G.kind!=='go' || G.phase==='end';
+  $('#estBtn').disabled = !playing;
+  $('#estBtn').classList.toggle('on', !!estOwn);
+  $('#resignBtn').hidden = G.phase==='end';
+  $('#resignBtn').disabled = !(playing || G.phase==='score') || (G.vs==='cpu' && !myTurn && G.phase!=='score');
+  $('#forbBtn').hidden = !(G.kind==='omok' && G.rule!=='free');
+  $('#forbBtn').classList.toggle('on', store.opt.forb);
+  $('#numBtn').classList.toggle('on', store.opt.nums);
+  $('#sndBtn').classList.toggle('on', store.opt.sound);
+  $('#sndBtn').textContent = store.opt.sound ? '소리 켜짐' : '소리 꺼짐';
+  // 계가
+  $('#scoreBox').hidden = G.phase!=='score';
+  if(G.phase==='score' && G.score) $('#scoreTable').innerHTML=scoreTableHTML(G.score);
+  // 결과
+  $('#resultBox').hidden = G.phase!=='end';
+  if(G.phase==='end'){
+    $('#resText').textContent=resultText();
+    const r=G.result;
+    $('#resSub').textContent = G.vs==='cpu' ? (!r.winner ? '비겼습니다.' : r.winner===G.human ? '승리했습니다.' : '패배했습니다.') : '';
+    $('#resTable').innerHTML = (r.how==='score'||r.how==='draw') && r.score ? scoreTableHTML(r.score) : '';
+    $('#resTable').hidden = !((r.how==='score'||r.how==='draw') && r.score);
+    const k=viewIdx(); $('#rvLabel').textContent=`${k}/${G.moves.length}`;
+  }
+  // 수 목록
+  const ml=$('#moveList'); const from=Math.max(0,G.moves.length-90); let h='';
+  for(let i=from;i<G.moves.length;i++){
+    const c=colorOfMove(i);
+    h+=`<div${i===G.moves.length-1?' class="last"':''}><span class="k">${i+1}</span>${cn(c)} ${coord(G.moves[i])}</div>`;
+  }
+  ml.innerHTML=h || '<div style="grid-column:1/-1;color:#6f6b63">아직 둔 수가 없습니다.</div>';
+  ml.scrollTop=ml.scrollHeight;
+}
+function renderSetup(){
+  document.querySelectorAll('#setupPane .seg').forEach(seg=>{
+    const k=seg.dataset.k;
+    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', String(setup[k])===b.dataset.v));
+  });
+  document.querySelectorAll('.cpuOnly').forEach(e=>e.hidden = setup.vs!=='cpu');
+  document.querySelectorAll('.goOnly').forEach(e=>e.hidden = setup.kind!=='go');
+  document.querySelectorAll('.omokOnly').forEach(e=>e.hidden = setup.kind!=='omok');
+  $('#hcVal').textContent = setup.handicap ? `${setup.handicap}점` : '없음';
+  $('#komiNote').textContent = setup.handicap
+    ? `흑이 화점에 돌 ${setup.handicap}개를 먼저 놓고, 백이 먼저 둡니다. 덤 0.5집.`
+    : '덤 6.5집을 백에게 줍니다 (한국 규칙). 흑이 먼저 둡니다.';
+  $('#ruleNote').textContent = ({
+    free:'가로·세로·대각선으로 5개 이상 이으면 이깁니다. 금지된 수가 없어서 먼저 두는 흑이 많이 유리합니다.',
+    no33:'흑·백 모두 열린 3을 두 줄 동시에 만드는 수(쌍삼)를 둘 수 없습니다. 5개 이상 이으면 이깁니다.',
+    renju:'흑은 3-3, 4-4, 6목 이상을 둘 수 없고 정확히 5개로 이깁니다. 백은 금지 없이 5개 이상이면 이깁니다.'
+  })[setup.rule];
+  const live = G && (G.phase==='play' || G.phase==='score');
+  $('#resumeBtn').hidden = !live;
+  // 전적
+  const rows=[];
+  const add=(key,label)=>{ const r=store.rec[key]; if(!r) return;
+    const t = r.w!=null ? `${r.w}승 ${r.l}패${r.d?` ${r.d}무`:''}` : `흑 ${r.bw}승 · 백 ${r.ww}승${r.d?` · ${r.d}무`:''}`;
+    rows.push(`<div class="row"><span>${label}</span><span>${t}</span></div>`); };
+  for(const kind of ['go','omok']){ const kn=kind==='go'?'바둑':'오목';
+    for(let l=0;l<3;l++) add(`${kind}-cpu-${l}`, `${kn} · 컴퓨터 ${LV[l]}`);
+    add(`${kind}-pvp`, `${kn} · 두 사람`); }
+  $('#recBox').innerHTML = '<div class="rh">전적</div>' + (rows.join('') || '<div>아직 기록이 없습니다.</div>');
+}
+
+/* ----- 입력 ----- */
+function pick(e){
+  const r=cv.getBoundingClientRect(); const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const x=Math.round((mx-ox)/cell), y=Math.round((my-oy)/cell);
+  if(!inB(x,y)) return -1;
+  const dx=mx-(ox+x*cell), dy=my-(oy+y*cell);
+  if(dx*dx+dy*dy>(cell*0.56)**2) return -1;
+  return y*N+x;
+}
+cv.addEventListener('pointermove',e=>{ if(e.pointerType==='touch') return; const p=pick(e); if(p!==hover){ hover=p; dirty=true; } });
+cv.addEventListener('pointerleave',()=>{ if(hover!==-1){ hover=-1; dirty=true; } });
+cv.addEventListener('pointerdown',e=>{
+  ac();
+  const p=pick(e); if(p<0) return;
+  if(e.pointerType==='touch' && G && showPlay && G.phase==='play' && viewAt===null && !G.board[p] && (G.vs==='pvp'||G.toMove===G.human)){
+    if(touchPend!==p){ touchPend=p; dirty=true; renderPanel(); return; }
+  }
+  touchPend=-1; onBoardClick(p); dirty=true;
+});
+document.querySelectorAll('#setupPane .seg').forEach(seg=>{
+  seg.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    const k=seg.dataset.k; setup[k] = k==='level' ? +b.dataset.v : b.dataset.v;
+    store.setup=setup; saveStore(); renderSetup(); sndStone(0.25);
+  });
+});
+$('#hcMinus').onclick=()=>{ setup.handicap = setup.handicap<=2 ? 0 : setup.handicap-1; renderSetup(); store.setup=setup; saveStore(); };
+$('#hcPlus').onclick=()=>{ setup.handicap = setup.handicap===0 ? 2 : Math.min(9,setup.handicap+1); renderSetup(); store.setup=setup; saveStore(); };
+$('#startBtn').onclick=()=>{ ac(); newGame(); };
+$('#resumeBtn').onclick=()=>{ showPlay=true; renderPanel(); dirty=true; maybeAI(); };
+$('#newBtn').onclick=()=>{ clearTimeout(aiTimer); showPlay=false; estOwn=null; viewAt=null; touchPend=-1; renderPanel(); dirty=true; };
+$('#undoBtn').onclick=()=>undo();
+$('#passBtn').onclick=()=>{ if(G && G.phase==='play' && (G.vs==='pvp'||G.toMove===G.human)) commitMove(-1); };
+$('#estBtn').onclick=()=>estimate();
+let resignArm=0;
+$('#resignBtn').onclick=()=>{
+  const btn=$('#resignBtn');
+  if(!resignArm){ resignArm=setTimeout(()=>{ resignArm=0; btn.textContent='기권'; btn.classList.remove('warn'); },2600); btn.textContent='한 번 더: 기권'; btn.classList.add('warn'); return; }
+  clearTimeout(resignArm); resignArm=0; btn.textContent='기권'; btn.classList.remove('warn'); resign();
+};
+$('#numBtn').onclick=()=>{ store.opt.nums=!store.opt.nums; saveStore(); renderPanel(); dirty=true; };
+$('#forbBtn').onclick=()=>{ store.opt.forb=!store.opt.forb; saveStore(); renderPanel(); dirty=true; };
+$('#sndBtn').onclick=()=>{ store.opt.sound=!store.opt.sound; saveStore(); renderPanel(); if(store.opt.sound) sndStone(0.6); };
+$('#scoreOkBtn').onclick=()=>{ if(G && G.phase==='score' && G.score) confirmScore(); };
+$('#scoreBackBtn').onclick=()=>{ if(G && G.phase==='score') resumeFromScore(); };
+$('#againBtn').onclick=()=>{
+  setup.kind=G.kind; setup.vs=G.vs; setup.level=G.level; setup.handicap=G.handicap; setup.rule=G.rule;
+  if(setup.color!=='random') setup.color = G.human===BLACK ? 'black' : 'white';
+  newGame();
+};
+const rv=k=>{ if(!G || G.phase!=='end') return; const n=G.moves.length; viewAt=Math.max(0,Math.min(n,k)); if(viewAt===n) viewAt=null; renderPanel(); dirty=true; };
+$('#rvFirst').onclick=()=>rv(0);
+$('#rvPrev').onclick=()=>rv(viewIdx()-1);
+$('#rvNext').onclick=()=>rv(viewIdx()+1);
+$('#rvLast').onclick=()=>rv(G?G.moves.length:0);
+window.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); }
+  else if(e.key==='Escape'){ touchPend=-1; if(estOwn){ estOwn=null; renderPanel(); } dirty=true; }
+  else if(G && G.phase==='end' && e.key==='ArrowLeft') rv(viewIdx()-1);
+  else if(G && G.phase==='end' && e.key==='ArrowRight') rv(viewIdx()+1);
+});
+
+/* ----- 시작 ----- */
+try{
+  if(loadGame()){ showPlay = G.phase!=='end'; }
+}catch(e){ console.error(e); G=null; store.game=null; }
+resize(); renderPanel();
+requestAnimationFrame(loop);
+if(G && showPlay) maybeAI();
+
+// 시험용 손잡이
+window.BO={get G(){return G;}, set G(v){G=v;}, setup, newGame, commitMove, goAI, omokAI, forbidType, mcOwnership, deadFromOwn, calcScore, enterScoring, confirmScore, resize, draw:()=>draw(performance.now()), renderPanel, undo, rebuild, store};
+</script>
+<script src="../track.js" defer></script>
+</body>
+</html>
