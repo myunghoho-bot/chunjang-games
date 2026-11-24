@@ -74,7 +74,8 @@
     'antwar': { pinch: 0 },   // 두 손가락 이동·확대를 게임이 직접 함
     'firewater': { pinch: 0 },   // 두 사람이 양쪽 화면 버튼을 같이 누름(게임 자체 버튼)
     'baduk': { pinch: 0, orient: 'any' },   // 판이 정사각형이라 세로도 됨. 손가락은 같은 자리 두 번 눌러 놓기
-    'taxi3d': { pinch: 0 },   // 게임 안에 핸들·페달·시점·지도·정지 단추가 이미 있음 (TOUCHDEV)
+    'taxi3d': { pinch: 0 },
+    'siege': {},   // 끌어서 조준(손가락 그대로), 각도·속도·발사 단추가 게임 안에 있음. 두 손가락 벌리기 = 확대   // 게임 안에 핸들·페달·시점·지도·정지 단추가 이미 있음 (TOUCHDEV)
     'airplane3d': {   // 왼쪽: 기수·기울기, 오른쪽: 추력·브레이크(군용기는 기관포·미사일). 게임 속 단추는 미니맵 아래 두 줄로
       show: () => g(() => G.mode === 'fly' && G.screen === 'fly' && PL && !PL.crashed),
       L: [{ t: '위로', k: 'ArrowDown', hold: 1 }, { t: '◀', k: 'ArrowLeft', hold: 1 }, { t: '아래로', k: 'ArrowUp', hold: 1 }, { t: '▶', k: 'ArrowRight', hold: 1 }],
