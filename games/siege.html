@@ -67,6 +67,21 @@ button:disabled{opacity:.38;cursor:default}
 .cdx .tx{font-size:12px;line-height:1.55;color:#ddd2bf;margin-top:4px}
 .cdx .sp{font-size:12px;color:var(--accent);margin-top:5px}
 .vslab{color:var(--dim);font-size:12px;margin:12px 0 6px}
+#toast{position:fixed;z-index:30;left:50%;top:64px;transform:translateX(-50%);padding:8px 14px;font-size:13px;line-height:1.5;pointer-events:none;text-align:center}
+#toast b{color:var(--accent)}
+#achList{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ach{padding:7px 10px;border:1px solid rgba(196,160,96,.18);border-radius:5px;font-size:12px;color:#8f8676;line-height:1.45}
+.ach.on{border-color:var(--accent);color:#ddd2bf}
+.ach b{display:block;font-size:13px;color:inherit}
+.ach .dt{font-size:11px;color:var(--dim)}
+#conqBox{width:min(960px,96vw)}
+#conqWrap{display:flex;gap:12px;align-items:stretch}
+#cqCv{flex:1;min-width:0;height:min(440px,60vh);border-radius:6px;border:1px solid rgba(196,160,96,.35);cursor:pointer;touch-action:manipulation}
+#cqSide{width:250px;flex:none;font-size:13px;line-height:1.55;display:flex;flex-direction:column;gap:6px}
+#cqSide #bCqAttack{padding:9px;font-weight:700}
+.cqrow{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12px}
+.cqrow small{color:var(--dim)}
+.cqrow button{padding:4px 8px;font-size:12px;flex:none}
 .vsr{display:flex;gap:6px;flex-wrap:wrap}
 .vsmine{font-size:13px;line-height:1.6;color:#ddd2bf}
 #result{position:fixed;z-index:12;left:50%;top:50%;transform:translate(-50%,-50%);width:330px;padding:18px 20px}
@@ -85,7 +100,7 @@ button:disabled{opacity:.38;cursor:default}
 #buildInfo{left:12px;top:12px;padding:9px 12px;font-size:12px;color:var(--dim);line-height:1.6;max-width:330px}
 #buildInfo b{color:var(--text)}
 @media (max-width:900px){#tip{display:none}#topL{width:220px;padding:7px 10px}#lvEra{display:none}#titleBox h1{font-size:40px}#lvGrid{grid-template-columns:repeat(5,130px)}.lvc{min-height:84px}#codexList{grid-template-columns:1fr}}
-@media (max-height:460px){#note{left:12px;top:132px;transform:none;max-width:44vw;font-size:11px;padding:6px 10px}#topR button{padding:4px 7px;font-size:12px}.wcard{min-width:84px;padding:3px 7px}.wcard .n{font-size:12px}#aimInfo{padding:3px 6px;font-size:12px}#buildTools{width:170px;padding:5px;gap:4px}.pc{width:60px}.pc canvas{width:46px;height:32px}}
+@media (max-height:460px){#title{overflow:auto}#titleBox h1{font-size:30px;letter-spacing:3px}#titleBox .sub{margin:2px 0 8px;font-size:12px}#titleBox button{padding:6px 12px;margin:4px 0;font-size:13px}#titleBox .foot{display:none}#note{left:12px;top:132px;transform:none;max-width:44vw;font-size:11px;padding:6px 10px}#topR button{padding:4px 7px;font-size:12px}.wcard{min-width:84px;padding:3px 7px}.wcard .n{font-size:12px}#aimInfo{padding:3px 6px;font-size:12px}#buildTools{width:170px;padding:5px;gap:4px}.pc{width:60px}.pc canvas{width:46px;height:32px}}
 </style>
 <script src="../mobile.js"></script>
 </head>
@@ -146,6 +161,8 @@ button:disabled{opacity:.38;cursor:default}
     <button id="bStages">단계 깨기</button>
     <button id="bFree">자유 모드 (성 쌓고 부수기)</button>
     <button id="bVersus">전쟁 모드 (성끼리 싸우기)</button>
+    <button id="bConq">정복 지도</button>
+    <button id="bAch">도전 과제</button>
     <button id="bCodex">무기 도감</button>
     <div class="foot">끌어서 조준 · 놓으면 발사 · 핸드폰은 화면을 가로로</div>
   </div>
@@ -183,6 +200,35 @@ button:disabled{opacity:.38;cursor:default}
     <div class="row"><button id="bVsBuild">내 성 쌓으러 가기</button><button id="bVsBack">뒤로</button><button id="bVsStart" class="on">시작</button></div>
   </div>
 </div>
+
+<div id="achScreen" class="screen hidden">
+  <div class="box panel" style="width:680px">
+    <h2>도전 과제</h2>
+    <div class="desc" id="achSum"></div>
+    <div id="achList"></div>
+    <div class="row"><button id="bAchBack">뒤로</button></div>
+  </div>
+</div>
+
+<div id="conq" class="screen hidden">
+  <div class="box panel" id="conqBox">
+    <h2>정복 지도</h2>
+    <div class="desc">내 땅과 길로 이어진 성을 공격해 차지합니다. 이기면 금화를 받고, 대장간에서 강화합니다. 전투 방식은 전쟁 모드와 같습니다(내 성 = 자유 모드에서 쌓은 성).</div>
+    <div id="conqWrap">
+      <canvas id="cqCv"></canvas>
+      <div id="cqSide">
+        <div id="cqGold"></div>
+        <div id="cqInfo"></div>
+        <button id="bCqAttack" class="on">공격</button>
+        <div class="vslab">대장간</div>
+        <div id="cqShop"></div>
+        <div class="row"><button id="bCqReset">새 지도</button><button id="bCqBack">뒤로</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="panel hidden"></div>
 
 <div id="result" class="panel hidden">
   <h2 id="resTitle"></h2>
@@ -225,9 +271,10 @@ const WEAPONS = {
   trebuchet: { name: '트레뷰셋', minA: 20, maxA: 65, minV: 16, maxV: 40, mass: 100, r: 0.28, mulStone: 26,  mulWood: 16,  ammo: 'stone', tRel: 0.88, tFire: 2.0, tReload: 1.4, def: [42, 27] },
   bombard:   { name: '사석포',   minA: -2, maxA: 22, minV: 55, maxV: 85, mass: 160, r: 0.3,  mulStone: 6,   mulWood: 5, ammo: 'ball', tRel: 0.4, tFire: 1.1, tReload: 1.0, def: [4, 70] },
   // 진천뢰: 화약을 채운 쇠 폭탄을 트레뷰셋으로 던짐. 닿으면 터짐
+  fire:      { name: '불항아리', engine: 'onager', minA: 15, maxA: 70, minV: 12, maxV: 30, mass: 15, r: 0.19, mulStone: 2, mulWood: 3, ammo: 'fire', tRel: 0.29, tFire: 0.7, tReload: 1.0, def: [45, 22] },
   bomb:      { name: '진천뢰',   engine: 'trebuchet', minA: 20, maxA: 65, minV: 16, maxV: 40, mass: 40, r: 0.26, mulStone: 4, mulWood: 4, ammo: 'bomb', tRel: 0.88, tFire: 2.0, tReload: 1.4, def: [42, 30] },
 };
-const W_ORDER = ['onager', 'ballista', 'trebuchet', 'bombard', 'bomb'];
+const W_ORDER = ['onager', 'ballista', 'trebuchet', 'bombard', 'bomb', 'fire'];
 const engOf = wk => (WEAPONS[wk] && WEAPONS[wk].engine) || wk;
 
 const D2R = Math.PI / 180, R2D = 180 / Math.PI;
@@ -324,6 +371,9 @@ const SND = (() => {
     boom() { noise({ f: 260, f2: 70, dur: 1.8, vol: 1, at: 0.002 }); tone({ f: 48, f2: 20, dur: 1.1, vol: 0.85 }); noise({ type: 'bandpass', f: 1300, dur: 0.6, vol: 0.35 }); },
     splash() { if (!allow()) return; noise({ type: 'highpass', f: 1400, dur: 0.4, vol: 0.22 }); noise({ f: 600, dur: 0.45, vol: 0.18 }); },
     click() { tone({ f: 700, f2: 520, dur: 0.05, vol: 0.05 }); },
+    crackle(k) { noise({ type: 'bandpass', f: 2200 + Math.random() * 2500, q: 2, dur: 0.035, vol: 0.02 + 0.05 * k }); },
+    pot() { noise({ type: 'highpass', f: 2200, dur: 0.12, vol: 0.25 }); noise({ f: 420, f2: 150, dur: 0.5, vol: 0.3, at: 0.02 }); },
+    ach() { tone({ f: 523, dur: 0.12, vol: 0.08, type: 'triangle' }); tone({ f: 784, dur: 0.25, vol: 0.08, type: 'triangle', delay: 0.1 }); },
     rumble() { noise({ f: 180, f2: 55, dur: 1.8, vol: 0.55, at: 0.05 }); tone({ f: 42, f2: 24, dur: 1.4, vol: 0.4 }); noise({ type: 'bandpass', f: 600, q: 0.8, dur: 1.2, vol: 0.15, delay: 0.1 }); },
     mortar() { if (!allow()) return; noise({ type: 'highpass', f: 2200, dur: 0.05, vol: 0.09 }); noise({ f: 700, dur: 0.12, vol: 0.06 }); },
     good() { tone({ f: 392, dur: 0.18, vol: 0.12, type: 'triangle' }); tone({ f: 523, dur: 0.22, vol: 0.12, type: 'triangle', delay: 0.12 }); tone({ f: 659, dur: 0.35, vol: 0.12, type: 'triangle', delay: 0.24 }); },
@@ -773,7 +823,7 @@ function tower(b, x0, w, rows, roof) {
 /* ===== 단계(성의 역사 순서) ===== */
 const LEVELS = [
   { name: '목책 요새', era: '10~11세기', info: '땅에 통나무를 박아 세운 울타리와 나무 망루. 빨리 지을 수 있지만 돌과 불에 약했다.',
-    dist: 45, sky: 'morning', weapons: { onager: 4 }, goal: 45, style: 'shingle',
+    dist: 45, sky: 'morning', weapons: { onager: 4, fire: 1 }, goal: 45, style: 'shingle',
     build(b) {
       palisade(b, 0, 10);
       b.at('post', 8, 0); b.at('post', 12.6, 0); b.at('crate', 9.2, 0); b.at('crate', 11.4, 0);
@@ -785,7 +835,7 @@ const LEVELS = [
     } },
   { name: '모트 앤 베일리', era: '11세기 · 노르만',
     info: '흙을 높이 쌓은 언덕(모트) 위에 나무 탑을 세운 성. 1066년 노르만 정복 뒤 잉글랜드에 많이 지어졌다.',
-    dist: 52, sky: 'day', weapons: { onager: 4 }, goal: 45, style: 'shingle', terrain: { mound: [[5, 0], [8.5, 3.5], [15.5, 3.5], [19, 0]] },
+    dist: 52, sky: 'day', weapons: { onager: 4, fire: 1 }, goal: 45, style: 'shingle', terrain: { mound: [[5, 0], [8.5, 3.5], [15.5, 3.5], [19, 0]] },
     build(b) {
       palisade(b, 0, 8);
       woodTower(b, 9, 3.5, 2, 'roofW', (s, y) => { if (s === 0) { b.at('crate', 10.2, y); b.at('crate', 12.4, y); } else { b.at('crate', 11.5, y); men(b, [10.2, 13.0], y, 'archer'); } });
@@ -794,14 +844,14 @@ const LEVELS = [
       men(b, [4.6], 0, 'spear'); men(b, [14.75], 3.5, 'spear');
     } },
   { name: '첫 돌담', era: '12세기', info: '나무 울타리 대신 돌로 바깥 벽(커튼 월)을 쌓기 시작했다. 안쪽 건물은 아직 나무였다.',
-    dist: 58, sky: 'day', weapons: { onager: 3, trebuchet: 2 }, goal: 35, style: 'shingle',
+    dist: 58, sky: 'day', weapons: { onager: 3, trebuchet: 2, fire: 1 }, goal: 35, style: 'shingle',
     build(b) {
       wall(b, 0, 6, 0, 6); const g = merlons(b, 0, 6, 6); men(b, [g[0], g[2]], 6, 'archer');
       woodTower(b, 9, 0, 1, 'roofW', (s, y) => { b.at('crate', 10.2, y); b.at('crate', 12.4, y); men(b, [11.8], y, 'spear'); });
       wall(b, 17, 3, 0, 8); merlons(b, 17, 3, 8); b.at('banner', 18.75, 8); men(b, [18.15], 8, 'archer');
     } },
   { name: '성문과 문루', era: '12~13세기', info: '성에서 가장 약한 곳인 문을 지키려고 양쪽에 탑을 세운 문루(게이트하우스). 성문은 두꺼운 참나무 판이었다.',
-    dist: 62, sky: 'overcast', weapons: { ballista: 3, trebuchet: 2, onager: 2 }, goal: 35, style: 'slate',
+    dist: 62, sky: 'overcast', weapons: { ballista: 3, trebuchet: 2, onager: 2, fire: 1 }, goal: 35, style: 'slate',
     build(b) {
       wall(b, 0, 4, 0, 10); b.at('gate', 4, 0); wall(b, 7, 4, 0, 10, 1);
       b.at('beam5', 3, 10); const g1 = merlons(b, 0, 2.8, 10), g2 = merlons(b, 8.2, 2.8, 10); b.at('roofW', 2.9, 10.4);
@@ -920,6 +970,7 @@ function genLevel(i) {
   if (n >= 100 && wset.has('trebuchet') && r() < 0.5) weapons.bomb = r() < 0.4 ? 2 : 1;
   const long = wset.has('trebuchet') || wset.has('bombard');
   let dist = Math.round(48 + 40 * t + r() * 10); if (!long) dist = Math.max(40, Math.min(dist, Math.round(86 - width))); if (moat) dist = Math.max(dist, 55); dist = Math.min(dist, Math.round(130 - width));
+  if (wood > 0 && dist + width * 0.5 < 84 && r() < 0.5) weapons.fire = r() < 0.3 ? 2 : 1;
   const century = Math.max(wset.has('bombard') ? 14 : 10, 10 + Math.round(t * 5.4));
   const core = powder >= 3 ? pick(['화약 창고', '무기고 성']) : moat ? pick(['물가 성', '해자 성']) : stone === 0 ? pick(['목책', '나무 요새', '망루']) : stone > 10 ? pick(['성채', '큰 성', '요새']) : pick(['성', '돌성', '요새']);
   const cnt = {}; for (const k of kinds) cnt[k] = (cnt[k] || 0) + 1;
@@ -968,6 +1019,7 @@ const WEAPON_INFO = {
   onager: { year: '고대 로마 · 4세기 무렵', text: '짐승 힘줄이나 밧줄 묶음을 꽈배기처럼 비틀어 두었다가 풀리는 힘으로 팔을 튕긴다. 쏠 때 뒤가 들썩이는 모습이 뒷발질하는 야생 당나귀(오나거) 같다고 해서 이 이름이 붙었다.', game: '돌 30kg · 속도 12~30m/s · 높이 던지기' },
   ballista: { year: '고대 그리스·로마', text: '비튼 밧줄 묶음 두 개로 활 팔을 당기는 거대한 쇠뇌. 큰 화살(볼트)을 거의 곧게 쏜다. 빠르고 정확해서 나무 방벽·성문·화약통에 강하지만 돌벽에는 약하다.', game: '볼트 8kg · 속도 30~55m/s · 나무 관통' },
   trebuchet: { year: '12세기 무렵 · 평형추 투석기', text: '몇 톤짜리 추가 떨어지는 힘으로 긴 팔을 돌리고, 끝의 끈(슬링)이 한 번 더 휘둘러 무거운 돌을 던진다. 1304년 스털링 성 공성 때 에드워드 1세가 만든 "워울프"가 유명하다.', game: '돌 100kg · 속도 16~40m/s · 돌벽 파괴' },
+  fire: { year: '고대~중세 · 불 무기', text: '기름·송진·유황처럼 잘 타는 것을 흙 항아리에 담고 불을 붙여 투석기로 던졌다. 비잔티움 제국은 물을 부어도 잘 꺼지지 않는 "그리스의 불"로 유명했다. 나무 성문과 지붕, 목책을 태우는 데 썼다.', game: '항아리 15kg · 오나거로 던짐 · 닿은 둘레 나무에 불이 붙고 옆으로 번짐' },
   bomb: { year: '13세기 · 금나라 · 화약 폭탄', text: '쇠로 만든 통에 화약을 채우고 심지에 불을 붙여 투석기로 던진 폭탄. 1232년 금나라가 몽골군에 맞서 성을 지킬 때 썼는데, 터지는 소리가 하늘을 흔드는 천둥 같다고 해서 "진천뢰"라고 불렀다.', game: '쇠 폭탄 40kg · 트레뷰셋으로 던짐 · 닿으면 터짐' },
   bombard: { year: '15세기 · 큰 대포', text: '화약이 터지는 힘으로 돌 포탄을 쏘는 커다란 대포. 스코틀랜드의 "몬스 메그"(1449년)는 지름 약 50cm 돌 포탄을 쐈다. 대포가 나오면서 높은 성벽의 시대가 끝났다.', game: '돌 포탄 160kg · 속도 55~85m/s · 낮고 빠르게' },
 };
@@ -1149,7 +1201,7 @@ function castleBoxOf(bs) {
   return { x0, x1, top };
 }
 function resetWorld() {
-  PHY.clear(); G.engX = 0; G.face = 1; G.blocks = []; G.rubble = []; G.shots = []; G.parts = []; G.pops = []; G.boomQ = []; G.proj = null; G.trail = []; G.men = []; G.debris = []; G.bonds = []; FX.clear();
+  PHY.clear(); G.engX = 0; G.face = 1; G.burning = []; G.fires = []; G.burnCount = 0; G.shot = null; G.blocks = []; G.rubble = []; G.shots = []; G.parts = []; G.pops = []; G.boomQ = []; G.proj = null; G.trail = []; G.men = []; G.debris = []; G.bonds = []; FX.clear();
 }
 function loadLevel(i, demo) {
   resetWorld();
@@ -1219,11 +1271,14 @@ function breakBody(b, hx, hy, blast) {
     if (blast) { const dx = wx - blast.x, dy = wy - blast.y, d = Math.hypot(dx, dy) || 1, dv = Math.min(18, TUNE.powderPush * blast.k / r.m * 0.5 + 4); r.vx += dx / d * dv; r.vy += dy / d * dv + 2; r.w += rnd(-6, 6); }
     r.spr = clipSprite(b, sh);
     PHY.add(r); G.rubble.push(r);
+    if (b.char) r.char = b.char;
+    if (b.burn > 0) ignite(r, rnd(3, 6));
   }
   const big = area > 1.5;
   dust(b.x, b.y, b.mat, Math.min(26, 5 + area * 6), Math.sqrt(area) * 0.6);
   chips(b.x, b.y, b.mat, Math.min(24, 4 + area * 5), b.vx, b.vy);
-  if (b.kind === 'block') { SND.crack(b.mat, big); if (big) FX.addShake(0.22); G.brkN = (G.brkN || 0) + (big ? 1.4 : 1); }
+  if (b.kind === 'block') { SND.crack(b.mat, big); if (big) FX.addShake(0.22); G.brkN = (G.brkN || 0) + (big ? 1.4 : 1); if (G.shot) G.shot.breaks++; if (b.t === 'gate') achGet('gate'); }
+  if (b.mat === 'powder' && G.shot) G.shot.barrels++;
   else if (area > 0.3) SND.crack(b.mat, false);
   if (b.mat === 'powder') G.boomQ.push({ x: b.x, y: b.y, t: 0.07 });
 }
@@ -1262,7 +1317,7 @@ function chipBlock(T, cp, D, S) {
 function hurt(T, E, S, cp) {
   if (T.dead || T.static || !T.maxHp) return;
   let mul = 1;
-  if (S.proj && Math.hypot(S.vx, S.vy) > 6) mul = T.mat === 'stone' ? S.weapon.mulStone : S.weapon.mulWood;
+  if (S.proj && Math.hypot(S.vx, S.vy) > 6) mul = (T.mat === 'stone' ? S.weapon.mulStone : S.weapon.mulWood) * (S.boost || 1);
   const D = E * mul, before = T.hp;
   if (S.proj && window.__hitlog) window.__hitlog.push({ t: T.t || T.kind, E: Math.round(E), D: Math.round(D), hp: Math.round(before), sp: +Math.hypot(S.vx, S.vy).toFixed(1) });
   T.hp -= D; T.flash = Math.min(1, (T.flash || 0) + D / T.maxHp * 2 + 0.15);
@@ -1294,7 +1349,7 @@ function onImpact(arb) {
   if (P && !T.static && sp > 8 && !P.splashed) {
     // 맞은 자리 둘레 돌벽도 금 가고 부서짐(무거운 돌덩이가 벽을 깨는 모습)
     P.splashed = true;
-    const mul = P.weapon.mulStone, D = E * mul * TUNE.splash, R = clamp(0.6 + D / 250000, 0.8, 2.6);
+    const mul = P.weapon.mulStone * (P.boost || 1), D = E * mul * TUNE.splash, R = clamp(0.6 + D / 250000, 0.8, 2.6);
     for (const b of G.blocks) {
       if (b.dead || b === T) continue;
       const d = Math.hypot(b.x - cp.x, b.y - cp.y) - b.shape.rad * 0.5; if (d > R) continue;
@@ -1531,6 +1586,7 @@ function spawnMan(cx, cy, role, face = -1, sty = 'def', side = 1) {
 function killMan(m, hard) {
   if (!m.alive) return;
   m.alive = false;
+  if (G.shot && G.state !== 'aim') { G.shot.men++; if (G.shot.wk === 'bomb') G.shot.bombMen++; }
   const b = m.b, f = m.face, grp = ++groupSeq, parts = {};
   PHY.remove(b);
   const c = Math.cos(b.a), s = Math.sin(b.a), Wd = (lx, ly) => ({ x: b.x + c * lx - s * ly, y: b.y + s * lx + c * ly });
@@ -1675,7 +1731,7 @@ function makeBonds() {
   for (const arb of PHY.arbList()) {
     const A = arb.a, B = arb.b;
     if (A.kind !== 'block' || B.kind !== 'block' || A.mat !== 'stone' || B.mat !== 'stone' || arb.pts.length < 2) continue;
-    const bd = { a: A, b: B, nx: arb.nx, ny: arb.ny, limit: TUNE.mortar * TUNE.gravity * Math.min(A.m, B.m), joints: [], broken: false };
+    const bd = { a: A, b: B, nx: arb.nx, ny: arb.ny, limit: TUNE.mortar * TUNE.gravity * Math.min(A.m, B.m) * (A.side === 0 && G.wallBoost ? G.wallBoost : 1), joints: [], broken: false };
     for (const c of arb.pts) { const j = new PHY.Joint(A, B, c.x, c.y, { bond: bd }); bd.joints.push(j); PHY.addJoint(j); }
     G.bonds.push(bd);
   }
@@ -1686,6 +1742,128 @@ PHY.hooks.bondBreak = (bd, j) => {
   if (G.parts.length < 700 && Math.hypot(j.b1.vx, j.b1.vy) + Math.hypot(j.b2.vx, j.b2.vy) > 2) dust(x, y, 'stone', 1, 0.1);
   const now = performance.now(); if (now - snapT > 70) { snapT = now; SND.mortar(); }
 };
+
+/* ===== 불: 불항아리 · 불타는 나무 · 번지는 불 ===== */
+function flammable(b) { return !!b && !b.static && !b.dead && (b.kind === 'block' || b.kind === 'rubble') && (b.mat === 'wood' || b.mat === 'powder' || (b.mat === 'roof' && b.style === 'shingle')); }
+function ignite(b, dur) {
+  if (!flammable(b) || b.burn > 0) return;
+  b.burn = dur || rnd(9, 13); b.char = b.char || 0; b.spreadT = rnd(0.2, 0.6);
+  G.burning.push(b);
+  if (b.kind === 'block') { G.burnCount = (G.burnCount || 0) + 1; if (G.burnCount >= 10) achGet('burn10'); }
+  if (b.mat === 'powder' && b.fuseT === undefined) b.fuseT = 0.9;
+  b.awake = true; b.sleepT = 0;
+}
+function aabbNear(a, b, m) { return !(a.x0 > b.x1 + m || a.x1 < b.x0 - m || a.y0 > b.y1 + m || a.y1 < b.y0 - m); }
+function updateFire(dt) {
+  if (!G.burning) return;
+  G.fireSnd = (G.fireSnd || 0) - dt;
+  if ((G.burning.length || G.fires.length) && G.fireSnd <= 0) { G.fireSnd = 0.1 + Math.random() * 0.15; SND.crackle(Math.min(1, (G.burning.length + G.fires.length) / 6)); }
+  for (let i = G.burning.length - 1; i >= 0; i--) {
+    const b = G.burning[i];
+    if (b.dead) { G.burning.splice(i, 1); continue; }
+    b.burn -= dt; b.char = Math.min(1, (b.char || 0) + dt * 0.09);
+    if (b.wv && Math.random() < (G.burning.length > 20 ? 0.35 : 0.65)) { const v = b.wv[Math.floor(Math.random() * b.wv.length)], u = Math.random(); part({ k: 'fire', x: lerp(b.x, v.x, u), y: lerp(b.y, v.y, u) + 0.1, vx: rnd(-0.4, 0.4), vy: rnd(0.8, 2.2), r: rnd(0.12, 0.3), life: rnd(0.3, 0.7) }); }
+    if (Math.random() < 0.07) part({ k: 'smoke', x: b.x + rnd(-0.3, 0.3), y: b.y1 + 0.2, vx: rnd(-0.3, 0.3), vy: rnd(0.6, 1.4), r: rnd(0.3, 0.6), gr: rnd(0.5, 1), life: rnd(1.5, 2.8) });
+    if (b.fuseT !== undefined) { b.fuseT -= dt; if (b.fuseT <= 0) { b.hp = 0; G.burning.splice(i, 1); breakBody(b, b.x, b.y, null); continue; } }
+    if (b.maxHp) { b.hp -= b.maxHp * 0.075 * dt; if (b.hp <= 0) { G.burning.splice(i, 1); breakBody(b, b.x, b.y, null); continue; } }
+    b.spreadT -= dt;
+    if (b.spreadT <= 0) {
+      b.spreadT = 0.5;
+      for (const o of PHY.bodies()) if (o !== b && !(o.burn > 0) && flammable(o) && aabbNear(b, o, 0.35) && Math.random() < 0.3) ignite(o);
+    }
+    if (b.burn <= 0) { G.burning.splice(i, 1); b.burn = 0; }
+  }
+  for (let i = G.fires.length - 1; i >= 0; i--) {
+    const f = G.fires[i]; f.t -= dt;
+    if (Math.random() < 0.8) part({ k: 'fire', x: f.x + rnd(-f.r, f.r), y: f.y + 0.05, vx: rnd(-0.3, 0.3), vy: rnd(0.6, 1.8), r: rnd(0.12, 0.28), life: rnd(0.3, 0.6) });
+    f.spread -= dt;
+    if (f.spread <= 0) { f.spread = 0.5; for (const o of PHY.bodies()) if (!(o.burn > 0) && flammable(o) && Math.abs(o.x - f.x) < f.r + 1 && o.y0 < f.y + 1.2 && o.y1 > f.y - 0.5) ignite(o); }
+    if (f.t <= 0) G.fires.splice(i, 1);
+  }
+}
+function shatterPot(p) {
+  const x = p.x, y = p.y;
+  PHY.remove(p);
+  SND.pot();
+  for (let i = 0; i < 14; i++) part({ k: 'chip', x, y, vx: rnd(-5, 5), vy: rnd(1, 6), s: rnd(0.06, 0.14), a: rnd(0, 6), w: rnd(-12, 12), life: rnd(0.6, 1.3), col: '#8a4f2a' });
+  for (let i = 0; i < 26; i++) { const a = rnd(0, 7), v = rnd(1, 6); part({ k: 'fire', x, y, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v + 1, r: rnd(0.2, 0.45), life: rnd(0.4, 0.9) }); }
+  FX.flash(0.08, '#ffb060');
+  for (const o of PHY.bodies()) if (flammable(o)) { const d = Math.hypot(o.x - x, o.y - y) - o.shape.rad * 0.6; if (d < 2.2) ignite(o); }
+  const gy = groundY(x);
+  G.fires.push({ x, y: y - gy < 1.5 ? gy : y - 0.2, r: 0.9, t: 5, spread: 0.2 });
+}
+function drawPot(x, y, rot, lit) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = '#8a4f2a'; ctx.beginPath(); ctx.ellipse(0, 0, 0.19, 0.17, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillRect(-0.06, 0.12, 0.12, 0.08);
+  ctx.strokeStyle = '#4a2814'; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.ellipse(0, 0, 0.19, 0.17, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(30,15,5,0.5)'; ctx.beginPath(); ctx.moveTo(-0.17, 0.03); ctx.lineTo(0.17, 0.03); ctx.stroke();
+  ctx.fillStyle = '#d9cfb8'; ctx.fillRect(-0.05, 0.19, 0.1, 0.06);
+  if (lit) { disc(0, 0.3, 0.07, '#ffd27a'); disc(0, 0.36, 0.045, '#ff8a3a'); }
+  ctx.restore();
+}
+
+/* ===== 도전 과제 30개 ===== */
+const ACH = [
+  ['first_shot', '첫 발', '처음으로 한 발 쏘기'],
+  ['clear1', '첫 함락', '단계를 처음으로 깨기'],
+  ['star3', '완벽한 공성', '어느 단계에서든 별 3개 받기'],
+  ['clear10', '성의 역사', '1~10단계를 모두 깨기'],
+  ['clear50', '쉰 번째 성', '50단계 깨기'],
+  ['clear100', '백 개의 성', '100단계 깨기'],
+  ['clear300', '삼백 고지', '300단계 깨기'],
+  ['clear943', '마지막 성', '943단계 깨기'],
+  ['big30', '한 방', '한 발로 붕괴율을 30% 넘게 올리기'],
+  ['big50', '대붕괴', '한 발로 붕괴율을 50% 넘게 올리기'],
+  ['men3', '셋을 한 번에', '한 발에 병사 3명 쓰러뜨리기'],
+  ['men6', '성벽 위 정리', '한 발에 병사 6명 쓰러뜨리기'],
+  ['chain3', '연쇄 폭발', '한 발에 화약통 3개 넘게 터뜨리기'],
+  ['bomb2', '하늘을 흔드는 천둥', '진천뢰 한 발로 병사 2명 쓰러뜨리기'],
+  ['gate', '성문 돌파', '성문 부수기'],
+  ['flag', '깃발 내리기', '성의 깃발 쓰러뜨리기'],
+  ['burn10', '불바다', '한 판에 성 조각 10개에 불붙이기'],
+  ['allWeapons', '무기고', '여섯 가지 무기를 모두 써 보기'],
+  ['pct97', '폐허', '성 붕괴율 97% 넘기기'],
+  ['leftover', '아껴 쓰기', '3발 넘게 남기고 단계 깨기'],
+  ['build50', '건축가', '자유 모드에서 조각 50개 넘게 쌓기'],
+  ['war1', '첫 전쟁', '전쟁 모드에서 컴퓨터 이기기'],
+  ['warHard', '명장', '전쟁 모드에서 컴퓨터 어려움 이기기'],
+  ['war2p', '맞대결', '두 사람 전쟁을 한 판 끝내기'],
+  ['warFast', '속전속결', '전쟁 모드에서 5발 안에 이기기'],
+  ['conq1', '첫 정복', '정복 지도에서 성 1개 차지하기'],
+  ['conq10', '영주', '정복 지도에서 성 10개 차지하기'],
+  ['conqAll', '통일', '정복 지도의 성을 모두 차지하기'],
+  ['upgrade', '대장간', '대장간에서 처음으로 강화하기'],
+  ['rubble1000', '돌무더기', '지금까지 성 조각 1000개 부수기'],
+];
+function achGet(id) {
+  SAVE.ach = SAVE.ach || {};
+  if (SAVE.ach[id] || G.mode === 'title') return;
+  const a = ACH.find(x => x[0] === id); if (!a) return;
+  SAVE.ach[id] = new Date().toISOString().slice(0, 10); save();
+  toast('도전 과제 달성 · ' + a[1], a[2]); SND.ach();
+}
+function toast(title, sub) { const el = $('toast'); el.innerHTML = `<b>${title}</b><br>${sub}`; el.classList.remove('hidden'); G.toastT = 3.4; }
+function shotStart() { G.shot = { breaks: 0, men: 0, barrels: 0, bombMen: 0, wk: G.weapon }; }
+function shotEnd(gain, pct) {
+  const S = G.shot; if (!S || G.mode === 'title') return;
+  if (gain >= 30) achGet('big30'); if (gain >= 50) achGet('big50');
+  if (S.men >= 3) achGet('men3'); if (S.men >= 6) achGet('men6');
+  if (S.barrels >= 3) achGet('chain3'); if (S.bombMen >= 2) achGet('bomb2');
+  if (pct >= 97) achGet('pct97');
+  const list = G.mode === 'versus' ? VS.sides[1 - VS.turn].blocks : G.blocks;
+  for (const b of list) if (b.banner && (b.dead || Math.hypot(b.x - b.ix, b.y - b.iy) > 0.7)) { achGet('flag'); break; }
+  SAVE.stat = SAVE.stat || { breaks: 0 };
+  SAVE.stat.breaks += S.breaks; if (SAVE.stat.breaks >= 1000) achGet('rubble1000');
+  save();
+}
+function openAch() {
+  showScreen('achScreen');
+  SAVE.ach = SAVE.ach || {};
+  const n = ACH.filter(a => SAVE.ach[a[0]]).length;
+  $('achSum').textContent = `달성 ${n} / ${ACH.length} · 지금까지 부순 성 조각 ${(SAVE.stat && SAVE.stat.breaks) || 0}개`;
+  $('achList').innerHTML = ACH.map(a => `<div class="ach ${SAVE.ach[a[0]] ? 'on' : ''}"><b>${SAVE.ach[a[0]] ? '달성 · ' : ''}${a[1]}</b>${a[2]}${SAVE.ach[a[0]] ? ` <span class="dt">${SAVE.ach[a[0]]}</span>` : ''}</div>`).join('');
+}
 
 /* ===== 투석기 모양과 움직임 ===== */
 const WOOD = '#86592f', WOOD_L = '#a3733f', WOOD_D = '#432a16', ROPE = '#cdb88d', IRON = '#3d4045', IRON_L = '#70757c', LEATHER = '#5b3b27';
@@ -1737,7 +1915,7 @@ function drawOnager(e) {
   ctx.restore();
   disc(-1.0, 0.62, 0.32, '#bfa774', '#6f5a36');
   ctx.strokeStyle = 'rgba(90,70,40,0.6)'; ctx.lineWidth = 0.035; for (let i = 0; i < 5; i++) { const r = 0.08 + i * 0.05; ctx.beginPath(); ctx.arc(-1.0, 0.62, r, i, i + 2.6); ctx.stroke(); }
-  if (e.phase === 'ready' || (e.phase === 'fire' && !e.released) || (e.phase === 'reload' && e.t > WEAPONS.onager.tReload * 0.85)) { const n = { x: -Math.sin(a), y: Math.cos(a) }; stoneBall(tip.x + n.x * 0.26, tip.y + n.y * 0.26, 0.2, false); }
+  if (e.phase === 'ready' || (e.phase === 'fire' && !e.released) || (e.phase === 'reload' && e.t > WEAPONS.onager.tReload * 0.85)) { const n = { x: -Math.sin(a), y: Math.cos(a) }; if (DRAW_POT) drawPot(tip.x + n.x * 0.26, tip.y + n.y * 0.26, a - Math.PI / 2, true); else stoneBall(tip.x + n.x * 0.26, tip.y + n.y * 0.26, 0.2, false); }
 }
 function ballistaPivot() { return { x: 0, y: 1.35 }; }
 function drawBallista(e, ang) {
@@ -1831,9 +2009,9 @@ function launchPoint(wk, ang) {
   if (wk === 'trebuchet') { const P = trebPoints(trebPose({ phase: 'fire', t: 0.88 })); return P.pouch; }
   return bombardGeom(ang, 0).muzzle;
 }
-let DRAW_BOMB = false;
+let DRAW_BOMB = false, DRAW_POT = false;
 function drawEngine(wk, e, ang) {
-  DRAW_BOMB = wk === 'bomb'; wk = engOf(wk);
+  DRAW_BOMB = wk === 'bomb'; DRAW_POT = wk === 'fire'; wk = engOf(wk);
   if (wk === 'onager') drawOnager(e); else if (wk === 'ballista') drawBallista(e, ang); else if (wk === 'trebuchet') drawTrebuchet(e); else drawBombard(e, ang);
 }
 
@@ -1845,6 +2023,8 @@ function fire() {
   if (G.mode === 'play') G.ammo[G.weapon]--;
   G.eng = { phase: 'fire', t: 0, released: false };
   G.state = 'firing'; G.finishT = -1;
+  shotStart(); achGet('first_shot');
+  if (G.mode !== 'title') { SAVE.used = SAVE.used || {}; SAVE.used[G.weapon] = 1; if (W_ORDER.every(k => SAVE.used[k])) achGet('allWeapons'); }
   SND.windup(engOf(G.weapon));
   updateHud(true);
 }
@@ -1859,6 +2039,8 @@ function launch() {
   G.state = 'flight';
   SND.launch(engOf(wk));
   if (wk === 'bomb') { b.bomb = true; b.fuse = 0; }
+  if (wk === 'fire') b.pot = true;
+  b.boost = G.mode === 'versus' ? (VS.sides[VS.turn].boost || 1) : 1;
   if (wk === 'bombard') {
     FX.addShake(0.45); FX.flash(0.18, '#ffe2b0');
     for (let i = 0; i < 30; i++) part({ k: 'smoke', x: L.x + rnd(-0.3, 0.3), y: L.y + rnd(-0.3, 0.3), vx: f * Math.cos(a) * rnd(1, 9) + rnd(-1, 1), vy: Math.sin(a) * rnd(1, 9) + rnd(0, 1.5), r: rnd(0.4, 1), gr: rnd(0.8, 1.5), life: rnd(1.5, 3) });
@@ -1918,6 +2100,7 @@ function autoShot(low) {
 function endShot() {
   const pct = G.mode === 'versus' ? collapsePct(VS.sides[1 - VS.turn].blocks) : collapsePct(), gain = pct - G.lastPct; G.lastPct = pct;
   if (G.trail.length > 2) G.lastTrace = G.trail.slice();
+  shotEnd(gain, pct);
   if (gain >= 1 && G.mode !== 'title') G.pops.push({ x: (G.castleBox.x0 + G.castleBox.x1) / 2, y: G.castleBox.top + 1.5, text: '+' + Math.round(gain) + '%', t: 0 });
   G.state = 'aim'; G.proj = null;
   if (G.mode === 'versus') { vsAfterShot(); return; }
@@ -2044,6 +2227,7 @@ function drawBody(b) {
     ctx.strokeStyle = b.mat === 'stone' ? 'rgba(45,38,30,0.8)' : 'rgba(30,18,8,0.8)'; ctx.lineWidth = 0.035; ctx.lineJoin = 'round';
     for (let i = 0; i < n; i++) { const L = b.cracks[i]; ctx.beginPath(); L.forEach((p, k) => k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); }
   }
+  if (b.char > 0.02) { ctx.save(); ctx.globalAlpha *= Math.min(0.7, b.char * 0.7); ctx.fillStyle = '#1c120a'; ctx.beginPath(); b.shape.v.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill(); ctx.restore(); }
   if (b.flash > 0.02) { ctx.globalAlpha = Math.min(0.55, b.flash * 0.55); ctx.fillStyle = '#fff6e6'; ctx.beginPath(); b.shape.v.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill(); }
   ctx.restore();
 }
@@ -2073,6 +2257,7 @@ function drawBomb(x, y, rot, lit) {
 }
 function drawProj(b) {
   if (b.bomb) { drawBomb(b.x, b.y, b.a, true); return; }
+  if (b.pot) { drawPot(b.x, b.y, b.a, true); return; }
   if (b.wk === 'ballista') drawBolt(b.x, b.y, b.a, 1.8);
   else stoneBall(b.x, b.y, b.shape.r, b.wk === 'bombard', b.a);
 }
@@ -2174,6 +2359,14 @@ function update(dt) {
   G.rubble = G.rubble.filter(r => !r.dead);
   while (G.rubble.length > TUNE.maxRubble) PHY.remove(G.rubble.shift());
   PHY.flush();
+  // 불항아리: 날아가며 불꽃, 닿으면 깨지며 불이 붙음
+  for (const b of G.shots) {
+    if (!b.pot || b.dead) continue;
+    if (Math.random() < 0.8) part({ k: 'fire', x: b.x + rnd(-0.05, 0.05), y: b.y + 0.25, vx: -b.vx * 0.08 + rnd(-0.5, 0.5), vy: rnd(0.3, 1.2), r: rnd(0.08, 0.18), life: rnd(0.2, 0.4) });
+    if (b.touched || (b.awake === false && G.time - b.born > 1)) shatterPot(b);
+  }
+  updateFire(dt);
+  if (G.toastT > 0) { G.toastT -= dt; if (G.toastT <= 0) $('toast').classList.add('hidden'); }
   // 진천뢰: 날아가며 심지 불똥, 무엇에든 닿으면 터짐
   for (const b of G.shots) {
     if (!b.bomb || b.dead) continue;
@@ -2219,11 +2412,12 @@ function loop(now) {
 
 /* ===== 정보줄·메뉴 ===== */
 const $ = id => document.getElementById(id);
-function showScreen(id) { for (const s of ['title', 'levels', 'codex', 'vsSetup']) $(s).classList.toggle('hidden', s !== id); }
+function showScreen(id) { for (const s of ['title', 'levels', 'codex', 'vsSetup', 'achScreen', 'conq']) $(s).classList.toggle('hidden', s !== id); }
 function showHud(which) { $('hudPlay').classList.toggle('hidden', which !== 'play' && which !== 'free' && which !== 'versus'); $('hudBuild').classList.toggle('hidden', which !== 'build'); $('result').classList.add('hidden'); if (which) showScreen(null); SND.setEnabled(!!which); }
+function weaponKeys() { return G.mode === 'play' ? Object.keys(G.lv.weapons) : G.mode === 'versus' && VS.sides ? (VS.sides[VS.turn].allowed || W_ORDER) : W_ORDER; }
 function buildWeaponCards() {
   const box = $('weapons'); box.innerHTML = '';
-  const keys = G.mode === 'play' ? Object.keys(G.lv.weapons) : W_ORDER;
+  const keys = weaponKeys();
   keys.forEach((k, i) => {
     const b = document.createElement('button'); b.className = 'wcard'; b.dataset.w = k;
     b.innerHTML = `<div class="n">${i + 1}. ${WEAPONS[k].name}</div><div class="c"></div>`;
@@ -2234,6 +2428,7 @@ function buildWeaponCards() {
 function selectWeapon(k, ai) {
   if (G.state !== 'aim' && G.state !== 'result') return;
   if (G.mode === 'versus' && vsAiTurn() && !ai) return;
+  if (G.mode === 'versus' && !ai && !weaponKeys().includes(k)) return;
   if (G.mode === 'play' && !(k in G.ammo)) return;
   if (G.weapon !== k) { G.weapon = k; G.eng = { phase: 'ready', t: 0, released: true }; }
   updateHud(true);
@@ -2279,11 +2474,16 @@ function finishLevel() {
   G.state = 'result';
   const prev = SAVE.lv[G.lvIndex] || { stars: 0, best: 0 };
   SAVE.lv[G.lvIndex] = { stars: Math.max(prev.stars, st), best: Math.max(prev.best, Math.round(pct)) }; save();
+  if (st > 0) {
+    achGet('clear1'); if (st === 3) achGet('star3'); if (totalAmmo() >= 3) achGet('leftover');
+    if ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].every(i => SAVE.lv[i] && SAVE.lv[i].stars > 0)) achGet('clear10');
+    const no = G.lvIndex + 1; if (no >= 50) achGet('clear50'); if (no >= 100) achGet('clear100'); if (no >= 300) achGet('clear300'); if (no >= TOTAL_STAGES) achGet('clear943');
+  }
   $('resTitle').textContent = st > 0 ? '공성 성공' : '공성 실패';
   $('resStars').innerHTML = [0, 1, 2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
   const th = [L.goal, Math.min(97, L.goal + 15), Math.min(98, L.goal + 30)];
   $('resText').innerHTML = `성 붕괴율 <b>${Math.round(pct)}%</b> (목표 ${L.goal}%)<br>쓰러진 병사 ${menDown()} / ${G.men.length}<br>별 기준: ${th.map(x => x + '%').join(' / ')}<br>최고 기록 ${SAVE.lv[G.lvIndex].best}%` + (st === 0 ? '<br>각도와 속도를 바꿔 아래쪽 돌을 노려 보세요.' : '');
-  $('bResNext').disabled = !(st > 0 && G.lvIndex < TOTAL_STAGES - 1); $('bResNext').classList.remove('hidden'); $('bResList').textContent = '단계 목록'; $('resStars').classList.remove('hidden');
+  $('bResRetry').textContent = '다시 하기'; $('bResNext').disabled = !(st > 0 && G.lvIndex < TOTAL_STAGES - 1); $('bResNext').classList.remove('hidden'); $('bResList').textContent = '단계 목록'; $('resStars').classList.remove('hidden');
   $('result').classList.remove('hidden');
   if (st > 0) SND.good(); else SND.bad();
   updateHud(true);
@@ -2407,6 +2607,7 @@ function buildClick(wx, wy, erase) {
   const gh = ghostAt(wx, wy); if (!gh.ok) return;
   const p = { t: G.build.sel, x: gh.x, y: gh.y, r: G.build.rot };
   G.build.pieces.push(p);
+  if (G.build.pieces.length >= 50) achGet('build50');
   const nb = spawnPieces([p], G.off, 'slate'), b = nb[0] || G.men[G.men.length - 1].b; b.awake = false; b.updateWorld(); if (nb[0]) G.blocks.push(b);
   SND.impact(3000, PT[p.t].mat); dust(b.x, b.y0, 'earth', 3, 0.3);
   saveBuild();
@@ -2450,8 +2651,9 @@ function vsRandomCastle() {
   const L = LEVELS[9], b = CB(L.style); L.build(b); return { list: b.L, style: L.style, name: L.name };
 }
 function defaultAims() { const a = {}; for (const k of W_ORDER) a[k] = { ang: WEAPONS[k].def[0], v: WEAPONS[k].def[1] }; return a; }
-function startVersus(opp) {
-  VS.opp = opp; SAVE.vsOpp = opp; save();
+function startVersus(opp, opts) {
+  opts = opts || {}; VS.opts = opts; VS.conq = opts.conq;
+  VS.opp = opp; if (opts.conq === undefined) { SAVE.vsOpp = opp; save(); }
   G.mode = 'versus'; G.lv = null; G.sky = SKIES[['day', 'morning', 'dusk', 'overcast'][Math.floor(Math.random() * 4)]];
   resetWorld(); makeTerrain(null, 0);
   // 내 성: 오른쪽(상대)을 보게 좌우를 뒤집음
@@ -2460,18 +2662,22 @@ function startVersus(opp) {
   const ea = piecesExtent(mine);
   const A = mine.map(p => Object.assign({}, p, { x: ea.x1 - p.x, cyl: p.cyl ? [ea.x1 - p.cyl[0], p.cyl[1]] : undefined }));
   if (!A.some(p => PT[p.t] && PT[p.t].man)) { const w = ea.x1 - ea.x0; A.push({ t: 'soldier', x: w + 1.5, y: 0.87, r: 0, role: 'spear' }, { t: 'soldier', x: w + 3, y: 0.87, r: 0, role: 'archer' }); }
-  const en = vsRandomCastle(), eb = piecesExtent(en.list);
+  let en;
+  if (opts.enemyLv !== undefined) { const L = getLevel(opts.enemyLv), bb = CB(L.style); L.build(bb); en = { list: bb.L.filter(p => p.t !== 'barrel'), style: L.style, name: opts.enemyName || L.name }; }
+  else en = vsRandomCastle();
+  const eb = piecesExtent(en.list);
   const B = en.list.map(p => Object.assign({}, p, { x: p.x - eb.x0, cyl: p.cyl ? [p.cyl[0] - eb.x0, p.cyl[1]] : undefined }));
   const wA = piecesExtent(A).x1, wB = eb.x1 - eb.x0;
   const engA = wA + 7, engB = engA + 72, offB = engB + 7;
   G.off = 0; const blocksA = spawnPieces(A, 0, 'slate', 0);
+  G.wallBoost = opts.wall || 1; for (const b of blocksA) { b.maxHp *= G.wallBoost; b.hp = b.maxHp; }
   G.off = offB; const blocksB = spawnPieces(B, offB, en.style, 1);
   G.blocks = blocksA.concat(blocksB);
-  settleWorld(3); makeBonds();
+  settleWorld(3); for (const b of blocksA) { b.hp = b.maxHp; } makeBonds();
   const two = opp === '2p';
   VS.sides = [
-    { name: two ? '1P' : '나', castle: myName, engX: engA, face: 1, weapon: 'trebuchet', aims: defaultAims(), eng: { phase: 'ready', t: 0, released: true }, blocks: blocksA, box: castleBoxOf(blocksA), ai: false, trace: null, shots: 0 },
-    { name: two ? '2P' : '컴퓨터', castle: en.name, engX: engB, face: -1, weapon: 'trebuchet', aims: defaultAims(), eng: { phase: 'ready', t: 0, released: true }, blocks: blocksB, box: castleBoxOf(blocksB), ai: !two, err: AI_ERR[opp] || AI_ERR.normal, miss: 1, trace: null, shots: 0 },
+    { name: two ? '1P' : '나', castle: myName, engX: engA, face: 1, weapon: 'trebuchet', aims: defaultAims(), eng: { phase: 'ready', t: 0, released: true }, blocks: blocksA, box: castleBoxOf(blocksA), ai: false, trace: null, shots: 0, allowed: opts.mine || W_ORDER, boost: opts.boost || 1 },
+    { name: two ? '2P' : '컴퓨터', castle: en.name, engX: engB, face: -1, weapon: 'trebuchet', aims: defaultAims(), eng: { phase: 'ready', t: 0, released: true }, blocks: blocksB, box: castleBoxOf(blocksB), ai: !two, err: AI_ERR[opp] || AI_ERR.normal, miss: 1, trace: null, shots: 0, allowed: opts.ai || W_ORDER, boost: 1 },
   ];
   VS.over = false; VS.endT = 0; VS.winner = -1; VS.plan = null; VS.shots = 0;
   G.state = 'aim'; G.view = 'auto'; G.zoomMul = 1; G.finishT = -1;
@@ -2480,6 +2686,7 @@ function startVersus(opp) {
 }
 function vsActivate(i) {
   const S = VS.sides[i], T = VS.sides[1 - i];
+  if (S.allowed && !S.allowed.includes(S.weapon)) S.weapon = S.allowed.includes('trebuchet') ? 'trebuchet' : S.allowed[0];
   VS.turn = i; G.weapon = S.weapon; G.aims = S.aims; G.eng = S.eng; G.engX = S.engX; G.face = S.face;
   G.castleBox = T.box; G.lastTrace = S.trace; G.trail = []; G.lastPct = collapsePct(T.blocks);
   VS.aiT = S.ai ? 1.6 : 0; VS.plan = null; G.drag = null;
@@ -2492,7 +2699,7 @@ function vsAfterShot() {
   const pa = collapsePct(VS.sides[0].blocks), pb = collapsePct(VS.sides[1].blocks), W = VS.winAt;
   if (pa >= W || pb >= W) { VS.winner = (pa >= W && pb >= W) ? VS.turn : (pb >= W ? 0 : 1); VS.over = true; VS.endT = 1.4; updateHud(true); return; }
   vsActivate(1 - VS.turn);
-  SND.click(); updateHud(true);
+  buildWeaponCards(); SND.click(); updateHud(true);
 }
 // 컴퓨터: 무거운 무기로 성 밑동이나 병사를 노리고, 쏠수록 덜 빗나감
 function aiPlan() {
@@ -2513,7 +2720,9 @@ function aiPlan() {
   }
   if (!target) return null;
   const order = Math.random() < 0.2 ? ['bomb', 'trebuchet', 'bombard'] : Math.random() < 0.55 ? ['trebuchet', 'bombard', 'onager', 'ballista'] : Math.random() < 0.6 ? ['bombard', 'trebuchet', 'ballista', 'onager'] : ['onager', 'trebuchet', 'ballista', 'bombard'];
+  if (T.blocks.some(b => !b.dead && b.mat === 'wood') && Math.random() < 0.2) order.unshift('fire');
   for (const wk of order) {
+    if (!(S.allowed || W_ORDER).includes(wk)) continue;
     const sol = solveAim(wk, target.x + (S.face > 0 ? -0.4 : 0.4), target.y);
     if (!sol) continue;
     const g = () => (Math.random() + Math.random() + Math.random() - 1.5) * 1.15, Wp = WEAPONS[wk], e = S.err, k = S.miss;
@@ -2551,7 +2760,14 @@ function vsFinish() {
   $('resTitle').textContent = two ? `${VS.sides[w].name} 승리` : (w === 0 ? '승리' : '패배');
   $('resStars').classList.add('hidden');
   $('resText').innerHTML = `${VS.sides[0].name} 성 붕괴율 <b>${Math.round(pa)}%</b> · ${VS.sides[1].name} 성 붕괴율 <b>${Math.round(pb)}%</b><br>쓰러진 병사: ${VS.sides[0].name} ${ma[0]}/${ma[1]} · ${VS.sides[1].name} ${mb[0]}/${mb[1]}<br>쏜 발 수: ${VS.sides[0].name} ${VS.sides[0].shots} · ${VS.sides[1].name} ${VS.sides[1].shots}<br>상대: ${OPP_NAME[VS.opp]}`;
-  $('bResNext').classList.add('hidden'); $('bResList').textContent = '전쟁 모드 메뉴';
+  $('bResNext').classList.add('hidden'); $('bResList').textContent = VS.conq !== undefined ? '지도로' : '전쟁 모드 메뉴';
+  if (two) achGet('war2p');
+  else if (w === 0) { achGet('war1'); if (VS.opp === 'hard') achGet('warHard'); if (VS.sides[0].shots <= 5) achGet('warFast'); }
+  if (VS.conq !== undefined) {
+    if (w === 0) { const rw = VS.opts.reward || 0; cqWin(VS.conq); $('resText').innerHTML += `<br><b>${VS.opts.enemyName} 차지 · 금화 +${rw}</b>`; }
+    else $('resText').innerHTML += '<br>지도에서 다시 공격할 수 있습니다.';
+    $('bResRetry').textContent = w === 0 ? '한 번 더' : '다시 공격';
+  } else $('bResRetry').textContent = '다시 하기';
   $('result').classList.remove('hidden');
   if (two || w === 0) SND.good(); else SND.bad();
   SAVE.vs = SAVE.vs || { win: 0, lose: 0 };
@@ -2565,7 +2781,8 @@ function vsHud(force) {
   const key = ['vs', VS.turn, Math.round(pa), Math.round(pb), vsMen(0)[0], vsMen(1)[0], G.weapon, A.ang.toFixed(1), A.v.toFixed(1), G.state, G.view, G.timeScale, SND.muted, VS.over].join('|');
   if (!force && key === hudCache) return; hudCache = key;
   const two = VS.opp === '2p';
-  $('lvName').textContent = VS.over ? '전쟁 모드 · 끝' : `전쟁 모드 · ${S.name} 차례` + (ai ? ' (조준 중)' : '');
+  const MODE = VS.conq !== undefined ? '정복 전투' : '전쟁 모드';
+  $('lvName').textContent = VS.over ? `${MODE} · 끝` : `${MODE} · ${S.name} 차례` + (ai ? ' (조준 중)' : '');
   $('lvEra').textContent = `${VS.sides[0].name}: ${VS.sides[0].castle} · ${VS.sides[1].name}: ${VS.sides[1].castle}` + (two ? '' : ` · ${OPP_NAME[VS.opp]}`) + (SAVE.vs && !two ? ` · ${SAVE.vs.win}승 ${SAVE.vs.lose}패` : '');
   $('barWrap').classList.remove('hidden'); $('barGoal').style.left = VS.winAt + '%'; $('barFill').style.width = Math.min(100, pT) + '%';
   const ma = vsMen(0), mb = vsMen(1);
@@ -2579,6 +2796,151 @@ function vsHud(force) {
   $('bSound').textContent = SND.muted ? '소리 꺼짐' : '소리 켜짐';
   $('bEdit').classList.remove('hidden'); $('bEdit').textContent = '내 성 고치기';
   $('bRetry').textContent = '새 판 (R)';
+}
+
+/* ===== 정복 지도: 이웃 성을 하나씩 차지하고, 금화로 대장간 강화 ===== */
+const CQ_N = 30;
+const CQ_SHOP = [
+  { id: 'dmg', name: '무거운 돌', desc: '내 돌덩이 피해 +15%', costs: [150, 300, 500, 800, 1200] },
+  { id: 'wall', name: '성벽 보강', desc: '내 성 돌·회반죽 +20%', costs: [150, 300, 500, 800, 1200] },
+  { id: 'fire', name: '불항아리 만들기', desc: '전투에서 불항아리를 씀', costs: [200], unlock: true },
+  { id: 'bombard', name: '사석포 들이기', desc: '전투에서 사석포를 씀', costs: [400], unlock: true },
+  { id: 'bomb', name: '진천뢰 만들기', desc: '전투에서 진천뢰를 씀', costs: [600], unlock: true },
+];
+function cqData() {
+  if (!SAVE.conq) { SAVE.conq = { seed: (Math.random() * 1e9) | 0, owned: [0], gold: 0, upg: {} }; save(); }
+  SAVE.conq.upg = SAVE.conq.upg || {};
+  return SAVE.conq;
+}
+let CQ_MAP = null, CQ_SEL = -1;
+function cqMap() {
+  const C = cqData(); if (CQ_MAP && CQ_MAP.seed === C.seed) return CQ_MAP;
+  const R = rng(C.seed), nodes = [{ x: 0.06, y: 0.5 }];
+  let guard = 0;
+  while (nodes.length < CQ_N && guard++ < 8000) {
+    const x = 0.1 + R() * 0.86, y = 0.08 + R() * 0.84;
+    if (nodes.every(n => Math.hypot((n.x - x) * 1.55, n.y - y) > 0.125)) nodes.push({ x, y });
+  }
+  const d = (a, b) => Math.hypot((nodes[a].x - nodes[b].x) * 1.55, nodes[a].y - nodes[b].y), key = (a, b) => a < b ? a + '-' + b : b + '-' + a, E = new Set();
+  for (let i = 0; i < nodes.length; i++) {
+    const near = nodes.map((_, j) => j).filter(j => j !== i).sort((a, b) => d(i, a) - d(i, b)).slice(0, 2);
+    for (const j of near) if (d(i, j) < 0.32) E.add(key(i, j));
+  }
+  const inT = new Set([0]);
+  while (inT.size < nodes.length) {
+    let best = null;
+    for (const a of inT) for (let b = 0; b < nodes.length; b++) if (!inT.has(b)) { const dd = d(a, b); if (!best || dd < best.d) best = { a, b, d: dd }; }
+    E.add(key(best.a, best.b)); inT.add(best.b);
+  }
+  const adj = nodes.map(() => []);
+  for (const k of E) { const [a, b] = k.split('-').map(Number); adj[a].push(b); adj[b].push(a); }
+  const tier = nodes.map(() => -1); tier[0] = 0; const q = [0];
+  while (q.length) { const a = q.shift(); for (const b of adj[a]) if (tier[b] < 0) { tier[b] = tier[a] + 1; q.push(b); } }
+  const NR = rng(C.seed + 99), CORE = ['성', '요새', '성채', '망루', '돌성', '산성'];
+  nodes.forEach((n, i) => {
+    n.tier = tier[i];
+    n.name = i === 0 ? '내 성' : NAME_A[Math.floor(NR() * NAME_A.length)] + ' ' + CORE[Math.floor(NR() * CORE.length)];
+    n.lv = clamp(60 + n.tier * 110 + Math.floor(NR() * 80), 60, TOTAL_STAGES - 1);
+    n.reward = 100 + n.tier * 60;
+    n.diff = n.tier <= 2 ? 'easy' : n.tier <= 4 ? 'normal' : 'hard';
+  });
+  // 꾸밈: 강·숲·산 자리
+  const DR = rng(C.seed + 7), deco = { trees: [], hills: [], river: [] };
+  for (let i = 0; i < 70; i++) deco.trees.push([DR(), DR(), 0.6 + DR() * 0.8]);
+  for (let i = 0; i < 14; i++) deco.hills.push([DR(), DR(), 0.7 + DR() * 0.8]);
+  let rx = 0.3 + DR() * 0.4; for (let y = -0.05; y <= 1.05; y += 0.05) { rx += (DR() - 0.5) * 0.06; deco.river.push([rx, y]); }
+  CQ_MAP = { seed: C.seed, nodes, adj, edges: [...E].map(k => k.split('-').map(Number)), deco };
+  return CQ_MAP;
+}
+function cqState(i) {
+  const C = cqData(), M = cqMap();
+  if (C.owned.includes(i)) return 'own';
+  return M.adj[i].some(j => C.owned.includes(j)) ? 'open' : 'lock';
+}
+function openConq() {
+  G.mode = 'title'; showHud(null); showScreen('conq'); $('result').classList.add('hidden');
+  cqMap(); if (CQ_SEL < 0 || cqState(CQ_SEL) === 'own') { const M = cqMap(); CQ_SEL = M.nodes.findIndex((_, i) => cqState(i) === 'open'); }
+  drawConq(); cqPanel();
+}
+function cqCanvasSize() {
+  const c = $('cqCv'), r = c.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+  c.width = Math.max(1, Math.round(r.width * dpr)); c.height = Math.max(1, Math.round(r.height * dpr));
+  return { c, w: r.width, h: r.height, dpr };
+}
+function drawConq() {
+  const { c, w, h, dpr } = cqCanvasSize(), g = c.getContext('2d'), M = cqMap(), C = cqData();
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const P = n => [n.x * w, n.y * h];
+  const bg = g.createLinearGradient(0, 0, w, h); bg.addColorStop(0, '#d8c79f'); bg.addColorStop(1, '#bfa77a');
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  const R = rng(C.seed + 3);
+  for (let i = 0; i < 260; i++) { g.fillStyle = R() < 0.5 ? 'rgba(90,70,40,0.06)' : 'rgba(255,250,230,0.08)'; g.fillRect(R() * w, R() * h, 2 + R() * 3, 2 + R() * 3); }
+  // 강
+  g.strokeStyle = 'rgba(80,120,140,0.55)'; g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+  M.deco.river.forEach((p, i) => i ? g.lineTo(p[0] * w, p[1] * h) : g.moveTo(p[0] * w, p[1] * h)); g.stroke();
+  g.strokeStyle = 'rgba(200,225,235,0.35)'; g.lineWidth = 2; g.stroke();
+  // 산
+  for (const [x, y, s] of M.deco.hills) { const X = x * w, Y = y * h, S = 14 * s; g.fillStyle = 'rgba(120,95,60,0.5)'; g.beginPath(); g.moveTo(X - S, Y + S * 0.5); g.lineTo(X, Y - S * 0.7); g.lineTo(X + S, Y + S * 0.5); g.fill(); g.fillStyle = 'rgba(240,235,220,0.5)'; g.beginPath(); g.moveTo(X - S * 0.3, Y - S * 0.25); g.lineTo(X, Y - S * 0.7); g.lineTo(X + S * 0.3, Y - S * 0.25); g.fill(); }
+  // 숲
+  for (const [x, y, s] of M.deco.trees) { const X = x * w, Y = y * h, S = 5 * s; g.fillStyle = 'rgba(70,95,50,0.55)'; g.beginPath(); g.moveTo(X - S, Y + S); g.lineTo(X, Y - S * 1.3); g.lineTo(X + S, Y + S); g.fill(); }
+  // 길
+  for (const [a, b] of M.edges) {
+    const [x1, y1] = P(M.nodes[a]), [x2, y2] = P(M.nodes[b]), both = C.owned.includes(a) && C.owned.includes(b);
+    g.strokeStyle = both ? 'rgba(47,79,120,0.8)' : 'rgba(95,70,40,0.6)'; g.lineWidth = both ? 3 : 2; g.setLineDash(both ? [] : [6, 5]);
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  }
+  g.setLineDash([]);
+  // 성
+  g.textAlign = 'center'; g.font = '11px "Malgun Gothic",sans-serif';
+  M.nodes.forEach((n, i) => {
+    const [x, y] = P(n), st = cqState(i), sz = i === 0 ? 1.3 : 1;
+    const wall = st === 'own' ? '#c9c2b0' : st === 'open' ? '#b9ad97' : '#a39a88', flag = st === 'own' ? '#2f4f78' : '#8f2a25';
+    g.globalAlpha = st === 'lock' ? 0.55 : 1;
+    if (i === CQ_SEL) { g.strokeStyle = '#d9a441'; g.lineWidth = 3; g.beginPath(); g.arc(x, y - 4, 17 * sz, 0, Math.PI * 2); g.stroke(); }
+    g.fillStyle = wall; g.strokeStyle = '#5a5246'; g.lineWidth = 1.2;
+    g.fillRect(x - 9 * sz, y - 9 * sz, 18 * sz, 13 * sz); g.strokeRect(x - 9 * sz, y - 9 * sz, 18 * sz, 13 * sz);
+    for (let k = 0; k < 3; k++) { g.fillRect(x - 9 * sz + k * 7 * sz, y - 12 * sz, 4 * sz, 3 * sz); g.strokeRect(x - 9 * sz + k * 7 * sz, y - 12 * sz, 4 * sz, 3 * sz); }
+    g.strokeStyle = '#3a2a1c'; g.beginPath(); g.moveTo(x, y - 12 * sz); g.lineTo(x, y - 22 * sz); g.stroke();
+    g.fillStyle = flag; g.fillRect(x, y - 22 * sz, 9 * sz, 6 * sz);
+    if (st === 'open') { g.fillStyle = '#3a2a1c'; g.fillRect(x - 2.5 * sz, y - 3 * sz, 5 * sz, 7 * sz); }
+    g.fillStyle = st === 'lock' ? 'rgba(40,30,20,0.6)' : '#2a2018';
+    g.fillText(n.name, x, y + 16 * sz);
+    g.globalAlpha = 1;
+  });
+}
+function cqPanel() {
+  const C = cqData(), M = cqMap(), n = M.nodes[CQ_SEL];
+  $('cqGold').innerHTML = `금화 <b>${C.gold}</b> · 차지한 성 ${C.owned.length} / ${M.nodes.length}`;
+  if (n) {
+    const st = cqState(CQ_SEL), DN = { easy: '쉬움', normal: '보통', hard: '어려움' };
+    $('cqInfo').innerHTML = `<b>${n.name}</b><br>${st === 'own' ? '내 땅입니다.' : st === 'open' ? '내 땅과 붙어 있어 공격할 수 있습니다.' : '아직 길이 닿지 않습니다.'}<br>상대 실력: ${DN[n.diff]} · 거리 단계 ${n.tier}<br>이기면 금화 ${n.reward}`;
+    $('bCqAttack').disabled = st !== 'open';
+  } else { $('cqInfo').textContent = '지도에서 성을 누르세요.'; $('bCqAttack').disabled = true; }
+  $('cqShop').innerHTML = '';
+  for (const it of CQ_SHOP) {
+    const lv = C.upg[it.id] || 0, max = it.costs.length, cost = it.costs[lv];
+    const row = document.createElement('div'); row.className = 'cqrow';
+    row.innerHTML = `<span><b>${it.name}</b>${it.unlock ? '' : ` ${lv}/${max}`}<br><small>${it.desc}</small></span>`;
+    const bt = document.createElement('button');
+    bt.textContent = lv >= max ? (it.unlock ? '있음' : '최고') : `금화 ${cost}`;
+    bt.disabled = lv >= max || C.gold < cost;
+    bt.onclick = () => { if (C.gold < cost || lv >= max) return; C.gold -= cost; C.upg[it.id] = lv + 1; save(); SND.good(); achGet('upgrade'); cqPanel(); };
+    row.appendChild(bt); $('cqShop').appendChild(row);
+  }
+}
+function cqAttack() {
+  const M = cqMap(), n = M.nodes[CQ_SEL]; if (!n || cqState(CQ_SEL) !== 'open') return;
+  const C = cqData(), up = C.upg;
+  const mine = ['onager', 'ballista', 'trebuchet'].concat(up.fire ? ['fire'] : [], up.bombard ? ['bombard'] : [], up.bomb ? ['bomb'] : []);
+  const ai = ['onager', 'ballista', 'trebuchet'].concat(n.tier >= 3 ? ['bombard', 'fire'] : [], n.tier >= 5 ? ['bomb'] : []);
+  startVersus(n.diff, { conq: CQ_SEL, enemyLv: n.lv, enemyName: n.name, mine, ai, boost: 1 + 0.15 * (up.dmg || 0), wall: 1 + 0.2 * (up.wall || 0), reward: n.reward });
+}
+function cqWin(i) {
+  const C = cqData(), M = cqMap(), n = M.nodes[i];
+  if (!C.owned.includes(i)) C.owned.push(i);
+  C.gold += n.reward; save();
+  achGet('conq1'); if (C.owned.length - 1 >= 10) achGet('conq10'); if (C.owned.length >= M.nodes.length) achGet('conqAll');
+  CQ_SEL = M.nodes.findIndex((_, k) => cqState(k) === 'open');
 }
 
 /* ===== 입력 ===== */
@@ -2655,10 +3017,10 @@ window.addEventListener('keydown', ev => {
   else if (k === 'f' || k === 'F') toggleFast();
   else if (k === 'm' || k === 'M') toggleSound();
   else if (k === 'Escape') openTitle();
-  else if (/^[1-5]$/.test(k)) { const keys = G.mode === 'play' ? Object.keys(G.lv.weapons) : W_ORDER; const w = keys[+k - 1]; if (w) selectWeapon(w); }
+  else if (/^[1-6]$/.test(k)) { const w = weaponKeys()[+k - 1]; if (w) selectWeapon(w); }
 });
 window.addEventListener('pointermove', ev => { G.mouse = { x: ev.clientX, y: ev.clientY }; });
-function retry() { SND.click(); if (G.mode === 'play') loadLevel(G.lvIndex); else if (G.mode === 'free') startAttack(); else if (G.mode === 'versus') startVersus(VS.opp); }
+function retry() { SND.click(); if (G.mode === 'play') loadLevel(G.lvIndex); else if (G.mode === 'free') startAttack(); else if (G.mode === 'versus') startVersus(VS.opp, VS.opts); }
 function toggleView() { G.view = G.view === 'castle' ? 'auto' : 'castle'; updateHud(true); }
 function toggleFast() { G.timeScale = G.timeScale > 1 ? 1 : 2; SAVE.fast = G.timeScale > 1; save(); updateHud(true); }
 function toggleSound() { SND.setMuted(!SND.muted); SAVE.mute = SND.muted; save(); updateHud(true); }
@@ -2666,6 +3028,18 @@ $('bView').onclick = toggleView; $('bFast').onclick = toggleFast; $('bSound').on
 $('bMenu').onclick = () => { SND.click(); openTitle(); };
 $('bEdit').onclick = () => { SND.click(); enterBuild(); };
 $('bVersus').onclick = () => { SND.unlock(); SND.click(); openVersus(); };
+$('bConq').onclick = () => { SND.unlock(); SND.click(); openConq(); };
+$('bAch').onclick = () => { SND.unlock(); SND.click(); openAch(); };
+$('bAchBack').onclick = () => { SND.click(); showScreen('title'); };
+$('bCqBack').onclick = () => { SND.click(); showScreen('title'); };
+$('bCqAttack').onclick = () => { SND.unlock(); SND.click(); cqAttack(); };
+$('bCqReset').onclick = () => { if (!confirm('지금 지도를 버리고 새 지도로 시작할까요? 차지한 성·금화·강화가 모두 처음으로 돌아갑니다.')) return; SAVE.conq = null; CQ_MAP = null; CQ_SEL = -1; cqData(); openConq(); };
+$('cqCv').addEventListener('click', ev => {
+  const r = $('cqCv').getBoundingClientRect(), M = cqMap(); let best = -1, bd = 26;
+  M.nodes.forEach((n, i) => { const d = Math.hypot(n.x * r.width - (ev.clientX - r.left), n.y * r.height - (ev.clientY - r.top)); if (d < bd) { bd = d; best = i; } });
+  if (best >= 0) { CQ_SEL = best; SND.click(); drawConq(); cqPanel(); }
+});
+window.addEventListener('resize', () => { if (!$('conq').classList.contains('hidden')) drawConq(); });
 $('bBuildWar').onclick = () => { SND.unlock(); SND.click(); saveBuild(); openVersus(); };
 $('bVsBack').onclick = () => { SND.click(); showScreen('title'); };
 $('bVsBuild').onclick = () => { SND.click(); enterBuild(); };
@@ -2684,8 +3058,8 @@ $('bPgFar').onclick = () => { SND.click(); openLevels(Math.floor(farOpen() / PER
 $('bGo').onclick = () => { const v = Math.round(+$('inGo').value); if (!(v >= 1 && v <= TOTAL_STAGES)) return; SND.click(); openLevels(Math.floor((v - 1) / PER_PAGE)); };
 $('inGo').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('bGo').click(); });
 $('bCdxBack').onclick = () => { SND.click(); showScreen('title'); };
-$('bResList').onclick = () => { SND.click(); if (G.mode === 'versus') openVersus(); else openLevels(Math.floor(G.lvIndex / PER_PAGE)); };
-$('bResRetry').onclick = () => { SND.click(); if (G.mode === 'versus') startVersus(VS.opp); else loadLevel(G.lvIndex); };
+$('bResList').onclick = () => { SND.click(); if (G.mode === 'versus') { if (VS.conq !== undefined) openConq(); else openVersus(); } else openLevels(Math.floor(G.lvIndex / PER_PAGE)); };
+$('bResRetry').onclick = () => { SND.click(); if (G.mode === 'versus') startVersus(VS.opp, VS.opts); else loadLevel(G.lvIndex); };
 $('bResNext').onclick = () => { SND.click(); if (G.lvIndex < TOTAL_STAGES - 1) loadLevel(G.lvIndex + 1); };
 $('bAttack').onclick = () => { SND.unlock(); SND.click(); startAttack(); };
 $('bRot').onclick = () => { SND.click(); G.build.rot = (G.build.rot + 1) % 4; };
@@ -2714,7 +3088,7 @@ resize();
 SND.setMuted(SAVE.mute); G.timeScale = SAVE.fast ? 2 : 1;
 openTitle();
 requestAnimationFrame(loop);
-window.__siege = { G, PHY, aimPath, VS, startVersus, vsActivate, chipBlock, LEVELS, getLevel, genLevel, TOTAL_STAGES, update, selectWeapon, killMan, menDown, makeBonds, loadLevel, autoShot, collapsePct, fire, startAttack, enterBuild, openLevels, openTitle, openCodex, finishLevel, cam, render, resize, solveAim };
+window.__siege = { G, PHY, aimPath, ignite, openConq, cqAttack, cqMap, cqData, openAch, achGet, ACH, VS, startVersus, vsActivate, chipBlock, LEVELS, getLevel, genLevel, TOTAL_STAGES, update, selectWeapon, killMan, menDown, makeBonds, loadLevel, autoShot, collapsePct, fire, startAttack, enterBuild, openLevels, openTitle, openCodex, finishLevel, cam, render, resize, solveAim };
 </script>
 <script src="../track.js" defer></script>
 </body>
