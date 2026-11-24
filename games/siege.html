@@ -1296,9 +1296,9 @@ function updateParts(dt) {
     if (p.life <= 0) { G.parts.splice(i, 1); continue; }
     if (p.k === 'dust' || p.k === 'smoke') { p.vx *= 1 - 1.6 * dt; p.vy = p.vy * (1 - 1.2 * dt) + (p.k === 'smoke' ? 0.9 : 0.25) * dt; p.r += p.gr * dt; }
     else if (p.k === 'fire') { p.vx *= 1 - 3 * dt; p.vy = p.vy * (1 - 3 * dt) + 3 * dt; p.r += 0.6 * dt; }
-    else { p.vy -= g * dt; if (p.k === 'chip') p.a += p.w * dt; }
+    else { p.vy -= g * dt; if (p.k === 'chip' || p.k === 'arrow') p.a += p.w * dt; }
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if ((p.k === 'chip' || p.k === 'spark') && p.y < groundY(p.x)) { p.y = groundY(p.x); p.vy *= -0.3; p.vx *= 0.5; p.w *= 0.5; }
+    if ((p.k === 'chip' || p.k === 'spark' || p.k === 'arrow') && p.y < groundY(p.x)) { p.y = groundY(p.x); p.vy *= -0.3; p.vx *= 0.5; p.w *= 0.5; }
     if (p.k === 'drop' && p.y < (G.water ? G.water.y1 : 0) - 0.2) p.life = 0;
   }
 }
@@ -1361,10 +1361,41 @@ function drawArm(sho, A, S, k) {
   capsule(A[0].x, A[0].y, A[1].x, A[1].y, 0.09, shade(S.tunic, k * 0.92));
   ctx.fillStyle = shade(S.skin, k); ctx.beginPath(); ctx.arc(A[1].x, A[1].y, 0.05, 0, 7); ctx.fill();
 }
+function drawShield(x, y, ang) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(-0.22, 0.33); ctx.lineTo(0.22, 0.33); ctx.lineTo(0.22, 0.05); ctx.quadraticCurveTo(0.2, -0.22, 0, -0.38); ctx.quadraticCurveTo(-0.2, -0.22, -0.22, 0.05); ctx.closePath();
+  ctx.fillStyle = '#7b2b25'; ctx.fill();
+  ctx.save(); ctx.clip(); ctx.fillStyle = '#c9a24a'; ctx.fillRect(-0.05, -0.4, 0.1, 0.75); ctx.fillRect(-0.24, 0.08, 0.48, 0.08); ctx.restore();
+  ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 0.035; ctx.stroke();
+  ctx.restore();
+}
+function drawQuiver(x, y, ang) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.strokeStyle = '#d9cfb8'; ctx.lineWidth = 0.012; ctx.lineCap = 'butt';
+  for (const dx of [-0.035, 0, 0.035]) { ctx.beginPath(); ctx.moveTo(dx, 0.2); ctx.lineTo(dx * 1.4, 0.4); ctx.stroke(); ctx.fillStyle = '#e8e0cc'; ctx.fillRect(dx * 1.4 - 0.025, 0.33, 0.05, 0.08); }
+  ctx.fillStyle = '#5b3b27'; ctx.fillRect(-0.065, -0.3, 0.13, 0.52);
+  ctx.strokeStyle = '#2e1d12'; ctx.lineWidth = 0.025; ctx.strokeRect(-0.065, -0.3, 0.13, 0.52);
+  ctx.fillStyle = '#8b6a44'; ctx.fillRect(-0.065, 0.1, 0.13, 0.04);
+  ctx.restore();
+}
+function drawArrowP(x, y, ang) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.strokeStyle = '#8b6a44'; ctx.lineWidth = 0.02; ctx.beginPath(); ctx.moveTo(-0.38, 0); ctx.lineTo(0.38, 0); ctx.stroke();
+  ctx.fillStyle = '#5a5f66'; ctx.beginPath(); ctx.moveTo(0.46, 0); ctx.lineTo(0.36, 0.035); ctx.lineTo(0.36, -0.035); ctx.fill();
+  ctx.fillStyle = '#e8e0cc'; ctx.fillRect(-0.4, -0.03, 0.09, 0.06);
+  ctx.restore();
+}
+// 등 뒤 장비(병사 얼굴 쪽이 +x인 그림 좌표에서)
+function drawGear(role, hip, lean) {
+  const bx = hip.x - Math.cos(lean) * 0.14 + Math.sin(lean) * 0.32, by = hip.y + Math.cos(lean) * 0.32 + Math.sin(lean) * 0.14;
+  if (role === 'spear') drawShield(bx - 0.04, by, -lean * 0.8);
+  else if (role === 'archer') drawQuiver(bx, by + 0.05, -lean - 0.35);
+}
 // x,y = 발 사이 땅 위치, f = 보는 쪽(1 오른쪽, -1 왼쪽)
-function drawManAt(x, y, f, P, sty, extra) {
+function drawManAt(x, y, f, P, sty, extra, gear) {
   const S = STY[sty], K = manFK(P);
   ctx.save(); ctx.translate(x, y); ctx.scale(f, 1);
+  if (gear) drawGear(gear, K.hip, P.lean);
   drawArm(K.sho, K.armB, S, 0.72); drawLeg(K.hip, K.legB, S, 0.72);
   // 몸통(누빈 옷)
   capsule(K.hip.x - Math.sin(P.lean) * 0.12, K.hip.y - Math.cos(P.lean) * 0.12, K.top.x - Math.sin(P.lean) * 0.12, K.top.y - Math.cos(P.lean) * 0.12, 0.32, S.tunic);
@@ -1401,7 +1432,7 @@ function drawStanding(m) {
     const h = K.armF[1];
     if (m.role === 'spear') drawSpear(h.x, h.y);
     else { const pb = manFK(P).armB[1]; drawBow(h.x, h.y, P.pull, pb.x, pb.y); }
-  });
+  }, m.role);
   ctx.restore();
 }
 // 쓰러진 몸: 조각마다 물리로 움직임
@@ -1462,7 +1493,17 @@ function killMan(m, hard) {
     hb.kind = 'debris'; hb.group = grp; hb.what = 'helm'; hb.life = 16; hb.face = f;
     hb.vx = b.vx * 1.2 + rnd(-3, 3); hb.vy = b.vy + rnd(3, 7); hb.w = rnd(-12, 12);
     PHY.add(hb); G.debris.push(hb);
-    SND.impact(4000, 'roof');
+    // 방패·화살통도 떨어져 나가 빙글빙글 날아감
+    m.lostGear = true;
+    const gp = Wd(-f * 0.18, 0.4);
+    const gs = m.role === 'spear' ? PHY.polyShape([[-0.22, -0.36], [0.22, -0.36], [0.22, 0.33], [-0.22, 0.33]]) : PHY.polyShape([[-0.065, -0.3], [0.065, -0.3], [0.065, 0.3], [-0.065, 0.3]]);
+    const gb = new PHY.Body(gs, gp.x, gp.y, b.a, { mass: m.role === 'spear' ? 4 : 1, fric: 0.6, rest: 0.2, angD: 0.15 });
+    gb.kind = 'debris'; gb.group = grp; gb.what = m.role === 'spear' ? 'shield' : 'quiver'; gb.life = 16; gb.face = f;
+    gb.vx = b.vx * 1.3 + rnd(-4, 4); gb.vy = b.vy + rnd(4, 9); gb.w = rnd(-15, 15);
+    PHY.add(gb); G.debris.push(gb);
+    if (m.role === 'archer') for (let k = 0; k < 6; k++) part({ k: 'arrow', x: gp.x, y: gp.y + 0.3, vx: b.vx * 0.8 + rnd(-6, 6), vy: b.vy * 0.5 + rnd(3, 10), a: rnd(0, 6), w: rnd(-14, 14), life: rnd(2.5, 4) });
+    for (let k = 0; k < 8; k++) part({ k: 'spark', x: b.x + rnd(-0.2, 0.2), y: b.y + rnd(0, 0.8), vx: rnd(-6, 6), vy: rnd(1, 7), life: rnd(0.2, 0.45) });
+    SND.impact(4000, 'roof'); SND.impact(2500, 'wood');
   }
   dust(b.x, b.y - 0.6, 'earth', 3, 0.25);
   SND.impact(1500, 'wood');
@@ -1488,6 +1529,7 @@ function drawRagdoll(m) {
     const half = q.len / 2 - q.wid / 2;
     const x1 = q.x - ax * half, y1 = q.y - ay * half, x2 = q.x + ax * half, y2 = q.y + ay * half;
     if (q.seg === 'torso') {
+      if (!m.lostGear) { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.a); ctx.scale(m.face, 1); drawGear(m.role, { x: 0, y: -0.3 }, 0); ctx.restore(); }
       capsule(q.x - ax * 0.27, q.y - ay * 0.27, x2, y2, 0.32, S.tunic);
       capsule(q.x - ax * 0.2 - ay * 0.13 * m.face, q.y - ay * 0.2 + ax * 0.13 * m.face, q.x - ax * 0.2 + ay * 0.13 * m.face, q.y - ay * 0.2 - ax * 0.13 * m.face, 0.05, '#3a2a1c');
     } else if (q.seg === 'thigh') capsule(x1, y1, x2, y2, 0.15, shade(S.hose, back));
@@ -1500,6 +1542,8 @@ function drawDebris(d) {
   ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.a);
   if (d.life < 1.5) ctx.globalAlpha = Math.max(0, d.life / 1.5);
   if (d.what === 'spear') drawSpear(0, 0, 2.4, 1.2);
+  else if (d.what === 'shield') { ctx.scale(d.face, 1); drawShield(0, 0, 0); }
+  else if (d.what === 'quiver') drawQuiver(0, 0, 0);
   else if (d.what === 'helm') {
     ctx.fillStyle = '#6f747b'; ctx.beginPath(); ctx.arc(0, -0.035, 0.128, 0, Math.PI); ctx.closePath(); ctx.fill(); ctx.fillRect(-0.21, -0.05, 0.42, 0.04);
     ctx.strokeStyle = '#33363a'; ctx.lineWidth = 0.02; ctx.beginPath(); ctx.arc(0, -0.035, 0.128, 0, Math.PI); ctx.stroke(); ctx.strokeRect(-0.21, -0.05, 0.42, 0.04);
@@ -1919,6 +1963,7 @@ function drawParts() {
     else if (p.k === 'smoke') { ctx.globalAlpha = 0.45 * k; ctx.fillStyle = '#6d6a66'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
     else if (p.k === 'fire') { ctx.globalAlpha = k; ctx.fillStyle = k > 0.6 ? '#ffe49a' : k > 0.3 ? '#ff9a3c' : '#b8452a'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
     else if (p.k === 'spark') { ctx.globalAlpha = k; ctx.fillStyle = '#ffd27a'; ctx.fillRect(p.x - 0.04, p.y - 0.04, 0.08, 0.08); }
+    else if (p.k === 'arrow') { ctx.globalAlpha = Math.min(1, k * 3); drawArrowP(p.x, p.y, p.a); }
     else if (p.k === 'drop') { ctx.globalAlpha = 0.8 * k; ctx.fillStyle = '#cfe3ea'; ctx.fillRect(p.x - 0.05, p.y - 0.05, 0.1, 0.1); }
     else { ctx.globalAlpha = Math.min(1, k * 2); ctx.fillStyle = p.col; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.75); ctx.restore(); }
   }
