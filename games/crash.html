@@ -134,6 +134,7 @@ const TUNE = {
   slowmo: 0.3,          // 처음 부딪힐 때 느린 화면 배속
   slowmoTime: 1.6,      // 느린 화면 시간(초)
   staticMargin: 0.14,   // 무게중심이 앞에 있는 정도 (안정성)
+  diveTrimMax: 1.45,    // 내려가는 각도에 맞춰 다듬는 속도 한계(시작 속도 × 이 값). 크면 더 곧게 내리꽂힘
   shardMax: 650,        // 쇠조각 최대 개수
   partMax: 1800,        // 불꽃·먼지 최대 개수
 };
@@ -435,8 +436,14 @@ function makeSim(){
   // 사람
   s.persons=initPersons(s,persons);
   // 다듬기(trim): 속도에 맞게 꼬리날개 각도
-  const V=set.spd/3.6;const q=0.5*TUNE.rho*V*V;
-  const a=cx-xw,bb=cx-xt;const Lw=Mt*9.81*bb/(bb-a);const Lt=Mt*9.81-Lw;
+  const V=set.spd/3.6;
+  // 내려가는 각도 그대로 계속 내려가도록, 그 각도에서 버티는 속도에 맞춰 다듬음(갑자기 다시 올라가지 않게)
+  const gam0=set.gam*DEG,Wt=Mt*9.81,Sw=wingSurf.area;
+  let Tt=0;for(const e of P.engines)Tt+=set.pow/100*(e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1)));
+  const cd0=wingSurf.cd0+0.022+0.02*P.hs.area/Sw,kI=wingSurf.k;const drive=Wt*Math.sin(-gam0)+Tt;let Vt=V;
+  if(drive>0){const qa=Sw*cd0,qc=kI*(Wt*Math.cos(gam0))**2/Sw,disc=drive*drive-4*qa*qc;if(disc>0){const qe=(drive+Math.sqrt(disc))/(2*qa);Vt=clamp(Math.sqrt(2*qe/TUNE.rho),V,V*TUNE.diveTrimMax);}}
+  const q=0.5*TUNE.rho*Vt*Vt;
+  const a=cx-xw,bb=cx-xt;const Lw=Wt*Math.cos(gam0)*bb/(bb-a);const Lt=Wt*Math.cos(gam0)-Lw;
   let alw=(Lw/(q*wingSurf.area)-wingSurf.cl0)/wingSurf.cla;alw=Math.min(alw,wingSurf.stall*0.92);
   const phiW=Math.atan2(s.y[B.wn[0]]-s.y[B.wn[1]],s.x[B.wn[0]]-s.x[B.wn[1]]);
   const phiT=Math.atan2(s.y[B.hn[0]]-s.y[B.hn[1]],s.x[B.hn[0]]-s.x[B.hn[1]]);
