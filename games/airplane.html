@@ -522,58 +522,58 @@ const CLS={
 // eng:엔진 수, prop:프로펠러, hi:날개가 위, ttail:T자 꼬리, hump:747 이층, mount:엔진 위치
 const PLANES=[
   {id:'a300', name:'A300',       cls:'L', eng:2, len:54, hgt:5.6, pax:250, mount:'wing'},
-  {id:'q400', name:'Q400',       cls:'M', eng:2, prop:1, hi:1, ttail:1, len:33, hgt:2.9, pax:78, mount:'wing'},
-  {id:'b747', name:'B747',       cls:'L', eng:4, len:71, hgt:6.4, pax:350, hump:1, mount:'wing'},
-  {id:'b737', name:'B737',       cls:'M', eng:2, len:39, hgt:3.8, pax:150, mount:'wing'},
-  {id:'b777', name:'B777',       cls:'L', eng:2, len:74, hgt:6.2, pax:300, mount:'wing'},
-  {id:'a345', name:'A340-500',   cls:'L', eng:4, len:68, hgt:5.6, pax:313, mount:'wing', fence:1, ctrGear:1},  // 초장거리형 — 동체 가운데 바퀴 다리
-  {id:'a346', name:'A340-600',   cls:'L', eng:4, len:75, hgt:5.6, pax:380, mount:'wing', fence:1, ctrGear:1},  // -500보다 7m 길다 (한때 세계에서 제일 긴 여객기)
+  {id:'q400', name:'Q400',       cls:'M', eng:2, prop:1, hi:1, ttail:1, len:33, hgt:2.9, pax:78, mount:'wing', mw:[1]},
+  {id:'b747', name:'B747',       cls:'L', eng:4, len:71, hgt:6.4, pax:350, hump:1, mount:'wing', mw:[2,2]},
+  {id:'b737', name:'B737',       cls:'M', eng:2, len:39, hgt:3.8, pax:150, mount:'wing', mw:[1]},
+  {id:'b777', name:'B777',       cls:'L', eng:2, len:74, hgt:6.2, pax:300, mount:'wing', mw:[3]},
+  {id:'a345', name:'A340-500',   cls:'L', eng:4, len:68, hgt:5.6, pax:313, mount:'wing', fence:1, ctrGear:2},  // 초장거리형 — 동체 가운데 바퀴 다리
+  {id:'a346', name:'A340-600',   cls:'L', eng:4, len:75, hgt:5.6, pax:380, mount:'wing', fence:1, ctrGear:2},  // -500보다 7m 길다 (한때 세계에서 제일 긴 여객기)
   {id:'a359', name:'A350-900',   cls:'L', eng:2, len:67, hgt:5.9, pax:315, mount:'wing', mask:1, winglet:1},
-  {id:'a351', name:'A350-1000',  cls:'L', eng:2, len:74, hgt:5.9, pax:370, mount:'wing', mask:1, winglet:1, bogie6:1},  // -900보다 7m 길고 주바퀴가 6개
+  {id:'a351', name:'A350-1000',  cls:'L', eng:2, len:74, hgt:5.9, pax:370, mount:'wing', mask:1, winglet:1, mw:[3]},  // -900보다 7m 길고 주바퀴가 6개
   {id:'dc10', name:'DC-10',      cls:'L', eng:3, len:55, hgt:6.0, pax:270, mount:'tri'},
-  {id:'md11', name:'MD-11',      cls:'L', eng:3, len:61, hgt:6.0, pax:290, mount:'tri'},
+  {id:'md11', name:'MD-11',      cls:'L', eng:3, len:61, hgt:6.0, pax:290, mount:'tri', ctrGear:1},
   {id:'l1011', name:'L-1011 트라이스타', cls:'L', eng:3, len:54, hgt:6.0, pax:250, mount:'wing', sTail:1},  // 가운데 엔진이 동체 속 S덕트 — 흡입구는 수직미익 밑동, 배기는 꼬리 끝
-  {id:'md83', name:'MD-83',      cls:'M', eng:2, len:45, hgt:3.4, pax:150, mount:'tail', ttail:1},
-  {id:'md80', name:'MD-80',      cls:'M', eng:2, len:45, hgt:3.4, pax:140, mount:'tail', ttail:1},
+  {id:'md83', name:'MD-83',      cls:'M', eng:2, len:45, hgt:3.4, pax:150, mount:'tail', ttail:1, mw:[1]},
+  {id:'md80', name:'MD-80',      cls:'M', eng:2, len:45, hgt:3.4, pax:140, mount:'tail', ttail:1, mw:[1]},
   {id:'il62', name:'Il-62',      cls:'L', eng:4, len:53, hgt:4.6, pax:180, mount:'tail', ttail:1},  // 꼬리에 4발(옆에서 2개)+T꼬리
   {id:'tu134', name:'Tu-134',    cls:'M', eng:2, len:37, hgt:3.4, pax:76, mount:'tail', ttail:1},  // 꼬리 엔진 2개+T꼬리
-  {id:'tu154', name:'Tu-154',    cls:'L', eng:3, len:48, hgt:3.9, pax:160, mount:'tail', ttail:1, sDuct:1},  // 꼬리 트라이제트(옆2+가운데1)
-  {id:'il76p', name:'Il-76 여객', cls:'L', eng:4, hi:1, ttail:1, glassnose:1, len:62, hgt:6.2, pax:140, mount:'wing'},  // 고익+T꼬리+유리노즈 여객형
-  {id:'bae146', name:'BAe 146',  cls:'M', eng:4, hi:1, ttail:1, len:28, hgt:3.6, pax:100, mount:'wing'},  // 고익 4발 제트 (거의 안 알려진)
-  {id:'conni',  name:'컨스텔레이션', cls:'L', eng:4, prop:1, tritail:1, len:35, hgt:4.0, pax:100, mount:'wing'},  // 꼬리 3개 옛날 프롭 여객기
+  {id:'tu154', name:'Tu-154',    cls:'L', eng:3, len:48, hgt:3.9, pax:160, mount:'tail', ttail:1, sDuct:1, mw:[3]},  // 꼬리 트라이제트(옆2+가운데1)
+  {id:'il76p', name:'Il-76 여객', cls:'L', eng:4, hi:1, ttail:1, glassnose:1, len:62, hgt:6.2, pax:140, mount:'wing', mw:[1,1]},  // 고익+T꼬리+유리노즈 여객형
+  {id:'bae146', name:'BAe 146',  cls:'M', eng:4, hi:1, ttail:1, len:28, hgt:3.6, pax:100, mount:'wing', mw:[1]},  // 고익 4발 제트 (거의 안 알려진)
+  {id:'conni',  name:'컨스텔레이션', cls:'L', eng:4, prop:1, tritail:1, len:35, hgt:4.0, pax:100, mount:'wing', mw:[1]},  // 꼬리 3개 옛날 프롭 여객기
   {id:'an2',    name:'An-2 복엽기', cls:'S', eng:1, prop:1, biplane:1, len:13, hgt:3.0, pax:12, mount:'wing'},  // 위아래 날개 2개
   {id:'c172', name:'세스나 172',  cls:'S', eng:1, prop:1, hi:1, len:6,  hgt:2.0, pax:3,  mount:'nose'},
-  {id:'c408', name:'세스나 408',  cls:'S', eng:2, prop:1, hi:1, len:12, hgt:2.1, pax:19, mount:'wing'},
+  {id:'c408', name:'세스나 408',  cls:'S', eng:2, prop:1, hi:1, len:12, hgt:2.1, pax:19, mount:'wing', mw:[1]},
   {id:'c182', name:'세스나 182',  cls:'S', eng:1, prop:1, hi:1, len:6.5,hgt:2.0, pax:3,  mount:'nose'},
-  {id:'atr72', name:'ATR 72',    cls:'T', eng:2, prop:1, hi:1, ttail:1, len:27, hgt:2.8, pax:70, mount:'wing'},
-  {id:'atr42', name:'ATR 42',    cls:'T', eng:2, prop:1, hi:1, ttail:1, len:23, hgt:2.8, pax:48, mount:'wing'},
+  {id:'atr72', name:'ATR 72',    cls:'T', eng:2, prop:1, hi:1, ttail:1, len:27, hgt:2.8, pax:70, mount:'wing', mw:[1]},
+  {id:'atr42', name:'ATR 42',    cls:'T', eng:2, prop:1, hi:1, ttail:1, len:23, hgt:2.8, pax:48, mount:'wing', mw:[1]},
   // ── 특이한 여객기 ──
   {id:'conc',   name:'콩코드',         cls:'L', eng:4, len:62, hgt:3.6, pax:100, mount:'wing', delta:1, droop:1},   // 삼각날개 + 아래로 꺾인 긴 코
-  {id:'a380',   name:'A380',           cls:'L', eng:4, len:73, hgt:7.4, pax:550, mount:'wing', dbl:1},              // 꼬리까지 통째로 2층 → 창문 두 줄
-  {id:'b377',   name:'스트라토크루저',  cls:'L', eng:4, prop:1, len:33, hgt:5.4, pax:100, mount:'wing', bubble:1, lowprop:1},   // 배가 불룩한 2층 프롭기
+  {id:'a380',   name:'A380',           cls:'L', eng:4, len:73, hgt:7.4, pax:550, mount:'wing', dbl:1, mw:[3,2]},              // 꼬리까지 통째로 2층 → 창문 두 줄
+  {id:'b377',   name:'스트라토크루저',  cls:'L', eng:4, prop:1, len:33, hgt:5.4, pax:100, mount:'wing', bubble:1, lowprop:1, mw:[1]},   // 배가 불룩한 2층 프롭기
   {id:'comet',  name:'코멧',           cls:'M', eng:4, len:34, hgt:3.5, pax:80,  mount:'wing', rootEng:1},          // 엔진이 날개 뿌리 속에 파묻힘
-  {id:'vfw614', name:'VFW-614',        cls:'T', eng:2, len:20, hgt:2.9, pax:44,  mount:'overwing'},                 // 엔진이 날개 위에 올라탐
-  {id:'avanti', name:'피아지오 아반티', cls:'T', eng:2, prop:1, ttail:1, canard:1, len:14, hgt:2.4, pax:9, mount:'pusher'}, // 앞날개 + 뒤로 미는 프로펠러
+  {id:'vfw614', name:'VFW-614',        cls:'T', eng:2, len:20, hgt:2.9, pax:44,  mount:'overwing', mw:[1]},                 // 엔진이 날개 위에 올라탐
+  {id:'avanti', name:'피아지오 아반티', cls:'T', eng:2, prop:1, ttail:1, canard:1, len:14, hgt:2.4, pax:9, mount:'pusher', mw:[1]}, // 앞날개 + 뒤로 미는 프로펠러
   // ── 화물기 ──
-  {id:'b747f', name:'B747 카고', cargo:1, cls:'L', eng:4, len:71, hgt:6.4, box:45, hump:1, mount:'wing'},
-  {id:'b737f', name:'B737 카고', cargo:1, cls:'M', eng:2, len:39, hgt:3.8, box:20, mount:'wing'},
-  {id:'b777f', name:'B777 카고', cargo:1, cls:'L', eng:2, len:74, hgt:6.2, box:40, mount:'wing'},
+  {id:'b747f', name:'B747 카고', cargo:1, cls:'L', eng:4, len:71, hgt:6.4, box:45, hump:1, mount:'wing', mw:[2,2]},
+  {id:'b737f', name:'B737 카고', cargo:1, cls:'M', eng:2, len:39, hgt:3.8, box:20, mount:'wing', mw:[1]},
+  {id:'b777f', name:'B777 카고', cargo:1, cls:'L', eng:2, len:74, hgt:6.2, box:40, mount:'wing', mw:[3]},
   {id:'b707f', name:'B707 카고', cargo:1, cls:'L', eng:4, len:47, hgt:3.8, box:24, mount:'wing'},
-  {id:'il76', name:'Il-76 카고', cargo:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, len:62, hgt:6.2, box:40, mount:'wing'},  // 고익+T꼬리+날개밑 4발+동체 맨아래 유리혹 수송기
-  {id:'c408f', name:'세스나 408 카고', cargo:1, cls:'S', eng:2, prop:1, hi:1, len:12, hgt:2.1, box:8, mount:'wing'},
+  {id:'il76', name:'Il-76 카고', cargo:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, len:62, hgt:6.2, box:40, mount:'wing', mw:[1,1]},  // 고익+T꼬리+날개밑 4발+동체 맨아래 유리혹 수송기
+  {id:'c408f', name:'세스나 408 카고', cargo:1, cls:'S', eng:2, prop:1, hi:1, len:12, hgt:2.1, box:8, mount:'wing', mw:[1]},
   {id:'dc10f', name:'DC-10 카고', cargo:1, cls:'L', eng:3, len:55, hgt:6.0, box:38, mount:'tri'},
-  {id:'md11f', name:'MD-11 카고', cargo:1, cls:'L', eng:3, len:61, hgt:6.0, box:42, mount:'tri'},
-  {id:'q300f', name:'Q300 카고', cargo:1, cls:'M', eng:2, prop:1, hi:1, ttail:1, len:25, hgt:2.7, box:12, mount:'wing'},
+  {id:'md11f', name:'MD-11 카고', cargo:1, cls:'L', eng:3, len:61, hgt:6.0, box:42, mount:'tri', ctrGear:1},
+  {id:'q300f', name:'Q300 카고', cargo:1, cls:'M', eng:2, prop:1, hi:1, ttail:1, len:25, hgt:2.7, box:12, mount:'wing', mw:[1]},
   {id:'belugaf',name:'벨루가 카고',cargo:1, cls:'L', eng:2, beluga:1, partload:1, len:56, hgt:6.4, box:42, mount:'wing'},  // 고래 모양 — 다른 비행기 부품을 실어 나름
   {id:'a330f', name:'A330 카고', cargo:1, cls:'L', eng:2, len:63, hgt:6.2, box:44, mount:'wing'},
   // ── 군사 ──
   {id:'e707',   name:'707 정찰기',    mil:1, cls:'L', eng:4, len:47, hgt:3.8, pax:20, awacs:1, mount:'wing'},   // AWACS 로토돔
-  {id:'il76ml', name:'Il-76 미사일',  mil:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, missiles:1, len:56, hgt:6.2, pax:6, mount:'wing'},
-  {id:'il76t',  name:'Il-76 수송기',  mil:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, transportWin:1, len:62, hgt:6.2, pax:120, mount:'wing'},  // 군용 수송기 + 동그란 포트홀 창
+  {id:'il76ml', name:'Il-76 미사일',  mil:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, missiles:1, len:56, hgt:6.2, pax:6, mount:'wing', mw:[1,1]},
+  {id:'il76t',  name:'Il-76 수송기',  mil:1, cls:'L', eng:4, hi:1, ttail:1, glassnose:1, transportWin:1, len:62, hgt:6.2, pax:120, mount:'wing', mw:[1,1]},  // 군용 수송기 + 동그란 포트홀 창
   {id:'c130',   name:'C-130',        mil:1, cls:'T', eng:4, prop:1, hi:1, transportWin:1, len:30, hgt:4.2, pax:90, mount:'wing'},   // 허큘리스 4발 터보프롭 수송기
-  {id:'c400',   name:'C-400',        mil:1, cls:'L', eng:4, hi:1, ttail:1, transportWin:1, len:48, hgt:5.6, pax:150, mount:'wing'}, // 대형 제트 수송기
-  {id:'c230',   name:'C-230',        mil:1, cls:'T', eng:2, prop:1, hi:1, ttail:1, transportWin:1, len:24, hgt:3.6, pax:50, mount:'wing'}, // 소형 터보프롭 수송기
-  {id:'atr42r', name:'ATR-42 정찰기', mil:1, cls:'T', eng:2, prop:1, hi:1, ttail:1, radome:1, len:23, hgt:2.8, pax:6, mount:'wing'},
+  {id:'c400',   name:'C-400',        mil:1, cls:'L', eng:4, hi:1, ttail:1, transportWin:1, len:48, hgt:5.6, pax:150, mount:'wing', mw:[3]}, // 대형 제트 수송기
+  {id:'c230',   name:'C-230',        mil:1, cls:'T', eng:2, prop:1, hi:1, ttail:1, transportWin:1, len:24, hgt:3.6, pax:50, mount:'wing', mw:[1]}, // 소형 터보프롭 수송기
+  {id:'atr42r', name:'ATR-42 정찰기', mil:1, cls:'T', eng:2, prop:1, hi:1, ttail:1, radome:1, len:23, hgt:2.8, pax:6, mount:'wing', mw:[1]},
   {id:'f14',    name:'F-14',         mil:1, cls:'M', eng:2, fighter:'f14', len:19, hgt:4.4, pax:2},
   {id:'f22',    name:'F-22',         mil:1, cls:'M', eng:2, fighter:'f22', len:19, hgt:4.6, pax:1},
   {id:'b2',     name:'B-2',          mil:1, cls:'L', eng:4, fighter:'b2', len:21, hgt:5.4, pax:2},
@@ -582,48 +582,50 @@ const PLANES=[
 
 /* ═══════════════ 데이터: 항공사 ═══════════════ */
 const AIRLINES=[
-  {id:'hj',    name:'HJ항공',       body:'#f6f5f1', tail:'#2F6B4F', stripe:'#2F6B4F', text:'#2F6B4F', all:1, ic:'✈️'},
-  {id:'lh',    name:'루프트한자',   body:'#f4f5f7', tail:'#0a1e5e', stripe:'#ffce00', text:'#0a1e5e', ic:'🦢',
+  {id:'hj',    name:'HJ항공',       en:'HJ AIRLINES', body:'#f6f5f1', tail:'#2F6B4F', stripe:'#2F6B4F', text:'#2F6B4F', all:1, ic:'✈️'},
+  {id:'lh',    name:'루프트한자',   en:'Lufthansa', body:'#f4f5f7', tail:'#05164a', stripe:'#e3e7ec', text:'#05164a', ic:'🦢',
     fleet:['b747','b737','b777','b747f','a380','vfw614','a359','a346']},
-  {id:'ke',    name:'대한항공',     body:'#cfe4f0', tail:'#79b6d4', stripe:'#79b6d4', text:'#1c4c6b', ic:'🌀',
+  {id:'ke',    name:'대한항공',     en:'KOREAN AIR', body:'#cfe4f0', tail:'#9ccbe0', stripe:'#b9c2c7', text:'#17406b', ic:'🌀',
     fleet:['b747','b777','b737','dc10','b777f','b747f','a380','a359']},
-  {id:'jin',   name:'진에어',       body:'#f6f7f2', tail:'#95c11f', stripe:'#95c11f', text:'#5c7a12', ic:'🦋',
+  {id:'ke2',   name:'대한항공 신도장', en:'KOREAN', body:'#9cc5de', tail:'#86b4d2', stripe:'#bcd6e6', text:'#12355f', ic:'🌀',
+    fleet:['b777','b737','a359','a351','a380','b747','b777f','b747f']},
+  {id:'jin',   name:'진에어',       en:'JIN AIR', body:'#f6f7f2', tail:'#95c11f', stripe:'#95c11f', text:'#5c7a12', ic:'🦋',
     fleet:['b777','b737']},
-  {id:'ana',   name:'전일본공수',   body:'#f2f4f8', tail:'#10286e', stripe:'#10286e', text:'#10286e', ic:'🗻',
+  {id:'ana',   name:'전일본공수',   en:'ANA', body:'#f2f4f8', tail:'#10286e', stripe:'#1a63b5', text:'#10286e', ic:'🗻',
     fleet:['a300','q400','b777','b737','atr72','atr42','q300f','l1011']},
-  {id:'swa',   name:'사우스웨스트', body:'#304cb2', tail:'#d5152e', stripe:'#f9b612', text:'#ffffff', ic:'❤️',
+  {id:'swa',   name:'사우스웨스트', en:'Southwest', body:'#304cb2', tail:'#d5152e', stripe:'#f9b612', text:'#ffffff', ic:'❤️',
     fleet:['md83','md80','b737','atr72']},
-  {id:'tropic',name:'트로픽 에어',  body:'#fdf8ee', tail:'#e8542f', stripe:'#f2b132', text:'#c34a20', ic:'🌴',
+  {id:'tropic',name:'트로픽 에어',  en:'TROPIC AIR', body:'#fdf8ee', tail:'#e8542f', stripe:'#f2b132', text:'#c34a20', ic:'🌴',
     fleet:['c408','c182','c172','avanti']},
-  {id:'seom',  name:'섬에어',       body:'#f1f9f8', tail:'#0d9488', stripe:'#14b8a6', text:'#0d7a70', ic:'🏝️',
+  {id:'seom',  name:'섬에어',       en:'ISLAND AIR', body:'#f1f9f8', tail:'#0d9488', stripe:'#14b8a6', text:'#0d7a70', ic:'🏝️',
     fleet:['b737','atr72','atr42','vfw614','avanti']},
-  {id:'aero',  name:'아에로플로트', body:'#eef2f8', tail:'#0a3d91', stripe:'#e01e2b', text:'#0a3d91', ic:'⭐',
+  {id:'aero',  name:'아에로플로트', en:'AEROFLOT', body:'#eef2f8', tail:'#0a3d91', stripe:'#e8731f', text:'#0a3d91', ic:'⭐',
     fleet:['il62','il76','il76p','tu134','tu154','b777','b737']},
-  {id:'af',    name:'공군',         body:'#d7ddd6', tail:'#3a4a3f', stripe:'#5f7a5f', text:'#2a3a2f', ic:'🎖️',
+  {id:'af',    name:'공군',         en:'AIR FORCE', body:'#d7ddd6', tail:'#3a4a3f', stripe:'#5f7a5f', text:'#2a3a2f', ic:'🎖️',
     fleet:['e707','il76ml','il76t','c130','c400','c230','atr42r','f14','f22','b2','tu95']},
-  {id:'emir',  name:'에미레이트',   body:'#f5f2ea', tail:'#d71921', stripe:'#c8a24a', text:'#d71921', ic:'🌙',
+  {id:'emir',  name:'에미레이트',   en:'Emirates', body:'#f5f2ea', tail:'#d71921', stripe:'#c8a24a', text:'#d71921', ic:'🌙',
     fleet:['b747','b777','a300','a330f','a380','a345']},
-  {id:'sia',   name:'싱가포르항공', body:'#f3f0e6', tail:'#0a2a5e', stripe:'#c9a24a', text:'#0a2a5e', ic:'🦁',
+  {id:'sia',   name:'싱가포르항공', en:'SINGAPORE AIRLINES', body:'#f3f0e6', tail:'#0a2a5e', stripe:'#c9a24a', text:'#0a2a5e', ic:'🦁',
     fleet:['b747','b777','a300','md11','a380','a359','a345']},
-  {id:'afr',   name:'에어프랑스',   body:'#f4f6f8', tail:'#00205b', stripe:'#e2001a', text:'#00205b', ic:'🗼',
+  {id:'afr',   name:'에어프랑스',   en:'AIRFRANCE', body:'#f4f6f8', tail:'#00205b', stripe:'#e2001a', text:'#00205b', ic:'🗼',
     fleet:['a300','b777','b737','conni','conc','comet','a380','a359','a351']},
-  {id:'klm',   name:'KLM',          body:'#e7f1f8', tail:'#00a1de', stripe:'#ffffff', text:'#0a3d62', ic:'👑',
+  {id:'klm',   name:'KLM',          en:'KLM', body:'#9fcbe4', tail:'#00a1de', stripe:'#e9f3fa', text:'#0a3d62', ic:'👑',
     fleet:['b747','b777','md11','b737']},
-  {id:'qfa',   name:'콴타스',       body:'#f6f4f2', tail:'#e0002b', stripe:'#e0002b', text:'#e0002b', ic:'🦘',
+  {id:'qfa',   name:'콴타스',       en:'QANTAS', body:'#f6f4f2', tail:'#e0002b', stripe:'#e0002b', text:'#43474a', ic:'🦘',
     fleet:['b747','b777','a300','dc10','a380','b377','a351']},
-  {id:'thy',   name:'터키항공',     body:'#f4f6f7', tail:'#c8102e', stripe:'#c8102e', text:'#c8102e', ic:'🌷',
+  {id:'thy',   name:'터키항공',     en:'TURKISH AIRLINES', body:'#f4f6f7', tail:'#c8102e', stripe:'#c8102e', text:'#c8102e', ic:'🌷',
     fleet:['b737','b777','a300','a330f','a359','a351']},
-  {id:'aal',   name:'아메리칸',     body:'#d3d8dd', tail:'#0d47a1', stripe:'#c8102e', text:'#0d47a1', ic:'🦅',
+  {id:'aal',   name:'아메리칸',     en:'American', body:'#d3d8dd', tail:'#0d47a1', stripe:'#c8102e', text:'#5a6672', ic:'🦅',
     fleet:['b777','b737','md83','dc10','b377']},
-  {id:'dal',   name:'델타',         body:'#f2f4f7', tail:'#0a2444', stripe:'#c8102e', text:'#0a2444', ic:'🔺',
+  {id:'dal',   name:'델타',         en:'DELTA', body:'#f2f4f7', tail:'#0a2444', stripe:'#c8102e', text:'#0a2444', ic:'🔺',
     fleet:['b777','b737','md80','md11','l1011','a359']},
-  {id:'baw',   name:'브리티시',     body:'#f4f6f8', tail:'#1d4f91', stripe:'#c8102e', text:'#1d4f91', ic:'🎩',
+  {id:'baw',   name:'브리티시',     en:'BRITISH AIRWAYS', body:'#f4f6f8', tail:'#1d4f91', stripe:'#1d4f91', text:'#1d4f91', ic:'🎩',
     fleet:['b747','b777','a300','conni','conc','comet','b377','a380','l1011','a351']},
-  {id:'cpa',   name:'캐세이퍼시픽', body:'#f2f5f4', tail:'#006564', stripe:'#a3d4c8', text:'#006564', ic:'🐉',
+  {id:'cpa',   name:'캐세이퍼시픽', en:'CATHAY PACIFIC', body:'#f2f5f4', tail:'#006564', stripe:'#cfd6d8', text:'#006564', ic:'🐉',
     fleet:['b747','b777','a330f','a300','l1011','a359','a351']},
-  {id:'fedex', name:'페덱스',       body:'#f5f4f8', tail:'#4d148c', stripe:'#ff6200', text:'#4d148c', ic:'📦',
+  {id:'fedex', name:'페덱스',       en:'FedEx', body:'#f5f4f8', tail:'#4d148c', stripe:'#ff6200', text:'#4d148c', ic:'📦',
     fleet:['b747f','b777f','b737f','q300f','dc10f','md11f','a330f','belugaf','il76']},
-  {id:'dhl',   name:'DHL',          body:'#ffcc00', tail:'#ffcc00', stripe:'#d40511', text:'#d40511', ic:'🟡',
+  {id:'dhl',   name:'DHL',          en:'DHL', body:'#ffcc00', tail:'#ffcc00', stripe:'#d40511', text:'#d40511', ic:'🟡',
     fleet:['b747f','b777f','b737f','q300f','dc10f','md11f','a330f','il76']},
 ];
 const NEUTRAL={body:'#f6f5f1',tail:'#2F6B4F',stripe:'#2F6B4F',text:'#43554f',name:''};
@@ -1409,9 +1411,14 @@ function drawPlane(c,cx,cy,sc,P,A,o){
     c.strokeRect(r-0.36*L,cy-Hh*0.36,0.10*L,Hh*0.72);
   }
   if(A.name&&L>70){
-    c.fillStyle=A.text; c.font='900 '+Math.max(8,Hh*0.34)+'px sans-serif';
-    c.textAlign='center'; c.textBaseline='middle';
-    c.fillText(A.name+(P.cargo?' CARGO':''),cx+L*0.04,cy-Hh*0.28);
+    const ttl=A.en||A.name;                              // 실제 비행기처럼 동체에는 영문 이름
+    let fs=Math.max(8,Hh*0.34);
+    c.font='900 '+fs+'px sans-serif';
+    const maxW=L*0.46;                                   // 이름이 길면 줄여서 동체 밖으로 안 나가게
+    const tw=c.measureText(ttl).width;
+    if(tw>maxW){ fs=Math.max(5,fs*maxW/tw); c.font='900 '+fs+'px sans-serif'; }
+    c.fillStyle=A.text; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(ttl,cx+L*0.04,cy-Hh*0.28);
   }
   if(P.glassnose){ // Il-76: 뾰족한 노즈콘 앞쪽을 덮는 유리창 + 얇은 흰 경계
     const gx=r-0.005*L, bw=Math.max(1.4,sc*0.12);
@@ -1482,10 +1489,13 @@ function drawPlane(c,cx,cy,sc,P,A,o){
     c.strokeStyle='#55636e'; c.lineWidth=Math.max(1.5,wr*0.4);
     c.fillStyle='#222b32';
     const gy=cy+Hh/2;
-    let mains=P.bogie6                                     // A350-1000: 무거워서 주바퀴 축이 3줄
-      ?[[cx-0.14*L,1.15],[cx-0.14*L+wr*2.3,1.15],[cx-0.14*L+wr*4.6,1.15]]
-      :[[cx-0.10*L,1.15],[cx-0.10*L+wr*2.4,1.15]];
-    if(P.ctrGear)mains=mains.concat([[cx-0.015*L,1.10],[cx-0.015*L+wr*2.2,1.10]]);  // A340-500/600: 동체 한가운데 바퀴 다리가 하나 더
+    // P.mw = 주바퀴 다리마다 옆에서 보이는 바퀴 수를 뒤→앞 순서로 (실제 기종대로). 없으면 [2].
+    const mains=[]; let bx=cx-0.12*L;
+    (P.mw||[2]).forEach(n=>{
+      for(let k=0;k<n;k++)mains.push([bx+k*wr*2.2,1.15]);
+      bx+=(n-1)*wr*2.2+wr*4.2;                           // 다음(앞) 다리까지 띄우기
+    });
+    for(let k=0;k<(P.ctrGear||0);k++)mains.push([bx+k*wr*2.2,1.10]);  // 동체 한가운데 바퀴 다리(A340-500/600·MD-11)
     [[P.droop?r-0.32*L:r-0.20*L,1]].concat(mains).forEach(w=>{
       c.beginPath(); c.moveTo(w[0],gy-2); c.lineTo(w[0],gy+wr*1.6*w[1]); c.stroke();
       c.beginPath(); c.arc(w[0],gy+wr*1.6*w[1],wr,0,7); c.fill();
