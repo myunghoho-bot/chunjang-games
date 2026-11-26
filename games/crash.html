@@ -55,6 +55,7 @@ button.mini{padding:0 6px;font-size:10.5px;margin-left:4px;vertical-align:1px}
 #result .g b{font-family:Consolas,monospace;font-weight:normal;text-align:right}
 #result .btns{display:flex;gap:6px;margin-top:9px}
 #result .btns button{flex:1}
+#landPad{position:fixed;right:10px;bottom:64px;display:none;flex-direction:column;gap:6px;z-index:4}#landPad button{min-width:84px;padding:9px 10px;font-size:13px}
 #tip{position:fixed;z-index:6;background:rgba(13,17,23,.95);border:1px solid #3a4553;border-radius:5px;padding:5px 8px;font-size:11.5px;pointer-events:none;display:none;white-space:nowrap}
 @media (max-height:520px){#hud{font-size:10px;padding:5px 7px;min-width:130px}#hud .g{gap:0 8px}#bar{font-size:11px;padding:4px}#bar button{padding:3px 6px}}
 @media (max-width:820px){#panel{width:236px;font-size:12px}#bar{max-width:calc(100% - 20px);bottom:6px}#hud{font-size:11px;min-width:150px}#result{top:auto;bottom:70px}}
@@ -66,11 +67,21 @@ button.mini{padding:0 6px;font-size:10.5px;margin-left:4px;vertical-align:1px}
 <div id="panel">
   <div class="hd"><h1>비행기 추락 실험실</h1><button id="hidePanel">접기</button></div>
   <div class="ver">옆에서 보는 2D 물리 · 쇠가 휘고 끊어짐</div>
+  <div class="seg" id="modeSeg" style="margin-bottom:2px"><button data-m="crash">추락 실험</button><button data-m="land">착륙 연습</button></div>
+  <div class="info" id="modeInfo"></div>
   <div class="sec">기종</div>
   <div class="plist" id="planeList"></div>
   <div class="info" id="planeInfo"></div>
   <div class="sec">장소</div>
   <div class="seg" id="sceneSeg"></div>
+  <div class="sec">같이 나는 기체</div>
+  <select id="c2Type"></select>
+  <div class="seg" style="margin-top:5px"><button id="exPlace">하늘에 놓기</button><button id="exClear">모두 지우기</button></div>
+  <div class="info" id="exInfo"></div>
+  <div class="sec">부서지는 장애물</div>
+  <div class="seg" id="toolSeg"><button data-t="bld">건물</button><button data-t="tree">나무</button><button data-t="car">차</button><button data-t="fire">소방차</button><button data-t="amb">구급차</button><button data-t="tower">관제탑</button><button data-t="erase">지우기</button></div>
+  <div class="seg" style="margin-top:4px"><button id="autoPlace">자동으로 놓기</button><button id="clearPlace">모두 지우기</button></div>
+  <div class="info" id="placeInfo"></div>
   <div class="sec">빠른 설정</div>
   <select id="preset">
     <option value="">직접 정하기</option>
@@ -103,6 +114,7 @@ button.mini{padding:0 6px;font-size:10.5px;margin-left:4px;vertical-align:1px}
 <div id="hud"></div>
 <div id="result"></div>
 <div id="tip"></div>
+<div id="landPad"><button data-k="up">기수 ▲</button><button data-k="dn">기수 ▼</button><button data-k="pu">출력 +</button><button data-k="pd">출력 −</button><button data-k="br">브레이크</button></div>
 <div id="bar">
   <div class="grp"><button id="bRestart">다시 실행</button><button id="bPause">일시정지</button></div>
   <div class="grp"><em>배속</em><button data-ts="0.1">0.1</button><button data-ts="0.25">0.25</button><button data-ts="0.5">0.5</button><button data-ts="1" class="on">1</button><button data-ts="2">2</button></div>
@@ -133,6 +145,7 @@ const TUNE = {
   waterKt: 0.011,       // 물 위로 미끄러질 때 저항
   seatG: [16, 28],      // 의자가 바닥에서 뜯겨 나가는 충격(g) 범위
   hurtG: [32, 52],      // 크게 다치는 충격(g) 범위
+  deathG: [85, 130],    // 목숨을 잃는 충격(g) 범위 (숫자로만 보여 줌)
   muscleAcc: 55,        // 사람이 자세를 버티는 힘(m/s²)
   slowmo: 0.3,          // 처음 부딪힐 때 느린 화면 배속
   slowmoTime: 1.6,      // 느린 화면 시간(초)
@@ -208,7 +221,40 @@ PLANES.b738f=Object.assign({},PLANES.b738,{name:'보잉 737-800 화물기',desc:
   seats:[{u:2.9,n:2,cls:'pilot'}],noWindows:true,barrier:5.9,
   cargo:{u0:6.55,count:11,len:2.2,gap:0.05,h:2.05,mass:1650,half:true},
   col:{body:'#f2f2ef',belly:'#c9c6bf',stripe:'#8a4b1f',tail:'#5b3a22',tail2:'#d98a2b',wing:'#c9cfd6',eng:'#e6e9ed'}});
-const PLANE_ORDER=['c172','at72','b738','b738f','b744'];
+PLANES.a320={name:'에어버스 A320',desc:'737과 같은 크기의 여객기 · 180석',len:37.57,span:35.8,height:11.76,wingArea:122.6,emptyMass:42600,fuel:6000,stations:27,
+  prof:[[0,-0.25,-0.45],[0.5,0.35,-1.0],[1.3,0.85,-1.45],[2.4,1.3,-1.8],[3.6,1.75,-1.97],[5,1.98,-2.0],[6,2,-2],[25,2,-2],[28,1.95,-1.75],[31,1.75,-1.0],[34,1.45,-0.2],[36.6,1.0,0.5],[37.57,0.8,0.65]],
+  floorY:-0.6,winY:0.5,winPitch:0.53,winSize:[0.25,0.34],winFrom:5.9,winTo:28.8,
+  wing:{rLE:[13.6,-1.55],rTE:[20.4,-1.45],tLE:[21.0,0.3],tTE:[22.5,0.35],inc:1.5,cl0:0.55,cla:5.0,stall:14,cd0:0.04,k:0.042},
+  engines:[{f:10.6,r:15.0,ft:-1.25,fb:-3.4,rt:-1.55,rb:-2.95,thrust:240000,mass:4800,jet:true,count:2}],
+  gear:[{top:[19.2,-1.65],wheels:[[19.4,-3.43]],r:0.57,main:true},{top:[5.1,-1.9],wheels:[[5.1,-3.62]],r:0.38}],
+  fin:{rf:[27.5,2.0],rr:[36.8,1.0],tf:[34.3,7.7],tr:[37.1,7.7]},
+  hs:{rLE:[32.5,0.3],rTE:[36.4,0.45],tLE:[35.8,1.0],tTE:[37.3,1.05],area:31},
+  seats:[{u:2.7,n:2,cls:'pilot'},...rows(6.3,0.76,30,6,'eco')],
+  col:{body:'#f1f2f4',belly:'#c8ccd2',stripe:'#b8323f',tail:'#b8323f',tail2:'#f2d0d4',wing:'#c9ced5',eng:'#e8eaed'},
+  spd:[210,900,270]};
+PLANES.f16={name:'F-16 전투기',desc:'1인승 전투기 · 엔진 1개',len:15.06,span:9.96,height:4.88,wingArea:27.87,emptyMass:8570,fuel:3000,stations:16,
+  prof:[[0,0,-0.06],[0.8,0.25,-0.35],[2.2,0.55,-0.6],[3.2,0.78,-0.66],[4.3,1.05,-0.75],[5.8,0.85,-1.15],[7,0.75,-1.15],[10,0.7,-1.0],[12.5,0.6,-0.7],[14.2,0.5,-0.5],[15.06,0.45,-0.45]],
+  floorY:-0.15,noWindows:true,canopy:[2.9,5.9],interior:'#5d636b',
+  wing:{rLE:[6.2,-0.2],rTE:[10.9,-0.25],tLE:[9.64,-0.15],tTE:[10.64,-0.15],inc:0,cl0:0.1,cla:3.5,stall:24,cd0:0.025,k:0.12},
+  engines:[{internal:true,thrust:129000,mass:1800,jet:true,count:1}],
+  gear:[{top:[8.6,-0.9],wheels:[[8.8,-1.95]],r:0.38,main:true},{top:[4.9,-0.75],wheels:[[4.9,-1.95]],r:0.3}],
+  fin:{rf:[10.2,0.7],rr:[14.4,0.5],tf:[13.2,2.55],tr:[14.35,2.55]},
+  hs:{rLE:[12.2,-0.3],rTE:[14.6,-0.35],tLE:[13.6,-0.5],tTE:[14.9,-0.5],area:10.8},
+  seats:[{u:3.9,n:1,cls:'pilot'}],
+  col:{body:'#8e979f',belly:'#a3abb2',stripe:'#7d868e',tail:'#7f888f',tail2:'#5d656c',wing:'#8a939b',eng:'#6d757c'},
+  spd:[250,1200,500]};
+PLANES.uh60={name:'UH-60 블랙호크',desc:'헬리콥터 · 조종사 2명 + 11명',len:15.26,span:16.36,height:5.13,heli:true,emptyMass:4819,fuel:1100,stations:16,
+  prof:[[0,0,-0.55],[0.5,0.55,-0.9],[1.4,1.0,-1.05],[2.4,1.1,-1.1],[4.5,1.2,-1.1],[5.2,1.5,-1.1],[8.5,1.5,-1.0],[9.5,0.95,-0.4],[12.5,0.65,-0.05],[15.26,0.7,0.2]],
+  floorY:-0.75,winY:0.3,winPitch:1.1,winSize:[0.55,0.5],winFrom:2.9,winTo:6.2,fixedGear:true,
+  rotor:{hub:[6.6,2.3],R:8.18,mass:700,blades:4},
+  engines:[],
+  gear:[{top:[7.6,-0.9],wheels:[[7.9,-1.85]],r:0.38,main:true},{top:[14.2,0.0],wheels:[[14.4,-0.9]],r:0.23}],
+  fin:{rf:[13.0,0.6],rr:[15.3,0.6],tf:[14.4,3.2],tr:[15.4,3.2]},
+  hs:{rLE:[14.0,0.25],rTE:[15.3,0.25],tLE:[14.2,0.3],tTE:[15.4,0.3],area:4.2},
+  seats:[{u:1.6,n:2,cls:'pilot'},{u:3.5,n:4,cls:'eco'},{u:4.5,n:4,cls:'eco'},{u:5.5,n:3,cls:'eco'}],
+  col:{body:'#4b5340',belly:'#3f4636',stripe:'#3a4132',tail:'#4b5340',tail2:'#3a4132',wing:'#4b5340',eng:'#4b5340'},interior:'#8b8f86',
+  spd:[0,300,120]};
+const PLANE_ORDER=['c172','at72','b738','b738f','a320','b744','f16','uh60'];
 
 /* ===================== 땅 ===================== */
 const SCENES=[{id:'runway',name:'활주로'},{id:'seawall',name:'방파제 활주로'},{id:'field',name:'들판'},{id:'mountain',name:'산비탈'},{id:'sea',name:'바다'}];
@@ -217,7 +263,7 @@ const TER={x0:-3000,dx:0.5,n:0,h:null,h0:null,scar:null,kind:null,water:false,sc
 function buildTerrain(scene,xEst,wallArg){
   const r0=mulberry32(12345+scene.length*77);
   const n=Math.ceil((32000-TER.x0)/TER.dx);
-  TER.n=n;TER.h=new Float32Array(n);TER.scar=new Float32Array(n);TER.kind=new Uint8Array(n);TER.scene=scene;TER.water=scene==='sea'||scene==='seawall';TER.waterEnd=Infinity;TER.xEst=xEst;TER.rwA=xEst-1400;TER.rwB=xEst+3200;
+  TER.n=n;TER.h=new Float32Array(n);TER.scar=new Float32Array(n);TER.kind=new Uint8Array(n);TER.scene=scene;TER.water=scene==='sea'||scene==='seawall';TER.waterEnd=Infinity;TER.xEst=xEst;TER.rwA=set.mode==='land'?xEst-350:xEst-1400;TER.rwB=xEst+3200;
   const wallX=wallArg!=null?wallArg:xEst-110;if(scene==='seawall'){TER.waterEnd=wallX+1.2;TER.rwA=wallX+160;TER.rwB=wallX+3400;TER.wallX=wallX;}
   const ph=[r0()*6,r0()*6,r0()*6];
   const xm=Math.max(60,xEst*0.72);
@@ -284,18 +330,26 @@ function buildPlaneLocal(P,gearDown){
   const attach=(n,cands,k,o)=>near(nodes[n].x,nodes[n].y,cands,k,[n]).forEach(m=>B_(n,m,o));
   const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
   // 날개
-  const W=P.wing;const wp=[W.rLE,W.rTE,mid(W.rLE,W.tLE),mid(W.rTE,W.tTE),W.tLE,W.tTE];
-  const wn=wp.map(p=>N_(p[0],p[1],1,0.08));
+  const W=P.wing;let wn=[];
+  if(W){const wp=[W.rLE,W.rTE,mid(W.rLE,W.tLE),mid(W.rTE,W.tTE),W.tLE,W.tTE];
+  wn=wp.map(p=>N_(p[0],p[1],1,0.08));
   B_(wn[0],wn[1],{k:1,coll:1});B_(wn[2],wn[3],{k:1});B_(wn[4],wn[5],{k:1,coll:1});
   [[0,2],[2,4],[1,3],[3,5]].forEach(e=>B_(wn[e[0]],wn[e[1]],{k:1,coll:1}));
   [[0,3],[1,2],[2,5],[3,4]].forEach(e=>B_(wn[e[0]],wn[e[1]],{k:1}));
-  attach(wn[0],fus,3,{k:2});attach(wn[1],fus,3,{k:2});attach(wn[2],fus,2,{k:2});attach(wn[3],fus,2,{k:2});
+  attach(wn[0],fus,3,{k:2});attach(wn[1],fus,3,{k:2});attach(wn[2],fus,2,{k:2});attach(wn[3],fus,2,{k:2});}
+  // 헬리콥터 로터
+  let rotor=null;
+  if(P.rotor){const R=P.rotor;const hub=N_(R.hub[0],R.hub[1],8,0.1);const base=near(-R.hub[0],R.hub[1],G.map(c=>c[0]),3);base.forEach(m=>B_(hub,m,{k:8,str:1.4}));
+    const t1=N_(R.hub[0]-R.R,R.hub[1]+0.12,9,0.1),t2=N_(R.hub[0]+R.R,R.hub[1]+0.12,9,0.1);
+    const tb1=[B_(hub,t1,{k:9,coll:1})],tb2=[B_(hub,t2,{k:9,coll:1})];base.forEach(m=>{tb1.push(B_(t1,m,{k:9}));tb2.push(B_(t2,m,{k:9}));});
+    rotor={hub,base,tips:[t1,t2],tipBeams:[tb1,tb2],R:R.R,area:Math.PI*R.R*R.R,nb:R.blades,spin:0};}
   let strut=null;
   if(P.strut){const s=near(-P.strut[0],P.strut[1],fus,1)[0];strut=B_(s,wn[2],{k:2});}
   // 엔진
   const engines=[];
   for(const e of P.engines){
     if(e.nose){engines.push(Object.assign({},e,{n:[G[0][0],G[0][BR],G[2][0],G[2][BR]],alive:true,spin:0}));continue;}
+    if(e.internal){const a=NS-5;engines.push(Object.assign({},e,{n:[G[a][0],G[a][BR],G[NS][0],G[NS][BR]],alive:true,spin:0}));continue;}
     const en=[N_(e.f,e.ft,2,0.1),N_(e.f,e.fb,2,0.1),N_(e.r,e.rt,2,0.1),N_(e.r,e.rb,2,0.1)];
     B_(en[0],en[1],{k:3,coll:1});B_(en[2],en[3],{k:3,coll:1});B_(en[0],en[2],{k:3,coll:1});B_(en[1],en[3],{k:3,coll:1});B_(en[0],en[3],{k:3});B_(en[1],en[2],{k:3});
     attach(en[0],wn,2,{k:4,str:0.85});attach(en[2],wn,2,{k:4,str:0.85});
@@ -357,8 +411,9 @@ function buildPlaneLocal(P,gearDown){
   if(P.barrier){barrierI=Math.round(P.barrier/L*NS);for(let r=0;r<FR;r++)beams[VERT[barrierI][r]].coll=1;}
   // 무게 나누기
   const empty=P.emptyMass;
-  const wingS=0.17*empty,tailM=0.05*empty,gearM=0.04*empty;let engM=0;P.engines.forEach(e=>engM+=e.mass);
-  const fusM=empty-wingS-tailM-gearM-engM;
+  const wingS=W?0.17*empty:0,tailM=0.05*empty,gearM=0.04*empty;let engM=0;P.engines.forEach(e=>engM+=e.mass);const rotM=P.rotor?P.rotor.mass:0;
+  const fusM=empty-wingS-tailM-gearM-engM-rotM+(W?0:P.fuel);
+  if(rotor){nodes[rotor.hub].m+=rotM*0.6;rotor.tips.forEach(t=>nodes[t].m+=rotM*0.2);}
   const wmw=[.25,.25,.15,.15,.1,.1];wn.forEach((n,k)=>nodes[n].m+=(wingS+P.fuel)*wmw[k]);
   engines.forEach(e=>e.n.forEach(n=>nodes[n].m+=e.mass/4));
   fn.forEach(n=>nodes[n].m+=tailM*0.55/6);hn.forEach(n=>nodes[n].m+=tailM*0.45/4);
@@ -367,18 +422,21 @@ function buildPlaneLocal(P,gearDown){
   const fusTot=fusM+(gearNodes.length?0:gearM);
   let wsum=0;G.forEach(c=>c.forEach((n,r)=>{const w=r===0?0.85:(r===BR?1.2:1);wsum+=w;}));
   G.forEach(c=>c.forEach((n,r)=>{const w=r===0?0.85:(r===BR?1.2:1);nodes[n].m+=fusTot*w/wsum;}));
-  return {nodes,beams,G,LONG,VERT,NS,nR,FR,UR,BR,rowY,wn,fn,hn,engines,wheels,cells,seats,boxes,locks,strut,barrierI,fus,L};
+  return {nodes,beams,G,LONG,VERT,NS,nR,FR,UR,BR,rowY,wn,fn,hn,engines,wheels,cells,seats,boxes,locks,strut,barrierI,fus,L,rotor};
 }
 
 /* ===================== 시뮬레이션 상태 ===================== */
-const set={plane:'b738',scene:'runway',alt:60,spd:270,gam:-4,pow:0,elev:0,fill:100,gear:false,fire:true,slow:true,att:null};
+const set={plane:'b738',scene:'runway',alt:60,spd:270,gam:-4,pow:0,elev:0,fill:100,gear:false,fire:true,slow:true,att:null,mode:'crash',obs:[],placed:[],extra:[],exType:'a320'};
 let S=null;
-const STATE={ready:true,seed:1,mode:'run',paused:false,ts:1,slowT:0,view:'inside',stress:false,trail:true,follow:true,wide:false,sound:true,t:0};
+const STATE={tool:null,brake:false,ready:true,seed:1,mode:'run',paused:false,ts:1,slowT:0,view:'inside',stress:false,trail:true,follow:true,wide:false,sound:true,t:0};
 
-function makeSim(){
-  const P=PLANES[set.plane];
-  rnd=mulberry32(STATE.seed);
-  const gearDown=P.fixedGear?true:set.gear;
+function exCfg(e){const P=PLANES[e.type];let a=((e.ang%360)+540)%360-180;const mir=Math.cos(a*DEG)<0;let g=mir?(a>0?180-a:-180-a):a;g=clamp(g,-85,85);
+  return{plane:e.type,gear:!!P.fixedGear,fill:set.fill,spd:clamp(e.spd,P.spd[0],P.spd[1]),gam:Math.round(g),alt:Math.max(3,e.alt),att:null,elev:0,pow:P.heli?75:60,x0:e.x,mir};}
+function primaryCfg(){return{land:set.mode==='land',plane:set.plane,gear:set.gear,fill:set.fill,spd:set.spd,gam:set.gam,alt:set.alt,att:set.att,elev:set.elev,pow:set.pow,x0:0,mir:false};}
+function makeSim(cfg){
+  cfg=cfg||primaryCfg();const P=PLANES[cfg.plane];
+  rnd=mulberry32(STATE.seed+(cfg.x0?7919:0));
+  const gearDown=P.fixedGear?true:cfg.gear;
   const B=buildPlaneLocal(P,gearDown);
   const n=B.nodes.length,nb=B.beams.length;
   const s={P,B,n,nb,x:new Float64Array(n),y:new Float64Array(n),ox:new Float64Array(n),oy:new Float64Array(n),vx:new Float64Array(n),vy:new Float64Array(n),
@@ -388,27 +446,26 @@ function makeSim(){
     lam:new Float64Array(nb),alive:new Uint8Array(nb),coll:new Uint8Array(nb),bk:new Uint8Array(nb),stress:new Float32Array(nb),bent:new Float32Array(nb),
     broken:[],nComp:1,mainComp:0,compMass:[],locks:B.locks,engines:B.engines,wheels:B.wheels,boxes:B.boxes,
     t:0,impactT:-1,impact:null,maxG:0,gS:0,lastV:null,trail:[],firstTouchX:null,stopT:0,done:false,yieldCount:0,breakCount:0,fires:[],
-    persons:null,surf:[]};
+    persons:null,surf:[],cfg,mir:cfg.mir?-1:1,rotor:B.rotor};
   for(let i=0;i<n;i++){const d=B.nodes[i];s.x[i]=d.x;s.y[i]=d.y;s.m[i]=Math.max(d.m,1);s.kind[i]=d.k;s.rad[i]=d.r;
-    s.buoy[i]=[1.7,1.3,0.35,1.1,0.4,0.6,0.9][d.k];}
+    s.buoy[i]=[1.7,1.3,0.35,1.1,0.4,0.6,0.9,0.3,0.5,0.6][d.k]||0.5;}
   for(let b=0;b<nb;b++){const d=B.beams[b];s.ba[b]=d.a;s.bb[b]=d.b;s.coll[b]=d.coll;s.bk[b]=d.k;s.alive[b]=1;
     const l=hyp(s.x[d.b]-s.x[d.a],s.y[d.b]-s.y[d.a]);s.rest[b]=s.rest0[b]=l;}
   // 사람 무게를 바닥에 더함
   const persons=[];
-  for(const st of B.seats){st.occ=[];for(let c=0;c<st.n;c++){const crew=c<st.crew;const occ=crew||rnd()*100<set.fill;st.occ.push(occ);
+  for(const st of B.seats){st.occ=[];for(let c=0;c<st.n;c++){const crew=c<st.crew;const occ=crew||rnd()*100<cfg.fill;st.occ.push(occ);
     if(occ){const a=B.G[st.i][st.r],b2=B.G[st.i+1][st.r],c1=B.G[st.i][B.BR],c2=B.G[st.i+1][B.BR];
       s.m[a]+=70*(1-st.t);s.m[b2]+=70*st.t;s.m[c1]+=25*(1-st.t);s.m[c2]+=25*st.t;persons.push({seat:st,col:c,crew});}}}
   // 무게중심을 날개 앞쪽으로 (안정)
   const W=P.wing;
-  const wingSurf={le:B.wn[0],te:B.wn[1],nodes:B.wn,wts:[.375,.125,.25,.083,.125,.042],area:P.wingArea,cl0:W.cl0,cla:W.cla,stall:W.stall*DEG,cd0:W.cd0,k:W.k,inc:W.inc*DEG,wing:true};
+  const wingSurf=!W?null:{le:B.wn[0],te:B.wn[1],nodes:B.wn,wts:[.375,.125,.25,.083,.125,.042],area:P.wingArea,cl0:W.cl0,cla:W.cla,stall:W.stall*DEG,cd0:W.cd0,k:W.k,inc:W.inc*DEG,wing:true};
   const hsSurf={le:B.hn[0],te:B.hn[1],nodes:B.hn,wts:[.45,.15,.3,.1],area:P.hs.area,cl0:0,cla:3.6,stall:16*DEG,cd0:0.02,k:0.08,inc:0,wing:false};
-  s.surf=[wingSurf,hsSurf];
+  s.surf=W?[wingSurf,hsSurf]:[hsSurf];s.wingS=wingSurf;s.hsS=hsSurf;
   const acX=sf=>{let a=0;sf.nodes.forEach((nd,k)=>a+=s.x[nd]*sf.wts[k]);return a;};
-  const xw=acX(wingSurf),xt=acX(hsSurf);
-  const aw=wingSurf.cla*wingSurf.area,at=hsSurf.cla*hsSurf.area;
-  const xnp=(aw*xw+at*xt)/(aw+at);
-  const mac=hyp(s.x[B.wn[0]]-s.x[B.wn[1]],s.y[B.wn[0]]-s.y[B.wn[1]])*0.72;
-  const target=xnp+TUNE.staticMargin*mac;
+  const xt=acX(hsSurf);let xw,xnp,target;
+  if(W){xw=acX(wingSurf);const aw=wingSurf.cla*wingSurf.area,at=hsSurf.cla*hsSurf.area;xnp=(aw*xw+at*xt)/(aw+at);
+    const mac=hyp(s.x[B.wn[0]]-s.x[B.wn[1]],s.y[B.wn[0]]-s.y[B.wn[1]])*0.72;target=xnp+TUNE.staticMargin*mac;}
+  else{xw=s.x[B.rotor.hub];xnp=xw;target=xw;}
   let M=0,Mx=0;for(let i=0;i<n;i++){if(s.kind[i]===6)continue;M+=s.m[i];Mx+=s.m[i]*s.x[i];}
   let fm=0,fmx=0;B.fus.forEach(i=>{fm+=s.m[i];fmx+=s.m[i]*s.x[i];});const xc=fmx/fm;
   let sd=0,dmin=0,dmax=0;B.fus.forEach(i=>{const d=s.x[i]-xc;sd+=s.m[i]*d*s.x[i];dmin=Math.min(dmin,d);dmax=Math.max(dmax,d);});
@@ -418,16 +475,16 @@ function makeSim(){
   let Mt=0,cx=0,cy=0;for(let i=0;i<n;i++){Mt+=s.m[i];cx+=s.m[i]*s.x[i];cy+=s.m[i]*s.y[i];}cx/=Mt;cy/=Mt;
   s.M=Mt;s.cg0={x:cx,y:cy};
   for(let i=0;i<n;i++)s.w[i]=1/s.m[i];
-  const fBody=0.022*P.wingArea;for(let i=0;i<n;i++)s.cd[i]=fBody*s.m[i]/Mt;
+  const fBody=P.heli?3.2:0.022*P.wingArea;for(let i=0;i<n;i++)s.cd[i]=fBody*s.m[i]/Mt;
   // 바퀴 다리 부드러움
   const nMain=B.wheels.filter(w=>w.main).length;
   for(let b=0;b<nb;b++){const sf=B.beams[b].soft;if(sf){const share=sf===1?0.92/Math.max(1,nMain):0.1;const load=share*Mt*9.81;s.alpha[b]=TUNE.gearSink/load*(B.wheels.find(w=>w.n.includes(s.bb[b])||w.n.includes(s.ba[b]))?1:1);} else s.alpha[b]=1e-11;}
   // 힘 재기(평소 비행·착륙에서 받는 힘) → 휘는 힘·끊어지는 힘
-  const F1=calibrate(s,B.wn,1);let F2=null;
+  const liftPins=W?B.wn:[B.rotor.hub];const F1=calibrate(s,liftPins,1);let F2=null;
   const wheelNodes=[];B.wheels.forEach(w=>w.n.forEach(q=>wheelNodes.push(q)));
   if(wheelNodes.length)F2=calibrate(s,wheelNodes,1);
   const Vm=P.spd[1]/3.6*0.75,Ft=0.5*TUNE.rho*Vm*Vm*P.hs.area*0.3;
-  const F3=calibrate(s,B.wn,1,{nodes:B.hn,f:-Ft}),F4=calibrate(s,B.wn,1,{nodes:B.hn,f:Ft});
+  const F3=calibrate(s,liftPins,1,{nodes:B.hn,f:-Ft}),F4=calibrate(s,liftPins,1,{nodes:B.hn,f:Ft});
   for(let b=0;b<nb;b++){
     const d=B.beams[b];let F=Math.max(F1[b],F2?F2[b]:0,F3[b],F4[b]);
     const fl=TUNE.floorG*9.81*(s.m[s.ba[b]]+s.m[s.bb[b]])*0.5;
@@ -439,7 +496,7 @@ function makeSim(){
   s.compMass=[];
   // 사람
   s.persons=initPersons(s,persons);
-  const phiW=Math.atan2(s.y[B.wn[0]]-s.y[B.wn[1]],s.x[B.wn[0]]-s.x[B.wn[1]]);
+  const phiW=W?Math.atan2(s.y[B.wn[0]]-s.y[B.wn[1]],s.x[B.wn[0]]-s.x[B.wn[1]]):0;
   const phiT=Math.atan2(s.y[B.hn[0]]-s.y[B.hn[1]],s.x[B.hn[0]]-s.x[B.hn[1]]);
   const lx=new Float64Array(n),ly=new Float64Array(n);for(let i=0;i<n;i++){lx[i]=s.x[i]-cx;ly[i]=s.y[i]-cy;}
   s.tb={xw,xt,cx,cy,Mt,phiW,phiT,lx,ly,xnp,target,beta};
@@ -449,31 +506,33 @@ function makeSim(){
 }
 /* 속도·각도·기수 각도에 맞춰 꼬리날개를 다듬고 하늘에 놓기 (화살표로 바꿀 때도 부름) */
 function applyFlight(s){
-  const P=s.P,B=s.B,tb=s.tb,wingSurf=s.surf[0],hsSurf=s.surf[1];const n=s.n;
-  const V=set.spd/3.6;const gam0=set.gam*DEG,Wt=tb.Mt*9.81,Sw=wingSurf.area;
+  const P=s.P,B=s.B,tb=s.tb,wingSurf=s.wingS,hsSurf=s.hsS;const n=s.n;const C=s.cfg;
+  const V=C.spd/3.6;const gam0=C.gam*DEG,Wt=tb.Mt*9.81,Sw=wingSurf?wingSurf.area:1;
   const a=tb.cx-tb.xw,bb=tb.cx-tb.xt;let alw,Lw,Lt,q;
-  if(set.att!=null){
+  if(!wingSurf){alw=(C.att!=null?C.att:-4)*DEG;q=1;Lw=0;Lt=0;}
+  else if(C.att!=null){
     // 기수 각도를 직접 정함: 그 자세(받음각)를 그대로 유지하게 꼬리를 맞춤 → 느리면 점점 가라앉음
-    q=0.5*TUNE.rho*V*V;alw=set.att*DEG+tb.phiW+wingSurf.inc;Lw=q*Sw*clOf(alw,wingSurf);Lt=-Lw*a/bb;
+    q=0.5*TUNE.rho*V*V;alw=C.att*DEG+tb.phiW+wingSurf.inc;Lw=q*Sw*clOf(alw,wingSurf);Lt=-Lw*a/bb;
   }else{
     // 내려가는 각도 그대로 계속 내려가도록, 그 각도에서 버티는 속도에 맞춰 다듬음(갑자기 다시 올라가지 않게)
-    let Tt=0;for(const e of P.engines)Tt+=set.pow/100*(e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1)));
+    let Tt=0;for(const e of P.engines)Tt+=C.pow/100*(e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1)));
     const cd0=wingSurf.cd0+0.022+0.02*P.hs.area/Sw,kI=wingSurf.k;const drive=Wt*Math.sin(-gam0)+Tt;let Vt=V;
-    if(drive>0){const qa=Sw*cd0,qc=kI*(Wt*Math.cos(gam0))**2/Sw,disc=drive*drive-4*qa*qc;if(disc>0){const qe=(drive+Math.sqrt(disc))/(2*qa);Vt=clamp(Math.sqrt(2*qe/TUNE.rho),V,V*TUNE.diveTrimMax);}}
+    if(drive>0&&!C.land){const qa=Sw*cd0,qc=kI*(Wt*Math.cos(gam0))**2/Sw,disc=drive*drive-4*qa*qc;if(disc>0){const qe=(drive+Math.sqrt(disc))/(2*qa);Vt=clamp(Math.sqrt(2*qe/TUNE.rho),V,V*TUNE.diveTrimMax);}}
     q=0.5*TUNE.rho*Vt*Vt;
     Lw=Wt*Math.cos(gam0)*bb/(bb-a);Lt=Wt*Math.cos(gam0)-Lw;
     alw=(Lw/(q*Sw)-wingSurf.cl0)/wingSurf.cla;alw=Math.min(alw,wingSurf.stall*0.92);
   }
-  const thb=alw-tb.phiW-wingSurf.inc;
-  const alt=clamp(Lt/(q*hsSurf.area)/hsSurf.cla,-0.25,0.25);
-  hsSurf.inc=alt-thb-tb.phiT-set.elev*DEG;
+  const thb=wingSurf?alw-tb.phiW-wingSurf.inc:alw;
+  const alt=wingSurf?clamp(Lt/(q*hsSurf.area)/hsSurf.cla,-0.25,0.25):0;
+  s.hsBase=alt-thb-tb.phiT;hsSurf.inc=s.hsBase-C.elev*DEG;
   s.trimInfo={alw:alw/DEG,thb:thb/DEG,it:hsSurf.inc/DEG,xnp:tb.xnp,target:tb.target,cx:tb.cx,beta:tb.beta};
   // 세상에 놓기
   const gam=gam0,th=gam+thb;const ct=Math.cos(th),st=Math.sin(th);
-  const X0=0,Y0=baseY(0)+set.alt;
+  const X0=C.x0||0,Y0=baseY(X0)+C.alt;
   const vx0=V*Math.cos(gam),vy0=V*Math.sin(gam);
-  for(let i=0;i<n;i++){const lx=tb.lx[i],ly=tb.ly[i];s.x[i]=X0+lx*ct-ly*st;s.y[i]=Y0+lx*st+ly*ct;s.vx[i]=vx0;s.vy[i]=vy0;s.ox[i]=s.x[i];s.oy[i]=s.y[i];}
-  placePersons(s,vx0,vy0);
+  for(let i=0;i<tb.lx.length;i++){const lx=tb.lx[i],ly=tb.ly[i];s.x[i]=X0+lx*ct-ly*st;s.y[i]=Y0+lx*st+ly*ct;s.vx[i]=vx0;s.vy[i]=vy0;s.ox[i]=s.x[i];s.oy[i]=s.y[i];}
+  if(s.mir<0)for(let i=0;i<tb.lx.length;i++){s.x[i]=s.ox[i]=2*X0-s.x[i];s.vx[i]=-s.vx[i];}
+  placePersons(s,vx0*s.mir,vy0);
   s.V0=V;s.th0=th;s.trail.length=0;
 }
 function baseY(x){return (TER.water&&x<TER.waterEnd)?Math.max(0,gH(x)):gH(x);}
@@ -509,7 +568,8 @@ function solveBeams(s,h,plastic){
         const lc=ln>0?Y:-Y;dl=lc-lam[b];
         const Crem=C+ws*dl+at*lc;
         rest[b]+=Crem;s.yieldCount++;s.bent[b]+=Math.abs(Crem)/s.rest0[b];
-        if(rest[b]>s.rest0[b]*(1+TUNE.breakStretch)){alive[b]=0;s.broken.push(b);continue;}
+        const brittle=s.bk[b]===7;
+        if(rest[b]>s.rest0[b]*(1+(brittle?0.035:TUNE.breakStretch))||(brittle&&rest[b]<s.rest0[b]*0.8)){alive[b]=0;s.broken.push(b);continue;}
         if(rest[b]<s.rest0[b]*TUNE.crushMin)rest[b]=s.rest0[b]*TUNE.crushMin;
       }
       const f=Math.abs(lam[b]+dl)/h2/s.yieldF[b];if(f>s.stress[b])s.stress[b]=f;
@@ -523,7 +583,7 @@ function solveLocks(s,h,canBreak){
   const x=s.x,y=s.y,w=s.w;const h2=h*h;
   for(const L of s.locks){if(!L.alive)continue;const {A,Bn}=lockFrame(s,L);
     let fx=x[A]-x[Bn],fy=y[A]-y[Bn];const fl=hyp(fx,fy)||1;fx/=fl;fy/=fl;
-    const tx=x[A]+(x[Bn]-x[A])*L.t-fy*L.off,ty=y[A]+(y[Bn]-y[A])*L.t+fx*L.off;
+    const tx=x[A]+(x[Bn]-x[A])*L.t-fy*L.off*s.mir,ty=y[A]+(y[Bn]-y[A])*L.t+fx*L.off*s.mir;
     const dx=tx-x[L.p],dy=ty-y[L.p];const W=w[L.p]+w[A]*(1-L.t)*(1-L.t)+w[Bn]*L.t*L.t;if(W===0)continue;
     const k=1/W;
     if(canBreak&&hyp(dx,dy)*k/h2>L.str){L.alive=false;continue;}
@@ -541,7 +601,7 @@ function clOf(a,sf){const st=sf.stall;
 function surfAlpha(s,sf){
   const le=sf.le,te=sf.te;const vx=(s.vx[le]+s.vx[te])*0.5,vy=(s.vy[le]+s.vy[te])*0.5;
   const fx=s.x[le]-s.x[te],fy=s.y[le]-s.y[te];
-  return {vx,vy,a:Math.atan2(vx*fy-vy*fx,vx*fx+vy*fy)+sf.inc};
+  return {vx,vy,a:s.mir*Math.atan2(vx*fy-vy*fx,vx*fx+vy*fy)+sf.inc};
 }
 function computeForces(s){
   const n=s.n,ax=s.ax,ay=s.ay,g=TUNE.gravity,rho=TUNE.rho;
@@ -559,11 +619,12 @@ function computeForces(s){
     const q=0.5*rho*V*V*sf.area;let wetk=1;
     if(TER.water){let wc=0;for(const nd of sf.nodes)if(s.y[nd]<0&&s.x[nd]<TER.waterEnd)wc++;wetk=1-wc/sf.nodes.length;}
     const L=q*cl*wetk,D=q*cd*wetk;const ux=r.vx/V,uy=r.vy/V;
-    const Fx=-L*uy-D*ux,Fy=L*ux-D*uy;
+    const Fx=-L*uy*s.mir-D*ux,Fy=L*ux*s.mir-D*uy;
     sf.lastA=a;sf.lastCL=cl;
     for(let k=0;k<sf.nodes.length;k++){const nd=sf.nodes[k];ax[nd]+=Fx*sf.wts[k]/s.m[nd];ay[nd]+=Fy*sf.wts[k]/s.m[nd];}
   }
-  const pw=set.pow/100;
+  const pw=s.cfg.pow/100;
+  if(s.rotor)rotorForce(s,pw);
   if(pw>0)for(const e of s.engines){
     if(!e.alive)continue;const nn=e.n;
     if(s.comp[nn[0]]!==s.mainComp){e.alive=false;continue;}
@@ -572,6 +633,21 @@ function computeForces(s){
     let T=e.jet?pw*e.thrust*Math.max(0.35,1-V*0.0016):Math.min(pw*e.thrust,pw*e.power*e.eta/Math.max(V,1));
     for(const nd of nn){ax[nd]+=T/4*fx/fl/s.m[nd];ay[nd]+=T/4*fy/fl/s.m[nd];}
   }
+}
+function rotorForce(s,pw){
+  const R=s.rotor;const hub=R.hub;if(s.comp[hub]!==s.mainComp)return;
+  const alive=R.tipBeams.filter(tb=>s.alive[tb[0]]).length;if(!alive)return;
+  let bx=0,by=0;for(const m of R.base){bx+=s.x[m];by+=s.y[m];}bx/=R.base.length;by/=R.base.length;
+  let ux=s.x[hub]-bx,uy=s.y[hub]-by;const l=Math.sqrt(ux*ux+uy*uy)||1;ux/=l;uy/=l;
+  const Wt=s.tb.Mt*9.81;const vax=s.vx[hub]*ux+s.vy[hub]*uy;const vd=Math.max(0,-vax);
+  let T=pw*1.3*Wt+0.5*TUNE.rho*R.area*1.15*vd*vd;T*=alive/2;
+  s.ax[hub]+=T*ux/s.m[hub];s.ay[hub]+=T*uy/s.m[hub];
+  // 조종사가 자세를 붙잡음(로터가 돌 때만)
+  if(pw>0.05){const B=s.B;const A=B.G[0][B.FR],Z=B.G[B.NS][B.FR];if(s.comp[A]===s.comp[Z]&&s.comp[A]===s.mainComp){
+    const dx=s.x[A]-s.x[Z],dy=s.y[A]-s.y[Z];const d=Math.sqrt(dx*dx+dy*dy)||1;let th=Math.atan2(dy,dx);if(s.mir<0)th=Math.atan2(dy,-dx);
+    let err=s.th0-th;err=Math.atan2(Math.sin(err),Math.cos(err));const om=((s.vy[A]-s.vy[Z])*dx-(s.vx[A]-s.vx[Z])*dy)/(d*d)*s.mir;
+    const I=s.tb.Mt*(d/3.5)**2;const tau=I*(4*err-2.8*om);const f=tau/d;const nx=-dy/d,ny=dx/d;
+    s.ax[A]+=f*nx*s.mir/s.m[A];s.ay[A]+=f*ny*s.mir/s.m[A];s.ax[Z]-=f*nx*s.mir/s.m[Z];s.ay[Z]-=f*ny*s.mir/s.m[Z];}}
 }
 function waterForces(s,h){
   if(!TER.water)return;const n=s.n,g=TUNE.gravity;
@@ -588,7 +664,7 @@ function waterForces(s,h){
 function groundCollide(s,h){
   const n=s.n,x=s.x,y=s.y,ox=s.ox,oy=s.oy;const wc2=TUNE.contactW*TUNE.contactW*h*h;
   for(let i=0;i<n;i++){
-    const r=s.rad[i];const gx=x[i];const gh=gH(gx);
+    if(s.w[i]===0)continue;const r=s.rad[i];const gx=x[i];const gh=gH(gx);
     if(y[i]-r>=gh){continue;}
     const sl=gSlope(gx);const inv=1/Math.sqrt(1+sl*sl);const nx=-sl*inv,ny=inv;
     const pen=(gh+r-y[i])*ny;const kd=gKind(gx);const isWheel=s.kind[i]===5;
@@ -599,7 +675,7 @@ function groundCollide(s,h){
     x[i]+=nx*push;y[i]+=ny*push;
     const vdx=x[i]-ox[i],vdy=y[i]-oy[i];const dn=vdx*nx+vdy*ny;
     const tx=vdx-dn*nx,ty=vdy-dn*ny;const tl=hyp(tx,ty);
-    if(tl>1e-9){const mu=isWheel?TUNE.rollFric:TUNE.fric[kd];
+    if(tl>1e-9){const mu=isWheel?(STATE.brake&&s===S?0.38:TUNE.rollFric):TUNE.fric[kd];
       const plow=soft*Math.min(pen,0.6)*0.012;
       const lim=mu*push+plow*tl;const red=Math.min(tl,lim)/tl;x[i]-=tx*red;y[i]-=ty*red;}
     const sp=tl/h;if(sp>s.contact[i])s.contact[i]=sp;
@@ -655,7 +731,7 @@ function recomputeComps(s){
   const n=s.n,par=new Int32Array(n);for(let i=0;i<n;i++)par[i]=i;
   const f=i=>{while(par[i]!==i){par[i]=par[par[i]];i=par[i];}return i;};
   for(let b=0;b<s.nb;b++){if(!s.alive[b])continue;const a=f(s.ba[b]),c=f(s.bb[b]);if(a!==c)par[a]=c;}
-  const mass=new Map();for(let i=0;i<n;i++){const r=f(i);s.comp[i]=r;if(s.kind[i]!==6)mass.set(r,(mass.get(r)||0)+s.m[i]);}
+  const mass=new Map();for(let i=0;i<n;i++){const r=f(i);s.comp[i]=r;if(s.kind[i]<6)mass.set(r,(mass.get(r)||0)+s.m[i]);}
   let best=-1,bm=-1;for(const [k,v] of mass){if(v>bm){bm=v;best=k;}}
   s.mainComp=best;s.nComp=mass.size;
   let big=0;for(const [k,v] of mass)if(v>s.M*0.03)big++;s.bigPieces=big;
@@ -675,12 +751,12 @@ const HAIRS=['#2a2522','#4a3426','#7a5a3a','#c9b28a','#8c8c8c','#1c1a19'];
 function initPersons(s,list){
   const np=list.length;const pp={n:np,x:new Float64Array(np*J),y:new Float64Array(np*J),ox:new Float64Array(np*J),oy:new Float64Array(np*J),vx:new Float64Array(np*J),vy:new Float64Array(np*J),
     rest:new Float64Array(np*J*2),bl:new Float64Array(np*BONES.length),loose:new Uint8Array(np),maxG:new Float32Array(np),gS:new Float32Array(np),pvx:new Float32Array(np),pvy:new Float32Array(np),
-    hurt:new Uint8Array(np),list};
+    hurt:new Uint8Array(np),dead:new Uint8Array(np),list};
   list.forEach((p,k)=>{
     const sc=p.crew?rr(0.97,1.05):rr(0.86,1.08);p.sc=sc;
     p.shirt=p.crew?'#e9ecef':SHIRTS[(rnd()*SHIRTS.length)|0];p.pants=p.crew?'#1f2a3a':PANTS[(rnd()*PANTS.length)|0];
     p.skin=SKINS[(rnd()*SKINS.length)|0];p.hair=HAIRS[(rnd()*HAIRS.length)|0];
-    p.seatLim=rr(TUNE.seatG[0],TUNE.seatG[1]);p.hurtLim=rr(TUNE.hurtG[0],TUNE.hurtG[1]);
+    p.seatLim=rr(TUNE.seatG[0],TUNE.seatG[1]);p.hurtLim=rr(TUNE.hurtG[0],TUNE.hurtG[1]);p.deathLim=rr(TUNE.deathG[0],TUNE.deathG[1]);
     const st=p.seat,nc=st.n;const span=nc>1?Math.min(0.32,0.07*(nc-1)):0;p.dx=nc>1?span*(p.col/(nc-1)):0;p.dy=nc>1?0.13*(p.col/(nc-1)):0;
     p.dim=nc>1?1-0.36*(p.col/(nc-1)):1;
     const pilot=st.cls==='pilot';
@@ -697,7 +773,7 @@ function seatName(st,c){if(st.cls==='pilot')return c===0?'기장석':(st.crew>1?
 function seatFrame(s,st){
   const G=s.B.G;const A=G[st.i][st.r],B=G[st.i+1][st.r];
   let fx=s.x[A]-s.x[B],fy=s.y[A]-s.y[B];const l=hyp(fx,fy)||1;fx/=l;fy/=l;
-  return {ox:s.x[A]+(s.x[B]-s.x[A])*st.t,oy:s.y[A]+(s.y[B]-s.y[A])*st.t,fx,fy,ux:-fy,uy:fx,vx:lerp(s.vx[A],s.vx[B],st.t),vy:lerp(s.vy[A],s.vy[B],st.t)};
+  return {ox:s.x[A]+(s.x[B]-s.x[A])*st.t,oy:s.y[A]+(s.y[B]-s.y[A])*st.t,fx,fy,ux:-fy*s.mir,uy:fx*s.mir,vx:lerp(s.vx[A],s.vx[B],st.t),vy:lerp(s.vy[A],s.vy[B],st.t)};
 }
 function placePersons(s,vx0,vy0){
   const pp=s.persons;let rowNo=0,lastDeck='';
@@ -759,26 +835,43 @@ function peopleFrame(s,dt){
     pp.gS[k]+=(a-pp.gS[k])*0.15;
     if(pp.gS[k]>pp.maxG[k])pp.maxG[k]=pp.gS[k];
     if(!pp.loose[k]&&pp.gS[k]>p.seatLim){pp.loose[k]=1;p.seatTorn=true;}
-    if(pp.maxG[k]>p.hurtLim)pp.hurt[k]=1;
+    if(pp.maxG[k]>p.deathLim){pp.dead[k]=1;pp.hurt[k]=0;}else if(pp.maxG[k]>p.hurtLim)pp.hurt[k]=1;
   }
 }
 
 /* ===================== 한 번 진행 ===================== */
 const PROF={};function pt(k,t){PROF[k]=(PROF[k]||0)+performance.now()-t;}
-function stepSim(s,dt){
-  const ns=TUNE.substeps,h=dt/ns;const n=s.n;
-  s.contact.fill(0);s.hit.fill(0);
-  const needInter=()=>s.nComp>1||(s.persons&&s.persons.loose.some(v=>v));
-  let inter=needInter();
+function simBox(s){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(let i=0;i<s.n;i++){const x=s.x[i],y=s.y[i];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}return[x0-8,x1+8,y0-8,y1+8];}
+function crossCollide(sa,sb,h){
+  gridBuild(sb);const x=sa.x,y=sa.y,cs=GR.cs,R=0.07;
+  for(let i=0;i<sa.n;i++){const ix=Math.floor(x[i]/cs),iy=Math.floor(y[i]/cs);let e=GR.head[ghash(ix,iy)];
+    while(e>=0){const b=GR.item[e];e=GR.next[e];const r=segPush(sb,x[i],y[i],sa.ox[i],sa.oy[i],b,R);if(!r)continue;
+      const [nx,ny,pen,t]=r;const a=sb.ba[b],c=sb.bb[b];const wa=sb.w[a]*(1-t),wc=sb.w[c]*t;const W=sa.w[i]+wa*(1-t)+wc*t;if(W===0)continue;const k=pen*0.6/W;
+      x[i]+=nx*k*sa.w[i];y[i]+=ny*k*sa.w[i];sb.x[a]-=nx*k*wa;sb.y[a]-=ny*k*wa;sb.x[c]-=nx*k*wc;sb.y[c]-=ny*k*wc;
+      const rvx=(x[i]-sa.ox[i])-((sb.x[a]-sb.ox[a])*(1-t)+(sb.x[c]-sb.ox[c])*t),rvy=(y[i]-sa.oy[i])-((sb.y[a]-sb.oy[a])*(1-t)+(sb.y[c]-sb.oy[c])*t);
+      const dn=rvx*nx+rvy*ny;const tx=rvx-dn*nx,ty=rvy-dn*ny;const tl=Math.sqrt(tx*tx+ty*ty);
+      if(tl>1e-9){const red=Math.min(tl,0.35*pen)/tl/W;x[i]-=tx*red*sa.w[i];y[i]-=ty*red*sa.w[i];sb.x[a]+=tx*red*wa;sb.y[a]+=ty*red*wa;sb.x[c]+=tx*red*wc;sb.y[c]+=ty*red*wc;}
+      if(tl/h>12&&sa.contact[i]<tl/h*0.6)sa.contact[i]=tl/h*0.6;}}
+}
+function stepSim(s,dt){stepWorld([s],dt);}
+function stepWorld(list,dt){
+  const ns=TUNE.substeps,h=dt/ns;
+  const needInter=s=>s.nComp>1||s.hasObs||(s.persons&&s.persons.loose.some(v=>v));
+  const inter=list.map(s=>{s.contact.fill(0);s.hit.fill(0);return needInter(s);});
+  const pairs=[];if(list.length>1){const bx=list.map(simBox);for(let a=0;a<list.length;a++)for(let b=a+1;b<list.length;b++){const A=bx[a],Bq=bx[b];if(A[0]<Bq[1]&&Bq[0]<A[1]&&A[2]<Bq[3]&&Bq[2]<A[3])pairs.push([list[a],list[b]]);}}
   for(let st=0;st<ns;st++){
+   for(let k=0;k<list.length;k++){const s=list[k];const n=s.n;
     let t0=performance.now();computeForces(s);
-    for(let i=0;i<n;i++){s.vx[i]+=s.ax[i]*h;s.vy[i]+=s.ay[i]*h;}
+    for(let i=0;i<n;i++){if(s.w[i]===0)continue;s.vx[i]+=s.ax[i]*h;s.vy[i]+=s.ay[i]*h;}
     waterForces(s,h);
     for(let i=0;i<n;i++){s.ox[i]=s.x[i];s.oy[i]=s.y[i];s.x[i]+=s.vx[i]*h;s.y[i]+=s.vy[i]*h;}
     s.lam.fill(0);
     for(let it=0;it<TUNE.iters;it++){solveBeams(s,h,true);solveLocks(s,h,true);}
     pt('a',t0);t0=performance.now();groundCollide(s,h);pt('g',t0);t0=performance.now();
-    if(inter){gridBuild(s);interCollide(s,h);}pt('i',t0);t0=performance.now();
+    if(inter[k]){gridBuild(s);interCollide(s,h);}pt('i',t0);
+   }
+   for(const pr of pairs){crossCollide(pr[0],pr[1],h);crossCollide(pr[1],pr[0],h);}
+   for(let k=0;k<list.length;k++){const s=list[k];const n=s.n;let t0=performance.now();
     for(let i=0;i<n;i++){s.vx[i]=(s.x[i]-s.ox[i])/h;s.vy[i]=(s.y[i]-s.oy[i])/h;}
     // 연결 방향 떨림 줄이기
     const kd=TUNE.beamDamp*(s.t<0.4?3:1);
@@ -787,21 +880,121 @@ function stepSim(s,dt){
       const dv=(s.vx[c]-s.vx[a])*nx+(s.vy[c]-s.vy[a])*ny;const imp=dv*Math.min(0.9,kd)/ws;
       s.vx[a]+=wa*imp*nx;s.vy[a]+=wa*imp*ny;s.vx[c]-=wc*imp*nx;s.vy[c]-=wc*imp*ny;}
     pt('b',t0);t0=performance.now();if((st&1)&&!s.noPeople)peopleStep(s,2*h);pt('p',t0);
-    if(s.broken.length){recomputeComps(s);inter=needInter();}
+    if(s.broken.length){recomputeComps(s);inter[k]=needInter(s);}
+   }
   }
-  s.t+=dt;
+  for(const s of list)s.t+=dt;
 }
+
+/* ===================== 부서지는 장애물 (건물·나무·차·관제탑) ===================== */
+const NODE_KEYS=['x','y','ox','oy','vx','vy','m','w','ax','ay','cd','kind','rad','comp','contact','hit','wet','buoy'];
+const BEAM_KEYS=['ba','bb','rest','rest0','alpha','yieldF','lam','alive','coll','bk','stress','bent'];
+const VEH={
+  car:{p:[[0,0],[4.5,0],[4.5,0.6],[3.4,0.75],[2.6,1.2],[0.9,1.2],[0.3,0.75],[0,0.65]],mass:1500,str:60,wr:0.32,wheels:[0.8,3.7],glass:[6,5,4,3]},
+  fire:{p:[[0,0],[10,0],[10,1.1],[9.85,2.95],[7.6,3.05],[7.3,2.85],[0,2.85]],mass:16000,str:45,wr:0.5,wheels:[1.6,3.0,8.4],col:'#c62d24',glass:[4,3,2,2]},
+  amb:{p:[[0,0],[6.2,0],[6.2,0.95],[5.6,1.35],[4.9,2.55],[0,2.65]],mass:3800,str:50,wr:0.38,wheels:[1.1,5.0],col:'#f2f2ee',glass:[4,3,2,2]},
+};
+function autoPlace(){const s=S;if(!s)return;const r=mulberry32((Math.random()*1e9)|0);const R=(a,b)=>a+(b-a)*r();
+  const x0=predictTouch(s);const types=['bld','tree','car','fire','amb','tree','bld','tower'];let x=x0-40,k=0;set.placed=[];
+  while(x<x0+650&&set.placed.length<14){const t=types[k%types.length];k++;if(!(TER.water&&x<TER.waterEnd+6))set.placed.push({t,x:Math.round(x)});x+=t==='bld'?R(45,85):t==='tower'?R(70,110):R(22,45);}}
+function placeAt(wx,wy){if(!STATE.tool)return;
+  if(STATE.tool==='craft'){const P=PLANES[set.exType];const sx=S?mainCG(S).x:0;
+    set.extra.push({type:set.exType,x:Math.round(wx),alt:Math.max(5,Math.round(wy-baseY(wx))),spd:P.spd[2],ang:wx>sx?180:0});if(set.extra.length>2)set.extra.shift();
+    save();const kc={x:cam.x,y:cam.y,free:cam.free,z:cam.z};restart();Object.assign(cam,kc);return;}
+  if(STATE.tool==='erase'&&SIMS.length>1){let bi=-1,bd=40;SIMS.slice(1).forEach((z,i)=>{const c=mainCG(z);const d=Math.hypot(c.x-wx,c.y-wy);if(d<bd){bd=d;bi=i;}});
+    if(bi>=0){set.extra.splice(bi,1);save();const kc={x:cam.x,y:cam.y,free:cam.free,z:cam.z};restart();Object.assign(cam,kc);return;}}
+  if(STATE.tool==='erase'){let bi=-1,bd=25;set.placed.forEach((o,i)=>{const d=Math.abs(o.x+5-wx);if(d<bd){bd=d;bi=i;}});if(bi>=0)set.placed.splice(bi,1);}
+  else{if(TER.water&&wx<TER.waterEnd+6)return;set.placed.push({t:STATE.tool,x:Math.round(wx*2)/2});if(set.placed.length>40)set.placed.shift();}
+  save();const keepCam={x:cam.x,y:cam.y,free:cam.free,z:cam.z};restart();Object.assign(cam,keepCam);}
+function predictTouch(s){
+  if(!s.wingS)return Math.min(xEstimate(),20000);
+  const P=s.P,wing=s.surf[0],tb=s.tb;const M=tb.Mt,Sw=wing.area;const alw=s.trimInfo.alw*DEG,thb=s.trimInfo.thb*DEG;const CL=clOf(alw,wing);
+  const CD=wing.cd0+0.022+wing.k*Math.min(CL*CL,3)+1.5*Math.sin(alw)**2;const lf=1-(tb.cx-tb.xw)/(tb.cx-tb.xt);
+  let x=0,y=baseY(0)+set.alt,vx=set.spd/3.6*Math.cos(set.gam*DEG),vy=set.spd/3.6*Math.sin(set.gam*DEG);const dt=0.03;
+  for(let k=0;k<3000;k++){const V=Math.hypot(vx,vy),q=0.5*TUNE.rho*V*V,ux=vx/V,uy=vy/V;let T=0;for(const e of P.engines)T+=set.pow/100*(e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1)));
+    const th=Math.atan2(vy,vx)+thb;vx+=((-q*Sw*CL*lf*uy-q*Sw*CD*ux+T*Math.cos(th))/M)*dt;vy+=((q*Sw*CL*lf*ux-q*Sw*CD*uy+T*Math.sin(th))/M-9.81)*dt;x+=vx*dt;y+=vy*dt;
+    if(y-P.len*0.08<baseY(x))return x;if(x>25000)break;}
+  return Math.min(xEstimate(),20000);}
+function placeObstacles(s){
+  s.obs=[];s.hasObs=false;
+  const r=mulberry32(77+set.placed.length*13);const R=(a,b)=>a+(b-a)*r();
+  const landOK=x=>!(TER.water&&x<TER.waterEnd+6);
+  const list=set.placed.filter(o=>landOK(o.x));if(!list.length)return;
+  const nodes=[],beams=[];const obs=[];
+  const N_=(x,y,m,anchor,rad)=>{nodes.push({x,y,m,anchor,rad:rad||0.08});return s.n+nodes.length-1;};
+  const B_=(a,b,y,coll)=>{beams.push({a,b,y,coll:coll?1:0});};
+  for(const o of list){const gx=o.x;
+    if(o.t==='bld'||o.t==='tower'){
+      const tower=o.t==='tower';const nc=tower?2:((R(3,6))|0)+1,cw=tower?4:5,nf=tower?8:((R(3,8))|0),fh=3.5;const mn=tower?1800:2600;
+      const G=[];for(let f=0;f<=nf;f++){G.push([]);for(let c=0;c<nc;c++){const xx=gx+c*cw;const base=gH(xx);G[f].push(N_(xx,base+f*fh+(f===0?0:0),mn,f===0));}}
+      for(let f=0;f<nf;f++)for(let c=0;c<nc;c++){const above=(nf-f)*mn*9.81;B_(G[f][c],G[f+1][c],above*3+mn*9.81*25,c===0||c===nc-1);}
+      for(let f=1;f<=nf;f++)for(let c=0;c<nc-1;c++)B_(G[f][c],G[f][c+1],mn*9.81*18,1);
+      for(let f=0;f<nf;f++)for(let c=0;c<nc-1;c++){B_(G[f][c],G[f+1][c+1],mn*9.81*9,0);B_(G[f][c+1],G[f+1][c],mn*9.81*9,0);}
+      let cab=null;
+      if(tower){const ty=G[nf][0],tz=G[nf][1];const yb=gH(gx)+nf*fh;const c1=N_(gx-2.5,yb+0.3,900,false),c2=N_(gx+cw+2.5,yb+0.3,900,false),c3=N_(gx+cw+2,yb+4,700,false),c4=N_(gx-2,yb+4,700,false);
+        cab=[c1,c2,c3,c4];[[c1,c2],[c2,c3],[c3,c4],[c4,c1]].forEach(e=>B_(e[0],e[1],9e5,1));B_(c1,c3,9e5,0);B_(c2,c4,9e5,0);B_(c1,ty,6e5,0);B_(c2,tz,6e5,0);B_(c1,tz,4e5,0);B_(c2,ty,4e5,0);}
+      obs.push({t:o.t,G,nc,nf,cab,col:tower?'#b9bcbf':['#a59d90','#9c958b','#b0a596','#8f949a'][(R(0,4))|0]});
+    }else if(o.t==='tree'){
+      const h=R(9,15),m=350;const base=gH(gx);const a=N_(gx,base,m,true),b=N_(gx+R(-0.2,0.2),base+h*0.35,m,false),c=N_(gx+R(-0.4,0.4),base+h*0.7,m,false),d=N_(gx+R(-0.5,0.5),base+h,250,false);
+      const st=m*9.81*45;B_(a,b,st*1.6,1);B_(b,c,st,1);B_(c,d,st*0.7,1);B_(a,c,st*0.8,0);B_(b,d,st*0.6,0);
+      obs.push({t:'tree',n:[a,b,c,d],h,cr:R(2.8,4.2),col:['#3f6a32','#4b7a3a','#38602e'][(R(0,3))|0]});
+    }else if(VEH[o.t]){const V=VEH[o.t];
+      const base=gH(gx)+V.wr+0.02,m=V.mass/V.p.length;
+      const ids=V.p.map(q=>N_(gx+q[0],base+q[1],m,false,q[1]===0?V.wr:0.08));const st=m*9.81*V.str;const L=ids.length;
+      for(let i=0;i<L;i++)B_(ids[i],ids[(i+1)%L],st,1);
+      for(let i=0;i<L;i++)for(let j=i+2;j<L;j++){if(i===0&&j===L-1)continue;if((i+j)%2===0||j-i===Math.floor(L/2))B_(ids[i],ids[j],st*0.8,0);}
+      obs.push({t:o.t,n:ids,V,col:V.col||['#b23a2e','#2e5fa8','#e0e2e4','#2f3236','#c9a43a','#5a7a4a'][(R(0,6))|0]});
+    }}
+  if(!nodes.length)return;
+  const n0=s.n,nb0=s.nb,n1=n0+nodes.length,nb1=nb0+beams.length;
+  for(const k of NODE_KEYS){const old=s[k];const a=new old.constructor(n1);a.set(old);s[k]=a;}
+  for(const k of BEAM_KEYS){const old=s[k];const a=new old.constructor(nb1);a.set(old);s[k]=a;}
+  nodes.forEach((d,j)=>{const i=n0+j;s.x[i]=s.ox[i]=d.x;s.y[i]=s.oy[i]=d.y;s.m[i]=d.m;s.w[i]=d.anchor?0:1/d.m;s.kind[i]=7;s.rad[i]=d.rad;s.cd[i]=0;s.buoy[i]=0.3;});
+  beams.forEach((d,j)=>{const b=nb0+j;s.ba[b]=d.a;s.bb[b]=d.b;const l=Math.hypot(s.x[d.b]-s.x[d.a],s.y[d.b]-s.y[d.a]);s.rest[b]=s.rest0[b]=l;s.alpha[b]=1e-11;s.yieldF[b]=d.y*(1+0.25*(r()*2-1));s.alive[b]=1;s.coll[b]=d.coll;s.bk[b]=7;});
+  s.n=n1;s.nb=nb1;s.obs=obs;s.hasObs=true;recomputeComps(s);
+}
+function drawObstacles(s){
+  if(!s.obs||!s.obs.length)return;const S0=scale();const px=DPR/S0;const X=s.x,Y=s.y;
+  for(const o of s.obs){
+    if(o.G){for(let f=0;f<o.nf;f++)for(let c=0;c<o.nc-1;c++){const q=[o.G[f+1][c],o.G[f+1][c+1],o.G[f][c+1],o.G[f][c]];
+        const draw=(ns)=>{poly(s,ns);ctx.fillStyle=o.col;ctx.fill();ctx.strokeStyle=shade(o.col,0.75);ctx.lineWidth=Math.max(0.05,1*px);ctx.stroke();};
+        if(vis(s,q)){draw(q);const a=bilQ(s,q,0.18,0.3),b=bilQ(s,q,0.82,0.3),d=bilQ(s,q,0.82,0.75),e=bilQ(s,q,0.18,0.75);ctx.fillStyle=o.t==='tower'?'#4d5a66':'#3c4855';ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(d[0],d[1]);ctx.lineTo(e[0],e[1]);ctx.fill();}
+        else{const t1=[q[0],q[1],q[2]],t2=[q[0],q[2],q[3]];if(vis(s,t1))draw(t1);if(vis(s,t2))draw(t2);}}
+      if(o.cab&&vis(s,o.cab)){poly(s,o.cab);ctx.fillStyle='#5f6b75';ctx.fill();const c=o.cab;const m=(i,j,t)=>[lerp(X[i],X[j],t),lerp(Y[i],Y[j],t)];
+        const a=m(c[0],c[3],0.25),b=m(c[1],c[2],0.25),d=m(c[1],c[2],0.85),e=m(c[0],c[3],0.85);ctx.fillStyle='#7fb3d2';ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(d[0],d[1]);ctx.lineTo(e[0],e[1]);ctx.fill();}
+    }else if(o.t==='tree'){const n=o.n;ctx.strokeStyle='#5b4029';ctx.lineCap='round';
+      for(let k=0;k<3;k++){const b=findBeam(s,n[k],n[k+1]);if(b<0||!s.alive[b])continue;ctx.lineWidth=0.55-k*0.12;ctx.beginPath();ctx.moveTo(X[n[k]],Y[n[k]]);ctx.lineTo(X[n[k+1]],Y[n[k+1]]);ctx.stroke();}
+      const t=n[3],u=n[2];ctx.fillStyle=o.col;ctx.beginPath();ctx.ellipse(X[t],Y[t]-o.cr*0.3,o.cr,o.cr*0.9,Math.atan2(Y[t]-Y[u],X[t]-X[u])-Math.PI/2,0,7);ctx.fill();
+      ctx.fillStyle='rgba(20,40,15,.3)';ctx.beginPath();ctx.ellipse(X[t]+o.cr*0.3,Y[t]-o.cr*0.5,o.cr*0.7,o.cr*0.55,0,0,7);ctx.fill();}
+    else if(o.V){const n=o.n;if(!vis(s,n)){for(let k=0;k<n.length;k++){const a=n[k],b=n[(k+1)%n.length];const bi=findBeam(s,a,b);if(bi<0||!s.alive[bi])continue;ctx.strokeStyle=o.col;ctx.lineWidth=0.12;ctx.beginPath();ctx.moveTo(X[a],Y[a]);ctx.lineTo(X[b],Y[b]);ctx.stroke();}continue;}
+      poly(s,n);ctx.fillStyle=o.col;ctx.fill();ctx.strokeStyle=shade(o.col,0.6);ctx.lineWidth=0.05;ctx.stroke();
+      const m=(i,j,t)=>[lerp(X[n[i]],X[n[j]],t),lerp(Y[n[i]],Y[n[j]],t)];
+      // 차 몸 기준 좌표 (뒤아래 n0 → 앞아래 n1)
+      const ox=X[n[0]],oy=Y[n[0]];let fx=X[n[1]]-ox,fy=Y[n[1]]-oy;const fl=hyp(fx,fy)||1;fx/=fl;fy/=fl;const ux=-fy,uy=fx;const P2=(a,b)=>[ox+fx*a+ux*b,oy+fy*a+uy*b];
+      const quad=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach((q,i)=>{const w=P2(q[0],q[1]);if(i)ctx.lineTo(w[0],w[1]);else ctx.moveTo(w[0],w[1]);});ctx.closePath();ctx.fill();};
+      if(o.t==='car'){quad([[1.0,0.78],[2.55,1.12],[3.25,0.78]],'#3a4b5a');quad([[0.95,0.78],[1.0,1.12],[2.5,1.12],[2.45,0.78]],'#3a4b5a');}
+      else if(o.t==='fire'){quad([[0,1.3],[7.3,1.3],[7.3,1.5],[0,1.5]],'#f0f0ea');quad([[7.7,1.7],[9.7,1.7],[9.75,2.7],[7.8,2.8]],'#2f3d4a');
+        ctx.strokeStyle='#b9bdc2';ctx.lineWidth=0.12;ctx.beginPath();const a=P2(0.3,3.05),b=P2(7.2,3.25);ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);const a2=P2(0.3,3.35),b2=P2(7.2,3.55);ctx.moveTo(a2[0],a2[1]);ctx.lineTo(b2[0],b2[1]);
+        for(let k=0;k<=8;k++){const q1=P2(0.3+k*0.86,3.05+k*0.025),q2=P2(0.3+k*0.86,3.35+k*0.025);ctx.moveTo(q1[0],q1[1]);ctx.lineTo(q2[0],q2[1]);}ctx.stroke();
+        const lt=Math.sin(STATE.t*9)>0;quad([[8.2,3.05],[8.8,3.05],[8.8,3.3],[8.2,3.3]],lt?'#ff3b30':'#7a1a16');}
+      else if(o.t==='amb'){quad([[0,1.05],[5.9,1.05],[5.9,1.35],[0,1.35]],'#d9472b');quad([[5.0,1.45],[5.55,1.4],[4.85,2.4],[4.6,2.4]],'#2f3d4a');quad([[3.3,1.5],[4.3,1.5],[4.3,2.2],[3.3,2.2]],'#2f3d4a');
+        const lt=Math.sin(STATE.t*9)>0;quad([[4.2,2.62],[4.6,2.62],[4.6,2.85],[4.2,2.85]],lt?'#ff3b30':'#2a6bff');}
+      for(const wx of o.V.wheels){const w=P2(wx,0);ctx.fillStyle='#1d1f22';ctx.beginPath();ctx.arc(w[0],w[1],o.V.wr,0,7);ctx.fill();ctx.fillStyle='#8b9097';ctx.beginPath();ctx.arc(w[0],w[1],o.V.wr*0.45,0,7);ctx.fill();}}
+  }
+}
+function bilQ(s,q,u,v){const tx=lerp(s.x[q[0]],s.x[q[1]],u),ty=lerp(s.y[q[0]],s.y[q[1]],u),bx=lerp(s.x[q[3]],s.x[q[2]],u),by=lerp(s.y[q[3]],s.y[q[2]],u);return[lerp(bx,tx,v),lerp(by,ty,v)];}
+function findBeam(s,a,b){if(!s._bm){s._bm=new Map();for(let i=0;i<s.nb;i++){s._bm.set(Math.min(s.ba[i],s.bb[i])+'_'+Math.max(s.ba[i],s.bb[i]),i);}}const v=s._bm.get(Math.min(a,b)+'_'+Math.max(a,b));return v==null?-1:v;}
 
 /* ===================== 효과 (쇠조각·불꽃·먼지·불·물보라) ===================== */
 const shards=[],parts=[];
-function kindColor(s,k){const c=s.P.col;return [c.body,c.wing,'#7a8088',c.tail,'#3a3d42','#2a2c30','#a8aeb5'][k]||'#9aa';}
+function kindColor(s,k){const c=s.P.col;return [c.body,c.wing,'#7a8088',c.tail,'#3a3d42','#2a2c30','#a8aeb5','#9a948a'][k]||'#9aa';}
 function spawnShard(x,y,vx,vy,col,size){
   if(shards.length>=TUNE.shardMax)shards.shift();
   const pts=[];const nv=3+((rnd()*2)|0);for(let k=0;k<nv;k++){const a=k/nv*Math.PI*2+rr(-0.4,0.4);const r=size*rr(0.4,1);pts.push(Math.cos(a)*r,Math.sin(a)*r);}
   shards.push({x,y,vx,vy,a:rr(0,6.28),va:rr(-14,14),pts,col,rest:false,life:60});
 }
 function part(t,x,y,vx,vy,life,size,col){if(parts.length>=TUNE.partMax)parts.splice(0,40);parts.push({t,x,y,vx,vy,life,max:life,size,col});}
-function updateFx(dt,s){
+function updateFx(dt){
   for(let k=shards.length-1;k>=0;k--){const p=shards[k];if(p.rest){continue;}
     p.vy-=9.81*dt;const sp=hyp(p.vx,p.vy);const dr=Math.max(0,1-0.0025*sp*dt*60*0.5);p.vx*=dr;p.vy*=dr;
     p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.va*dt;
@@ -815,9 +1008,7 @@ function updateFx(dt,s){
     else if(p.t===3){p.vx*=1-1.2*dt;p.vy=p.vy*(1-1.2*dt)+5*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.size+=dt*1.2;}
     else if(p.t===4||p.t===5){p.vy-=9.81*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;const gh=p.t===4?-0.3:gH(p.x);if(p.y<gh){p.life=0;}}
   }
-  if(!s)return;
-  // 불
-  for(const f of s.fires){if(f.until<s.t)continue;const i=f.node;if(TER.water&&s.y[i]<0.2&&s.x[i]<TER.waterEnd){f.until=0;continue;}
+  for(const s of SIMS)for(const f of s.fires){if(f.until<s.t)continue;const i=f.node;if(TER.water&&s.y[i]<0.2&&s.x[i]<TER.waterEnd){f.until=0;continue;}
     let nf=f.pow*dt*60*0.6;while(nf>0){if(nf<1&&rnd()>nf)break;nf--;part(3,s.x[i]+rr(-1,1)*f.r*0.6,s.y[i]+rr(-0.3,0.6)*f.r,s.vx[i]*0.7+rr(-1,1),s.vy[i]*0.7+rr(0.5,2.5),rr(0.4,0.9),rr(0.35,0.8)*f.r,null);}
     if(rnd()<0.35*dt*60)part(2,s.x[i]+rr(-1,1)*f.r,s.y[i]+f.r*1.2,s.vx[i]*0.5+rr(-1,1)+1,rr(1,3),rr(4,8),f.r*rr(0.7,1.3),null);}
 }
@@ -827,6 +1018,9 @@ function fireball(s,x,y,vx,vy,r){if(!set.fire)return;for(let k=0;k<34;k++){const
   SND.boom(clamp(r/6,0.3,1));Shake.add(0.5);}
 function frameEffects(s,dt){
   const sc=s.P.len/40;
+  if(s.rotor){const R=s.rotor;R.tips.forEach((t,k)=>{const tbm=R.tipBeams[k];if(!s.alive[tbm[0]])return;
+    if(s.contact[t]>2||s.hit[t]>2){for(const b of tbm){if(s.alive[b]){s.alive[b]=0;s.broken.push(b);}}
+      for(let q=0;q<8;q++)spawnShard(s.x[t],s.y[t],s.vx[t]+rr(-40,40),s.vy[t]+rr(5,40),'#2a2d31',rr(0.3,1.2));SND.snap(1);Shake.add(0.3);recomputeComps(s);}});}
   // 끊어진 곳 → 쇠조각
   if(s.broken.length){let snaps=0;
     for(const b of s.broken){const a=s.ba[b],c=s.bb[b];const t=rnd();const x=lerp(s.x[a],s.x[c],t),y=lerp(s.y[a],s.y[c],t);
@@ -834,7 +1028,7 @@ function frameEffects(s,dt){
       const cnt=s.coll[b]?3:1;const col=kindColor(s,Math.max(s.kind[a],s.kind[c])===6?6:s.kind[a]);
       for(let k=0;k<cnt;k++){const spread=sp*0.14+3;spawnShard(x,y,vx+rr(-1,1)*spread,vy+rr(-0.6,1)*spread,k===0?col:'#a5acb4',rr(0.12,0.5)*Math.max(0.5,sc));}
       for(let k=0;k<3;k++)part(0,x,y,vx*0.7+rr(-6,6),vy*0.7+rr(-2,6),rr(0.2,0.5),0,null);
-      snaps++;s.breakCount++;
+      snaps++;if(s.bk[b]===7){s.obsBreak=(s.obsBreak||0)+1;}else s.breakCount++;
       const fuel=(s.kind[a]===1&&s.kind[c]===1)||s.bk[b]===2,pyl=s.bk[b]===4;
       if((fuel&&sp>22)||(pyl&&sp>45&&rnd()<0.35)){const node=s.kind[a]===1?a:c;addFire(s,node,sp>45?2.2:1.2,Math.max(0.6,sc*1.2));if(fuel&&sp>40&&(!s.lastBall||s.t-s.lastBall>0.6)&&!(TER.water&&s.y[node]<1&&s.x[node]<TER.waterEnd)){s.lastBall=s.t;fireball(s,s.x[node],s.y[node],s.vx[node],s.vy[node],Math.max(1.5,sc*3.2));}}
     }
@@ -971,16 +1165,16 @@ function drawPlane(s){
   const B=s.B,P=s.P,col=P.col;const S0=scale();const px=DPR/S0;const inside=STATE.view==='inside';
   ctx.lineJoin='round';ctx.lineCap='round';
   // 먼 쪽(반대편 날개·엔진·꼬리날개)
-  const far=[0.25*P.len/40,0.35*P.len/40];
+  const fm=s.mir;const far=[0.25*P.len/40,0.35*P.len/40*fm];
   const elem=(ns,fill,stroke,dx,dy,lw)=>{if(!vis(s,ns))return;poly(s,ns,dx,dy);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1.2*px;ctx.stroke();}};
   const wn=B.wn,hn=B.hn,fn=B.fn;
-  elem([wn[0],wn[2],wn[3],wn[1]],shade(col.wing,0.62),null,-far[1],far[0]);elem([wn[2],wn[4],wn[5],wn[3]],shade(col.wing,0.62),null,-far[1],far[0]);
+  if(wn.length){elem([wn[0],wn[2],wn[3],wn[1]],shade(col.wing,0.62),null,-far[1],far[0]);elem([wn[2],wn[4],wn[5],wn[3]],shade(col.wing,0.62),null,-far[1],far[0]);}
   elem([hn[0],hn[2],hn[3],hn[1]],shade(col.tail,0.6),null,-far[1]*0.6,far[0]*0.6);
-  for(const e of s.engines){if(e.nose)continue;drawEngine(s,e,-far[1],far[0],0.62);}
+  for(const e of s.engines){if(e.nose||e.internal)continue;drawEngine(s,e,-far[1],far[0],0.62);}
   drawGear(s,-far[1]*0.6,far[0]*0.5,0.6);
   // 몸통 칸
   for(const c of B.cells){const n=c.n;
-    const fs=inside?(c.hold?'#6b7078':'#d9dcdf'):(c.hold?col.belly:col.body);ctx.fillStyle=fs;ctx.strokeStyle=fs;ctx.lineWidth=px*0.8;
+    const fs=inside?(c.hold?'#6b7078':(P.interior||'#d9dcdf')):(c.hold?col.belly:col.body);ctx.fillStyle=fs;ctx.strokeStyle=fs;ctx.lineWidth=px*0.8;
     if(vis(s,n)){poly(s,n);ctx.fill();ctx.stroke();continue;}
     const tri=(a,b,d)=>{const t=[n[a],n[b],n[d]];if(!vis(s,t))return false;poly(s,t);ctx.fill();ctx.stroke();return true;};
     if(!(tri(0,1,2)|tri(0,2,3))){tri(0,1,3);tri(1,2,3);}}
@@ -1017,17 +1211,43 @@ function drawPlane(s){
   elem([fn[0],fn[2],fn[3],fn[1]],fc,shade(fc,0.7));elem([fn[2],fn[4],fn[5],fn[3]],fc,shade(fc,0.7));
   if(vis(s,[fn[2],fn[4],fn[5],fn[3]])){ctx.strokeStyle=col.tail2;ctx.lineWidth=Math.max(0.1,0.35*P.len/40);ctx.beginPath();const a=fn[2],b=fn[3];ctx.moveTo(lerp(s.x[a],s.x[b],0.15),lerp(s.y[a],s.y[b],0.15)+0.2*P.len/40);ctx.lineTo(lerp(s.x[fn[4]],s.x[fn[5]],0.3),lerp(s.y[fn[4]],s.y[fn[5]],0.3)-0.4*P.len/40);ctx.stroke();}
   drawGear(s,0,0,1);
-  elem([wn[0],wn[2],wn[3],wn[1]],col.wing,shade(col.wing,0.65));elem([wn[2],wn[4],wn[5],wn[3]],col.wing,shade(col.wing,0.65));
-  if(vis(s,[wn[0],wn[1]])){ // 날개 뿌리 단면
-    const a=wn[0],b=wn[1];const dx=s.x[b]-s.x[a],dy=s.y[b]-s.y[a];const l=hyp(dx,dy);const nx=-dy/l,ny=dx/l;const th=l*0.1;
+  if(wn.length)elem([wn[0],wn[2],wn[3],wn[1]],col.wing,shade(col.wing,0.65));if(wn.length)elem([wn[2],wn[4],wn[5],wn[3]],col.wing,shade(col.wing,0.65));
+  if(wn.length&&vis(s,[wn[0],wn[1]])){ // 날개 뿌리 단면
+    const a=wn[0],b=wn[1];const dx=s.x[b]-s.x[a],dy=s.y[b]-s.y[a];const l=hyp(dx,dy);const nx=-dy/l*fm,ny=dx/l*fm;const th=l*0.1;
     ctx.beginPath();ctx.moveTo(s.x[a],s.y[a]);ctx.bezierCurveTo(s.x[a]+dx*0.05-nx*th*1.4,s.y[a]+dy*0.05-ny*th*1.4,s.x[a]+dx*0.4-nx*th,s.y[a]+dy*0.4-ny*th,s.x[b],s.y[b]);
     ctx.bezierCurveTo(s.x[a]+dx*0.5+nx*th*0.3,s.y[a]+dy*0.5+ny*th*0.3,s.x[a]+dx*0.05+nx*th*0.5,s.y[a]+dy*0.05+ny*th*0.5,s.x[a],s.y[a]);
     ctx.fillStyle=shade(col.wing,0.9);ctx.fill();ctx.strokeStyle=shade(col.wing,0.6);ctx.lineWidth=1*px;ctx.stroke();}
   if(B.strut!=null&&s.alive[B.strut]){const a=s.ba[B.strut],c=s.bb[B.strut];if(s.comp[a]===s.comp[c]){ctx.strokeStyle=shade(col.wing,0.75);ctx.lineWidth=0.07;ctx.beginPath();ctx.moveTo(s.x[a],s.y[a]);ctx.lineTo(s.x[c],s.y[c]);ctx.stroke();}}
   elem([hn[0],hn[2],hn[3],hn[1]],fc,shade(fc,0.7));
-  for(const e of s.engines){if(e.nose)drawNoseProp(s,e);else drawEngine(s,e,0,0,1);}
+  for(const e of s.engines){if(e.nose)drawNoseProp(s,e);else if(e.internal)drawAfterburner(s,e);else drawEngine(s,e,0,0,1);}
+  if(P.canopy){for(const c of B.cells){if(c.r!==0||!vis(s,c.n))continue;if(c.uB<P.canopy[0]||c.uA>P.canopy[1])continue;
+    const q=[bil(s,c,0,0.55),bil(s,c,1,0.55),bil(s,c,1,1),bil(s,c,0,1)];ctx.fillStyle='rgba(150,190,215,0.75)';ctx.beginPath();ctx.moveTo(q[0][0],q[0][1]);for(let k=1;k<4;k++)ctx.lineTo(q[k][0],q[k][1]);ctx.fill();}}
+  if(s.rotor)drawRotor(s);
 }
-function drawBins(s){const B=s.B,P=s.P;if(P.cargo||P.len<10)return;ctx.fillStyle='#eceef0';ctx.strokeStyle='#a9aeb4';ctx.lineWidth=0.03;
+function drawAfterburner(s,e){const n=e.n;if(!e.alive||s.cfg.pow<5||s.comp[n[2]]!==s.mainComp)return;
+  const rx=(s.x[n[2]]+s.x[n[3]])/2,ry=(s.y[n[2]]+s.y[n[3]])/2,fx=(s.x[n[0]]+s.x[n[1]])/2,fy=(s.y[n[0]]+s.y[n[1]])/2;let ax=rx-fx,ay=ry-fy;const l=hyp(ax,ay)||1;ax/=l;ay/=l;
+  const ab=s.cfg.pow>80;const L=(ab?3.2:1.2)*(0.85+0.15*Math.sin(STATE.t*40));const r=0.42;
+  ctx.fillStyle=ab?'rgba(255,150,60,0.75)':'rgba(255,190,120,0.35)';ctx.beginPath();ctx.moveTo(rx-ay*r,ry+ax*r);ctx.lineTo(rx+ax*L,ry+ay*L);ctx.lineTo(rx+ay*r,ry-ax*r);ctx.fill();
+  if(ab){ctx.fillStyle='rgba(255,240,200,0.8)';ctx.beginPath();ctx.moveTo(rx-ay*r*0.5,ry+ax*r*0.5);ctx.lineTo(rx+ax*L*0.45,ry+ay*L*0.45);ctx.lineTo(rx+ay*r*0.5,ry-ax*r*0.5);ctx.fill();}}
+function drawRotor(s){const R=s.rotor;const hub=R.hub;let bx=0,by=0;for(const m of R.base){bx+=s.x[m];by+=s.y[m];}bx/=R.base.length;by/=R.base.length;
+  if(s.comp[hub]!==s.comp[R.base[0]])return;
+  ctx.strokeStyle='#2c3028';ctx.lineWidth=0.22;ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(s.x[hub],s.y[hub]);ctx.stroke();
+  const on=[0,1].map(k=>s.alive[R.tipBeams[k][0]]);
+  let ux=s.x[hub]-bx,uy=s.y[hub]-by;const l=hyp(ux,uy)||1;ux/=l;uy/=l;const px=uy,py=-ux;
+  const spinning=(on[0]||on[1]);
+  if(spinning){ctx.strokeStyle='rgba(40,44,40,0.18)';ctx.lineWidth=0.35;ctx.beginPath();
+    ctx.moveTo(s.x[hub]-px*R.R*(on[0]?1:0.15)*s.mir,s.y[hub]-py*R.R*(on[0]?1:0.15)*s.mir);ctx.lineTo(s.x[hub]+px*R.R*(on[1]?1:0.15)*s.mir,s.y[hub]+py*R.R*(on[1]?1:0.15)*s.mir);ctx.stroke();}
+  ctx.strokeStyle='#22251f';ctx.lineWidth=0.16;ctx.beginPath();
+  for(let k=0;k<R.nb;k++){const c=Math.cos(R.spin+k*Math.PI*2/R.nb);const side=c<0?0:1;if(!on[side]){const st=0.12;ctx.moveTo(s.x[hub],s.y[hub]);ctx.lineTo(s.x[hub]+px*R.R*st*Math.sign(c)*s.mir,s.y[hub]+py*R.R*st*Math.sign(c)*s.mir);continue;}
+    ctx.moveTo(s.x[hub],s.y[hub]);ctx.lineTo(s.x[hub]+px*R.R*c*s.mir+ux*0.1,s.y[hub]+py*R.R*c*s.mir+uy*0.1);}
+  ctx.stroke();ctx.fillStyle='#3a3e36';ctx.beginPath();ctx.arc(s.x[hub],s.y[hub],0.3,0,7);ctx.fill();
+  // 꼬리 로터
+  const fn=s.B.fn;const t=fn[3];if(s.comp[t]===s.comp[hub]||true){const tx=lerp(s.x[fn[3]],s.x[fn[5]],0.55),ty=lerp(s.y[fn[3]],s.y[fn[5]],0.55);
+    ctx.strokeStyle='rgba(40,44,40,0.25)';ctx.lineWidth=0.12;ctx.beginPath();ctx.arc(tx,ty,1.68,0,7);ctx.stroke();
+    ctx.strokeStyle='#22251f';ctx.lineWidth=0.1;ctx.beginPath();for(let k=0;k<4;k++){const a=R.spin*1.6+k*Math.PI/2;ctx.moveTo(tx,ty);ctx.lineTo(tx+Math.cos(a)*1.68,ty+Math.sin(a)*1.68);}ctx.stroke();}
+}
+
+function drawBins(s){const B=s.B,P=s.P;if(P.cargo||P.heli||P.canopy||P.len<10)return;ctx.fillStyle='#eceef0';ctx.strokeStyle='#a9aeb4';ctx.lineWidth=0.03;
   for(const c of B.cells){if(c.hold||!vis(s,c.n))continue;if(B.UR>=0&&c.r===0&&!(c.uA>P.upFrom-1&&c.uB<P.upTo+1))continue;if(c.uB<P.winFrom||c.uA>P.winTo)continue;
     const a=bil(s,c,0,0.97),b=bil(s,c,1,0.97),d=bil(s,c,1,0.8),e=bil(s,c,0,0.8);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(d[0],d[1]);ctx.lineTo(e[0],e[1]);ctx.closePath();ctx.fill();ctx.stroke();}}
 function drawWindows(s,c,colr,sizeMul){
@@ -1056,7 +1276,7 @@ function drawEngine(s,e,dx,dy,f){
   if(e.prop)drawProp(s,e,fcx+ax*fl*0.22,fcy+ay*fl*0.22,ax,ay,e.prop,f);
 }
 function drawProp(s,e,cx,cy,ax,ay,R,f){
-  const px=-ay,py=ax;const spinning=(e.alive&&set.pow>0)||hyp(s.vx[e.n[0]],s.vy[e.n[0]])>18&&!e.struck;
+  const px=-ay,py=ax;const spinning=(e.alive&&s.cfg.pow>0)||hyp(s.vx[e.n[0]],s.vy[e.n[0]])>18&&!e.struck;
   ctx.fillStyle=shade('#2b2f35',f);ctx.beginPath();ctx.moveTo(cx+px*R*0.12,cy+py*R*0.12);ctx.quadraticCurveTo(cx+ax*R*0.35,cy+ay*R*0.35,cx-px*R*0.12,cy-py*R*0.12);ctx.fill();
   if(spinning&&!e.struck){ctx.fillStyle='rgba(60,64,70,'+(0.22*f)+')';ctx.beginPath();ctx.ellipse(cx,cy,R*0.06,R,Math.atan2(py,px)-Math.PI/2,0,7);ctx.fill();}
   const nb=e.jet?0:(R>1.5?6:2);ctx.strokeStyle=shade('#2a2d31',f);ctx.lineWidth=R*0.07;ctx.beginPath();
@@ -1094,7 +1314,7 @@ function drawCabin(s){
       if(k!=null&&!pp.loose[k])drawPerson(s,k,dim);
     }}
   for(let k=0;k<pp.n;k++)if(pp.loose[k]){const p=pp.list[k];const b=k*J;
-    const ux=pp.x[b+1]-pp.x[b],uy=pp.y[b+1]-pp.y[b];const l=hyp(ux,uy)||1;const Ux=ux/l,Uy=uy/l;const Fx=Uy,Fy=-Ux;
+    const ux=pp.x[b+1]-pp.x[b],uy=pp.y[b+1]-pp.y[b];const l=hyp(ux,uy)||1;const Ux=ux/l,Uy=uy/l;const Fx=Uy*s.mir,Fy=-Ux*s.mir;
     if(p.seatTorn)drawSeatAt(pp.x[b]-Ux*0.5+Fx*0.05,pp.y[b]-Uy*0.5+Fy*0.05,Fx,Fy,Ux,Uy,0,0,shade(SEATCOL[p.seat.cls]||SEATCOL.eco,1));
     drawPerson(s,k,1);}
 }
@@ -1145,9 +1365,12 @@ function draw(){
   const [sx,sy]=Shake.off(STATE.t);
   setWorld(sx,sy);
   drawTerrain();
-  if(S){drawTrail(S);drawFx(true);drawPlane(S);drawFx(false);if(STATE.stress)drawStress(S);}
+  if(S){for(const s of SIMS)drawTrail(s);drawFx(true);drawObstacles(S);for(const s of SIMS)drawPlane(s);drawFx(false);if(STATE.stress)for(const s of SIMS)drawStress(s);}
   drawWater();
+  drawGlide();
   if(S&&STATE.ready)drawArrows(S);
+  if(STATE.tool==='craft'&&ARW.mx!=null&&ARW.my!=null){const S0=scale();const r=10*DPR/S0;ctx.strokeStyle='#c58cff';ctx.lineWidth=2*DPR/S0;ctx.beginPath();ctx.arc(ARW.mx,ARW.my,r,0,7);ctx.moveTo(ARW.mx-r*1.6,ARW.my);ctx.lineTo(ARW.mx+r*1.6,ARW.my);ctx.moveTo(ARW.mx,ARW.my-r*1.6);ctx.lineTo(ARW.mx,ARW.my+r*1.6);ctx.stroke();}
+  else if(STATE.tool&&ARW.mx!=null){const S0=scale();const gx=ARW.mx,gy=gH(gx);ctx.strokeStyle=STATE.tool==='erase'?'#ff6a5a':'#ffd27a';ctx.lineWidth=2*DPR/S0;ctx.setLineDash([6*DPR/S0,4*DPR/S0]);ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx,gy+40*DPR/S0*3);ctx.stroke();ctx.setLineDash([]);}
   ctx.setTransform(1,0,0,1,0,0);
   if(S&&STATE.ready)drawArrowLabels(S);
   // 축척 막대
@@ -1167,19 +1390,30 @@ function arrowLine(a,b,col,w){const S0=scale();const lw=w*DPR/S0;const dx=b[0]-a
   ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0]-ux*hl*0.6,b[1]-uy*hl*0.6);ctx.stroke();
   ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(b[0],b[1]);ctx.lineTo(b[0]-ux*hl-uy*hl*0.55,b[1]-uy*hl+ux*hl*0.55);ctx.lineTo(b[0]-ux*hl+uy*hl*0.55,b[1]-uy*hl-ux*hl*0.55);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#fff';ctx.lineWidth=1.5*DPR/S0;ctx.beginPath();ctx.arc(b[0],b[1],7*DPR/S0,0,7);ctx.stroke();}
-function drawArrows(s){const g=arrowGeom(s);const hot=ARW.drag||ARW.hover;
+function exGeom(i){const z=SIMS[i+1],e=set.extra[i];if(!z||!e)return null;const c=mainCG(z);const P=z.P;const k=P.len*0.55/(Math.max(60,P.spd[2])/3.6);const V=Math.max(e.spd,20)/3.6;
+  return{c,k,tip:[c.x+Math.cos(e.ang*DEG)*V*k,c.y+Math.sin(e.ang*DEG)*V*k]};}
+function drawExArrows(){for(let i=0;i<set.extra.length;i++){const g=exGeom(i);if(!g)continue;const hot=ARW.drag&&ARW.drag.ex===i||ARW.hover&&ARW.hover.ex===i;
+  arrowLine([g.c.x,g.c.y],g.tip,hot?'#e2c4ff':'#c58cff',4.2);const S0=scale();ctx.strokeStyle='#fff';ctx.lineWidth=2*DPR/S0;ctx.beginPath();ctx.arc(g.c.x,g.c.y,9*DPR/S0,0,7);ctx.stroke();}}
+function drawArrows(s){drawExArrows();const g=arrowGeom(s);const hot=ARW.drag||ARW.hover;
   arrowLine(g.tail[0],g.tail[1],hot==='tail'?'#bfe9ff':'#6cc6f0',3.2);arrowLine(g.nose[0],g.nose[1],hot==='nose'?'#bfe9ff':'#6cc6f0',3.2);arrowLine(g.mid[0],g.mid[1],hot==='mid'?'#ffd27a':'#ffa632',4.5);}
 function drawArrowLabels(s){const g=arrowGeom(s);ctx.font=(11.5*DPR)+'px "Malgun Gothic",sans-serif';ctx.textAlign='left';
   const lab=(p,t)=>{const q=W2S(p[0],p[1]);const w=ctx.measureText(t).width+10*DPR;ctx.fillStyle='rgba(13,17,23,.82)';ctx.fillRect(q[0]+10*DPR,q[1]-9*DPR,w,18*DPR);ctx.fillStyle='#eef2f6';ctx.fillText(t,q[0]+15*DPR,q[1]+4*DPR);};
   const att=set.att!=null?set.att:(s.trimInfo?Math.round(s.trimInfo.thb*2)/2:0);
+  for(let i=0;i<set.extra.length;i++){const q=exGeom(i);if(!q)continue;const e=set.extra[i];const cf=exCfg(e);lab(q.tip,PLANES[e.type].name+' · '+cf.spd+' km/h · '+(cf.mir?'왼쪽':'오른쪽')+' '+cf.gam+'°');}
   lab(g.mid[1],set.spd+' km/h · '+set.gam+'°');lab(g.nose[1],'기수 '+(att>0?'+':'')+att+'° (가는 방향 기준)');lab(g.tail[1],'꼬리');}
-const ARW={drag:null,hover:null,wy0:0,att0:0};
+const ARW={drag:null,hover:null,wy0:0,att0:0,mx:null};
 function arrowHit(cx,cy){if(!S||!STATE.ready)return null;const g=arrowGeom(S);let best=null,bd=(24*DPR)**2;
+  for(let i=0;i<set.extra.length;i++){const q=exGeom(i);if(!q)continue;for(const [part,pt] of [['tip',q.tip],['body',[q.c.x,q.c.y]]]){const w=W2S(pt[0],pt[1]);const d=(w[0]-cx*DPR)**2+(w[1]-cy*DPR)**2;if(d<bd){bd=d;best={ex:i,part};}}}
   for(const k of ['mid','nose','tail']){const q=W2S(g[k][1][0],g[k][1][1]);const d=(q[0]-cx*DPR)**2+(q[1]-cy*DPR)**2;if(d<bd){bd=d;best=k;}}return best;}
-function arrowMove(cx,cy){const S0=scale();const wx=cam.x+(cx*DPR-W/2)/S0,wy=cam.y-(cy*DPR-H/2)/S0;const g=arrowGeom(S);const P=S.P;
+function arrowMove(cx,cy){const S0=scale();const wx=cam.x+(cx*DPR-W/2)/S0,wy=cam.y-(cy*DPR-H/2)/S0;
+  if(typeof ARW.drag==='object'){const i=ARW.drag.ex,e=set.extra[i],z=SIMS[i+1];if(!e||!z)return;const q=exGeom(i);const P2=z.P;
+    if(ARW.drag.part==='tip'){const dx=wx-q.c.x,dy=wy-q.c.y;e.ang=Math.round(Math.atan2(dy,dx)/DEG);e.spd=Math.round(clamp(hyp(dx,dy)/q.k*3.6,P2.spd[0],P2.spd[1])/5)*5;}
+    else{e.x=Math.round(wx);e.alt=Math.max(3,Math.round(wy-baseY(wx)));}
+    z.cfg=exCfg(e);applyFlight(z);return;}
+  const g=arrowGeom(S);const P=S.P;
   if(ARW.drag==='mid'){const dx=Math.max(wx-g.c.x,0.5),dy=wy-g.c.y;set.gam=clamp(Math.round(Math.atan2(dy,dx)/DEG),-80,5);set.spd=Math.round(clamp(hyp(dx,dy)/g.k*3.6,P.spd[0],P.spd[1])/5)*5;}
   else{const sg=ARW.drag==='nose'?1:-1;set.att=clamp(Math.round((ARW.att0+sg*Math.atan2(wy-ARW.wy0,P.len*0.5)/DEG)*2)/2,-10,25);}
-  $('preset').value='';applyFlight(S);syncUI();}
+  $('preset').value='';Object.assign(S.cfg,primaryCfg());applyFlight(S);syncUI();}
 
 /* ===================== 카메라·정보 ===================== */
 function updateCamera(dt){
@@ -1193,8 +1427,8 @@ function updateHud(){
   if(!S)return;const c=mainCG(S);const V=hyp(c.vx,c.vy);const B=S.B;
   const A=B.G[0][B.FR],Z=B.G[B.NS][B.FR];let pitch=NaN;if(S.comp[A]===S.comp[Z])pitch=Math.atan2(S.y[A]-S.y[Z],S.x[A]-S.x[Z])/DEG;
   const alt=c.y-baseY(c.x);
-  const sf=S.surf[0];const aoa=sf.dead?NaN:(sf.lastA||0)/DEG;
-  const pp=S.persons;let hurt=0,loose=0;for(let k=0;k<pp.n;k++){if(pp.hurt[k])hurt++;if(pp.loose[k])loose++;}
+  const sf=S.wingS||S.hsS;const aoa=(!S.wingS||sf.dead)?NaN:(sf.lastA||0)/DEG;
+  let hurt=0,loose=0,dead=0,np=0;for(const s of SIMS){const q=s.persons;np+=q.n;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;}}const pp={n:np};
   const slowV=V<25;const stall=!slowV&&!sf.dead&&Math.abs(sf.lastA||0)>sf.stall;
   hudEl.innerHTML='<div class="t">'+S.P.name+'</div><div class="g">'+
    '<span>속도</span><b>'+fmt(V*3.6)+' km/h</b>'+
@@ -1208,7 +1442,8 @@ function updateHud(){
    '<span>큰 조각</span><b>'+S.bigPieces+'</b>'+
    '<span>탑승</span><b>'+pp.n+'명</b>'+
    '<span>의자 뜯김</span><b>'+loose+'명</b>'+
-   '<span>크게 다침</span><b'+(hurt?' class="warn"':'')+'>'+hurt+'명</b></div>';
+   '<span>크게 다침</span><b'+(hurt?' class="warn"':'')+'>'+hurt+'명</b>'+
+   '<span>사망</span><b'+(dead?' class="warn"':'')+'>'+dead+'명</b></div>';
 }
 function countBent(s){let n=0;for(let b=0;b<s.nb;b++)if(s.bent[b]>0.01)n++;return n;}
 function frameStats(s,dt){
@@ -1217,17 +1452,21 @@ function frameStats(s,dt){
   s.lastV=[c.vx,c.vy];s.lastMain=s.mainComp;
   if(!s.trail.length||hyp(c.x-s.trail[s.trail.length-1][0],c.y-s.trail[s.trail.length-1][1])>s.P.len*0.08){s.trail.push([c.x,c.y]);if(s.trail.length>4000)s.trail.shift();}
   // 처음 닿음
-  if(s.impactT<0){let touched=false;for(let i=0;i<s.n;i++){if(s.hit[i]>0||s.contact[i]>0||(TER.water&&s.y[i]<0&&s.x[i]<TER.waterEnd)){touched=true;break;}}
-    if(touched){s.impactT=s.t;s.impact={v:hyp(c.vx,c.vy),vs:-c.vy,ang:Math.atan2(c.vy,c.vx)/DEG,x:c.x};if(set.slow)STATE.slowT=TUNE.slowmoTime;}}
+  if(s.impactT<0){let touched=false,byWheel=true;for(let i=0;i<s.n;i++){if(s.kind[i]>=7)continue;if(s.hit[i]>0||s.contact[i]>0||(TER.water&&s.y[i]<0&&s.x[i]<TER.waterEnd)){touched=true;if(s.kind[i]!==5)byWheel=false;}}
+    if(touched){s.impactT=s.t;s.impact={v:hyp(c.vx,c.vy),vs:-c.vy,ang:Math.atan2(c.vy,c.vx)/DEG,x:c.x,byWheel};if(set.slow)STATE.slowT=TUNE.slowmoTime;}}
   // 멈춤
   const V=hyp(c.vx,c.vy);
-  if(s.impactT>=0&&!s.done){if(V<0.6)s.stopT+=dt;else s.stopT=0;if(s.stopT>1.5||s.t-s.impactT>60){s.done=true;s.stopX=c.x;showResult(s);}}
+  if(s.impactT>=0&&!s.done){if(V<0.6)s.stopT+=dt;else s.stopT=0;if(s.stopT>1.5||s.t-s.impactT>60){s.done=true;s.stopX=c.x;if(s===S)showResult(s);}}
 }
 const resEl=document.getElementById('result');
 function showResult(s){
-  const pp=s.persons;let hurt=0,loose=0;for(let k=0;k<pp.n;k++){if(pp.hurt[k])hurt++;if(pp.loose[k])loose++;}
+  let hurt=0,loose=0,dead=0,np=0;for(const z of SIMS){const q=z.persons;np+=q.n;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;}}const pp={n:np};
   const im=s.impact||{v:0,vs:0,ang:0,x:0};const slide=Math.max(0,(s.stopX||0)-im.x);
-  resEl.innerHTML='<div class="t">실험 결과</div><div class="g">'+
+  let landTxt='';
+  if(set.mode==='land'){const td=im.x-TER.rwA;const onRw=im.x>TER.rwA&&im.x<TER.rwB&&s.stopX<TER.rwB;let r;
+    if(s.breakCount>25||dead)r='추락';else if(!im.byWheel)r='바퀴 말고 다른 곳이 먼저 닿음';else if(!onRw)r='활주로 밖에 내림';else if(im.vs<1.2)r='아주 부드러운 착륙';else if(im.vs<2.5)r='좋은 착륙';else if(im.vs<4)r='조금 거친 착륙';else r='너무 세게 닿음';
+    landTxt='<div style="margin:2px 0 7px;font-size:13px;color:#ffd58a">'+r+'</div><div class="g" style="margin-bottom:6px"><span>활주로 시작부터 닿은 곳</span><b>'+fmt(td)+' m</b></div>';}
+  resEl.innerHTML='<div class="t">'+(set.mode==='land'?'착륙 결과':'실험 결과')+'</div>'+landTxt+'<div class="g">'+
    '<span>닿을 때 속도</span><b>'+fmt(im.v*3.6)+' km/h</b>'+
    '<span>닿을 때 내려가는 속도</span><b>'+fmt(im.vs,1)+' m/s</b>'+
    '<span>닿는 각도</span><b>'+fmt(im.ang,1)+'°</b>'+
@@ -1237,12 +1476,14 @@ function showResult(s){
    '<span>끊어진 연결</span><b>'+s.breakCount+'</b>'+
    '<span>큰 조각</span><b>'+s.bigPieces+'개</b>'+
    '<span>탑승</span><b>'+pp.n+'명</b>'+
-   '<span>무사</span><b>'+(pp.n-hurt)+'명</b>'+
-   '<span>크게 다침</span><b>'+hurt+'명</b></div>'+
+   '<span>무사</span><b>'+(pp.n-hurt-dead)+'명</b>'+
+   '<span>크게 다침 (생존)</span><b>'+hurt+'명</b>'+
+   '<span>사망</span><b>'+dead+'명</b>'+
+   (s.obsBreak?'<span>부서진 장애물 연결</span><b>'+s.obsBreak+'</b>':'')+'</div>'+
    '<div class="btns"><button id="rAgain">다시 실행</button><button id="rClose">닫기</button></div>';
   resEl.style.display='block';
   document.getElementById('rAgain').onclick=()=>restart(true);document.getElementById('rClose').onclick=()=>{resEl.style.display='none';};
-  try{const h=JSON.parse(localStorage.getItem('plane-crash-v1-log')||'[]');h.unshift({p:set.plane,sc:set.scene,v:Math.round(im.v*3.6),g:+s.maxG.toFixed(1),br:s.breakCount,n:pp.n,hurt});localStorage.setItem('plane-crash-v1-log',JSON.stringify(h.slice(0,30)));}catch(e){}
+  try{const h=JSON.parse(localStorage.getItem('plane-crash-v1-log')||'[]');h.unshift({p:set.plane,sc:set.scene,v:Math.round(im.v*3.6),g:+s.maxG.toFixed(1),br:s.breakCount,n:pp.n,hurt,dead});localStorage.setItem('plane-crash-v1-log',JSON.stringify(h.slice(0,30)));}catch(e){}
 }
 
 /* ===================== 시작·다시 ===================== */
@@ -1253,26 +1494,33 @@ function predictWall(s){
   const t0=s.t,yc=s.yieldCount,bc=s.breakCount,nc=s.nComp,mc=s.mainComp;const sd=s.surf.map(f=>f.dead),eng=s.engines.map(e=>[e.alive,e.struck]),lk=s.locks.map(l=>l.alive);
   s.noPeople=true;let res=null;
   for(let f=0;f<60*40&&res==null;f++){stepSim(s,1/60);
-    for(let i=0;i<s.n;i++){if(s.kind[i]===6)continue;if(s.y[i]-s.rad[i]<2.6){res=s.x[i];break;}}
+    for(let i=0;i<s.n;i++){if(s.kind[i]>=6)continue;if(s.y[i]-s.rad[i]<2.6){res=s.x[i];break;}}
     if(s.breakCount>bc)break;}
   for(const k of keys)s[k].set(snap[k]);
   s.t=t0;s.yieldCount=yc;s.breakCount=bc;s.nComp=nc;s.mainComp=mc;s.broken.length=0;s.noPeople=false;
   s.surf.forEach((f,k)=>f.dead=sd[k]);s.engines.forEach((e,k)=>{e.alive=eng[k][0];e.struck=eng[k][1];});s.locks.forEach((l,k)=>l.alive=lk[k]);
   return res==null?null:res-1.2;}
-function xEstimate(){const g=Math.max(Math.abs(set.gam),2)*DEG;return clamp(set.alt/Math.tan(g),120,12000);}
+function xEstimate(){if(set.mode==='land')return clamp(set.alt/Math.tan(3*DEG),300,12000);const g=Math.max(Math.abs(set.gam),2)*DEG;return clamp(set.alt/Math.tan(g),120,12000);}
 function restart(run){
   if(run)STATE.seed=(Math.random()*1e9)|0;
   buildTerrain(set.scene,xEstimate(),set.scene==='seawall'?1e9:null);
   shards.length=0;parts.length=0;
   S=makeSim();
   if(set.scene==='seawall'){const w=predictWall(S);if(w!=null)buildTerrain('seawall',xEstimate(),w);}
+  placeObstacles(S);
+  if(set.mode==='land'&&S.wingS&&run!==false&&!STATE.keepPow){const P=S.P,V=set.spd/3.6,Wt=S.tb.Mt*9.81,Sw=S.wingS.area,g=set.gam*DEG;const q=0.5*TUNE.rho*V*V;const CL=Wt*Math.cos(g)/(q*Sw);
+    const D=q*Sw*(S.wingS.cd0+0.022+0.02*P.hs.area/Sw+S.wingS.k*CL*CL);let Tm=0;for(const e of P.engines)Tm+=e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1));
+    set.pow=Math.round(clamp((D-Wt*Math.sin(-g))/Tm*100,0,100));S.cfg.pow=set.pow;applyFlight(S);}
+  SIMS=[S];
+  set.extra.forEach(e=>SIMS.push(makeSim(exCfg(e))));
   STATE.slowT=0;STATE.paused=false;cam.free=false;resEl.style.display='none';
   document.getElementById('bPause').textContent='일시정지';
   Shake.tr=0;STATE.ready=!run;updateHud();syncUI();
 }
 
 /* ===================== 메인 루프 ===================== */
-function simFrame(d){stepSim(S,d);peopleFrame(S,d);frameEffects(S,d);frameStats(S,d);}
+let SIMS=[];
+function simFrame(d){stepWorld(SIMS,d);for(const s of SIMS){peopleFrame(s,d);frameEffects(s,d);frameStats(s,d);}}
 let last=performance.now();
 function loop(now){
   try{
@@ -1282,18 +1530,30 @@ function loop(now){
       let ts=STATE.ts;if(STATE.slowT>0){ts=Math.min(ts,TUNE.slowmo);STATE.slowT-=real;}
       const gdt=real*ts;const nst=Math.max(1,Math.ceil(gdt/(1/55)));
       for(let k=0;k<nst;k++)simFrame(gdt/nst);
-      updateFx(gdt,S);
-      for(const w of S.wheels){const n=w.n[0];w.rot-=S.vx[n]*gdt/w.r;}
-      for(const e of S.engines){const V=hyp(S.vx[e.n[0]],S.vy[e.n[0]]);if(!e.struck)e.spin+=gdt*((e.alive&&set.pow>0)?40:V*0.6);}
+      updateFx(gdt);
+      for(const s of SIMS){for(const w of s.wheels){const n=w.n[0];w.rot-=s.vx[n]*gdt/w.r;}
+        for(const e of s.engines){const V=hyp(s.vx[e.n[0]],s.vy[e.n[0]]);if(!e.struck)e.spin+=gdt*((e.alive&&s.cfg.pow>0)?40:V*0.6);}
+        if(s.rotor){const R=s.rotor;const on=s.alive[R.tipBeams[0][0]]||s.alive[R.tipBeams[1][0]];R.spin+=gdt*(on?(s.cfg.pow>0?27:Math.min(27,8+hyp(s.vx[R.hub],s.vy[R.hub])*0.5)):0);}}
     }
+    if(set.mode==='land'&&S&&!STATE.ready&&!STATE.paused)landControl(real);
     updateCamera(real);
     draw();
     hudT-=real;if(hudT<=0){hudT=0.12;updateHud();
-      if(S){const c=mainCG(S);const e=S.engines.find(e=>e.alive);SND.update(hyp(c.vx,c.vy),e?set.pow/100:0,S.P.engines[0].jet,!STATE.paused&&!S.done&&!STATE.ready);}}
+      if(S){const c=mainCG(S);const e=S.engines.find(e=>e.alive)||(S.rotor&&S.alive[S.rotor.tipBeams[0][0]]?{}:null);SND.update(hyp(c.vx,c.vy),e?set.pow/100:0,!!(S.P.engines[0]&&S.P.engines[0].jet),!STATE.paused&&!S.done&&!STATE.ready);}}
   }catch(err){console.error(err);}
   requestAnimationFrame(loop);
 }
 
+/* ===================== 착륙 연습 조종 ===================== */
+const PAD={up:0,dn:0,pu:0,pd:0};
+function landControl(dt){const up=KEYS.has('ArrowUp')||PAD.up,dn=KEYS.has('ArrowDown')||PAD.dn,pu=KEYS.has('KeyW')||PAD.pu,pd=KEYS.has('KeyS')||PAD.pd;let ch=false;
+  if(up){set.elev=clamp(set.elev+6*dt,-10,10);ch=true;}if(dn){set.elev=clamp(set.elev-6*dt,-10,10);ch=true;}
+  if(pu){set.pow=clamp(set.pow+40*dt,0,100);ch=true;}if(pd){set.pow=clamp(set.pow-40*dt,0,100);ch=true;}
+  if(ch){S.cfg.pow=set.pow;S.cfg.elev=set.elev;S.hsS.inc=S.hsBase-set.elev*DEG;landHudT-=dt;if(landHudT<0){landHudT=0.15;$('vElev').textContent=(set.elev>0?'기수 듦 ':set.elev<0?'기수 내림 ':'')+Math.abs(set.elev).toFixed(1)+'°';$('vPow').textContent=Math.round(set.pow)+' %';}}}
+let landHudT=0;
+function drawGlide(){if(set.mode!=='land'||!S)return;const S0=scale();const ax=TER.xEst,ay=gH(ax);const L=4000;
+  ctx.strokeStyle='rgba(110,230,140,.8)';ctx.lineWidth=2*DPR/S0;ctx.setLineDash([10*DPR/S0,8*DPR/S0]);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax-L*Math.cos(3*DEG),ay+L*Math.sin(3*DEG));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(110,230,140,.9)';ctx.fillRect(ax-0.6,ay,1.2,0.4);}
 /* ===================== 설정 화면 ===================== */
 const $=id=>document.getElementById(id);
 function buildUI(){
@@ -1305,6 +1565,15 @@ function buildUI(){
   sl('alt','alt');sl('spd','spd');sl('gam','gam');sl('pow','pow');sl('elev','elev');sl('fill','fill');sl('att','att');
   ['gear','fire','slow'].forEach(k=>$(k).addEventListener('change',e=>{set[k]=e.target.checked;save();if(k!=='slow')restart();}));
   $('preset').addEventListener('change',e=>{applyPreset(e.target.value);});
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{set.mode=b.dataset.m;if(set.mode==='land'){Object.assign(set,{scene:'runway',alt:150,gam:-3,att:null,elev:0,gear:true});const P=PLANES[set.plane];set.spd=Math.round(P.spd[2]/5)*5;set.pow=P.heli?70:30;}save();syncUI();restart();});
+  const pad=$('landPad');pad.querySelectorAll('button').forEach(b=>{const k=b.dataset.k;const on=v=>e=>{e.preventDefault();if(k==='br')STATE.brake=v;else PAD[k]=v?1:0;if(v&&STATE.ready)go();};b.addEventListener('pointerdown',on(true));b.addEventListener('pointerup',on(false));b.addEventListener('pointerleave',on(false));});
+  const ct=$('c2Type');ct.innerHTML=PLANE_ORDER.map(k=>'<option value="'+k+'">'+PLANES[k].name+'</option>').join('');
+  ct.addEventListener('change',e=>{set.exType=e.target.value;save();});
+  $('exPlace').onclick=()=>{STATE.tool=STATE.tool==='craft'?null:'craft';if(STATE.tool){STATE.wide=true;cam.free=false;if(!STATE.ready)restart();}syncUI();syncBar();};
+  $('exClear').onclick=()=>{set.extra=[];save();restart();};
+  document.querySelectorAll('#toolSeg button').forEach(b=>b.onclick=()=>{const t=b.dataset.t;STATE.tool=STATE.tool===t?null:t;if(STATE.tool){STATE.wide=true;cam.free=false;if(!STATE.ready)restart();}syncUI();syncBar();});
+  $('autoPlace').onclick=()=>{autoPlace();save();restart();};
+  $('clearPlace').onclick=()=>{set.placed=[];save();restart();};
   $('startBtn').onclick=()=>{SND.init();go();};
   $('attAuto').onclick=()=>{set.att=null;$('preset').value='';save();restart();};
   $('hidePanel').onclick=()=>{$('panel').classList.add('hide');$('showPanel').style.display='block';};
@@ -1324,7 +1593,14 @@ function syncBar(){$('vInside').classList.toggle('on',STATE.view==='inside');$('
 function syncUI(){
   const P=PLANES[set.plane];
   document.querySelectorAll('#planeList button').forEach(b=>b.classList.toggle('on',b.dataset.k===set.plane));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===set.mode));
+  $('modeInfo').textContent=set.mode==='land'?'활주로에 부드럽게 내립니다. ↑↓ 기수, W/S 엔진 출력, B 브레이크. 초록 점선을 따라가면 됩니다.':'';
+  $('landPad').style.display=set.mode==='land'?'flex':'none';
   document.querySelectorAll('#sceneSeg button').forEach(b=>b.classList.toggle('on',b.dataset.k===set.scene));
+  document.querySelectorAll('#toolSeg button').forEach(b=>b.classList.toggle('on',STATE.tool===b.dataset.t));
+  $('placeInfo').textContent=STATE.tool&&STATE.tool!=='craft'?(STATE.tool==='erase'?'땅을 누르면 가까운 장애물을 지웁니다.':'땅을 누르면 그 자리에 놓습니다. 끌면 화면 이동, 휠로 확대.'):('놓은 장애물 '+set.placed.length+'개');
+  $('c2Type').value=set.exType;$('exPlace').classList.toggle('on',STATE.tool==='craft');
+  $('exInfo').textContent=STATE.tool==='craft'?'하늘을 누르면 그 자리에 놓습니다. 화살표 끝을 끌면 방향·속도, 가운데 동그라미를 끌면 위치가 바뀝니다.':('놓은 기체 '+set.extra.length+'대 (최대 2대)');
   $('spd').min=P.spd[0];$('spd').max=P.spd[1];set.spd=clamp(set.spd,P.spd[0],P.spd[1]);
   for(const k of ['alt','spd','gam','pow','elev','fill'])$(k).value=set[k];
   const attShow=set.att!=null?set.att:(S&&S.trimInfo?Math.round(S.trimInfo.thb*2)/2:0);$('att').value=attShow;
@@ -1335,8 +1611,8 @@ function syncUI(){
   $('gear').checked=P.fixedGear?true:set.gear;$('gear').disabled=!!P.fixedGear;$('gearLbl').classList.toggle('dis',!!P.fixedGear);
   $('fire').checked=set.fire;$('slow').checked=set.slow;
   const seats=P.seats.reduce((a,r)=>a+(r.cls==='pilot'?0:r.n),0),crew=P.seats.filter(r=>r.cls==='pilot').reduce((a,r)=>a+(r.crew!=null?r.crew:r.n),0);
-  const vs=Math.sqrt(2*(P.emptyMass+P.fuel+seats*95+(P.cargo?P.cargo.mass*11.5:0))*9.81/(1.225*P.wingArea*(P.wing.cl0+P.wing.cla*P.wing.stall*DEG)))*3.6;
-  $('planeInfo').innerHTML='길이 '+P.len+' m · 날개폭 '+P.span+' m · 높이 '+P.height+' m<br>'+(P.cargo?'화물 약 '+Math.round(P.cargo.mass*11.5/1000)+' t · 조종사 '+crew+'명':'좌석 '+(seats+(P.seats[0].crew!=null&&P.seats[0].crew<P.seats[0].n?P.seats[0].n-P.seats[0].crew:0))+'석 · 조종사 '+crew+'명')+'<br>빈 무게 '+Math.round(P.emptyMass/100)/10+' t · 실속 속도 약 '+Math.round(vs)+' km/h';
+  const vs=P.wing?Math.sqrt(2*(P.emptyMass+P.fuel+seats*95+(P.cargo?P.cargo.mass*11.5:0))*9.81/(1.225*P.wingArea*(P.wing.cl0+P.wing.cla*P.wing.stall*DEG)))*3.6:0;
+  const nSeat=seats+(P.seats[0].crew!=null&&P.seats[0].crew<P.seats[0].n?P.seats[0].n-P.seats[0].crew:0);$('planeInfo').innerHTML='길이 '+P.len+' m · '+(P.heli?'로터 지름 ':'날개폭 ')+P.span+' m · 높이 '+P.height+' m<br>'+(P.cargo?'화물 약 '+Math.round(P.cargo.mass*11.5/1000)+' t · 조종사 '+crew+'명':(nSeat?'좌석 '+nSeat+'석 · ':'')+'조종사 '+crew+'명')+'<br>빈 무게 '+Math.round(P.emptyMass/100)/10+' t · '+(P.heli?'엔진 출력 = 로터 힘(약 77%면 제자리 비행)':'실속 속도 약 '+Math.round(vs)+' km/h');
 }
 const PRESETS={
   belly:{scene:'runway',alt:40,gam:-3,pow:0,elev:0,gear:false,spdK:1.0},
@@ -1352,7 +1628,7 @@ function applyPreset(k){const p=PRESETS[k];if(!p)return;const P=PLANES[set.plane
   Object.assign(set,{scene:p.scene,alt:p.alt,gam:p.gam,pow:p.pow,elev:p.elev,gear:p.gear,att:p.att==null?null:p.att});set.spd=Math.round(clamp(P.spd[2]*p.spdK,P.spd[0],P.spd[1])/5)*5;
   syncUI();save();restart();$('preset').value=k;}
 function save(){try{localStorage.setItem('plane-crash-v1',JSON.stringify(set));}catch(e){}}
-function load(){try{const d=JSON.parse(localStorage.getItem('plane-crash-v1')||'null');if(d)for(const k in set)if(k in d)set[k]=d[k];}catch(e){}if(!PLANES[set.plane])set.plane='b738';}
+function load(){try{const d=JSON.parse(localStorage.getItem('plane-crash-v1')||'null');if(d)for(const k in set)if(k in d)set[k]=d[k];}catch(e){}if(!PLANES[set.plane])set.plane='b738';if(!Array.isArray(set.obs))set.obs=[];if(!Array.isArray(set.placed))set.placed=[];if(!Array.isArray(set.extra))set.extra=[];if(!PLANES[set.exType])set.exType='a320';set.extra=set.extra.filter(e=>PLANES[e.type]);}
 
 /* ===================== 손·마우스 ===================== */
 let drag=null,pinch=null;
@@ -1360,30 +1636,36 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.
 function zoomAt(sx,sy,f){const S0=scale();const wx=cam.x+(sx-W/2)/S0,wy=cam.y-(sy-H/2)/S0;cam.z=clamp(cam.z*f,0.02,40);const S1=scale();if(cam.free){cam.x=wx-(sx-W/2)/S1;cam.y=wy+(sy-H/2)/S1;}}
 cv.addEventListener('pointerdown',e=>{SND.init();cv.setPointerCapture(e.pointerId);const h=arrowHit(e.clientX,e.clientY);
   if(h){ARW.drag=h;const S0=scale();ARW.wy0=cam.y-(e.clientY*DPR-H/2)/S0;ARW.att0=set.att!=null?set.att:Math.round(S.trimInfo.thb*2)/2;drag=null;return;}
+  if(STATE.tool==='craft'){drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};return;}
   drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};});
 cv.addEventListener('pointermove',e=>{
   if(ARW.drag){arrowMove(e.clientX,e.clientY);return;}
-  const ah=arrowHit(e.clientX,e.clientY);ARW.hover=ah;cv.style.cursor=ah?'grab':'';
+  {const S0=scale();ARW.mx=cam.x+(e.clientX*DPR-W/2)/S0;ARW.my=cam.y-(e.clientY*DPR-H/2)/S0;}
+  const ah=arrowHit(e.clientX,e.clientY);ARW.hover=ah;cv.style.cursor=ah?'grab':(STATE.tool?'crosshair':'');
   if(drag&&drag.id===e.pointerId&&!pinch){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.moved+=Math.abs(dx)+Math.abs(dy);drag.x=e.clientX;drag.y=e.clientY;
     if(drag.moved>4){const S0=scale();cam.free=true;cam.x-=dx*DPR/S0;cam.y+=dy*DPR/S0;syncBar();}}
   else hoverPerson(e.clientX,e.clientY,false);
 });
-cv.addEventListener('pointerup',e=>{if(ARW.drag){ARW.drag=null;save();restart();return;}if(drag&&drag.moved<=4)hoverPerson(e.clientX,e.clientY,true);drag=null;});
+cv.addEventListener('pointerup',e=>{if(ARW.drag){ARW.drag=null;save();restart();return;}
+  if(drag&&drag.moved<=4&&STATE.tool){const S0=scale();placeAt(cam.x+(e.clientX*DPR-W/2)/S0,cam.y-(e.clientY*DPR-H/2)/S0);drag=null;return;}
+  if(drag&&drag.moved<=4)hoverPerson(e.clientX,e.clientY,true);drag=null;});
 cv.addEventListener('touchstart',e=>{if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];pinch={d:hyp(a.clientX-b.clientX,a.clientY-b.clientY)};}},{passive:true});
 cv.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const a=e.touches[0],b=e.touches[1];const d=hyp(a.clientX-b.clientX,a.clientY-b.clientY);zoomAt((a.clientX+b.clientX)/2*DPR,(a.clientY+b.clientY)/2*DPR,d/pinch.d);pinch.d=d;}},{passive:true});
 cv.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null;},{passive:true});
 const tipEl=$('tip');
 function hoverPerson(cx,cy,click){
-  if(!S||!S.persons.n){tipEl.style.display='none';return;}
-  const S0=scale();const wx=cam.x+(cx*DPR-W/2)/S0,wy=cam.y-(cy*DPR-H/2)/S0;const pp=S.persons;let best=-1,bd=(14*DPR/S0)**2;
-  for(let k=0;k<pp.n;k++){const b=k*J+1;const d=(pp.x[b]-wx)**2+(pp.y[b]-wy)**2;if(d<bd){bd=d;best=k;}}
+  if(!S){tipEl.style.display='none';return;}
+  const S0=scale();const wx=cam.x+(cx*DPR-W/2)/S0,wy=cam.y-(cy*DPR-H/2)/S0;let pp=null,best=-1,bd=(14*DPR/S0)**2;
+  for(const z of SIMS){const q=z.persons;for(let k=0;k<q.n;k++){const b=k*J+1;const d=(q.x[b]-wx)**2+(q.y[b]-wy)**2;if(d<bd){bd=d;best=k;pp=q;}}}
   if(best<0||!(click||tipEl.style.display==='block')){if(best<0)tipEl.style.display='none';if(!click)return;}
   if(best<0)return;
   const p=pp.list[best];
-  tipEl.innerHTML=(p.crew?'조종사 · ':'승객 · ')+p.seatName+'<br>최대 충격 '+pp.maxG[best].toFixed(1)+' g · '+(pp.hurt[best]?'<span style="color:#ff8a6a">크게 다침</span>':'무사')+(pp.loose[best]?' · 의자 뜯김':'');
+  tipEl.innerHTML=(p.crew?'조종사 · ':'승객 · ')+p.seatName+'<br>최대 충격 '+pp.maxG[best].toFixed(1)+' g · '+(pp.dead[best]?'<span style="color:#ff6a5a">사망</span>':pp.hurt[best]?'<span style="color:#ff8a6a">크게 다침 (생존)</span>':'무사')+(pp.loose[best]?' · 의자 뜯김':'');
   tipEl.style.left=(cx+14)+'px';tipEl.style.top=(cy+10)+'px';tipEl.style.display='block';
 }
+const KEYS=new Set();window.addEventListener('keyup',e=>{KEYS.delete(e.code);if(e.code==='KeyB')STATE.brake=false;});
 window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range')return;
+  if(set.mode==='land'&&['ArrowUp','ArrowDown','KeyW','KeyS','KeyB'].includes(e.code)){e.preventDefault();KEYS.add(e.code);if(e.code==='KeyB')STATE.brake=true;if(STATE.ready&&e.code!=='KeyB')go();return;}
   if(e.code==='Space'){e.preventDefault();SND.init();if(STATE.ready)go();else if(S&&S.done)restart(true);else togglePause();}
   else if(e.code==='KeyR'){SND.init();restart(true);}});
 function go(){if(STATE.ready&&S){STATE.ready=false;syncUI();}else restart(true);}
@@ -1392,7 +1674,7 @@ function go(){if(STATE.ready&&S){STATE.ready=false;syncUI();}else restart(true);
 load();buildUI();syncUI();syncBar();restart();
 if(innerWidth<900||innerHeight<520){$('panel').classList.add('hide');$('showPanel').style.display='block';}
 requestAnimationFrame(loop);
-window.__crash={TER,PROF,get S(){return S;},simFrame,updateFx:(d)=>updateFx(d,S),set,STATE,cam,restart,stepSim,TUNE,draw,resize,applyPreset,syncUI};
+window.__crash={TER,PROF,get S(){return S;},get SIMS(){return SIMS;},simFrame,updateFx:(d)=>updateFx(d),set,STATE,cam,restart,stepSim,TUNE,draw,resize,applyPreset,syncUI};
 </script>
 <script src="../track.js" defer></script>
 </body>
