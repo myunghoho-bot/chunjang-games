@@ -33,6 +33,7 @@ select{width:100%;font:inherit;color:#d9e1ea;background:#1b222b;border:1px solid
 .chk label{display:flex;align-items:center;gap:6px;color:#aeb9c6;cursor:pointer}
 .chk input{accent-color:#f2a93b}
 .chk label.dis{opacity:.45}
+button.mini{padding:0 6px;font-size:10.5px;margin-left:4px;vertical-align:1px}
 #startBtn{width:100%;margin-top:12px;padding:10px;font-size:14px;font-weight:bold;background:#7a2b1c;border-color:#c4502f;color:#fff}
 #startBtn:hover{background:#933522}
 .hint{color:#6f7c8b;font-size:11px;margin-top:8px;line-height:1.5}
@@ -80,11 +81,13 @@ select{width:100%;font:inherit;color:#d9e1ea;background:#1b222b;border:1px solid
     <option value="dive">급강하</option>
     <option value="stall">실속 (속도가 너무 느림)</option>
     <option value="cfit">산비탈에 부딪힘</option>
+    <option value="tail">기수 들고 낮고 느리게 → 꼬리가 방파제에 걸림</option>
   </select>
   <div class="sec">비행 조건</div>
   <div class="row"><span>시작 고도</span><b id="vAlt"></b></div><input type="range" id="alt" min="10" max="800" step="5">
   <div class="row"><span>속도</span><b id="vSpd"></b></div><input type="range" id="spd" min="80" max="950" step="5">
   <div class="row"><span>내려가는 각도</span><b id="vGam"></b></div><input type="range" id="gam" min="-80" max="5" step="1">
+  <div class="row"><span>기수 각도 <button id="attAuto" class="mini">자동</button></span><b id="vAtt"></b></div><input type="range" id="att" min="-10" max="25" step="0.5">
   <div class="row"><span>엔진 출력</span><b id="vPow"></b></div><input type="range" id="pow" min="0" max="100" step="5">
   <div class="row"><span>승강타 (기수)</span><b id="vElev"></b></div><input type="range" id="elev" min="-10" max="10" step="0.5">
   <div class="row"><span>탑승률</span><b id="vFill"></b></div><input type="range" id="fill" min="0" max="100" step="5">
@@ -94,7 +97,7 @@ select{width:100%;font:inherit;color:#d9e1ea;background:#1b222b;border:1px solid
     <label><input type="checkbox" id="slow"> 처음 부딪힐 때 느린 화면</label>
   </div>
   <button id="startBtn">추락 시작</button>
-  <div class="hint">Space 시작·멈춤 · R 다시 실행<br>마우스 휠 확대 · 끌어서 화면 이동 · 사람을 누르면 정보</div>
+  <div class="hint">추락 전에 비행기의 화살표를 끌 수 있습니다: 가운데 = 방향·속도, 앞·뒤 = 기수 각도<br>Space 시작·멈춤 · R 다시 실행<br>마우스 휠 확대 · 끌어서 화면 이동 · 사람을 누르면 정보</div>
 </div>
 <button id="showPanel">설정</button>
 <div id="hud"></div>
@@ -208,14 +211,14 @@ PLANES.b738f=Object.assign({},PLANES.b738,{name:'보잉 737-800 화물기',desc:
 const PLANE_ORDER=['c172','at72','b738','b738f','b744'];
 
 /* ===================== 땅 ===================== */
-const SCENES=[{id:'runway',name:'활주로'},{id:'field',name:'들판'},{id:'mountain',name:'산비탈'},{id:'sea',name:'바다'}];
+const SCENES=[{id:'runway',name:'활주로'},{id:'seawall',name:'방파제 활주로'},{id:'field',name:'들판'},{id:'mountain',name:'산비탈'},{id:'sea',name:'바다'}];
 // 땅 종류: 0 활주로 1 풀 2 흙 3 바위 4 모래(바다 밑)
 const TER={x0:-3000,dx:0.5,n:0,h:null,h0:null,scar:null,kind:null,water:false,scene:'runway',rwA:0,rwB:0,decor:[],xEst:0};
-function buildTerrain(scene,xEst){
+function buildTerrain(scene,xEst,wallArg){
   const r0=mulberry32(12345+scene.length*77);
   const n=Math.ceil((32000-TER.x0)/TER.dx);
-  TER.n=n;TER.h=new Float32Array(n);TER.scar=new Float32Array(n);TER.kind=new Uint8Array(n);TER.scene=scene;TER.water=scene==='sea';TER.xEst=xEst;
-  TER.rwA=xEst-1400;TER.rwB=xEst+3200;
+  TER.n=n;TER.h=new Float32Array(n);TER.scar=new Float32Array(n);TER.kind=new Uint8Array(n);TER.scene=scene;TER.water=scene==='sea'||scene==='seawall';TER.waterEnd=Infinity;TER.xEst=xEst;TER.rwA=xEst-1400;TER.rwB=xEst+3200;
+  const wallX=wallArg!=null?wallArg:xEst-110;if(scene==='seawall'){TER.waterEnd=wallX+1.2;TER.rwA=wallX+160;TER.rwB=wallX+3400;TER.wallX=wallX;}
   const ph=[r0()*6,r0()*6,r0()*6];
   const xm=Math.max(60,xEst*0.72);
   for(let i=0;i<n;i++){
@@ -225,16 +228,17 @@ function buildTerrain(scene,xEst){
     else if(scene==='mountain'){ const d=x-xm; if(d<0){h=0.6*Math.sin(x/90+ph[0]);k=1;} else { const s=Math.min(d,1500);
         h=s*Math.tan(27*DEG)*sstep(0,90,d)+6*Math.sin(d/23+ph[1])*sstep(0,60,d)+2.5*Math.sin(d/7+ph[2])*sstep(0,40,d); if(d>1500)h+= (d-1500)*0.15; k=d<25?1:3; } }
     else if(scene==='sea'){ h=-19-5*Math.sin(x/420+ph[0])-2*Math.sin(x/97+ph[1]); k=4; }
+    else if(scene==='seawall'){ if(x<wallX){h=-9-1.5*Math.sin(x/120+ph[0]);k=4;} else if(x<wallX+3){h=-9+13*sstep(wallX,wallX+2.2,x);k=3;} else {h=4;k=(x>TER.rwA&&x<TER.rwB)?0:(x<wallX+25?3:1);} }
     TER.h[i]=h;TER.kind[i]=k;
   }
   TER.h0=TER.h.slice();
   // 꾸밈
   const D=[];const r1=mulberry32(999+scene.length);
-  if(scene==='runway'){
+  if(scene==='runway'||scene==='seawall'){
     for(let x=TER.rwA;x<=TER.rwB;x+=60)D.push({t:'edge',x});
     for(let x=TER.rwA-900;x<TER.rwA-20;x+=30)D.push({t:'appr',x,h:1.5+(TER.rwA-x)*0.004});
     for(let x=TER.rwB+80;x<TER.rwB+4000;x+=rr2(r1,30,90))D.push({t:'tree',x,s:rr2(r1,0.7,1.3)});
-    for(let x=TER.x0+50;x<TER.rwA-950;x+=rr2(r1,30,110))D.push({t:'tree',x,s:rr2(r1,0.7,1.3)});
+    if(scene==='runway')for(let x=TER.x0+50;x<TER.rwA-950;x+=rr2(r1,30,110))D.push({t:'tree',x,s:rr2(r1,0.7,1.3)});
   }else if(scene==='field'){
     for(let x=TER.x0+30;x<30000;x+=rr2(r1,25,140))D.push({t:r1()<0.18?'pole':'tree',x,s:rr2(r1,0.6,1.4)});
     for(let x=TER.x0;x<30000;x+=rr2(r1,500,1500)){const len=rr2(r1,40,140);for(let k=0;k<len;k+=3)D.push({t:'fence',x:x+k});}
@@ -367,13 +371,13 @@ function buildPlaneLocal(P,gearDown){
 }
 
 /* ===================== 시뮬레이션 상태 ===================== */
-const set={plane:'b738',scene:'runway',alt:60,spd:270,gam:-4,pow:0,elev:0,fill:100,gear:false,fire:true,slow:true};
+const set={plane:'b738',scene:'runway',alt:60,spd:270,gam:-4,pow:0,elev:0,fill:100,gear:false,fire:true,slow:true,att:null};
 let S=null;
-const STATE={mode:'run',paused:false,ts:1,slowT:0,view:'inside',stress:false,trail:true,follow:true,wide:false,sound:true,t:0};
+const STATE={ready:true,seed:1,mode:'run',paused:false,ts:1,slowT:0,view:'inside',stress:false,trail:true,follow:true,wide:false,sound:true,t:0};
 
 function makeSim(){
   const P=PLANES[set.plane];
-  rnd=mulberry32((Math.random()*1e9)|0);
+  rnd=mulberry32(STATE.seed);
   const gearDown=P.fixedGear?true:set.gear;
   const B=buildPlaneLocal(P,gearDown);
   const n=B.nodes.length,nb=B.beams.length;
@@ -435,32 +439,44 @@ function makeSim(){
   s.compMass=[];
   // 사람
   s.persons=initPersons(s,persons);
-  // 다듬기(trim): 속도에 맞게 꼬리날개 각도
-  const V=set.spd/3.6;
-  // 내려가는 각도 그대로 계속 내려가도록, 그 각도에서 버티는 속도에 맞춰 다듬음(갑자기 다시 올라가지 않게)
-  const gam0=set.gam*DEG,Wt=Mt*9.81,Sw=wingSurf.area;
-  let Tt=0;for(const e of P.engines)Tt+=set.pow/100*(e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1)));
-  const cd0=wingSurf.cd0+0.022+0.02*P.hs.area/Sw,kI=wingSurf.k;const drive=Wt*Math.sin(-gam0)+Tt;let Vt=V;
-  if(drive>0){const qa=Sw*cd0,qc=kI*(Wt*Math.cos(gam0))**2/Sw,disc=drive*drive-4*qa*qc;if(disc>0){const qe=(drive+Math.sqrt(disc))/(2*qa);Vt=clamp(Math.sqrt(2*qe/TUNE.rho),V,V*TUNE.diveTrimMax);}}
-  const q=0.5*TUNE.rho*Vt*Vt;
-  const a=cx-xw,bb=cx-xt;const Lw=Wt*Math.cos(gam0)*bb/(bb-a);const Lt=Wt*Math.cos(gam0)-Lw;
-  let alw=(Lw/(q*wingSurf.area)-wingSurf.cl0)/wingSurf.cla;alw=Math.min(alw,wingSurf.stall*0.92);
   const phiW=Math.atan2(s.y[B.wn[0]]-s.y[B.wn[1]],s.x[B.wn[0]]-s.x[B.wn[1]]);
   const phiT=Math.atan2(s.y[B.hn[0]]-s.y[B.hn[1]],s.x[B.hn[0]]-s.x[B.hn[1]]);
-  const thb=alw-phiW-wingSurf.inc;
-  const alt=clamp(Lt/(q*hsSurf.area)/hsSurf.cla,-0.25,0.25);
-  hsSurf.inc=alt-thb-phiT-set.elev*DEG;
-  s.trimInfo={alw:alw/DEG,thb:thb/DEG,it:hsSurf.inc/DEG,xnp,target,cx,beta};
-  // 세상에 놓기
-  const gam=set.gam*DEG,th=gam+thb;const ct=Math.cos(th),st=Math.sin(th);
-  const X0=0,Y0=gH(0)+set.alt+(TER.water?0:0);
-  const vx0=V*Math.cos(gam),vy0=V*Math.sin(gam);
-  for(let i=0;i<n;i++){const lx=s.x[i]-cx,ly=s.y[i]-cy;s.x[i]=X0+lx*ct-ly*st;s.y[i]=Y0+lx*st+ly*ct;s.vx[i]=vx0;s.vy[i]=vy0;s.ox[i]=s.x[i];s.oy[i]=s.y[i];}
-  placePersons(s,vx0,vy0);
+  const lx=new Float64Array(n),ly=new Float64Array(n);for(let i=0;i<n;i++){lx[i]=s.x[i]-cx;ly[i]=s.y[i]-cy;}
+  s.tb={xw,xt,cx,cy,Mt,phiW,phiT,lx,ly,xnp,target,beta};
+  applyFlight(s);
   recomputeComps(s);
-  s.V0=V;s.th0=th;
   return s;
 }
+/* 속도·각도·기수 각도에 맞춰 꼬리날개를 다듬고 하늘에 놓기 (화살표로 바꿀 때도 부름) */
+function applyFlight(s){
+  const P=s.P,B=s.B,tb=s.tb,wingSurf=s.surf[0],hsSurf=s.surf[1];const n=s.n;
+  const V=set.spd/3.6;const gam0=set.gam*DEG,Wt=tb.Mt*9.81,Sw=wingSurf.area;
+  const a=tb.cx-tb.xw,bb=tb.cx-tb.xt;let alw,Lw,Lt,q;
+  if(set.att!=null){
+    // 기수 각도를 직접 정함: 그 자세(받음각)를 그대로 유지하게 꼬리를 맞춤 → 느리면 점점 가라앉음
+    q=0.5*TUNE.rho*V*V;alw=set.att*DEG+tb.phiW+wingSurf.inc;Lw=q*Sw*clOf(alw,wingSurf);Lt=-Lw*a/bb;
+  }else{
+    // 내려가는 각도 그대로 계속 내려가도록, 그 각도에서 버티는 속도에 맞춰 다듬음(갑자기 다시 올라가지 않게)
+    let Tt=0;for(const e of P.engines)Tt+=set.pow/100*(e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1)));
+    const cd0=wingSurf.cd0+0.022+0.02*P.hs.area/Sw,kI=wingSurf.k;const drive=Wt*Math.sin(-gam0)+Tt;let Vt=V;
+    if(drive>0){const qa=Sw*cd0,qc=kI*(Wt*Math.cos(gam0))**2/Sw,disc=drive*drive-4*qa*qc;if(disc>0){const qe=(drive+Math.sqrt(disc))/(2*qa);Vt=clamp(Math.sqrt(2*qe/TUNE.rho),V,V*TUNE.diveTrimMax);}}
+    q=0.5*TUNE.rho*Vt*Vt;
+    Lw=Wt*Math.cos(gam0)*bb/(bb-a);Lt=Wt*Math.cos(gam0)-Lw;
+    alw=(Lw/(q*Sw)-wingSurf.cl0)/wingSurf.cla;alw=Math.min(alw,wingSurf.stall*0.92);
+  }
+  const thb=alw-tb.phiW-wingSurf.inc;
+  const alt=clamp(Lt/(q*hsSurf.area)/hsSurf.cla,-0.25,0.25);
+  hsSurf.inc=alt-thb-tb.phiT-set.elev*DEG;
+  s.trimInfo={alw:alw/DEG,thb:thb/DEG,it:hsSurf.inc/DEG,xnp:tb.xnp,target:tb.target,cx:tb.cx,beta:tb.beta};
+  // 세상에 놓기
+  const gam=gam0,th=gam+thb;const ct=Math.cos(th),st=Math.sin(th);
+  const X0=0,Y0=baseY(0)+set.alt;
+  const vx0=V*Math.cos(gam),vy0=V*Math.sin(gam);
+  for(let i=0;i<n;i++){const lx=tb.lx[i],ly=tb.ly[i];s.x[i]=X0+lx*ct-ly*st;s.y[i]=Y0+lx*st+ly*ct;s.vx[i]=vx0;s.vy[i]=vy0;s.ox[i]=s.x[i];s.oy[i]=s.y[i];}
+  placePersons(s,vx0,vy0);
+  s.V0=V;s.th0=th;s.trail.length=0;
+}
+function baseY(x){return (TER.water&&x<TER.waterEnd)?Math.max(0,gH(x)):gH(x);}
 
 /* 고정해 놓고 무게를 달아 연결마다 힘을 잰다 */
 function calibrate(s,pins,gmul,extra){
@@ -541,7 +557,7 @@ function computeForces(s){
     const cl=clOf(a,sf);const sn=Math.sin(a);
     const cd=sf.cd0+sf.k*Math.min(cl*cl,3)+1.5*sn*sn;
     const q=0.5*rho*V*V*sf.area;let wetk=1;
-    if(TER.water){let wc=0;for(const nd of sf.nodes)if(s.y[nd]<0)wc++;wetk=1-wc/sf.nodes.length;}
+    if(TER.water){let wc=0;for(const nd of sf.nodes)if(s.y[nd]<0&&s.x[nd]<TER.waterEnd)wc++;wetk=1-wc/sf.nodes.length;}
     const L=q*cl*wetk,D=q*cd*wetk;const ux=r.vx/V,uy=r.vy/V;
     const Fx=-L*uy-D*ux,Fy=L*ux-D*uy;
     sf.lastA=a;sf.lastCL=cl;
@@ -559,7 +575,7 @@ function computeForces(s){
 }
 function waterForces(s,h){
   if(!TER.water)return;const n=s.n,g=TUNE.gravity;
-  for(let i=0;i<n;i++){const d=-s.y[i];if(d<=0){s.wet[i]=0;continue;}
+  for(let i=0;i<n;i++){const d=-s.y[i];if(d<=0||s.x[i]>=TER.waterEnd){s.wet[i]=0;continue;}
     s.wet[i]=1;const f=Math.min(1,d/0.6);
     s.vy[i]+=g*s.buoy[i]*Math.min(d/1.2,1)*h;
     const vx=s.vx[i],vy=s.vy[i];
@@ -716,7 +732,7 @@ function peopleStep(s,h){
     }
     for(let j=0;j<J;j++){const q=base+j;const gh=gH(pp.x[q])+0.05;
       if(pp.y[q]<gh){const d=gh-pp.y[q];pp.y[q]+=Math.min(d,0.03+d*0.05);const tx=pp.x[q]-pp.ox[q];pp.x[q]-=tx*0.25;if(pp.y[q]-pp.oy[q]>0)pp.oy[q]=pp.y[q]-Math.min(pp.y[q]-pp.oy[q],0.02);}
-      if(TER.water&&pp.y[q]<0){pp.vy[q]+=g*1.05*h;}}
+      if(TER.water&&pp.y[q]<0&&pp.x[q]<TER.waterEnd){pp.vy[q]+=g*1.05*h;}}
     if(loose&&s.nComp>0){
       for(let j=0;j<J;j+=1){const q=base+j;const ix=Math.floor(pp.x[q]/GR.cs),iy=Math.floor(pp.y[q]/GR.cs);let e=GR.head[ghash(ix,iy)];
         while(e>=0){const b=GR.item[e];e=GR.next[e];const r=segPush(s,pp.x[q],pp.y[q],pp.ox[q],pp.oy[q],b,0.06);if(!r)continue;const pn=Math.min(r[2],0.04);
@@ -725,7 +741,7 @@ function peopleStep(s,h){
           const rvx=(pp.x[q]-pp.ox[q])-svx,rvy=(pp.y[q]-pp.oy[q])-svy;const dn=rvx*r[0]+rvy*r[1];const tx=rvx-dn*r[0],ty=rvy-dn*r[1];pp.x[q]-=tx*0.3;pp.y[q]-=ty*0.3;}}
     }
     for(let j=0;j<J;j++){const q=base+j;pp.vx[q]=(pp.x[q]-pp.ox[q])/h;pp.vy[q]=(pp.y[q]-pp.oy[q])/h;
-      if(TER.water&&pp.y[q]<0){pp.vx[q]*=0.995;pp.vy[q]*=0.99;}}
+      if(TER.water&&pp.y[q]<0&&pp.x[q]<TER.waterEnd){pp.vx[q]*=0.995;pp.vy[q]*=0.99;}}
   }
 }
 function peopleFrame(s,dt){
@@ -770,7 +786,7 @@ function stepSim(s,dt){
       const dx=s.x[c]-s.x[a],dy=s.y[c]-s.y[a];const l=hyp(dx,dy)||1;const nx=dx/l,ny=dy/l;
       const dv=(s.vx[c]-s.vx[a])*nx+(s.vy[c]-s.vy[a])*ny;const imp=dv*Math.min(0.9,kd)/ws;
       s.vx[a]+=wa*imp*nx;s.vy[a]+=wa*imp*ny;s.vx[c]-=wc*imp*nx;s.vy[c]-=wc*imp*ny;}
-    pt('b',t0);t0=performance.now();if(st&1)peopleStep(s,2*h);pt('p',t0);
+    pt('b',t0);t0=performance.now();if((st&1)&&!s.noPeople)peopleStep(s,2*h);pt('p',t0);
     if(s.broken.length){recomputeComps(s);inter=needInter();}
   }
   s.t+=dt;
@@ -789,7 +805,7 @@ function updateFx(dt,s){
   for(let k=shards.length-1;k>=0;k--){const p=shards[k];if(p.rest){continue;}
     p.vy-=9.81*dt;const sp=hyp(p.vx,p.vy);const dr=Math.max(0,1-0.0025*sp*dt*60*0.5);p.vx*=dr;p.vy*=dr;
     p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.va*dt;
-    if(TER.water&&p.y<0){p.vx*=0.9;p.vy=p.vy*0.9-0.3*dt;p.va*=0.95;if(p.y<gH(p.x)+0.05){p.rest=true;}}
+    if(TER.water&&p.y<0&&p.x<TER.waterEnd){p.vx*=0.9;p.vy=p.vy*0.9-0.3*dt;p.va*=0.95;if(p.y<gH(p.x)+0.05){p.rest=true;}}
     const gh=gH(p.x)+0.04;
     if(p.y<gh){p.y=gh;if(Math.abs(p.vy)>2){p.vy=-p.vy*0.25;p.vx*=0.6;p.va*=0.6;}else{p.vy=0;p.vx*=0.8;p.va*=0.7;if(Math.abs(p.vx)<0.3){p.rest=true;}}}
   }
@@ -801,7 +817,7 @@ function updateFx(dt,s){
   }
   if(!s)return;
   // 불
-  for(const f of s.fires){if(f.until<s.t)continue;const i=f.node;if(TER.water&&s.y[i]<0.2){f.until=0;continue;}
+  for(const f of s.fires){if(f.until<s.t)continue;const i=f.node;if(TER.water&&s.y[i]<0.2&&s.x[i]<TER.waterEnd){f.until=0;continue;}
     let nf=f.pow*dt*60*0.6;while(nf>0){if(nf<1&&rnd()>nf)break;nf--;part(3,s.x[i]+rr(-1,1)*f.r*0.6,s.y[i]+rr(-0.3,0.6)*f.r,s.vx[i]*0.7+rr(-1,1),s.vy[i]*0.7+rr(0.5,2.5),rr(0.4,0.9),rr(0.35,0.8)*f.r,null);}
     if(rnd()<0.35*dt*60)part(2,s.x[i]+rr(-1,1)*f.r,s.y[i]+f.r*1.2,s.vx[i]*0.5+rr(-1,1)+1,rr(1,3),rr(4,8),f.r*rr(0.7,1.3),null);}
 }
@@ -820,7 +836,7 @@ function frameEffects(s,dt){
       for(let k=0;k<3;k++)part(0,x,y,vx*0.7+rr(-6,6),vy*0.7+rr(-2,6),rr(0.2,0.5),0,null);
       snaps++;s.breakCount++;
       const fuel=(s.kind[a]===1&&s.kind[c]===1)||s.bk[b]===2,pyl=s.bk[b]===4;
-      if((fuel&&sp>22)||(pyl&&sp>45&&rnd()<0.35)){const node=s.kind[a]===1?a:c;addFire(s,node,sp>45?2.2:1.2,Math.max(0.6,sc*1.2));if(fuel&&sp>40&&(!s.lastBall||s.t-s.lastBall>0.6)&&!(TER.water&&s.y[node]<1)){s.lastBall=s.t;fireball(s,s.x[node],s.y[node],s.vx[node],s.vy[node],Math.max(1.5,sc*3.2));}}
+      if((fuel&&sp>22)||(pyl&&sp>45&&rnd()<0.35)){const node=s.kind[a]===1?a:c;addFire(s,node,sp>45?2.2:1.2,Math.max(0.6,sc*1.2));if(fuel&&sp>40&&(!s.lastBall||s.t-s.lastBall>0.6)&&!(TER.water&&s.y[node]<1&&s.x[node]<TER.waterEnd)){s.lastBall=s.t;fireball(s,s.x[node],s.y[node],s.vx[node],s.vy[node],Math.max(1.5,sc*3.2));}}
     }
     if(snaps)SND.snap(Math.min(1,snaps/4));
     s.broken.length=0;
@@ -833,15 +849,15 @@ function frameEffects(s,dt){
     if(s.kind[i]===5&&sp>0){continue;}
     if(sp>8){scrape+=Math.min(sp,80);
       if(!onGround||kd===0||kd===3){if(rnd()<sp/40*dt*60)for(let k=0;k<2;k++)part(0,s.x[i],s.y[i]-s.rad[i]+0.05,s.vx[i]*rr(0.3,0.9)+rr(-3,3),rr(1,7)+Math.abs(s.vy[i])*0.2,rr(0.25,0.7),0,null);}
-      else if(TER.water){}
+      else if(TER.water&&s.x[i]<TER.waterEnd){}
       else{if(rnd()<sp/30*dt*60){part(1,s.x[i],gH(s.x[i])+0.3,s.vx[i]*0.25+rr(-1,1),rr(0.5,2.5),rr(1.2,2.6),rr(0.3,0.8)*Math.max(0.5,sc),kd===2?'#8a6a48':'#7d6f55');}
         if(rnd()<sp/60*dt*60)part(5,s.x[i],gH(s.x[i])+0.2,s.vx[i]*rr(0.3,0.7),rr(2,7),rr(0.6,1.5),rr(0.08,0.22),kd===1?'#4d6b33':'#6b4f35');}}
-    if(hv>6&&onGround&&!TER.water&&rnd()<0.5){for(let k=0;k<Math.min(3,hv/8);k++)part(1,s.x[i]+rr(-1,1),gH(s.x[i])+0.2,s.vx[i]*0.2+rr(-3,3),rr(1,4),rr(1.5,3),rr(0.4,1.1)*Math.max(0.5,sc),kd===0?'#9a9890':'#8b7556');}
+    if(hv>6&&onGround&&!(TER.water&&s.x[i]<TER.waterEnd)&&rnd()<0.5){for(let k=0;k<Math.min(3,hv/8);k++)part(1,s.x[i]+rr(-1,1),gH(s.x[i])+0.2,s.vx[i]*0.2+rr(-3,3),rr(1,4),rr(1.5,3),rr(0.4,1.1)*Math.max(0.5,sc),kd===0?'#9a9890':'#8b7556');}
     if(s.kind[i]===2&&(hv>8||sp>25)){const e=s.engines.find(e=>e.n.includes(i));if(e&&e.alive){e.alive=false;e.struck=true;if(sp>55&&rnd()<0.3)addFire(s,i,1,Math.max(0.5,sc*0.8));}}
     if(s.kind[i]===0&&s.engines[0]&&s.engines[0].nose&&s.engines[0].n.includes(i)&&sp>5){s.engines[0].alive=false;s.engines[0].struck=true;}
   }
   // 물보라
-  if(TER.water){for(let i=0;i<s.n;i++){if(s.y[i]>0.4||s.y[i]<-2.5)continue;const sp=hyp(s.vx[i],s.vy[i]);
+  if(TER.water){for(let i=0;i<s.n;i++){if(s.y[i]>0.4||s.y[i]<-2.5||s.x[i]>=TER.waterEnd)continue;const sp=hyp(s.vx[i],s.vy[i]);
     if(sp>9&&rnd()<sp/220*dt*60){const k=rnd();part(4,s.x[i],0.2,s.vx[i]*rr(0.1,0.6)+rr(-2,2),rr(2,6)+sp*0.15*k,rr(0.6,1.6),rr(0.1,0.35)*Math.max(0.6,sc),null);}
     if(s.oy[i]>0&&s.y[i]<=0&&s.vy[i]<-5){SND.splash(Math.min(1,-s.vy[i]/25));for(let k=0;k<4;k++)part(4,s.x[i],0.2,s.vx[i]*0.3+rr(-4,4),rr(3,12),rr(0.8,1.8),rr(0.15,0.4)*Math.max(0.6,sc),null);}}}
   if(maxHit>4){SND.thud(Math.min(1,maxHit/30));Shake.add(Math.min(0.6,maxHit/60));}
@@ -937,12 +953,12 @@ function drawDecor(xL,xR,S0,front){
       else if(d.t==='fence'){ctx.fillStyle='#6b5a46';ctx.fillRect(d.x-0.06,gy,0.12,1.2);if(true){ctx.fillRect(d.x,gy+0.95,3,0.07);}}
     }else{
       if(d.t==='edge'){ctx.fillStyle='#555';ctx.fillRect(d.x-0.05,gy,0.1,0.35);ctx.fillStyle='#ffe9a8';ctx.beginPath();ctx.arc(d.x,gy+0.4,Math.max(0.12,1.5*px),0,7);ctx.fill();}
-      else if(d.t==='appr'){ctx.fillStyle='#6a6a66';ctx.fillRect(d.x-0.1,gy,0.2,d.h);ctx.fillStyle='#fff6d0';ctx.beginPath();ctx.arc(d.x,gy+d.h,Math.max(0.18,1.6*px),0,7);ctx.fill();}
+      else if(d.t==='appr'){const top=Math.max(gy,TER.water&&d.x<TER.waterEnd?0:gy)+d.h;ctx.fillStyle='#6a6a66';ctx.fillRect(d.x-0.1,gy,0.2,top-gy);ctx.fillStyle='#fff6d0';ctx.beginPath();ctx.arc(d.x,top,Math.max(0.18,1.6*px),0,7);ctx.fill();}
       else if(d.t==='buoy'){const wy=waveY(d.x,STATE.t);ctx.fillStyle='#d24a2a';ctx.fillRect(d.x-0.5,wy-0.3,1,1.6);ctx.fillStyle='#f0c040';ctx.fillRect(d.x-0.5,wy+0.6,1,0.3);}
     }}
 }
 function drawWater(){
-  if(!TER.water)return;const S0=scale();const xL=cam.x-W/2/S0-5,xR=cam.x+W/2/S0+5,yB=cam.y-H/2/S0-20;const step=Math.max(0.5,3*DPR/S0);
+  if(!TER.water)return;const S0=scale();const xL=cam.x-W/2/S0-5,xR=Math.min(TER.waterEnd,cam.x+W/2/S0+5);if(xR<=xL)return;const yB=cam.y-H/2/S0-20;const step=Math.max(0.5,3*DPR/S0);
   ctx.beginPath();ctx.moveTo(xL,yB);for(let x=xL;x<=xR+step;x+=step)ctx.lineTo(x,waveY(x,STATE.t));ctx.lineTo(xR+step,yB);ctx.closePath();
   ctx.fillStyle='rgba(28,78,112,0.62)';ctx.fill();
   ctx.lineWidth=Math.max(0.12,1.5*DPR/S0);ctx.strokeStyle='rgba(200,230,245,0.75)';ctx.beginPath();for(let x=xL;x<=xR+step;x+=step){const y=waveY(x,STATE.t);if(x===xL)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
@@ -1131,13 +1147,39 @@ function draw(){
   drawTerrain();
   if(S){drawTrail(S);drawFx(true);drawPlane(S);drawFx(false);if(STATE.stress)drawStress(S);}
   drawWater();
+  if(S&&STATE.ready)drawArrows(S);
   ctx.setTransform(1,0,0,1,0,0);
+  if(S&&STATE.ready)drawArrowLabels(S);
   // 축척 막대
   const S0=scale();let m=1;const cand=[1,2,5,10,20,50,100,200,500,1000];for(const c of cand){if(c*S0>90*DPR){m=c;break;}m=c;}
   ctx.fillStyle='rgba(13,17,23,.6)';ctx.fillRect(W-14*DPR-m*S0-8*DPR,H-34*DPR,m*S0+16*DPR,24*DPR);
   ctx.strokeStyle='#e8edf2';ctx.lineWidth=2*DPR;ctx.beginPath();ctx.moveTo(W-14*DPR-m*S0,H-16*DPR);ctx.lineTo(W-14*DPR,H-16*DPR);ctx.stroke();
   ctx.fillStyle='#e8edf2';ctx.font=(11*DPR)+'px Consolas,monospace';ctx.textAlign='center';ctx.fillText(m+' m',W-14*DPR-m*S0/2,H-21*DPR);
 }
+
+/* ===================== 화살표 3개 (추락 전 방향·속도·기수 각도) ===================== */
+function arrowGeom(s){const B=s.B;const avg=col=>{let x=0,y=0;for(const n of col){x+=s.x[n];y+=s.y[n];}return[x/col.length,y/col.length];};
+  const c=mainCG(s);const nose=avg(B.G[0]),tail=avg(B.G[B.NS]);const V=set.spd/3.6,g=set.gam*DEG;const k=s.P.len*0.55/(s.P.spd[2]/3.6);
+  const vx=Math.cos(g)*V*k,vy=Math.sin(g)*V*k;
+  return{c,k,mid:[[c.x,c.y],[c.x+vx,c.y+vy]],nose:[nose,[nose[0]+vx*0.5,nose[1]+vy*0.5]],tail:[tail,[tail[0]+vx*0.5,tail[1]+vy*0.5]]};}
+function arrowLine(a,b,col,w){const S0=scale();const lw=w*DPR/S0;const dx=b[0]-a[0],dy=b[1]-a[1];const l=hyp(dx,dy)||1;const ux=dx/l,uy=dy/l;const hl=Math.min(l*0.4,lw*4.2);
+  ctx.strokeStyle='rgba(15,18,24,.55)';ctx.lineWidth=lw+2.5*DPR/S0;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0]-ux*hl*0.6,b[1]-uy*hl*0.6);ctx.stroke();
+  ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0]-ux*hl*0.6,b[1]-uy*hl*0.6);ctx.stroke();
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(b[0],b[1]);ctx.lineTo(b[0]-ux*hl-uy*hl*0.55,b[1]-uy*hl+ux*hl*0.55);ctx.lineTo(b[0]-ux*hl+uy*hl*0.55,b[1]-uy*hl-ux*hl*0.55);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5*DPR/S0;ctx.beginPath();ctx.arc(b[0],b[1],7*DPR/S0,0,7);ctx.stroke();}
+function drawArrows(s){const g=arrowGeom(s);const hot=ARW.drag||ARW.hover;
+  arrowLine(g.tail[0],g.tail[1],hot==='tail'?'#bfe9ff':'#6cc6f0',3.2);arrowLine(g.nose[0],g.nose[1],hot==='nose'?'#bfe9ff':'#6cc6f0',3.2);arrowLine(g.mid[0],g.mid[1],hot==='mid'?'#ffd27a':'#ffa632',4.5);}
+function drawArrowLabels(s){const g=arrowGeom(s);ctx.font=(11.5*DPR)+'px "Malgun Gothic",sans-serif';ctx.textAlign='left';
+  const lab=(p,t)=>{const q=W2S(p[0],p[1]);const w=ctx.measureText(t).width+10*DPR;ctx.fillStyle='rgba(13,17,23,.82)';ctx.fillRect(q[0]+10*DPR,q[1]-9*DPR,w,18*DPR);ctx.fillStyle='#eef2f6';ctx.fillText(t,q[0]+15*DPR,q[1]+4*DPR);};
+  const att=set.att!=null?set.att:(s.trimInfo?Math.round(s.trimInfo.thb*2)/2:0);
+  lab(g.mid[1],set.spd+' km/h · '+set.gam+'°');lab(g.nose[1],'기수 '+(att>0?'+':'')+att+'° (가는 방향 기준)');lab(g.tail[1],'꼬리');}
+const ARW={drag:null,hover:null,wy0:0,att0:0};
+function arrowHit(cx,cy){if(!S||!STATE.ready)return null;const g=arrowGeom(S);let best=null,bd=(24*DPR)**2;
+  for(const k of ['mid','nose','tail']){const q=W2S(g[k][1][0],g[k][1][1]);const d=(q[0]-cx*DPR)**2+(q[1]-cy*DPR)**2;if(d<bd){bd=d;best=k;}}return best;}
+function arrowMove(cx,cy){const S0=scale();const wx=cam.x+(cx*DPR-W/2)/S0,wy=cam.y-(cy*DPR-H/2)/S0;const g=arrowGeom(S);const P=S.P;
+  if(ARW.drag==='mid'){const dx=Math.max(wx-g.c.x,0.5),dy=wy-g.c.y;set.gam=clamp(Math.round(Math.atan2(dy,dx)/DEG),-80,5);set.spd=Math.round(clamp(hyp(dx,dy)/g.k*3.6,P.spd[0],P.spd[1])/5)*5;}
+  else{const sg=ARW.drag==='nose'?1:-1;set.att=clamp(Math.round((ARW.att0+sg*Math.atan2(wy-ARW.wy0,P.len*0.5)/DEG)*2)/2,-10,25);}
+  $('preset').value='';applyFlight(S);syncUI();}
 
 /* ===================== 카메라·정보 ===================== */
 function updateCamera(dt){
@@ -1150,7 +1192,7 @@ function fmt(v,d){return v.toFixed(d||0);}
 function updateHud(){
   if(!S)return;const c=mainCG(S);const V=hyp(c.vx,c.vy);const B=S.B;
   const A=B.G[0][B.FR],Z=B.G[B.NS][B.FR];let pitch=NaN;if(S.comp[A]===S.comp[Z])pitch=Math.atan2(S.y[A]-S.y[Z],S.x[A]-S.x[Z])/DEG;
-  const alt=c.y-(TER.water?0:gH(c.x));
+  const alt=c.y-baseY(c.x);
   const sf=S.surf[0];const aoa=sf.dead?NaN:(sf.lastA||0)/DEG;
   const pp=S.persons;let hurt=0,loose=0;for(let k=0;k<pp.n;k++){if(pp.hurt[k])hurt++;if(pp.loose[k])loose++;}
   const slowV=V<25;const stall=!slowV&&!sf.dead&&Math.abs(sf.lastA||0)>sf.stall;
@@ -1175,7 +1217,7 @@ function frameStats(s,dt){
   s.lastV=[c.vx,c.vy];s.lastMain=s.mainComp;
   if(!s.trail.length||hyp(c.x-s.trail[s.trail.length-1][0],c.y-s.trail[s.trail.length-1][1])>s.P.len*0.08){s.trail.push([c.x,c.y]);if(s.trail.length>4000)s.trail.shift();}
   // 처음 닿음
-  if(s.impactT<0){let touched=false;for(let i=0;i<s.n;i++){if(s.hit[i]>0||s.contact[i]>0||(TER.water&&s.y[i]<0)){touched=true;break;}}
+  if(s.impactT<0){let touched=false;for(let i=0;i<s.n;i++){if(s.hit[i]>0||s.contact[i]>0||(TER.water&&s.y[i]<0&&s.x[i]<TER.waterEnd)){touched=true;break;}}
     if(touched){s.impactT=s.t;s.impact={v:hyp(c.vx,c.vy),vs:-c.vy,ang:Math.atan2(c.vy,c.vx)/DEG,x:c.x};if(set.slow)STATE.slowT=TUNE.slowmoTime;}}
   // 멈춤
   const V=hyp(c.vx,c.vy);
@@ -1199,19 +1241,34 @@ function showResult(s){
    '<span>크게 다침</span><b>'+hurt+'명</b></div>'+
    '<div class="btns"><button id="rAgain">다시 실행</button><button id="rClose">닫기</button></div>';
   resEl.style.display='block';
-  document.getElementById('rAgain').onclick=()=>restart();document.getElementById('rClose').onclick=()=>{resEl.style.display='none';};
+  document.getElementById('rAgain').onclick=()=>restart(true);document.getElementById('rClose').onclick=()=>{resEl.style.display='none';};
   try{const h=JSON.parse(localStorage.getItem('plane-crash-v1-log')||'[]');h.unshift({p:set.plane,sc:set.scene,v:Math.round(im.v*3.6),g:+s.maxG.toFixed(1),br:s.breakCount,n:pp.n,hurt});localStorage.setItem('plane-crash-v1-log',JSON.stringify(h.slice(0,30)));}catch(e){}
 }
 
 /* ===================== 시작·다시 ===================== */
+/* 방파제 위치: 같은 물리로 미리 한 번 날려 보고(사람 빼고), 제일 낮은 곳이 방파제 윗부분 아래로 내려가는 곳에 놓음 */
+function predictWall(s){
+  const keys=['x','y','ox','oy','vx','vy','rest','lam','bent','stress','contact','hit','wet','comp','alive'];
+  const snap={};for(const k of keys)snap[k]=s[k].slice();
+  const t0=s.t,yc=s.yieldCount,bc=s.breakCount,nc=s.nComp,mc=s.mainComp;const sd=s.surf.map(f=>f.dead),eng=s.engines.map(e=>[e.alive,e.struck]),lk=s.locks.map(l=>l.alive);
+  s.noPeople=true;let res=null;
+  for(let f=0;f<60*40&&res==null;f++){stepSim(s,1/60);
+    for(let i=0;i<s.n;i++){if(s.kind[i]===6)continue;if(s.y[i]-s.rad[i]<2.6){res=s.x[i];break;}}
+    if(s.breakCount>bc)break;}
+  for(const k of keys)s[k].set(snap[k]);
+  s.t=t0;s.yieldCount=yc;s.breakCount=bc;s.nComp=nc;s.mainComp=mc;s.broken.length=0;s.noPeople=false;
+  s.surf.forEach((f,k)=>f.dead=sd[k]);s.engines.forEach((e,k)=>{e.alive=eng[k][0];e.struck=eng[k][1];});s.locks.forEach((l,k)=>l.alive=lk[k]);
+  return res==null?null:res-1.2;}
 function xEstimate(){const g=Math.max(Math.abs(set.gam),2)*DEG;return clamp(set.alt/Math.tan(g),120,12000);}
-function restart(){
-  buildTerrain(set.scene,xEstimate());
+function restart(run){
+  if(run)STATE.seed=(Math.random()*1e9)|0;
+  buildTerrain(set.scene,xEstimate(),set.scene==='seawall'?1e9:null);
   shards.length=0;parts.length=0;
   S=makeSim();
+  if(set.scene==='seawall'){const w=predictWall(S);if(w!=null)buildTerrain('seawall',xEstimate(),w);}
   STATE.slowT=0;STATE.paused=false;cam.free=false;resEl.style.display='none';
   document.getElementById('bPause').textContent='일시정지';
-  Shake.tr=0;updateHud();
+  Shake.tr=0;STATE.ready=!run;updateHud();syncUI();
 }
 
 /* ===================== 메인 루프 ===================== */
@@ -1221,7 +1278,7 @@ function loop(now){
   try{
     const real=Math.min(0.05,(now-last)/1000);last=now;STATE.t+=real;
     Shake.tr=Math.max(0,Shake.tr-real*1.4);
-    if(S&&!STATE.paused){
+    if(S&&!STATE.paused&&!STATE.ready){
       let ts=STATE.ts;if(STATE.slowT>0){ts=Math.min(ts,TUNE.slowmo);STATE.slowT-=real;}
       const gdt=real*ts;const nst=Math.max(1,Math.ceil(gdt/(1/55)));
       for(let k=0;k<nst;k++)simFrame(gdt/nst);
@@ -1232,7 +1289,7 @@ function loop(now){
     updateCamera(real);
     draw();
     hudT-=real;if(hudT<=0){hudT=0.12;updateHud();
-      if(S){const c=mainCG(S);const e=S.engines.find(e=>e.alive);SND.update(hyp(c.vx,c.vy),e?set.pow/100:0,S.P.engines[0].jet,!STATE.paused&&!S.done);}}
+      if(S){const c=mainCG(S);const e=S.engines.find(e=>e.alive);SND.update(hyp(c.vx,c.vy),e?set.pow/100:0,S.P.engines[0].jet,!STATE.paused&&!S.done&&!STATE.ready);}}
   }catch(err){console.error(err);}
   requestAnimationFrame(loop);
 }
@@ -1245,13 +1302,14 @@ function buildUI(){
   const sg=$('sceneSeg');sg.innerHTML='';
   for(const sc of SCENES){const b=document.createElement('button');b.textContent=sc.name;b.dataset.k=sc.id;b.onclick=()=>{set.scene=sc.id;syncUI();save();restart();};sg.appendChild(b);}
   const sl=(id,key,f)=>{$(id).addEventListener('input',e=>{set[key]=+e.target.value;$('preset').value='';syncUI();});$(id).addEventListener('change',()=>{save();restart();});};
-  sl('alt','alt');sl('spd','spd');sl('gam','gam');sl('pow','pow');sl('elev','elev');sl('fill','fill');
+  sl('alt','alt');sl('spd','spd');sl('gam','gam');sl('pow','pow');sl('elev','elev');sl('fill','fill');sl('att','att');
   ['gear','fire','slow'].forEach(k=>$(k).addEventListener('change',e=>{set[k]=e.target.checked;save();if(k!=='slow')restart();}));
   $('preset').addEventListener('change',e=>{applyPreset(e.target.value);});
-  $('startBtn').onclick=()=>{SND.init();restart();};
+  $('startBtn').onclick=()=>{SND.init();go();};
+  $('attAuto').onclick=()=>{set.att=null;$('preset').value='';save();restart();};
   $('hidePanel').onclick=()=>{$('panel').classList.add('hide');$('showPanel').style.display='block';};
   $('showPanel').onclick=()=>{$('panel').classList.remove('hide');$('showPanel').style.display='none';};
-  $('bRestart').onclick=()=>{SND.init();restart();};
+  $('bRestart').onclick=()=>{SND.init();restart(true);};
   $('bPause').onclick=()=>togglePause();
   document.querySelectorAll('[data-ts]').forEach(b=>b.onclick=()=>{STATE.ts=+b.dataset.ts;document.querySelectorAll('[data-ts]').forEach(x=>x.classList.toggle('on',x===b));});
   $('vInside').onclick=()=>{STATE.view='inside';syncBar();};$('vOutside').onclick=()=>{STATE.view='outside';syncBar();};
@@ -1269,6 +1327,9 @@ function syncUI(){
   document.querySelectorAll('#sceneSeg button').forEach(b=>b.classList.toggle('on',b.dataset.k===set.scene));
   $('spd').min=P.spd[0];$('spd').max=P.spd[1];set.spd=clamp(set.spd,P.spd[0],P.spd[1]);
   for(const k of ['alt','spd','gam','pow','elev','fill'])$(k).value=set[k];
+  const attShow=set.att!=null?set.att:(S&&S.trimInfo?Math.round(S.trimInfo.thb*2)/2:0);$('att').value=attShow;
+  $('vAtt').textContent=(set.att==null?'자동 ':'')+(attShow>0?'+':'')+attShow+'°';$('attAuto').classList.toggle('on',set.att==null);
+  $('startBtn').textContent=STATE.ready?'추락 시작':'처음부터 다시';
   $('vAlt').textContent=set.alt+' m';$('vSpd').textContent=set.spd+' km/h';$('vGam').textContent=set.gam+'°';$('vPow').textContent=set.pow+' %';
   $('vElev').textContent=(set.elev>0?'기수 듦 ':set.elev<0?'기수 내림 ':'')+Math.abs(set.elev)+'°';$('vFill').textContent=set.fill+' %';
   $('gear').checked=P.fixedGear?true:set.gear;$('gear').disabled=!!P.fixedGear;$('gearLbl').classList.toggle('dis',!!P.fixedGear);
@@ -1284,10 +1345,11 @@ const PRESETS={
   ditch:{scene:'sea',alt:40,gam:-3,pow:0,elev:1,gear:false,spdK:0.95},
   dive:{scene:'field',alt:400,gam:-40,pow:60,elev:-3,gear:false,spdK:1.9},
   stall:{scene:'field',alt:250,gam:0,pow:0,elev:6,gear:true,spdK:0.72},
+  tail:{scene:'seawall',alt:32,gam:-3,pow:30,elev:0,att:9,gear:true,spdK:0.8},
   cfit:{scene:'mountain',alt:250,gam:-2,pow:15,elev:0,gear:false,spdK:1.25},
 };
 function applyPreset(k){const p=PRESETS[k];if(!p)return;const P=PLANES[set.plane];
-  Object.assign(set,{scene:p.scene,alt:p.alt,gam:p.gam,pow:p.pow,elev:p.elev,gear:p.gear});set.spd=Math.round(clamp(P.spd[2]*p.spdK,P.spd[0],P.spd[1])/5)*5;
+  Object.assign(set,{scene:p.scene,alt:p.alt,gam:p.gam,pow:p.pow,elev:p.elev,gear:p.gear,att:p.att==null?null:p.att});set.spd=Math.round(clamp(P.spd[2]*p.spdK,P.spd[0],P.spd[1])/5)*5;
   syncUI();save();restart();$('preset').value=k;}
 function save(){try{localStorage.setItem('plane-crash-v1',JSON.stringify(set));}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem('plane-crash-v1')||'null');if(d)for(const k in set)if(k in d)set[k]=d[k];}catch(e){}if(!PLANES[set.plane])set.plane='b738';}
@@ -1296,13 +1358,17 @@ function load(){try{const d=JSON.parse(localStorage.getItem('plane-crash-v1')||'
 let drag=null,pinch=null;
 cv.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.0015);zoomAt(e.clientX*DPR,e.clientY*DPR,f);},{passive:false});
 function zoomAt(sx,sy,f){const S0=scale();const wx=cam.x+(sx-W/2)/S0,wy=cam.y-(sy-H/2)/S0;cam.z=clamp(cam.z*f,0.02,40);const S1=scale();if(cam.free){cam.x=wx-(sx-W/2)/S1;cam.y=wy+(sy-H/2)/S1;}}
-cv.addEventListener('pointerdown',e=>{SND.init();cv.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};});
+cv.addEventListener('pointerdown',e=>{SND.init();cv.setPointerCapture(e.pointerId);const h=arrowHit(e.clientX,e.clientY);
+  if(h){ARW.drag=h;const S0=scale();ARW.wy0=cam.y-(e.clientY*DPR-H/2)/S0;ARW.att0=set.att!=null?set.att:Math.round(S.trimInfo.thb*2)/2;drag=null;return;}
+  drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};});
 cv.addEventListener('pointermove',e=>{
+  if(ARW.drag){arrowMove(e.clientX,e.clientY);return;}
+  const ah=arrowHit(e.clientX,e.clientY);ARW.hover=ah;cv.style.cursor=ah?'grab':'';
   if(drag&&drag.id===e.pointerId&&!pinch){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.moved+=Math.abs(dx)+Math.abs(dy);drag.x=e.clientX;drag.y=e.clientY;
     if(drag.moved>4){const S0=scale();cam.free=true;cam.x-=dx*DPR/S0;cam.y+=dy*DPR/S0;syncBar();}}
   else hoverPerson(e.clientX,e.clientY,false);
 });
-cv.addEventListener('pointerup',e=>{if(drag&&drag.moved<=4)hoverPerson(e.clientX,e.clientY,true);drag=null;});
+cv.addEventListener('pointerup',e=>{if(ARW.drag){ARW.drag=null;save();restart();return;}if(drag&&drag.moved<=4)hoverPerson(e.clientX,e.clientY,true);drag=null;});
 cv.addEventListener('touchstart',e=>{if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];pinch={d:hyp(a.clientX-b.clientX,a.clientY-b.clientY)};}},{passive:true});
 cv.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const a=e.touches[0],b=e.touches[1];const d=hyp(a.clientX-b.clientX,a.clientY-b.clientY);zoomAt((a.clientX+b.clientX)/2*DPR,(a.clientY+b.clientY)/2*DPR,d/pinch.d);pinch.d=d;}},{passive:true});
 cv.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null;},{passive:true});
@@ -1318,14 +1384,15 @@ function hoverPerson(cx,cy,click){
   tipEl.style.left=(cx+14)+'px';tipEl.style.top=(cy+10)+'px';tipEl.style.display='block';
 }
 window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range')return;
-  if(e.code==='Space'){e.preventDefault();SND.init();if(S&&S.done)restart();else togglePause();}
-  else if(e.code==='KeyR'){SND.init();restart();}});
+  if(e.code==='Space'){e.preventDefault();SND.init();if(STATE.ready)go();else if(S&&S.done)restart(true);else togglePause();}
+  else if(e.code==='KeyR'){SND.init();restart(true);}});
+function go(){if(STATE.ready&&S){STATE.ready=false;syncUI();}else restart(true);}
 
 /* ===================== 시작 ===================== */
 load();buildUI();syncUI();syncBar();restart();
 if(innerWidth<900||innerHeight<520){$('panel').classList.add('hide');$('showPanel').style.display='block';}
 requestAnimationFrame(loop);
-window.__crash={PROF,get S(){return S;},simFrame,updateFx:(d)=>updateFx(d,S),set,STATE,cam,restart,stepSim,TUNE,draw,resize,applyPreset,syncUI};
+window.__crash={TER,PROF,get S(){return S;},simFrame,updateFx:(d)=>updateFx(d,S),set,STATE,cam,restart,stepSim,TUNE,draw,resize,applyPreset,syncUI};
 </script>
 <script src="../track.js" defer></script>
 </body>
