@@ -76,7 +76,7 @@ button.mini{padding:0 6px;font-size:10.5px;margin-left:4px;vertical-align:1px}
   <div class="seg" id="sceneSeg"></div>
   <div class="sec">같이 나는 기체</div>
   <select id="c2Type"></select>
-  <div class="seg" style="margin-top:5px"><button id="exPlace">하늘에 놓기</button><button id="exClear">모두 지우기</button></div>
+  <div class="seg" style="margin-top:5px"><button id="exPlace">하늘에 놓기</button><button id="exPark">땅에 세우기</button><button id="exClear">모두 지우기</button></div>
   <div class="info" id="exInfo"></div>
   <div class="sec">부서지는 장애물</div>
   <div class="seg" id="toolSeg"><button data-t="bld">건물</button><button data-t="tree">나무</button><button data-t="car">차</button><button data-t="fire">소방차</button><button data-t="amb">구급차</button><button data-t="tower">관제탑</button><button data-t="erase">지우기</button></div>
@@ -131,12 +131,25 @@ const TUNE = {
   rho: 1.225,           // 공기 밀도
   yieldMul: 3.2,        // 쇠가 휘기 시작하는 힘 = 평소 비행할 때 받는 힘 × 이 값
   floorG: 14,           // 아무리 약한 연결도 (양쪽 무게 × 이 g)까지는 버팀
-  breakStretch: 0.22,   // 이만큼(22%) 늘어나면 끊어짐
-  crushMin: 0.3,        // 찌그러져도 원래 길이의 30% 아래로는 안 줄어듦
+  breakStretch: 0.11,   // 이만큼(11%) 늘어나면 찢어짐 (진짜 알루미늄은 조금 늘어나다 찢어짐)
+  tearStrain: 0.3,      // 여러 번 접혔다 펴진 쇠(누적 30%)는 당기면 찢어짐
+  crushTear: 0.5,       // 길이 방향 쇠가 원래 길이의 절반 아래로 찌그러지면 찢어짐
+  crackSpread: 0.55,    // 한 곳이 찢어지면 같은 자리 쇠 세기가 이만큼으로 줄어듦
+  crushMin: 0.3,
+  frameCrushMin: 0.1,   // 몸통 고리(위아래 뼈대)는 원래 높이의 10%까지 눌려 납작해짐 (찢어지지 않음)
+  frameStr: 0.8,        // 몸통 고리 세기 배수 (작으면 더 잘 납작해짐)        // 찌그러져도 원래 길이의 30% 아래로는 안 줄어듦
   strengthVar: 0.3,     // 연결마다 세기가 다른 정도
   beamDamp: 0.22,       // 쇠 떨림 줄이기
-  gearSink: 0.22,       // 바퀴 다리가 무게에 눌리는 길이(m)
-  contactW: 70,         // 땅에 닿을 때 부드러움 (작을수록 푹신)
+  rigidDamp: 14,        // 한 덩어리 안에서 출렁이는 움직임을 줄이는 세기(1/초). 크면 더 딱딱
+  groundBounce: 1.0,    // 땅에서 튀어 오르는 속도 한계(m/s). 작으면 쿵 박히고 안 튐
+  weakJoint: [0.4, 0.55], // 몸통 이음매(날개 앞·뒤, 꼬리 쪽) 세기 배수
+  strongSkin: 1.2,      // 이음매가 아닌 몸통 세기 배수
+  gearSink: 0.22,
+  gearG: 3.2,
+  braceSoft: 0.12,
+  parkGearStiff: 0.08,  // 세워 둔 기체의 바퀴 다리 부드러움 배수 (작으면 단단)      // 바퀴 다리 버팀대 부드러움 (작으면 다리가 앞뒤로 덜 흔들림)           // 바퀴 다리가 휘지 않고 버티는 무게 배수 (세게 내리면 휨)       // 바퀴 다리가 무게에 눌리는 길이(m)
+  contactW: 70,
+  wheelContactW: 420,   // 바퀴는 땅에 덜 파묻힘 (작으면 바퀴가 땅에 푹 꺼짐)         // 땅에 닿을 때 부드러움 (작을수록 푹신)
   maxPen: 0.3,          // 땅 속으로 이만큼 넘게는 안 들어감(m)
   fric: [0.45, 0.6, 0.65, 0.55, 0.5], // 미끄럼 저항: 활주로 풀 흙 바위 모래
   soilSoft: [0, 0.55, 0.6, 0, 0.5],    // 땅이 무른 정도 (파임)
@@ -322,10 +335,22 @@ function buildPlaneLocal(P,gearDown){
     G.push(ys.map(y=>N_(u,y,0,0.06)));
   }
   const LONG=[],VERT=[];
-  for(let i=0;i<NS;i++){LONG.push([]);for(let r=0;r<nR;r++)LONG[i].push(B_(G[i][r],G[i+1][r],{coll:(r===0||r===BR||r===FR||r===UR)}));}
-  for(let i=0;i<=NS;i++){VERT.push([]);for(let r=0;r<nR-1;r++)VERT[i].push(B_(G[i][r],G[i][r+1],{coll:i===0||i===NS}));}
+  for(let i=0;i<NS;i++){LONG.push([]);for(let r=0;r<nR;r++){const b=B_(G[i][r],G[i+1][r],{coll:(r===0||r===BR||r===FR||r===UR)});beams[b].lon=1;LONG[i].push(b);}}
+  for(let i=0;i<=NS;i++){VERT.push([]);for(let r=0;r<nR-1;r++){const b=B_(G[i][r],G[i][r+1],{coll:i===0||i===NS,str:TUNE.frameStr});beams[b].vert=1;VERT[i].push(b);}}
   for(let i=0;i<NS;i++)for(let r=0;r<nR-1;r++){B_(G[i][r],G[i+1][r+1]);B_(G[i+1][r],G[i][r+1]);}
   const fus=[];G.forEach(c=>c.forEach(n=>fus.push(n)));
+  // 이음매(진짜 사고에서 몸통이 토막 나는 곳): 날개 앞, 날개 뒤, 꼬리 쪽
+  const stF=new Float64Array(NS).fill(1);
+  if(L>=25&&P.wing){const wj=TUNE.weakJoint;const at=u=>clamp(Math.round(u/L*NS),1,NS-2);
+    const js=[at(P.wing.rLE[0]-0.8),at(P.wing.rTE[0]+1.2),at(L*0.8)];
+    for(let i=0;i<NS;i++)stF[i]=TUNE.strongSkin;
+    js.forEach(j=>{stF[j]=rr(wj[0],wj[1]);});}
+  const colOf=new Map();G.forEach((c,i)=>c.forEach(n=>colOf.set(n,i)));
+  const stBeams=[];for(let i=0;i<NS;i++)stBeams.push([]);
+  beams.forEach((bm,k)=>{const ca=colOf.get(bm.a),cb=colOf.get(bm.b);if(ca==null||cb==null||ca===cb)return;const i=Math.min(ca,cb);bm.str*=stF[i];bm.st=i;stBeams[i].push(k);});
+  // 몸통이 국수처럼 휘지 않게: 두 칸 건너 잇는 굽힘 연결 (가운데가 끊어지면 같이 끊어짐)
+  const skips=[];const skRows=[0,FR,BR];if(up)skRows.push(UR);
+  for(let i=0;i+2<=NS;i++)for(const r of skRows){const b=B_(G[i][r],G[i+2][r],{str:Math.min(stF[i],stF[Math.min(i+1,NS-1)])});beams[b].skip=1;beams[b].lon=1;skips.push([b,LONG[i][r],LONG[i+1][r]]);}
   const near=(px,py,cands,k,ex)=>cands.filter(n=>!(ex&&ex.includes(n))).map(n=>[n,(nodes[n].x-px)**2+(nodes[n].y-py)**2]).sort((a,b)=>a[1]-b[1]).slice(0,k).map(a=>a[0]);
   const attach=(n,cands,k,o)=>near(nodes[n].x,nodes[n].y,cands,k,[n]).forEach(m=>B_(n,m,o));
   const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
@@ -352,17 +377,18 @@ function buildPlaneLocal(P,gearDown){
     if(e.internal){const a=NS-5;engines.push(Object.assign({},e,{n:[G[a][0],G[a][BR],G[NS][0],G[NS][BR]],alive:true,spin:0}));continue;}
     const en=[N_(e.f,e.ft,2,0.1),N_(e.f,e.fb,2,0.1),N_(e.r,e.rt,2,0.1),N_(e.r,e.rb,2,0.1)];
     B_(en[0],en[1],{k:3,coll:1});B_(en[2],en[3],{k:3,coll:1});B_(en[0],en[2],{k:3,coll:1});B_(en[1],en[3],{k:3,coll:1});B_(en[0],en[3],{k:3});B_(en[1],en[2],{k:3});
-    attach(en[0],wn,2,{k:4,str:0.85});attach(en[2],wn,2,{k:4,str:0.85});
+    attach(en[0],wn,2,{k:4,str:0.62});attach(en[2],wn,2,{k:4,str:0.62});
     engines.push(Object.assign({},e,{n:en,alive:true,spin:0}));
   }
-  // 바퀴
+  // 바퀴 (버팀대는 비스듬히 앞쪽 위로 달아서 다리가 그네처럼 접히지 않게)
   const wheels=[];
-  if(gearDown)for(const g of P.gear){
+  if(gearDown)for(const g of P.gear){const nb0=beams.length;
     const t=N_(g.top[0],g.top[1],4,0.08);attach(t,fus.concat(wn),3,{k:5});
     const ws=g.wheels.map(w=>N_(w[0],w[1],5,g.r));
     ws.forEach(w=>B_(t,w,{k:5,soft:g.main?1:2}));
     if(ws.length===2)B_(ws[0],ws[1],{k:5});
-    const br=near(nodes[ws[0]].x,nodes[ws[0]].y,fus.concat(wn),1,[t]);B_(ws[ws.length-1],br[0],{k:5,soft:g.main?1:2});
+    const legL=hyp(nodes[ws[0]].x-nodes[t].x,nodes[ws[0]].y-nodes[t].y);const br=near(nodes[t].x+legL*0.9,nodes[t].y,fus.concat(wn),1,[t]);{const q=B_(ws[ws.length-1],br[0],{k:5,soft:g.main?1:2});beams[q].brace=1;}
+    for(let q=nb0;q<beams.length;q++)beams[q].gm=g.main?1:2;
     wheels.push({n:ws,r:g.r,main:!!g.main,top:t,rot:0,share:0});
   }
   // 수직 꼬리날개
@@ -422,7 +448,7 @@ function buildPlaneLocal(P,gearDown){
   const fusTot=fusM+(gearNodes.length?0:gearM);
   let wsum=0;G.forEach(c=>c.forEach((n,r)=>{const w=r===0?0.85:(r===BR?1.2:1);wsum+=w;}));
   G.forEach(c=>c.forEach((n,r)=>{const w=r===0?0.85:(r===BR?1.2:1);nodes[n].m+=fusTot*w/wsum;}));
-  return {nodes,beams,G,LONG,VERT,NS,nR,FR,UR,BR,rowY,wn,fn,hn,engines,wheels,cells,seats,boxes,locks,strut,barrierI,fus,L,rotor};
+  return {nodes,beams,G,LONG,VERT,NS,nR,FR,UR,BR,rowY,wn,fn,hn,engines,wheels,cells,seats,boxes,locks,strut,barrierI,fus,L,rotor,skips,stBeams};
 }
 
 /* ===================== 시뮬레이션 상태 ===================== */
@@ -430,7 +456,7 @@ const set={plane:'b738',scene:'runway',alt:60,spd:270,gam:-4,pow:0,elev:0,fill:1
 let S=null;
 const STATE={tool:null,brake:false,ready:true,seed:1,mode:'run',paused:false,ts:1,slowT:0,view:'inside',stress:false,trail:true,follow:true,wide:false,sound:true,t:0};
 
-function exCfg(e){const P=PLANES[e.type];let a=((e.ang%360)+540)%360-180;const mir=Math.cos(a*DEG)<0;let g=mir?(a>0?180-a:-180-a):a;g=clamp(g,-85,85);
+function exCfg(e){const P=PLANES[e.type];if(e.ground)return{plane:e.type,gear:true,fill:set.fill,spd:0,gam:0,alt:0,att:0,elev:0,pow:0,x0:e.x,mir:Math.cos((e.ang||0)*DEG)<0,park:true};let a=((e.ang%360)+540)%360-180;const mir=Math.cos(a*DEG)<0;let g=mir?(a>0?180-a:-180-a):a;g=clamp(g,-85,85);
   return{plane:e.type,gear:!!P.fixedGear,fill:set.fill,spd:clamp(e.spd,P.spd[0],P.spd[1]),gam:Math.round(g),alt:Math.max(3,e.alt),att:null,elev:0,pow:P.heli?75:60,x0:e.x,mir};}
 function primaryCfg(){return{land:set.mode==='land',plane:set.plane,gear:set.gear,fill:set.fill,spd:set.spd,gam:set.gam,alt:set.alt,att:set.att,elev:set.elev,pow:set.pow,x0:0,mir:false};}
 function makeSim(cfg){
@@ -446,14 +472,17 @@ function makeSim(cfg){
     lam:new Float64Array(nb),alive:new Uint8Array(nb),coll:new Uint8Array(nb),bk:new Uint8Array(nb),stress:new Float32Array(nb),bent:new Float32Array(nb),
     broken:[],nComp:1,mainComp:0,compMass:[],locks:B.locks,engines:B.engines,wheels:B.wheels,boxes:B.boxes,
     t:0,impactT:-1,impact:null,maxG:0,gS:0,lastV:null,trail:[],firstTouchX:null,stopT:0,done:false,yieldCount:0,breakCount:0,fires:[],
-    persons:null,surf:[],cfg,mir:cfg.mir?-1:1,rotor:B.rotor};
+    persons:null,surf:[],crk:new Set(),cfg,mir:cfg.mir?-1:1,rotor:B.rotor};
   for(let i=0;i<n;i++){const d=B.nodes[i];s.x[i]=d.x;s.y[i]=d.y;s.m[i]=Math.max(d.m,1);s.kind[i]=d.k;s.rad[i]=d.r;
     s.buoy[i]=[1.7,1.3,0.35,1.1,0.4,0.6,0.9,0.3,0.5,0.6][d.k]||0.5;}
   for(let b=0;b<nb;b++){const d=B.beams[b];s.ba[b]=d.a;s.bb[b]=d.b;s.coll[b]=d.coll;s.bk[b]=d.k;s.alive[b]=1;
     const l=hyp(s.x[d.b]-s.x[d.a],s.y[d.b]-s.y[d.a]);s.rest[b]=s.rest0[b]=l;}
+  // 화물 고정끈: 실제 놓인 자리에서 바로 맞춰 둠 (처음부터 끊어지지 않게)
+  for(const L of s.locks){const A=B.G[L.i][B.FR],Bn=B.G[L.i+1][B.FR];const ex=s.x[Bn]-s.x[A],ey=s.y[Bn]-s.y[A];const el=hyp(ex,ey)||1;
+    const dx=s.x[L.p]-s.x[A],dy=s.y[L.p]-s.y[A];L.t=(dx*ex+dy*ey)/(el*el);const fx=-ex/el,fy=-ey/el;L.off=dx*(-fy)+dy*fx;}
   // 사람 무게를 바닥에 더함
   const persons=[];
-  for(const st of B.seats){st.occ=[];for(let c=0;c<st.n;c++){const crew=c<st.crew;const occ=crew||rnd()*100<cfg.fill;st.occ.push(occ);
+  for(const st of B.seats){st.occ=[];for(let c=0;c<st.n;c++){const crew=c<st.crew;const occ=!cfg.empty&&(crew||rnd()*100<cfg.fill);st.occ.push(occ);
     if(occ){const a=B.G[st.i][st.r],b2=B.G[st.i+1][st.r],c1=B.G[st.i][B.BR],c2=B.G[st.i+1][B.BR];
       s.m[a]+=70*(1-st.t);s.m[b2]+=70*st.t;s.m[c1]+=25*(1-st.t);s.m[c2]+=25*st.t;persons.push({seat:st,col:c,crew});}}}
   // 무게중심을 날개 앞쪽으로 (안정)
@@ -471,6 +500,11 @@ function makeSim(cfg){
   let sd=0,dmin=0,dmax=0;B.fus.forEach(i=>{const d=s.x[i]-xc;sd+=s.m[i]*d*s.x[i];dmin=Math.min(dmin,d);dmax=Math.max(dmax,d);});
   let beta=(target*M-Mx)/sd;const lim=0.8;beta=clamp(beta,-lim/dmax,lim/-dmin);
   B.fus.forEach(i=>{s.m[i]*=1+beta*(s.x[i]-xc);});
+  // 세워 둔 기체: 진짜처럼 무게중심이 뒷바퀴보다 조금 앞에 오게 (꼬리로 주저앉지 않게)
+  if(cfg.park){const mw=B.wheels.find(w=>w.main),nw=B.wheels.find(w=>!w.main);
+    if(mw&&nw){const xm=s.x[mw.n[0]],xn=s.x[nw.n[0]];const tgt=xm+0.14*(xn-xm);let M2=0,Mx2=0;for(let i=0;i<n;i++){M2+=s.m[i];Mx2+=s.m[i]*s.x[i];}
+      let fm2=0,fx2=0;B.fus.forEach(i=>{fm2+=s.m[i];fx2+=s.m[i]*s.x[i];});const xc2=fx2/fm2;let sd2=0;B.fus.forEach(i=>{sd2+=s.m[i]*(s.x[i]-xc2)*s.x[i];});
+      const b2=clamp((tgt*M2-Mx2)/sd2,-0.9/Math.max(1e-6,dmax),0.9/Math.max(1e-6,-dmin));B.fus.forEach(i=>{s.m[i]*=Math.max(0.1,1+b2*(s.x[i]-xc2));});}}
   // 화물 포함 무게중심
   let Mt=0,cx=0,cy=0;for(let i=0;i<n;i++){Mt+=s.m[i];cx+=s.m[i]*s.x[i];cy+=s.m[i]*s.y[i];}cx/=Mt;cy/=Mt;
   s.M=Mt;s.cg0={x:cx,y:cy};
@@ -478,7 +512,8 @@ function makeSim(cfg){
   const fBody=P.heli?3.2:0.022*P.wingArea;for(let i=0;i<n;i++)s.cd[i]=fBody*s.m[i]/Mt;
   // 바퀴 다리 부드러움
   const nMain=B.wheels.filter(w=>w.main).length;
-  for(let b=0;b<nb;b++){const sf=B.beams[b].soft;if(sf){const share=sf===1?0.92/Math.max(1,nMain):0.1;const load=share*Mt*9.81;s.alpha[b]=TUNE.gearSink/load*(B.wheels.find(w=>w.n.includes(s.bb[b])||w.n.includes(s.ba[b]))?1:1);} else s.alpha[b]=1e-11;}
+  const gLoad=new Float64Array(nb);
+  for(let b=0;b<nb;b++){const sf=B.beams[b].soft;if(sf){const share=sf===1?0.92/Math.max(1,nMain):0.15;const load=share*Mt*9.81;gLoad[b]=load;const pk=cfg.park?TUNE.parkGearStiff:1;if(B.beams[b].brace){s.alpha[b]=TUNE.gearSink/load*TUNE.braceSoft*pk;continue;}s.alpha[b]=TUNE.gearSink/load*pk;} else s.alpha[b]=1e-11;}
   // 힘 재기(평소 비행·착륙에서 받는 힘) → 휘는 힘·끊어지는 힘
   const liftPins=W?B.wn:[B.rotor.hub];const F1=calibrate(s,liftPins,1);let F2=null;
   const wheelNodes=[];B.wheels.forEach(w=>w.n.forEach(q=>wheelNodes.push(q)));
@@ -490,6 +525,7 @@ function makeSim(cfg){
     const fl=TUNE.floorG*9.81*(s.m[s.ba[b]]+s.m[s.bb[b]])*0.5;
     let y=Math.max(F*TUNE.yieldMul,fl);
     if(d.k===5)y=Math.max(F*2.6,fl);
+    if(d.gm)y=Math.max(y,(d.gm===1?0.92/Math.max(1,nMain):0.15)*Mt*9.81*TUNE.gearG);
     y*=d.str*(1+TUNE.strengthVar*(rnd()*2-1));
     s.yieldF[b]=y;
   }
@@ -507,6 +543,18 @@ function makeSim(cfg){
 /* 속도·각도·기수 각도에 맞춰 꼬리날개를 다듬고 하늘에 놓기 (화살표로 바꿀 때도 부름) */
 function applyFlight(s){
   const P=s.P,B=s.B,tb=s.tb,wingSurf=s.wingS,hsSurf=s.hsS;const n=s.n;const C=s.cfg;
+  if(C.park){// 땅에 세워 둠: 수평, 바퀴가 땅에 닿게, 멈춰 있음
+    s.hsBase=0;hsSurf.inc=0;s.trimInfo={alw:0,thb:0,it:0,xnp:tb.xnp,target:tb.target,cx:tb.cx,beta:tb.beta};
+    const X0=C.x0||0,sg=s.mir;let Y0=-1e9;
+    // 앞바퀴·뒷바퀴가 둘 다 땅에 닿게 기울기 맞춤
+    let th=0;const mw=B.wheels.find(w=>w.main),nw=B.wheels.find(w=>!w.main);
+    if(mw&&nw){const a=mw.n[0],c=nw.n[0];const ddx=tb.lx[c]-tb.lx[a];if(Math.abs(ddx)>0.5)th=-Math.atan(((tb.ly[c]-s.rad[c])-(tb.ly[a]-s.rad[a]))/ddx);}
+    const ct=Math.cos(th),st=Math.sin(th);const LX=new Float64Array(tb.lx.length),LY=new Float64Array(tb.lx.length);
+    for(let i=0;i<tb.lx.length;i++){LX[i]=tb.lx[i]*ct-tb.ly[i]*st;LY[i]=tb.lx[i]*st+tb.ly[i]*ct;}
+    for(let i=0;i<LX.length;i++){const gx=X0+LX[i]*sg;const need=baseY(gx)+s.rad[i]-LY[i];if(need>Y0)Y0=need;}
+    Y0+=0.02;
+    for(let i=0;i<LX.length;i++){s.x[i]=s.ox[i]=X0+LX[i]*sg;s.y[i]=s.oy[i]=Y0+LY[i];s.vx[i]=0;s.vy[i]=0;}
+    placePersons(s,0,0);s.V0=0;s.th0=0;s.trail.length=0;return;}
   const V=C.spd/3.6;const gam0=C.gam*DEG,Wt=tb.Mt*9.81,Sw=wingSurf?wingSurf.area:1;
   const a=tb.cx-tb.xw,bb=tb.cx-tb.xt;let alw,Lw,Lt,q;
   if(!wingSurf){alw=(C.att!=null?C.att:-4)*DEG;q=1;Lw=0;Lt=0;}
@@ -569,8 +617,10 @@ function solveBeams(s,h,plastic){
         const Crem=C+ws*dl+at*lc;
         rest[b]+=Crem;s.yieldCount++;s.bent[b]+=Math.abs(Crem)/s.rest0[b];
         const brittle=s.bk[b]===7;
-        if(rest[b]>s.rest0[b]*(1+(brittle?0.035:TUNE.breakStretch))||(brittle&&rest[b]<s.rest0[b]*0.8)){alive[b]=0;s.broken.push(b);continue;}
-        if(rest[b]<s.rest0[b]*TUNE.crushMin)rest[b]=s.rest0[b]*TUNE.crushMin;
+        if(rest[b]>s.rest0[b]*(1+(brittle?0.035:TUNE.breakStretch))||(brittle&&rest[b]<s.rest0[b]*0.8)||(lc<0&&s.bent[b]>TUNE.tearStrain)){alive[b]=0;s.broken.push(b);continue;}
+        const bd=s.B.beams[b];
+        if(bd&&bd.lon&&rest[b]<s.rest0[b]*TUNE.crushTear){alive[b]=0;s.broken.push(b);continue;}
+        const cm=bd&&bd.vert?TUNE.frameCrushMin:TUNE.crushMin;if(rest[b]<s.rest0[b]*cm)rest[b]=s.rest0[b]*cm;
       }
       const f=Math.abs(lam[b]+dl)/h2/s.yieldF[b];if(f>s.stress[b])s.stress[b]=f;
     }
@@ -662,7 +712,7 @@ function waterForces(s,h){
 
 /* 땅에 닿음 */
 function groundCollide(s,h){
-  const n=s.n,x=s.x,y=s.y,ox=s.ox,oy=s.oy;const wc2=TUNE.contactW*TUNE.contactW*h*h;
+  const n=s.n,x=s.x,y=s.y,ox=s.ox,oy=s.oy;const wc2=TUNE.contactW*TUNE.contactW*h*h,ww2=TUNE.wheelContactW*TUNE.wheelContactW*h*h;
   for(let i=0;i<n;i++){
     if(s.w[i]===0)continue;const r=s.rad[i];const gx=x[i];const gh=gH(gx);
     if(y[i]-r>=gh){continue;}
@@ -670,17 +720,18 @@ function groundCollide(s,h){
     const pen=(gh+r-y[i])*ny;const kd=gKind(gx);const isWheel=s.kind[i]===5;
     const soft=TUNE.soilSoft[kd]*(isWheel?0.5:1);
     // 부드러운 닿음: 깊이에 따라 밀어냄
-    let push=pen*wc2/(1+wc2)*(1-soft*0.85);
+    const k2=isWheel?ww2:wc2;let push=pen*k2/(1+k2)*(1-soft*0.85);
     if(pen>TUNE.maxPen*(1+soft*2))push=Math.max(push,Math.min(pen-TUNE.maxPen*(1+soft*2),0.035));
     x[i]+=nx*push;y[i]+=ny*push;
     const vdx=x[i]-ox[i],vdy=y[i]-oy[i];const dn=vdx*nx+vdy*ny;
     const tx=vdx-dn*nx,ty=vdy-dn*ny;const tl=hyp(tx,ty);
-    if(tl>1e-9){const mu=isWheel?(STATE.brake&&s===S?0.38:TUNE.rollFric):TUNE.fric[kd];
+    if(tl>1e-9){const mu=isWheel?((s.cfg.park||STATE.brake&&s===S)?0.38:TUNE.rollFric):TUNE.fric[kd];
       const plow=soft*Math.min(pen,0.6)*0.012;
       const lim=mu*push+plow*tl;const red=Math.min(tl,lim)/tl;x[i]-=tx*red;y[i]-=ty*red;}
+    {const mo=TUNE.groundBounce*h;const dn2=(x[i]-ox[i])*nx+(y[i]-oy[i])*ny;if(dn2>mo){const e=dn2-mo;ox[i]+=nx*e;oy[i]+=ny*e;}}
     const sp=tl/h;if(sp>s.contact[i])s.contact[i]=sp;
     const vin=-dn/h;if(vin>s.hit[i])s.hit[i]=vin;
-    if(soft>0&&!isWheel){const f=gIdx(gx)|0;const dig=Math.min(pen*soft*0.05,0.015);for(let k=-1;k<=1;k++){const j=f+k;if(j<0||j>=TER.n)continue;if(TER.h[j]>TER.h0[j]-1.6)TER.h[j]-=dig*(k===0?1:0.5);TER.scar[j]=Math.min(1,TER.scar[j]+0.05);}}
+    if(soft>0&&!isWheel&&(sp>1.5||vin>1.5)){const f=gIdx(gx)|0;const dig=Math.min(pen*soft*0.05,0.015);for(let k=-1;k<=1;k++){const j=f+k;if(j<0||j>=TER.n)continue;if(TER.h[j]>TER.h0[j]-1.6)TER.h[j]-=dig*(k===0?1:0.5);TER.scar[j]=Math.min(1,TER.scar[j]+0.05);}}
     else if(sp>3&&!isWheel){const f=gIdx(gx)|0;TER.scar[f]=Math.min(1,TER.scar[f]+0.03);}
   }
 }
@@ -854,6 +905,22 @@ function crossCollide(sa,sb,h){
       if(tl/h>12&&sa.contact[i]<tl/h*0.6)sa.contact[i]=tl/h*0.6;}}
 }
 function stepSim(s,dt){stepWorld([s],dt);}
+/* 금이 번짐: 몸통 한 곳이 찢어지면 같은 자리 나머지 쇠도 약해짐 → 그 자리에서 토막 남 */
+function crackSpread(s){const B=s.B;if(!B.stBeams)return;for(const b of s.broken){if(s.crk.has(b))continue;s.crk.add(b);const d=B.beams[b];if(!d||d.st==null)continue;
+  for(const o of B.stBeams[d.st])if(s.alive[o])s.yieldF[o]*=TUNE.crackSpread;}}
+function killSkips(s){crackSpread(s);const sk=s.B.skips;if(!sk)return;const al=s.alive;for(const q of sk){if(al[q[0]]&&(!al[q[1]]||!al[q[2]]))al[q[0]]=0;}}
+/* 한 덩어리(조각) 안에서 출렁이는 움직임만 줄임: 덩어리 전체의 이동·회전은 그대로 */
+function rigidDamp(s,h){const k=1-Math.exp(-TUNE.rigidDamp*h);if(k<=0)return;const n=s.n;
+  if(!s._rd||s._rd.n!==n){const F=()=>new Float64Array(n);s._rd={n,m:F(),x:F(),y:F(),vx:F(),vy:F(),L:F(),I:F(),fix:new Uint8Array(n)};}
+  const R=s._rd,c=s.comp,x=s.x,y=s.y,vx=s.vx,vy=s.vy,m=s.m,w=s.w;
+  for(let i=0;i<n;i++){const q=c[i];R.m[q]=0;R.x[q]=0;R.y[q]=0;R.vx[q]=0;R.vy[q]=0;R.L[q]=0;R.I[q]=0;R.fix[q]=0;}
+  for(let i=0;i<n;i++){const q=c[i];if(w[i]===0){R.fix[q]=1;continue;}const mm=m[i];R.m[q]+=mm;R.x[q]+=mm*x[i];R.y[q]+=mm*y[i];R.vx[q]+=mm*vx[i];R.vy[q]+=mm*vy[i];}
+  for(let i=0;i<n;i++){const q=c[i];if(w[i]===0||R.fix[q])continue;const M=R.m[q];const cx=R.x[q]/M,cy=R.y[q]/M;const rx=x[i]-cx,ry=y[i]-cy;
+    R.L[q]+=m[i]*(rx*(vy[i]-R.vy[q]/M)-ry*(vx[i]-R.vx[q]/M));R.I[q]+=m[i]*(rx*rx+ry*ry);}
+  for(let i=0;i<n;i++){const q=c[i];if(w[i]===0||R.fix[q]||R.I[q]<1e-9)continue;const M=R.m[q];const cx=R.x[q]/M,cy=R.y[q]/M;const om=R.L[q]/R.I[q];
+    const rx=x[i]-cx,ry=y[i]-cy;const tvx=R.vx[q]/M-om*ry,tvy=R.vy[q]/M+om*rx;
+    vx[i]+=(tvx-vx[i])*k;vy[i]+=(tvy-vy[i])*k;}
+}
 function stepWorld(list,dt){
   const ns=TUNE.substeps,h=dt/ns;
   const needInter=s=>s.nComp>1||s.hasObs||(s.persons&&s.persons.loose.some(v=>v));
@@ -880,7 +947,8 @@ function stepWorld(list,dt){
       const dv=(s.vx[c]-s.vx[a])*nx+(s.vy[c]-s.vy[a])*ny;const imp=dv*Math.min(0.9,kd)/ws;
       s.vx[a]+=wa*imp*nx;s.vy[a]+=wa*imp*ny;s.vx[c]-=wc*imp*nx;s.vy[c]-=wc*imp*ny;}
     pt('b',t0);t0=performance.now();if((st&1)&&!s.noPeople)peopleStep(s,2*h);pt('p',t0);
-    if(s.broken.length){recomputeComps(s);inter[k]=needInter(s);}
+    if(s.broken.length){killSkips(s);recomputeComps(s);inter[k]=needInter(s);}
+    rigidDamp(s,h);
    }
   }
   for(const s of list)s.t+=dt;
@@ -897,9 +965,13 @@ const VEH={
 function autoPlace(){const s=S;if(!s)return;const r=mulberry32((Math.random()*1e9)|0);const R=(a,b)=>a+(b-a)*r();
   const x0=predictTouch(s);const types=['bld','tree','car','fire','amb','tree','bld','tower'];let x=x0-40,k=0;set.placed=[];
   while(x<x0+650&&set.placed.length<14){const t=types[k%types.length];k++;if(!(TER.water&&x<TER.waterEnd+6))set.placed.push({t,x:Math.round(x)});x+=t==='bld'?R(45,85):t==='tower'?R(70,110):R(22,45);}}
+function trimExtra(g){const idx=set.extra.map((e,i)=>[!!e.ground,i]).filter(q=>q[0]===g).map(q=>q[1]);if(idx.length>2)set.extra.splice(idx[0],1);}
 function placeAt(wx,wy){if(!STATE.tool)return;
   if(STATE.tool==='craft'){const P=PLANES[set.exType];const sx=S?mainCG(S).x:0;
-    set.extra.push({type:set.exType,x:Math.round(wx),alt:Math.max(5,Math.round(wy-baseY(wx))),spd:P.spd[2],ang:wx>sx?180:0});if(set.extra.length>2)set.extra.shift();
+    set.extra.push({type:set.exType,x:Math.round(wx),alt:Math.max(5,Math.round(wy-baseY(wx))),spd:P.spd[2],ang:wx>sx?180:0});trimExtra(false);
+    save();const kc={x:cam.x,y:cam.y,free:cam.free,z:cam.z};restart();Object.assign(cam,kc);return;}
+  if(STATE.tool==='park'){if(TER.water&&wx<TER.waterEnd)return;
+    set.extra.push({type:set.exType,x:Math.round(wx),ground:true,ang:0});trimExtra(true);
     save();const kc={x:cam.x,y:cam.y,free:cam.free,z:cam.z};restart();Object.assign(cam,kc);return;}
   if(STATE.tool==='erase'&&SIMS.length>1){let bi=-1,bd=40;SIMS.slice(1).forEach((z,i)=>{const c=mainCG(z);const d=Math.hypot(c.x-wx,c.y-wy);if(d<bd){bd=d;bi=i;}});
     if(bi>=0){set.extra.splice(bi,1);save();const kc={x:cam.x,y:cam.y,free:cam.free,z:cam.z};restart();Object.assign(cam,kc);return;}}
@@ -1338,7 +1410,8 @@ function drawBox(s,bx){const n=bx.n;if(!vis(s,n))return;poly(s,n);ctx.fillStyle=
   const a=m(0,3,0.75),b=m(1,2,0.75);ctx.strokeStyle='#c27a2c';ctx.lineWidth=0.12;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
 function drawStress(s){
   const S0=scale();ctx.lineWidth=Math.max(0.05,1.6*DPR/S0);
-  for(let b=0;b<s.nb;b++){if(!s.alive[b]||s.bk[b]===6)continue;const v=s.stress[b];const bent=s.bent[b];
+  const sk=s.B.skipSet||(s.B.skipSet=new Set((s.B.skips||[]).map(q=>q[0])));
+  for(let b=0;b<s.nb;b++){if(!s.alive[b]||s.bk[b]===6||sk.has(b))continue;const v=s.stress[b];const bent=s.bent[b];
     const t=clamp(v,0,1);const r=t<0.5?Math.round(80+t*2*175):255,g=t<0.5?200:Math.round(200-(t-0.5)*2*200);
     ctx.strokeStyle=bent>0.02?'rgb(255,70,200)':'rgb('+r+','+g+',70)';const a=s.ba[b],c=s.bb[b];ctx.beginPath();ctx.moveTo(s.x[a],s.y[a]);ctx.lineTo(s.x[c],s.y[c]);ctx.stroke();}
   for(let b=0;b<s.nb;b++)s.stress[b]*=0.9;
@@ -1369,7 +1442,7 @@ function draw(){
   drawWater();
   drawGlide();
   if(S&&STATE.ready)drawArrows(S);
-  if(STATE.tool==='craft'&&ARW.mx!=null&&ARW.my!=null){const S0=scale();const r=10*DPR/S0;ctx.strokeStyle='#c58cff';ctx.lineWidth=2*DPR/S0;ctx.beginPath();ctx.arc(ARW.mx,ARW.my,r,0,7);ctx.moveTo(ARW.mx-r*1.6,ARW.my);ctx.lineTo(ARW.mx+r*1.6,ARW.my);ctx.moveTo(ARW.mx,ARW.my-r*1.6);ctx.lineTo(ARW.mx,ARW.my+r*1.6);ctx.stroke();}
+  if((STATE.tool==='craft'||STATE.tool==='park')&&ARW.mx!=null&&ARW.my!=null){const S0=scale();if(STATE.tool==='park')ARW.my=baseY(ARW.mx)+2;const r=10*DPR/S0;ctx.strokeStyle='#c58cff';ctx.lineWidth=2*DPR/S0;ctx.beginPath();ctx.arc(ARW.mx,ARW.my,r,0,7);ctx.moveTo(ARW.mx-r*1.6,ARW.my);ctx.lineTo(ARW.mx+r*1.6,ARW.my);ctx.moveTo(ARW.mx,ARW.my-r*1.6);ctx.lineTo(ARW.mx,ARW.my+r*1.6);ctx.stroke();}
   else if(STATE.tool&&ARW.mx!=null){const S0=scale();const gx=ARW.mx,gy=gH(gx);ctx.strokeStyle=STATE.tool==='erase'?'#ff6a5a':'#ffd27a';ctx.lineWidth=2*DPR/S0;ctx.setLineDash([6*DPR/S0,4*DPR/S0]);ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx,gy+40*DPR/S0*3);ctx.stroke();ctx.setLineDash([]);}
   ctx.setTransform(1,0,0,1,0,0);
   if(S&&STATE.ready)drawArrowLabels(S);
@@ -1390,7 +1463,9 @@ function arrowLine(a,b,col,w){const S0=scale();const lw=w*DPR/S0;const dx=b[0]-a
   ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0]-ux*hl*0.6,b[1]-uy*hl*0.6);ctx.stroke();
   ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(b[0],b[1]);ctx.lineTo(b[0]-ux*hl-uy*hl*0.55,b[1]-uy*hl+ux*hl*0.55);ctx.lineTo(b[0]-ux*hl+uy*hl*0.55,b[1]-uy*hl-ux*hl*0.55);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#fff';ctx.lineWidth=1.5*DPR/S0;ctx.beginPath();ctx.arc(b[0],b[1],7*DPR/S0,0,7);ctx.stroke();}
-function exGeom(i){const z=SIMS[i+1],e=set.extra[i];if(!z||!e)return null;const c=mainCG(z);const P=z.P;const k=P.len*0.55/(Math.max(60,P.spd[2])/3.6);const V=Math.max(e.spd,20)/3.6;
+function exGeom(i){const z=SIMS[i+1],e=set.extra[i];if(!z||!e)return null;const c=mainCG(z);const P=z.P;
+  if(e.ground){const d=Math.cos((e.ang||0)*DEG)<0?-1:1;return{c,k:1,tip:[c.x+d*P.len*0.45,c.y+P.len*0.12]};}
+ const k=P.len*0.55/(Math.max(60,P.spd[2])/3.6);const V=Math.max(e.spd,20)/3.6;
   return{c,k,tip:[c.x+Math.cos(e.ang*DEG)*V*k,c.y+Math.sin(e.ang*DEG)*V*k]};}
 function drawExArrows(){for(let i=0;i<set.extra.length;i++){const g=exGeom(i);if(!g)continue;const hot=ARW.drag&&ARW.drag.ex===i||ARW.hover&&ARW.hover.ex===i;
   arrowLine([g.c.x,g.c.y],g.tip,hot?'#e2c4ff':'#c58cff',4.2);const S0=scale();ctx.strokeStyle='#fff';ctx.lineWidth=2*DPR/S0;ctx.beginPath();ctx.arc(g.c.x,g.c.y,9*DPR/S0,0,7);ctx.stroke();}}
@@ -1399,7 +1474,7 @@ function drawArrows(s){drawExArrows();const g=arrowGeom(s);const hot=ARW.drag||A
 function drawArrowLabels(s){const g=arrowGeom(s);ctx.font=(11.5*DPR)+'px "Malgun Gothic",sans-serif';ctx.textAlign='left';
   const lab=(p,t)=>{const q=W2S(p[0],p[1]);const w=ctx.measureText(t).width+10*DPR;ctx.fillStyle='rgba(13,17,23,.82)';ctx.fillRect(q[0]+10*DPR,q[1]-9*DPR,w,18*DPR);ctx.fillStyle='#eef2f6';ctx.fillText(t,q[0]+15*DPR,q[1]+4*DPR);};
   const att=set.att!=null?set.att:(s.trimInfo?Math.round(s.trimInfo.thb*2)/2:0);
-  for(let i=0;i<set.extra.length;i++){const q=exGeom(i);if(!q)continue;const e=set.extra[i];const cf=exCfg(e);lab(q.tip,PLANES[e.type].name+' · '+cf.spd+' km/h · '+(cf.mir?'왼쪽':'오른쪽')+' '+cf.gam+'°');}
+  for(let i=0;i<set.extra.length;i++){const q=exGeom(i);if(!q)continue;const e=set.extra[i];const cf=exCfg(e);lab(q.tip,e.ground?PLANES[e.type].name+' · 세워 둠 · '+(cf.mir?'왼쪽':'오른쪽')+' 보기':PLANES[e.type].name+' · '+cf.spd+' km/h · '+(cf.mir?'왼쪽':'오른쪽')+' '+cf.gam+'°');}
   lab(g.mid[1],set.spd+' km/h · '+set.gam+'°');lab(g.nose[1],'기수 '+(att>0?'+':'')+att+'° (가는 방향 기준)');lab(g.tail[1],'꼬리');}
 const ARW={drag:null,hover:null,wy0:0,att0:0,mx:null};
 function arrowHit(cx,cy){if(!S||!STATE.ready)return null;const g=arrowGeom(S);let best=null,bd=(24*DPR)**2;
@@ -1407,6 +1482,7 @@ function arrowHit(cx,cy){if(!S||!STATE.ready)return null;const g=arrowGeom(S);le
   for(const k of ['mid','nose','tail']){const q=W2S(g[k][1][0],g[k][1][1]);const d=(q[0]-cx*DPR)**2+(q[1]-cy*DPR)**2;if(d<bd){bd=d;best=k;}}return best;}
 function arrowMove(cx,cy){const S0=scale();const wx=cam.x+(cx*DPR-W/2)/S0,wy=cam.y-(cy*DPR-H/2)/S0;
   if(typeof ARW.drag==='object'){const i=ARW.drag.ex,e=set.extra[i],z=SIMS[i+1];if(!e||!z)return;const q=exGeom(i);const P2=z.P;
+    if(e.ground){if(ARW.drag.part==='tip')e.ang=wx<q.c.x?180:0;else e.x=Math.round(wx);z.cfg=exCfg(e);applyFlight(z);return;}
     if(ARW.drag.part==='tip'){const dx=wx-q.c.x,dy=wy-q.c.y;e.ang=Math.round(Math.atan2(dy,dx)/DEG);e.spd=Math.round(clamp(hyp(dx,dy)/q.k*3.6,P2.spd[0],P2.spd[1])/5)*5;}
     else{e.x=Math.round(wx);e.alt=Math.max(3,Math.round(wy-baseY(wx)));}
     z.cfg=exCfg(e);applyFlight(z);return;}
@@ -1440,11 +1516,15 @@ function updateHud(){
    '<span>휜 연결</span><b>'+countBent(S)+'</b>'+
    '<span>끊어진 연결</span><b>'+S.breakCount+' / '+S.nb+'</b>'+
    '<span>큰 조각</span><b>'+S.bigPieces+'</b>'+
-   '<span>탑승</span><b>'+pp.n+'명</b>'+
+   '<span>탑승'+(SIMS.length>1?' (전체)':'')+'</span><b>'+pp.n+'명</b>'+
    '<span>의자 뜯김</span><b>'+loose+'명</b>'+
    '<span>크게 다침</span><b'+(hurt?' class="warn"':'')+'>'+hurt+'명</b>'+
-   '<span>사망</span><b'+(dead?' class="warn"':'')+'>'+dead+'명</b></div>';
+   '<span>사망</span><b'+(dead?' class="warn"':'')+'>'+dead+'명</b></div>'+perCraftHtml();
 }
+function peopleCount(z){const q=z.persons;let hurt=0,dead=0,loose=0;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;}return{n:q.n,hurt,dead,loose};}
+function perCraftHtml(){if(SIMS.length<2)return'';let h='<div class="t" style="margin-top:8px">기체별</div><div class="g">';
+  SIMS.forEach((z,i)=>{const c=peopleCount(z);h+='<span>'+(i+1)+'. '+z.P.name+(z.cfg.park?' (세워 둠)':'')+'</span><b>'+c.n+'명</b><span style="padding-left:10px">무사 · 다침 · 사망</span><b>'+(c.n-c.hurt-c.dead)+' · '+c.hurt+' · <i style="font-style:normal'+(c.dead?';color:#ff8a7a':'')+'">'+c.dead+'</i></b>';});
+  return h+'</div>';}
 function countBent(s){let n=0;for(let b=0;b<s.nb;b++)if(s.bent[b]>0.01)n++;return n;}
 function frameStats(s,dt){
   const c=mainCG(s);
@@ -1475,11 +1555,11 @@ function showResult(s){
    '<span>휜 연결</span><b>'+countBent(s)+'</b>'+
    '<span>끊어진 연결</span><b>'+s.breakCount+'</b>'+
    '<span>큰 조각</span><b>'+s.bigPieces+'개</b>'+
-   '<span>탑승</span><b>'+pp.n+'명</b>'+
+   '<span>탑승'+(SIMS.length>1?' (전체)':'')+'</span><b>'+pp.n+'명</b>'+
    '<span>무사</span><b>'+(pp.n-hurt-dead)+'명</b>'+
    '<span>크게 다침 (생존)</span><b>'+hurt+'명</b>'+
    '<span>사망</span><b>'+dead+'명</b>'+
-   (s.obsBreak?'<span>부서진 장애물 연결</span><b>'+s.obsBreak+'</b>':'')+'</div>'+
+   (s.obsBreak?'<span>부서진 장애물 연결</span><b>'+s.obsBreak+'</b>':'')+'</div>'+perCraftHtml()+
    '<div class="btns"><button id="rAgain">다시 실행</button><button id="rClose">닫기</button></div>';
   resEl.style.display='block';
   document.getElementById('rAgain').onclick=()=>restart(true);document.getElementById('rClose').onclick=()=>{resEl.style.display='none';};
@@ -1489,7 +1569,7 @@ function showResult(s){
 /* ===================== 시작·다시 ===================== */
 /* 방파제 위치: 같은 물리로 미리 한 번 날려 보고(사람 빼고), 제일 낮은 곳이 방파제 윗부분 아래로 내려가는 곳에 놓음 */
 function predictWall(s){
-  const keys=['x','y','ox','oy','vx','vy','rest','lam','bent','stress','contact','hit','wet','comp','alive'];
+  const keys=['x','y','ox','oy','vx','vy','rest','lam','bent','stress','contact','hit','wet','comp','alive','yieldF'];
   const snap={};for(const k of keys)snap[k]=s[k].slice();
   const t0=s.t,yc=s.yieldCount,bc=s.breakCount,nc=s.nComp,mc=s.mainComp;const sd=s.surf.map(f=>f.dead),eng=s.engines.map(e=>[e.alive,e.struck]),lk=s.locks.map(l=>l.alive);
   s.noPeople=true;let res=null;
@@ -1497,7 +1577,7 @@ function predictWall(s){
     for(let i=0;i<s.n;i++){if(s.kind[i]>=6)continue;if(s.y[i]-s.rad[i]<2.6){res=s.x[i];break;}}
     if(s.breakCount>bc)break;}
   for(const k of keys)s[k].set(snap[k]);
-  s.t=t0;s.yieldCount=yc;s.breakCount=bc;s.nComp=nc;s.mainComp=mc;s.broken.length=0;s.noPeople=false;
+  s.t=t0;s.yieldCount=yc;s.breakCount=bc;s.nComp=nc;s.mainComp=mc;s.broken.length=0;s.crk.clear();s.noPeople=false;
   s.surf.forEach((f,k)=>f.dead=sd[k]);s.engines.forEach((e,k)=>{e.alive=eng[k][0];e.struck=eng[k][1];});s.locks.forEach((l,k)=>l.alive=lk[k]);
   return res==null?null:res-1.2;}
 function xEstimate(){if(set.mode==='land')return clamp(set.alt/Math.tan(3*DEG),300,12000);const g=Math.max(Math.abs(set.gam),2)*DEG;return clamp(set.alt/Math.tan(g),120,12000);}
@@ -1570,6 +1650,7 @@ function buildUI(){
   const ct=$('c2Type');ct.innerHTML=PLANE_ORDER.map(k=>'<option value="'+k+'">'+PLANES[k].name+'</option>').join('');
   ct.addEventListener('change',e=>{set.exType=e.target.value;save();});
   $('exPlace').onclick=()=>{STATE.tool=STATE.tool==='craft'?null:'craft';if(STATE.tool){STATE.wide=true;cam.free=false;if(!STATE.ready)restart();}syncUI();syncBar();};
+  $('exPark').onclick=()=>{STATE.tool=STATE.tool==='park'?null:'park';if(STATE.tool){STATE.wide=true;cam.free=false;if(!STATE.ready)restart();}syncUI();syncBar();};
   $('exClear').onclick=()=>{set.extra=[];save();restart();};
   document.querySelectorAll('#toolSeg button').forEach(b=>b.onclick=()=>{const t=b.dataset.t;STATE.tool=STATE.tool===t?null:t;if(STATE.tool){STATE.wide=true;cam.free=false;if(!STATE.ready)restart();}syncUI();syncBar();});
   $('autoPlace').onclick=()=>{autoPlace();save();restart();};
@@ -1598,9 +1679,9 @@ function syncUI(){
   $('landPad').style.display=set.mode==='land'?'flex':'none';
   document.querySelectorAll('#sceneSeg button').forEach(b=>b.classList.toggle('on',b.dataset.k===set.scene));
   document.querySelectorAll('#toolSeg button').forEach(b=>b.classList.toggle('on',STATE.tool===b.dataset.t));
-  $('placeInfo').textContent=STATE.tool&&STATE.tool!=='craft'?(STATE.tool==='erase'?'땅을 누르면 가까운 장애물을 지웁니다.':'땅을 누르면 그 자리에 놓습니다. 끌면 화면 이동, 휠로 확대.'):('놓은 장애물 '+set.placed.length+'개');
-  $('c2Type').value=set.exType;$('exPlace').classList.toggle('on',STATE.tool==='craft');
-  $('exInfo').textContent=STATE.tool==='craft'?'하늘을 누르면 그 자리에 놓습니다. 화살표 끝을 끌면 방향·속도, 가운데 동그라미를 끌면 위치가 바뀝니다.':('놓은 기체 '+set.extra.length+'대 (최대 2대)');
+  $('placeInfo').textContent=STATE.tool&&STATE.tool!=='craft'&&STATE.tool!=='park'?(STATE.tool==='erase'?'땅을 누르면 가까운 장애물을 지웁니다.':'땅을 누르면 그 자리에 놓습니다. 끌면 화면 이동, 휠로 확대.'):('놓은 장애물 '+set.placed.length+'개');
+  $('c2Type').value=set.exType;$('exPlace').classList.toggle('on',STATE.tool==='craft');$('exPark').classList.toggle('on',STATE.tool==='park');
+  {const ng=set.extra.filter(e=>e.ground).length;$('exInfo').textContent=STATE.tool==='craft'?'하늘을 누르면 그 자리에 놓습니다. 화살표 끝을 끌면 방향·속도, 가운데 동그라미를 끌면 위치가 바뀝니다.':STATE.tool==='park'?'땅을 누르면 그 자리에 세워 둡니다(사람 탑승). 화살표 끝을 끌면 앞쪽 방향, 가운데 동그라미를 끌면 위치가 바뀝니다.':('나는 기체 '+(set.extra.length-ng)+'대 · 세워 둔 기체 '+ng+'대 (각각 최대 2대)');}
   $('spd').min=P.spd[0];$('spd').max=P.spd[1];set.spd=clamp(set.spd,P.spd[0],P.spd[1]);
   for(const k of ['alt','spd','gam','pow','elev','fill'])$(k).value=set[k];
   const attShow=set.att!=null?set.att:(S&&S.trimInfo?Math.round(S.trimInfo.thb*2)/2:0);$('att').value=attShow;
@@ -1636,7 +1717,7 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.
 function zoomAt(sx,sy,f){const S0=scale();const wx=cam.x+(sx-W/2)/S0,wy=cam.y-(sy-H/2)/S0;cam.z=clamp(cam.z*f,0.02,40);const S1=scale();if(cam.free){cam.x=wx-(sx-W/2)/S1;cam.y=wy+(sy-H/2)/S1;}}
 cv.addEventListener('pointerdown',e=>{SND.init();cv.setPointerCapture(e.pointerId);const h=arrowHit(e.clientX,e.clientY);
   if(h){ARW.drag=h;const S0=scale();ARW.wy0=cam.y-(e.clientY*DPR-H/2)/S0;ARW.att0=set.att!=null?set.att:Math.round(S.trimInfo.thb*2)/2;drag=null;return;}
-  if(STATE.tool==='craft'){drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};return;}
+  if(STATE.tool==='craft'||STATE.tool==='park'){drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};return;}
   drag={x:e.clientX,y:e.clientY,moved:0,id:e.pointerId};});
 cv.addEventListener('pointermove',e=>{
   if(ARW.drag){arrowMove(e.clientX,e.clientY);return;}
