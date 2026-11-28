@@ -825,7 +825,7 @@ function initPersons(s,list){
   const np=list.length;const pp={n:np,x:new Float64Array(np*J),y:new Float64Array(np*J),ox:new Float64Array(np*J),oy:new Float64Array(np*J),vx:new Float64Array(np*J),vy:new Float64Array(np*J),
     rest:new Float64Array(np*J*2),bl:new Float64Array(np*BONES.length),loose:new Uint8Array(np),maxG:new Float32Array(np),gS:new Float32Array(np),pvx:new Float32Array(np),pvy:new Float32Array(np),
     hurt:new Uint8Array(np),dead:new Uint8Array(np),list,
-    dose:new Float32Array(np),doseLim:new Float32Array(np).map(()=>rr(TUNE.smokeDose[0],TUNE.smokeDose[1])),fireDead:new Uint8Array(np),ev:new Uint8Array(np),wait:new Uint8Array(np),eu:new Float32Array(np),erow:new Uint8Array(np),eT:new Float32Array(np),ex:new Int16Array(np).fill(-1),edir:new Int8Array(np),efc:new Int8Array(np),eph:new Float32Array(np),ewx:new Float32Array(np),safe:new Float32Array(np),eraft:new Uint8Array(np),path:new Array(np).fill(null)};
+    dose:new Float32Array(np),doseLim:new Float32Array(np).map(()=>rr(TUNE.smokeDose[0],TUNE.smokeDose[1])),fireDead:new Uint8Array(np),need:new Uint8Array(np),taken:new Uint8Array(np),saved:new Uint8Array(np),ev:new Uint8Array(np),wait:new Uint8Array(np),eu:new Float32Array(np),erow:new Uint8Array(np),eT:new Float32Array(np),ex:new Int16Array(np).fill(-1),edir:new Int8Array(np),efc:new Int8Array(np),eph:new Float32Array(np),ewx:new Float32Array(np),safe:new Float32Array(np),eraft:new Uint8Array(np),path:new Array(np).fill(null)};
   list.forEach((p,k)=>{
     const sc=p.crew?rr(0.97,1.05):rr(0.86,1.08);p.sc=sc;
     p.shirt=p.crew?'#e9ecef':SHIRTS[(rnd()*SHIRTS.length)|0];p.pants=p.crew?'#1f2a3a':PANTS[(rnd()*PANTS.length)|0];
@@ -1210,11 +1210,11 @@ function evacStart(s){const P=s.P,B=s.B,L=P.len,NS=B.NS;const ex=[];
   for(let i=0;i<NS;i++){if(!s.alive[B.LONG[i][B.FR]])ex.push({u:(i+0.5)*L/NS,row:B.FR,kind:'break',free:0,deploy:1,fw:0,n:0,st:i});}
   s.evac={ex,t:0,chk:0,ok:null};const pp=s.persons;
   for(let k=0;k<pp.n;k++){if(pp.dead[k])continue;const p=pp.list[k];pp.safe[k]=rr(22,55);
-    if(!pp.loose[k]){pp.wait[k]=1;pp.eu[k]=p.seat.u;pp.erow[k]=p.seat.r;pp.eT[k]=rr(1,8)+(pp.hurt[k]?5:0);pp.ex[k]=-1;}
-    else{const b=k*J;const hg=pp.y[b]-baseY(pp.x[b]);if(hg<1.0&&!(TER.water&&pp.x[b]<TER.waterEnd)){pp.ev[k]=3;pp.ewx[k]=pp.x[b];pp.eT[k]=rr(2,7);pp.edir[k]=0;}
+    if(!pp.loose[k]){pp.eu[k]=p.seat.u;pp.erow[k]=p.seat.r;pp.ex[k]=-1;if(pp.hurt[k]){pp.need[k]=1;continue;}pp.wait[k]=1;pp.eT[k]=rr(1,8);}
+    else{const b=k*J;const hg=pp.y[b]-baseY(pp.x[b]);if(hg<1.0&&!(TER.water&&pp.x[b]<TER.waterEnd)){if(pp.hurt[k]){pp.need[k]=2;pp.ewx[k]=pp.x[b];continue;}pp.ev[k]=3;pp.ewx[k]=pp.x[b];pp.eT[k]=rr(2,7);pp.edir[k]=0;}
       else{// 의자에서 튕겨 나갔지만 기체 안 바닥 근처에 있으면 일어나서 출구로
         let bi=-1,bd=1.6;for(let i=0;i<=NS;i++){const n0=B.G[Math.min(i,NS)][B.FR];const d=hyp(s.x[n0]-pp.x[b],s.y[n0]-pp.y[b]);if(d<bd){bd=d;bi=i;}}
-        if(bi>=0){pp.wait[k]=1;pp.eu[k]=clamp(bi,0.2,NS-0.2)*L/NS;pp.erow[k]=B.FR;pp.eT[k]=rr(3,10);pp.ex[k]=-1;pp.uploose=1;}}}}
+        if(bi>=0){pp.eu[k]=clamp(bi,0.2,NS-0.2)*L/NS;pp.erow[k]=B.FR;pp.ex[k]=-1;if(pp.hurt[k]){pp.need[k]=1;continue;}pp.wait[k]=1;pp.eT[k]=rr(3,10);}}}}
 }
 function exitOK(s,e){const B=s.B,L=s.P.len,NS=B.NS;const i=clamp((e.u/L*NS)|0,0,NS-1);
   const f=floorFrame(s,e.row,e.u);const h=f.oy-baseY(f.ox);
@@ -1235,14 +1235,18 @@ function exitPath(s,e){const f=floorFrame(s,e.row,e.u);const top=[f.ox,f.oy];con
   const h=st[1]-baseY(st[0]);const bx=st[0]+dirX*clamp(h*1.5,2,9);const wet=!!(TER.water&&bx<TER.waterEnd);pts.push([bx,wet?0.25:baseY(bx)+0.1]);
   return mkPath(pts,4,wet);}
 /* 사람 자세(걷기·뛰기·앉기)를 바로 정해서 그림 */
-function setPose(pp,k,ox,oy,fx,fy,ux,uy,face,mode,ph){const sc=pp.list[k].sc;const b=k*J;
-  const put=(j,lx,ly)=>{lx*=sc*face;ly*=sc;pp.x[b+j]=ox+fx*lx+ux*ly;pp.y[b+j]=oy+fy*lx+uy*ly;};
+function setPose(pp,k,ox,oy,fx,fy,ux,uy,face,mode,ph){poseInto(pp.x,pp.y,k*J,pp.list[k].sc,ox,oy,fx,fy,ux,uy,face,mode,ph);}
+function poseInto(X,Y,b,sc,ox,oy,fx,fy,ux,uy,face,mode,ph){
+  const put=(j,lx,ly)=>{lx*=sc*face;ly*=sc;X[b+j]=ox+fx*lx+ux*ly;Y[b+j]=oy+fy*lx+uy*ly;};
+  if(mode==='carry'){put(0,0.08,1.5);put(1,-0.42,1.36);put(2,-0.66,1.16);put(3,0.36,1.46);put(4,0.5,1.02);put(5,0.32,1.42);put(6,0.46,0.98);put(7,-0.55,1.1);put(8,-0.6,0.84);put(9,-0.5,1.08);put(10,-0.52,0.82);return;}
+  if(mode==='lie'){put(0,0,0.12);put(1,-0.5,0.14);put(2,-0.76,0.16);put(3,0.42,0.12);put(4,0.88,0.08);put(5,0.4,0.16);put(6,0.86,0.1);put(7,-0.3,0.08);put(8,-0.05,0.06);put(9,-0.35,0.2);put(10,-0.1,0.18);return;}
   if(mode==='sit'){put(0,0,0.12);put(1,-0.12,0.62);put(2,-0.1,0.86);put(3,0.42,0.24);put(4,0.86,0.12);put(5,0.4,0.22);put(6,0.84,0.1);put(7,-0.02,0.4);put(8,0.2,0.32);put(9,0.0,0.38);put(10,0.22,0.3);return;}
-  const run=mode==='run';const sw=run?0.62:mode==='walk'?0.36:0;const a=Math.sin(ph)*sw;const kb=run?0.8:0.35;const hip=run?0.86:0.92;const lean=run?0.13:0.03;
+  const run=mode==='run';const sw=run?0.62:(mode==='walk'||mode==='carrying')?0.36:0;const a=Math.sin(ph)*sw;const kb=run?0.8:0.35;const hip=run?0.86:0.92;const lean=run?0.13:0.03;
   put(0,0,hip);put(1,lean,hip+0.5);put(2,lean+0.03,hip+0.74);
   const leg=(jk,jf,ang,phs)=>{const kx=Math.sin(ang)*0.44,ky=hip-Math.cos(ang)*0.44;const fa=ang-Math.max(0,Math.sin(phs))*kb;put(jk,kx,ky);put(jf,kx+Math.sin(fa)*0.47,ky-Math.cos(fa)*0.47);};
   leg(3,4,a,ph);leg(5,6,-a,ph+Math.PI);
   const arm=(je,jh,ang)=>{const ex=lean+Math.sin(ang)*0.28,ey=hip+0.5-Math.cos(ang)*0.28;put(je,ex,ey);const h2=ang+(run?1.2:0.25);put(jh,ex+Math.sin(h2)*0.27,ey-Math.cos(h2)*0.27);};
+  if(mode==='carrying'){put(7,lean+0.22,hip+0.42);put(8,lean+0.08,hip+0.62);put(9,lean+0.2,hip+0.4);put(10,lean+0.05,hip+0.6);return;}
   arm(7,8,-a*0.9);arm(9,10,a*0.9);}
 function evacStep(s,dt){if(!s.evac){if(!evacShould(s,dt))return;evacStart(s);}const E=s.evac;E.t+=dt;const pp=s.persons;
   E.chk-=dt;let rechk=false;if(E.chk<=0||!E.ok){E.chk=2;rechk=true;
@@ -1271,17 +1275,17 @@ function evacStep(s,dt){if(!s.evac){if(!evacShould(s,dt))return;evacStart(s);}co
         if(TER.water&&tx<TER.waterEnd){pp.edir[k]=1;tx=Math.max(W[1],TER.waterEnd)+pp.safe[k];}}
       const d=tx-pp.ewx[k];const sp=hurt?0.8:3.2*pp.list[k].sc;
       if(Math.abs(d)<0.3)pp.ev[k]=4;else{const nx=pp.ewx[k]+Math.sign(d)*Math.min(Math.abs(d),sp*dt);if(TER.water&&nx<TER.waterEnd)pp.ev[k]=4;else{pp.ewx[k]=nx;pp.efc[k]=Math.sign(d);pp.eph[k]+=dt*sp*3.0;}}}
-    else if(st===4){if(hurt&&amb&&!pp.eraft[k]&&Math.abs(pp.ewx[k]-(amb.x-amb.dir*3.5))>6)pp.ev[k]=3;}
+    else if(st===4){if(hurt&&amb&&!pp.eraft[k]&&!pp.saved[k]&&Math.abs(pp.ewx[k]-(amb.x-amb.dir*3.5))>6)pp.ev[k]=3;}
   }
   // 자세
-  for(let k=0;k<pp.n;k++){const st=pp.ev[k];if(!st)continue;
+  for(let k=0;k<pp.n;k++){const st=pp.ev[k];if(!st||st===5)continue;
     if(st===1){const f=floorFrame(s,pp.erow[k],pp.eu[k]);const fc=pp.efc[k]?(pp.edir[k]<0?1:-1):1;setPose(pp,k,f.ox,f.oy,f.fx,f.fy,f.ux,f.uy,fc,pp.efc[k]?'walk':'stand',pp.eph[k]);}
     else if(st===2){const P=pp.path[k];if(!P)continue;const q=pathAt(P,Math.min(1,pp.eT[k]));let dx=q[2],dy=q[3];const l=hyp(dx,dy)||1;dx/=l;dy/=l;
       const sliding=P.spd>=4&&!(P.pts.length>2&&q[4]===0);
       if(sliding){let ux=-dy,uy=dx;if(uy<0){ux=-ux;uy=-uy;}setPose(pp,k,q[0],q[1],dx,dy,ux,uy,1,'sit',0);}
       else{pp.eph[k]+=0.15;setPose(pp,k,q[0],q[1],1,0,0,1,dx<0?-1:1,'walk',pp.eph[k]);}}
     else if(st===3){const gy=baseY(pp.ewx[k]);setPose(pp,k,pp.ewx[k],gy,1,0,0,1,pp.efc[k]||1,pp.eT[k]>0?'stand':(pp.hurt[k]?'walk':'run'),pp.eph[k]);}
-    else{const x=pp.ewx[k];const gy=pp.eraft[k]?waveY(x,STATE.t)+0.3:baseY(x);setPose(pp,k,x,gy,1,0,0,1,pp.efc[k]||1,(pp.hurt[k]||pp.eraft[k])?'sit':'stand',0);}}
+    else{const x=pp.ewx[k];const gy=pp.eraft[k]?waveY(x,STATE.t)+0.3:baseY(x);setPose(pp,k,x,gy,1,0,0,1,pp.efc[k]||1,pp.saved[k]?'lie':(pp.hurt[k]||pp.eraft[k])?'sit':'stand',0);}}
 }
 function drawEvac(s){const E=s.evac;if(!E)return;const S0=scale();const px=DPR/S0;ctx.lineCap='round';
   E.ex.forEach(e=>{if(e.deploy<=0||(e.kind!=='door'&&e.kind!=='wing'))return;const P=exitPath(s,e);const pts=P.pts;const a=pts[pts.length-2],b=pts[pts.length-1];const k=e.deploy;
@@ -1291,7 +1295,7 @@ function drawEvac(s){const E=s.evac;if(!E)return;const S0=scale();const px=DPR/S
     ctx.strokeStyle='#f0c22e';ctx.lineWidth=Math.max(0.46,2.5*px);ctx.stroke();
     ctx.strokeStyle='rgba(255,250,220,.55)';ctx.lineWidth=Math.max(0.06,0.8*px);ctx.beginPath();ctx.moveTo(a[0],a[1]+0.14);ctx.quadraticCurveTo(lerp(a[0],ex,0.55),lerp(a[1],ey,0.55)-0.1,ex,ey+0.14);ctx.stroke();
     if(P.raft&&k>=1){const wy=waveY(b[0],STATE.t);ctx.fillStyle='#e39a1f';ctx.beginPath();ctx.ellipse(b[0],wy+0.18,2.8,0.42,0,0,7);ctx.fill();ctx.fillStyle='#c27c10';ctx.fillRect(b[0]-2.6,wy+0.1,5.2,0.08);}});
-  const pp=s.persons;for(let k=0;k<pp.n;k++)if(pp.ev[k]>=2)drawPerson(s,k,1);}
+  const pp=s.persons;for(let k=0;k<pp.n;k++)if(pp.ev[k]>=2&&pp.ev[k]!==5)drawPerson(s,k,1);}
 
 /* ===================== 화재: 기내에 연기가 차고, 연기·열을 많이 마시면 다치거나 목숨을 잃음 (숫자로만) ===================== */
 function stationOfX(s,x){const B=s.B;let bi=0,bd=1e9;for(let i=0;i<B.NS;i++){const d=Math.abs((s.x[B.G[i][B.FR]]+s.x[B.G[i+1][B.FR]])/2-x);if(d<bd){bd=d;bi=i;}}return[bi,bd];}
@@ -1309,7 +1313,7 @@ function fireHarm(s,dt){const pp=s.persons;const B=s.B,NS=B.NS,cs=s.csmoke;
   if(!pp||!pp.n)return;
   // 껍데기가 아직 있으면 바깥 불의 열을 꽤 막아 줌 (녹으면 못 막음)
   const mS=new Float32Array(NS);for(const c of B.cells)if(c.mt>mS[c.i])mS[c.i]=c.mt;
-  for(let k=0;k<pp.n;k++){if(pp.dead[k])continue;const ev=pp.ev[k];const b=k*J;const px=pp.x[b+1],py=pp.y[b+1];let rate=0,shield=1;
+  for(let k=0;k<pp.n;k++){if(pp.dead[k]||pp.ev[k]===5)continue;const ev=pp.ev[k];const b=k*J;const px=pp.x[b+1],py=pp.y[b+1];let rate=0,shield=1;
     if(ev<2){let si;if(ev===1)si=clamp((pp.eu[k]/s.P.len*NS)|0,0,NS-1);else{const st=stationOfX(s,px);si=st[1]<3?st[0]:-1;}
       if(si>=0){rate+=Math.pow(cs[si],2)*1.2;shield=0.15+0.85*mS[si];}}
     for(const f of active){const d=hyp(s.x[f.node]-px,s.y[f.node]-py);if(d<4)rate+=(1-d/4)*0.9*f.pow*(shield<1?0.5:1);}
@@ -1334,7 +1338,7 @@ function drawCabinSmoke(s){const B=s.B,cs=s.csmoke;let any=false;for(let i=0;i<B
   for(const c of B.cells){if(c.hold)continue;const v=cs[c.i];if(v<0.03||!vis(s,c.n))continue;poly(s,c.n);ctx.fillStyle='rgba(32,30,28,'+(Math.min(0.8,v*0.75)).toFixed(3)+')';ctx.fill();}}
 
 /* ===================== 구조: 소방차·구급차가 달려와 거품을 뿌려 불을 끔 ===================== */
-const RESC={on:false,t0:0,v:[],span:[0,0],side:1};
+const RESC={on:false,t0:0,v:[],span:[0,0],side:1,crew:[],cp:null};
 function wreckSpan(){let a=1e9,b=-1e9;for(const z of SIMS){if(z.impactT<0)continue;if(z.cfg.park&&z.breakCount<=3&&!z.fires.length)continue;const m=Math.min(z.n,z.burn.length);for(let i=0;i<m;i++){const x=z.x[i];if(x<a)a=x;if(x>b)b=x;}}
   if(a>b){const c=mainCG(S);a=c.x-10;b=c.x+10;}return[a,b];}
 function rescueStep(dt){if(!S)return;RESC.span=wreckSpan();
@@ -1342,11 +1346,65 @@ function rescueStep(dt){if(!S)return;RESC.span=wreckSpan();
     if(!bad)return;RESC.on=true;RESC.t0=S.t;return;}
   if(!RESC.v.length){if(S.t-RESC.t0<TUNE.rescueDelay)return;const [a,b]=RESC.span;const side=1;const x0=b+side*TUNE.rescueDist;let hurt=0;for(const z of SIMS){const q=z.persons;for(let k=0;k<q.n;k++)hurt+=q.hurt[k];}
     const mk=(t,off,stop)=>RESC.v.push({t,x:x0+side*off,v:0,dir:-side,stop,arr:false,aim:null,ph:rnd()*6});
-    mk('fire',0,24);mk('fire',18,40);mk('amb',36,64);if(hurt>6)mk('amb',50,74);RESC.side=side;}
+    mk('fire',0,18);mk('fire',18,46);mk('amb',36,31);if(hurt>6)mk('amb',50,58);RESC.side=side;}
   for(const v of RESC.v){const [a,b]=RESC.span;let tx=(RESC.side>0?b:a)+RESC.side*v.stop;if(TER.water&&tx<TER.waterEnd+8)tx=TER.waterEnd+8+(v.stop-24)*0.7;
     const d=tx-v.x,dist=Math.abs(d);const vmax=Math.min(20,Math.sqrt(2*3.5*dist));v.v+=clamp(vmax-v.v,-7*dt,3*dt);if(v.v<0)v.v=0;
     v.x+=Math.sign(d)*Math.min(dist,v.v*dt);v.arr=dist<1.5;if(v.t==='fire')spray(v,dt);}
 }
+/* 소방관·구급대원: 차에서 내려 크게 다친 사람에게 걸어가서(기내면 사다리로 올라가) 업고 구급차까지 데려옴 */
+const CREWC={fire:{shirt:'#4a4532',pants:'#3a3628',skin:'#d9a77f',hair:'#2a2522',hat:'#e8b923'},med:{shirt:'#2f6f4e',pants:'#26303c',skin:'#e8c4a0',hair:'#4a3426',hat:null}};
+function crewSpawn(v){if(v.crewOut)return;v.crewOut=true;const n=2;for(let q=0;q<n;q++){const role=v.t==='fire'?'fire':'med';
+  RESC.crew.push({role,v,x:v.x+v.dir*(-1.5-q*1.2),st:'home',s:null,k:-1,e:null,u:0,t:0,face:-v.dir,ph:rnd()*6,carry:-1,think:rr(0.5,2),sc:rr(0.97,1.06)});}
+  const N=RESC.crew.length;RESC.cp={n:N,x:new Float64Array(N*J),y:new Float64Array(N*J),list:RESC.crew.map(c=>Object.assign({sc:c.sc,crew:false},CREWC[c.role]))};}
+function ladderPts(s,e){const f=floorFrame(s,e.row,e.u);const dirX=(f.fx<0?-1:1)*(e.fw||1);const gx=f.ox+dirX*(e.kind==='break'||e.kind==='step'?0.7:0.9);return[[gx,baseY(gx)],[f.ox,f.oy]];}
+function crewJob(c){let best=null,bd=1e9;
+  for(const s of SIMS){const pp=s.persons;if(!pp||!s.evac)continue;
+    for(let k=0;k<pp.n;k++){if(!pp.need[k]||pp.taken[k]||pp.dead[k])continue;
+      if(pp.need[k]===2){if(TER.water&&pp.ewx[k]<TER.waterEnd+1)continue;if(TER.pfire&&(TER.pfire[gIdx(pp.ewx[k])|0]||0)>0.2)continue;const d=Math.abs(pp.ewx[k]-c.x);if(d<bd){bd=d;best={s,k,e:null,gx:pp.ewx[k]};}continue;}
+      if(c.role!=='fire')continue;
+      // 기내: 다가갈 출구(불 없는 곳)
+      const E=s.evac;let eb=null,ed=1e9;E.ex.forEach((e,j)=>{if(!E.ok||!E.ok[j]||e.row!==pp.erow[k]||!reach(s,pp.erow[k],pp.eu[k],e))return;const d=Math.abs(e.u-pp.eu[k]);if(d<ed){ed=d;eb=e;}});
+      if(!eb)continue;const lp=ladderPts(s,eb);if(TER.water&&lp[0][0]<TER.waterEnd+1)continue;for(const f of s.fires)if(f.until>s.t&&hyp(s.x[f.node]-lp[1][0],s.y[f.node]-lp[1][1])<3){eb=null;break;}if(!eb)continue;
+      const d=Math.abs(lp[0][0]-c.x)+ed;if(d<bd){bd=d;best={s,k,e:eb,gx:lp[0][0]};}}}
+  return best;}
+function crewStep(dt){if(!RESC.crew)return;for(const v of RESC.v)if(v.arr&&!v.crewOut&&(v.t==='amb'||!v.aim||RESC.crew.length<4))crewSpawn(v);
+  const amb=RESC.v.find(v=>v.t==='amb'&&v.arr)||RESC.v.find(v=>v.arr);
+  for(const c of RESC.crew){const walk=(tx,sp)=>{const d=tx-c.x;if(Math.abs(d)<0.15)return true;const nx=c.x+Math.sign(d)*Math.min(Math.abs(d),sp*dt);
+      if(TER.pfire&&(TER.pfire[gIdx(nx)|0]||0)>0.25)return false;c.x=nx;c.face=Math.sign(d);c.ph+=dt*sp*3.2;c.moving=sp;return false;};
+    c.moving=0;const pp=c.s?c.s.persons:null;
+    if(c.st==='home'){const hx=c.v.x-c.v.dir*2.5+(RESC.crew.indexOf(c)%4-1.5)*0.9;walk(hx,1.6);c.think-=dt;if(c.think<=0){c.think=1;const j=crewJob(c);if(j){c.s=j.s;c.k=j.k;c.e=j.e;c.gx=j.gx;j.s.persons.taken[j.k]=1;c.st='toG';}}}
+    else if(c.st==='toG'){if(walk(c.gx,3.0))c.st=c.e?'up':'pick',c.t=c.e?0:1.4;}
+    else if(c.st==='up'){const L=ladderPts(c.s,c.e);const len=hyp(L[1][0]-L[0][0],L[1][1]-L[0][1])||0.5;c.t+=dt*0.8/len;c.e.ladder=true;if(c.t>=1){c.st='in';c.u=c.e.u;}}
+    else if(c.st==='in'){const tu=pp.eu[c.k];const d=tu-c.u;const sm=c.s.csmoke[clamp((c.u/c.s.P.len*c.s.B.NS)|0,0,c.s.B.NS-1)];
+      if(pp.dead[c.k]){c.st='out';continue;}
+      if(Math.abs(d)<0.3){c.st='pick';c.t=1.4;}else{c.u+=Math.sign(d)*Math.min(Math.abs(d),dt*1.1*(1-0.4*sm));c.fu=Math.sign(d);c.ph+=dt*4;c.moving=1;}}
+    else if(c.st==='pick'){c.t-=dt;if(c.t<=0){if(!pp.dead[c.k]){c.carry=c.k;pp.ev[c.k]=5;pp.need[c.k]=0;pp.loose[c.k]=0;}else{pp.taken[c.k]=0;}c.st=c.e?'out':'toAmb';}}
+    else if(c.st==='out'){const d=c.e.u-c.u;if(Math.abs(d)<0.1){c.st='down';c.t=1;}else{c.u+=Math.sign(d)*Math.min(Math.abs(d),dt*0.8);c.fu=Math.sign(d);c.ph+=dt*3;c.moving=1;}}
+    else if(c.st==='down'){const L=ladderPts(c.s,c.e);const len=hyp(L[1][0]-L[0][0],L[1][1]-L[0][1])||0.5;c.t-=dt*0.6/len;if(c.t<=0){c.st='toAmb';c.x=L[0][0];}}
+    else if(c.st==='toAmb'){const tx=amb?amb.x-amb.dir*4+((c.k%6)-2.5)*0.9:c.v.x;if(walk(tx,c.carry>=0?1.9:2.8)){
+        if(c.carry>=0){const k=c.carry;pp.ev[k]=4;pp.ewx[k]=c.x+c.face*0.9;pp.saved[k]=1;pp.eraft[k]=0;pp.efc[k]=c.face;c.carry=-1;}c.st='home';c.s=null;c.e=null;}}
+    // 자리·자세
+    let ox,oy,fx=1,fy=0,ux=0,uy=1;
+    if(c.st==='up'||c.st==='down'){const L=ladderPts(c.s,c.e);const t=clamp(c.t,0,1);ox=lerp(L[0][0],L[1][0],t);oy=lerp(L[0][1],L[1][1],t);c.ph+=dt*3;}
+    else if(c.st==='in'||c.st==='out'||(c.st==='pick'&&c.e)){const f=floorFrame(c.s,c.e.row,c.u);ox=f.ox;oy=f.oy;fx=f.fx;fy=f.fy;ux=f.ux;uy=f.uy;}
+    else{ox=c.x;oy=baseY(c.x);}
+    c.pos=[ox,oy,fx,fy,ux,uy];
+    const i=RESC.crew.indexOf(c);let fcw=c.face;if(c.st==='in'||c.st==='out'||(c.st==='pick'&&c.e))fcw=-(c.fu||1);else if(c.st==='up'||c.st==='down'){const L=ladderPts(c.s,c.e);fcw=L[1][0]>=L[0][0]?1:-1;}
+    poseInto(RESC.cp.x,RESC.cp.y,i*J,c.sc,ox,oy,fx,fy,ux,uy,fcw,c.carry>=0?'carrying':(c.st==='pick'?'stand':(c.moving||c.st==='up'||c.st==='down')?(c.moving>2?'run':'walk'):'stand'),c.ph);
+    if(c.carry>=0){const P=c.s.persons;setPose(P,c.carry,ox,oy,fx,fy,ux,uy,fcw,'carry',0);}}
+}
+function drawCrew(){if(!RESC.crew||!RESC.crew.length)return;const S0=scale();const px=DPR/S0;const fake={persons:RESC.cp};
+  // 대원이 쓰는 사다리
+  for(const s of SIMS){if(!s.evac)continue;for(const e of s.evac.ex){if(!e.ladder)continue;const L=ladderPts(s,e);const dx=L[1][0]-L[0][0],dy=L[1][1]-L[0][1];const l=hyp(dx,dy)||1;const nx=-dy/l*0.22,ny=dx/l*0.22;
+    ctx.strokeStyle='#9aa0a6';ctx.lineWidth=Math.max(0.05,1.4*px);ctx.beginPath();ctx.moveTo(L[0][0]+nx,L[0][1]+ny);ctx.lineTo(L[1][0]+nx,L[1][1]+ny);ctx.moveTo(L[0][0]-nx,L[0][1]-ny);ctx.lineTo(L[1][0]-nx,L[1][1]-ny);
+    for(let t=0.1;t<1;t+=0.15){ctx.moveTo(L[0][0]+dx*t+nx,L[0][1]+dy*t+ny);ctx.lineTo(L[0][0]+dx*t-nx,L[0][1]+dy*t-ny);}ctx.stroke();}}
+  RESC.crew.forEach((c,i)=>{drawPerson(fake,i,1);const b=i*J;const X=RESC.cp.x,Y=RESC.cp.y;const col=CREWC[c.role];
+    // 몸통 반사띠
+    ctx.strokeStyle=c.role==='fire'?'#e6e05a':'#e8e8e0';ctx.lineWidth=0.05*c.sc;ctx.beginPath();const t1=0.45,t2=0.75;ctx.moveTo(lerp(X[b],X[b+1],t1)-0.12,lerp(Y[b],Y[b+1],t1));ctx.lineTo(lerp(X[b],X[b+1],t1)+0.12,lerp(Y[b],Y[b+1],t1));ctx.moveTo(lerp(X[b],X[b+1],t2)-0.12,lerp(Y[b],Y[b+1],t2));ctx.lineTo(lerp(X[b],X[b+1],t2)+0.12,lerp(Y[b],Y[b+1],t2));ctx.stroke();
+    const hx=X[b+2],hy=Y[b+2];if(col.hat){ctx.fillStyle=col.hat;ctx.beginPath();ctx.arc(hx,hy+0.03,0.135*c.sc,Math.PI*0.95,Math.PI*2.05);ctx.fill();ctx.fillRect(hx-0.17*c.sc,hy+0.0,0.34*c.sc,0.035);}
+    else{ctx.fillStyle='#f2f2ee';ctx.beginPath();ctx.arc(hx,hy+0.04,0.118*c.sc,Math.PI,Math.PI*2);ctx.fill();}});
+  // 업힌 사람은 대원 위에 다시 그림
+  for(const c of RESC.crew)if(c.carry>=0)drawPerson(c.s,c.carry,1);}
 function nozzle(v){const y=gH(v.x);return[v.x+v.dir*3.6,y+0.5+3.45];}
 function spray(v,dt){if(!v.arr){v.aim=null;return;}const nz=nozzle(v);
   // 제일 가까운 불 찾기
@@ -1730,7 +1788,7 @@ function draw(){
   const [sx,sy]=Shake.off(STATE.t);
   setWorld(sx,sy);
   drawTerrain();
-  if(S){drawShadows();for(const s of SIMS)drawTrail(s);drawFx(true);drawObstacles(S);drawRescue();for(const s of SIMS)drawPlane(s);for(const s of SIMS)drawEvac(s);drawFx(false);if(STATE.stress)for(const s of SIMS)drawStress(s);}
+  if(S){drawShadows();for(const s of SIMS)drawTrail(s);drawFx(true);drawObstacles(S);drawRescue();for(const s of SIMS)drawPlane(s);for(const s of SIMS)drawEvac(s);drawCrew();drawFx(false);if(STATE.stress)for(const s of SIMS)drawStress(s);}
   drawWater();
   drawGlide();
   if(S&&STATE.ready)drawArrows(S);
@@ -1796,7 +1854,7 @@ function updateHud(){
   const A=B.G[0][B.FR],Z=B.G[B.NS][B.FR];let pitch=NaN;if(S.comp[A]===S.comp[Z])pitch=Math.atan2(S.y[A]-S.y[Z],S.x[A]-S.x[Z])/DEG;
   const alt=c.y-baseY(c.x);
   const sf=S.wingS||S.hsS;const aoa=(!S.wingS||sf.dead)?NaN:(sf.lastA||0)/DEG;
-  let hurt=0,loose=0,dead=0,np=0,outN=0,fireD=0;for(const s of SIMS){const q=s.persons;np+=q.n;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;if(q.ev[k]>=2)outN++;if(q.fireDead[k])fireD++;}}const pp={n:np};
+  let hurt=0,loose=0,dead=0,np=0,outN=0,fireD=0,savedN=0;for(const s of SIMS){const q=s.persons;np+=q.n;for(let k=0;k<q.n;k++){if(q.saved[k])savedN++;if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;if(q.ev[k]>=2)outN++;if(q.fireDead[k])fireD++;}}const pp={n:np};
   const slowV=V<25;const stall=!slowV&&!sf.dead&&Math.abs(sf.lastA||0)>sf.stall;
   hudEl.innerHTML='<div class="t">'+S.P.name+'</div><div class="g">'+
    '<span>속도</span><b>'+fmt(V*3.6)+' km/h</b>'+
@@ -1814,6 +1872,7 @@ function updateHud(){
    '<span>사망</span><b'+(dead?' class="warn"':'')+'>'+dead+'명</b>'+
    '<span>그중 불·연기로</span><b'+(fireD?' class="warn"':'')+'>'+fireD+'명</b>'+
    '<span>밖으로 대피</span><b>'+outN+'명</b>'+
+   '<span>구조대가 데려옴</span><b>'+savedN+'명</b>'+
    '<span>구조</span><b>'+rescueText()+'</b></div>'+perCraftHtml();
 }
 function peopleCount(z){const q=z.persons;let hurt=0,dead=0,loose=0;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;}return{n:q.n,hurt,dead,loose};}
@@ -1884,7 +1943,7 @@ function restart(run){
   S=makeSim();
   if(set.scene==='seawall'){const w=predictWall(S);if(w!=null)buildTerrain('seawall',xEstimate(),w);}
   placeObstacles(S);
-  initPools();RESC.on=false;RESC.v=[];
+  initPools();RESC.on=false;RESC.v=[];RESC.crew=[];RESC.cp=null;
   if(set.mode==='land'&&S.wingS&&run!==false&&!STATE.keepPow){const P=S.P,V=set.spd/3.6,Wt=S.tb.Mt*9.81,Sw=S.wingS.area,g=set.gam*DEG;const q=0.5*TUNE.rho*V*V;const CL=Wt*Math.cos(g)/(q*Sw);
     const D=q*Sw*(S.wingS.cd0+0.022+0.02*P.hs.area/Sw+S.wingS.k*CL*CL);let Tm=0;for(const e of P.engines)Tm+=e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1));
     set.pow=Math.round(clamp((D-Wt*Math.sin(-g))/Tm*100,0,100));S.cfg.pow=set.pow;applyFlight(S);}
@@ -1897,7 +1956,7 @@ function restart(run){
 
 /* ===================== 메인 루프 ===================== */
 let SIMS=[];
-function simFrame(d){stepWorld(SIMS,d);for(const s of SIMS){peopleFrame(s,d);frameEffects(s,d);leakStep(s,d);frameStats(s,d);}poolStep(d);rescueStep(d);for(const s of SIMS){evacStep(s,d);fireHarm(s,d);meltStep(s,d);}}
+function simFrame(d){stepWorld(SIMS,d);for(const s of SIMS){peopleFrame(s,d);frameEffects(s,d);leakStep(s,d);frameStats(s,d);}poolStep(d);rescueStep(d);for(const s of SIMS){evacStep(s,d);fireHarm(s,d);meltStep(s,d);}crewStep(d);}
 let last=performance.now();
 function loop(now){
   try{
