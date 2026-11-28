@@ -139,9 +139,15 @@ const TUNE = {
   beltSlack: 0.04,      // 어깨 안전벨트 여유(m)
   beltOm: 42,           // 안전벨트가 늘어나는 단단함(클수록 딱딱)
   beltLimitG: 40,       // 안전벨트가 가슴을 잡는 힘 한계(g) — 진짜 차의 '하중 제한 장치'
-  hipOm: 130,           // 엉덩이가 의자(방석·허리 벨트)에 붙어 있는 단단함
-  bagOm: 55,            // 에어백 푹신함(작을수록 푹신)
-  bagCapG: 48,          // 에어백이 미는 힘 한계(g) — 구멍으로 바람이 빠져서 더 세지 않음
+  neckK: 1400,          // 목이 꺾일 때 버티는 세기(1/초²)
+  neckC: 40,            // 목 완충(1/초)
+  neckCapG: 50,         // 목이 머리를 잡아 주는 힘 한계(g)
+  headLimG: 55,
+  accelClipG: 260,      // 충격(g) 잴 때 한 순간(0.0014초)에 튀는 값은 이 아래로 자름 — 계산이 한 번에 밀어낸 몫이라 진짜 몸이 받는 값이 아님         // 머리가 가슴·무릎 쪽으로 끝까지 숙여질 때 받는 힘 한계(g)
+  hipOm: 130,
+  slipAcc: 6,           // 벨트 없을 때 엉덩이가 방석에서 앞으로 미끄러지지 않게 잡는 힘(m/s², 마찰)           // 엉덩이가 의자(방석·허리 벨트)에 붙어 있는 단단함
+  bagOm: 32,            // 에어백 푹신함(작을수록 푹신)
+  bagCapG: 25,          // 에어백이 미는 힘 한계(g) — 구멍으로 바람이 빠져서 더 세지 않음
   muscleAcc: 38,        // 사람이 자세를 버티는 힘(m/s²)
   slowmo: 0.2,          // 처음 부딪힐 때 느린 화면 배속
   slowmoTime: 1.3,      // 느린 화면 시간(초, 실제 시간)
@@ -422,7 +428,7 @@ function seatFrame(car,seat,X,Y,VX,VY){
   return {ox:o[0],oy:o[1],fx,fy,ux,uy,vx,vy};
 }
 function restPose(st,drv,sc){
-  const fv=st.fy-st.y+0.05;const P=[[0,0],[-0.11,0.44],[-0.14,0.7],[0.43,0.09],[0,0],[0.42,0.1],[0,0],[0.1,0.24],[0.34,0.18],[0.08,0.25],[0.3,0.1]];
+  const fv=st.fy-st.y+0.085;const P=[[0,0],[-0.11,0.44],[-0.14,0.7],[0.43,0.09],[0,0],[0.42,0.1],[0,0],[0.1,0.24],[0.34,0.18],[0.08,0.25],[0.3,0.1]];
   const shin=0.45;for(const [k,f] of [[3,4],[5,6]]){const kn=P[k];const dz=kn[1]-fv;const hz=dz<shin?Math.sqrt(shin*shin-dz*dz):0;P[f]=[kn[0]+hz,dz<shin?fv:kn[1]-shin];}
   if(drv){P[7]=[0.2,0.3];P[8]=[0.45,0.43];P[9]=[0.18,0.31];P[10]=[0.43,0.41];}
   return P.map(p=>[p[0]*sc,p[1]*sc]);
@@ -689,6 +695,17 @@ function driveStep(h){
 }
 
 /* ===================== 사람 (관절 몸, 안전벨트·에어백) ===================== */
+/* 관절마다 무게 비율(1/질량): 엉덩이·몸통은 무겁고 팔은 가벼움 → 팔이 휘둘려도 몸통이 덜 끌려감 */
+const JM=[1/16,1/22,1/4.5,1/8,1/4,1/8,1/4,1/2.2,1/1.1,1/2.2,1/1.1];
+/* 목: 머리가 몸통에 비해 꺾이면 용수철·완충기처럼 천천히 멈춤 (진짜 목 근육·인대) */
+function neckSpring(pp,base,p,h){const P=base,C=base+1,Hd=base+2;
+  const tx=pp.x[C]-pp.x[P],ty=pp.y[C]-pp.y[P],nx=pp.x[Hd]-pp.x[C],ny=pp.y[Hd]-pp.y[C];const nl=hyp(nx,ny)||1e-9;
+  const ang=Math.atan2(tx*ny-ty*nx,tx*nx+ty*ny);
+  const otx=pp.ox[C]-pp.ox[P],oty=pp.oy[C]-pp.oy[P],onx=pp.ox[Hd]-pp.ox[C],ony=pp.oy[Hd]-pp.oy[C];const oang=Math.atan2(otx*ony-oty*onx,otx*onx+oty*ony);
+  if(p.neck0==null)p.neck0=ang;let e=ang-p.neck0;const w=(ang-oang)/h;
+  const k=TUNE.neckK*(1+3*Math.max(0,Math.abs(e)-0.8));let al=-k*e-TUNE.neckC*w;
+  const amax=TUNE.neckCapG*TUNE.gravity/nl;if(al>amax)al=amax;if(al<-amax)al=-amax;
+  const d=al*nl*h*h;const px=-ny/nl,py=nx/nl;pp.x[Hd]+=px*d;pp.y[Hd]+=py*d;pp.x[C]-=px*d*0.2;pp.y[C]-=py*d*0.2;}
 /* 몸이 실내에 닿을 때: 용수철처럼 부드럽게 밀어냄 (om = 단단함, 클수록 딱딱) */
 let PH=1/720;
 function softPush(pp,q,nx,ny,pen,om,zeta,cap){const vin=-((pp.x[q]-pp.ox[q])*nx+(pp.y[q]-pp.oy[q])*ny)/PH;let a=om*om*pen+2*zeta*om*Math.max(0,vin);if(vin<0)a*=0.35;if(a<0)a=0;if(cap&&a>cap)a=cap;let d=a*PH*PH;
@@ -729,35 +746,41 @@ function peopleStep(h){
       if(s.bag.on){const c=mapA(s.bagC,X,Y);const R=bagR(s.bag,t);s.bagW=[c[0]-f.fx*R*0.6,c[1]-f.fy*R*0.6,R];}else s.bagW=null;
       if(s.pbag.on){const c=mapA(s.pbagC,X,Y);const R=bagR(s.pbag,t);s.pbagW=[c[0]-f.fx*R*0.6,c[1]-f.fy*R*0.6,R];}else s.pbagW=null;
       s.beltW=mapA(s.belt,X,Y);}
-    const aMax=(set.dummy?24:TUNE.muscleAcc)*h*h;PH=h;
+    const aMax=(set.dummy?24:TUNE.muscleAcc)*h*h;PH=h;const DB=window.DBG||{};
     for(let k=0;k<pp.n;k++){const p=pp.list[k],s=p.seat,f=s.fr,base=k*J;
       for(let j=0;j<J;j++){const q=base+j;pp.vx[q]=f.vx+(pp.vx[q]-f.vx)*0.997;pp.vy[q]=f.vy+(pp.vy[q]-f.vy)*0.997;pp.vy[q]-=g*h;pp.ox[q]=pp.x[q];pp.oy[q]=pp.y[q];pp.x[q]+=pp.vx[q]*h;pp.y[q]+=pp.vy[q]*h;}
       const belt=set.belt;
-      if(belt){const q=base;const ex=f.ox-pp.x[q],ey=f.oy-pp.y[q];const vx=(pp.x[q]-pp.ox[q])/h-f.vx,vy=(pp.y[q]-pp.oy[q])/h-f.vy;const om=TUNE.hipOm;
-        let ax=om*om*ex-1.0*om*vx,ay=om*om*ey-1.0*om*vy;pp.x[q]+=ax*h*h;pp.y[q]+=ay*h*h;const e2=hyp(f.ox-pp.x[q],f.oy-pp.y[q]);if(e2>0.12){const k2=(e2-0.12)/e2;pp.x[q]+=(f.ox-pp.x[q])*k2;pp.y[q]+=(f.oy-pp.y[q])*k2;}}
-      for(let j=belt?1:0;j<J;j++){const q=base+j;const T=tf(f,pp.rest[q*2],pp.rest[q*2+1]);let cx=(T[0]-pp.x[q])*0.25,cy=(T[1]-pp.y[q])*0.25;const cl=hyp(cx,cy);const lim=j===0?aMax*0.6:j===2?aMax*2.5:aMax;if(cl>lim){cx*=lim/cl;cy*=lim/cl;}pp.x[q]+=cx;pp.y[q]+=cy;}
+      {const q=base;const ex=f.ox-pp.x[q],ey=f.oy-pp.y[q];const vx=(pp.x[q]-pp.ox[q])/h-f.vx,vy=(pp.y[q]-pp.oy[q])/h-f.vy;const om=TUNE.hipOm;
+        let ax=om*om*ex-1.0*om*vx,ay=om*om*ey-1.0*om*vy;
+        if(!belt){// 벨트 없음: 방석·등받이는 밀어 주지만, 앞으로 미끄러지는 건 마찰만큼만 잡음
+          const eu=ex*f.fx+ey*f.fy,ev=ex*f.ux+ey*f.uy;let au=ax*f.fx+ay*f.fy,av=ax*f.ux+ay*f.uy;
+          if(eu<0)au=clamp(au,-TUNE.slipAcc,TUNE.slipAcc);if(ev<0)av=clamp(av,-15,15);ax=f.fx*au+f.ux*av;ay=f.fy*au+f.uy*av;}
+        pp.x[q]+=ax*h*h;pp.y[q]+=ay*h*h;const e2=hyp(f.ox-pp.x[q],f.oy-pp.y[q]);if(belt&&e2>0.12){const k2=(e2-0.12)/e2;pp.x[q]+=(f.ox-pp.x[q])*k2;pp.y[q]+=(f.oy-pp.y[q])*k2;}}
+      for(let j=belt?1:0;j<J;j++){const q=base+j;const T=tf(f,pp.rest[q*2],pp.rest[q*2+1]);let cx=(T[0]-pp.x[q])*0.25,cy=(T[1]-pp.y[q])*0.25;const cl=hyp(cx,cy);const lim=j===0?aMax*0.6:j===2?aMax*(DB.nomus?0:2.5):aMax;if(cl>lim){cx*=lim/cl;cy*=lim/cl;}pp.x[q]+=cx;pp.y[q]+=cy;}
       for(let it=0;it<2;it++){
-        for(let q=0;q<BONES.length;q++){const a=base+BONES[q][0],b=base+BONES[q][1];const wa=(a===base&&belt)?0.25:1,wb=1;
+        for(let q=0;q<BONES.length;q++){const ja=BONES[q][0],jb=BONES[q][1],a=base+ja,b=base+jb;const wa=JM[ja],wb=JM[jb];
           const dx=pp.x[b]-pp.x[a],dy=pp.y[b]-pp.y[a];const l=hyp(dx,dy)||1e-9;const d=(l-pp.bl[k*BONES.length+q])/l/(wa+wb);
           pp.x[a]+=dx*d*wa;pp.y[a]+=dy*d*wa;pp.x[b]-=dx*d*wb;pp.y[b]-=dy*d*wb;}
-        for(const lm of LIMS){const a=base+lm[0],b=base+lm[1];const mn=lm[2]*p.sc;const dx=pp.x[b]-pp.x[a],dy=pp.y[b]-pp.y[a];const l=hyp(dx,dy)||1e-9;
-          if(l<mn){const wa=1,wb=(b===base&&belt)?0.25:1;const d=(l-mn)/l/(wa+wb)*(lm[0]===2?0.12:0.5);pp.x[a]+=dx*d*wa;pp.y[a]+=dy*d*wa;pp.x[b]-=dx*d*wb;pp.y[b]-=dy*d*wb;}}
+        if(!DB.lims)for(const lm of LIMS){const a=base+lm[0],b=base+lm[1];const mn=lm[2]*p.sc;const dx=pp.x[b]-pp.x[a],dy=pp.y[b]-pp.y[a];const l=hyp(dx,dy)||1e-9;
+          if(l<mn){if(lm[0]===2){if(it===0){PH=h;softPush(pp,a,-dx/l,-dy/l,mn-l,90,0.5,TUNE.headLimG*g);}continue;}
+            const wa=JM[lm[0]],wb=JM[lm[1]];const d=(l-mn)/l/(wa+wb)*0.3;pp.x[a]+=dx*d*wa;pp.y[a]+=dy*d*wa;pp.x[b]-=dx*d*wb;pp.y[b]-=dy*d*wb;}}
       }
+      if(!DB.neck)neckSpring(pp,base,p,h);
       if(belt){const q=base+1;const dx=pp.x[q]-s.beltW[0],dy=pp.y[q]-s.beltW[1];const d=hyp(dx,dy);if(d>p.beltL){const nx=-dx/d,ny=-dy/d;const e=d-p.beltL;
         const vin=-((pp.x[q]-pp.ox[q])*nx+(pp.y[q]-pp.oy[q])*ny)/h;let a=TUNE.beltOm*TUNE.beltOm*e+2*0.35*TUNE.beltOm*Math.max(0,vin);a=Math.min(a,TUNE.beltLimitG*g);let dd=a*h*h;if(e>0.3)dd=Math.max(dd,e-0.3);pp.x[q]+=nx*dd;pp.y[q]+=ny*dd;}}
       // 실내에 부딪힘
       let hit=0;const rx=f.ox+f.ux*0.15,ry=f.oy+f.uy*0.15;
       for(let j=0;j<J;j++){const q=base+j;const rho=j===2?0.1:j===1?0.12:0.055;
-        if(s.obF)hit|=pushPoly(pp,q,s.obF,rx,ry,rho,s.ahead>=0?60:140,0.1,(s.ahead>=0?70:150)*g);
-        hit|=pushPoly(pp,q,s.obR,rx,ry,rho,110,0.1,75*g);
+        if(s.obF&&!DB.front)hit|=pushPoly(pp,q,s.obF,rx,ry,rho,s.ahead>=0?60:140,0.1,(s.ahead>=0?70:150)*g);
+        if(!DB.roof)hit|=pushPoly(pp,q,s.obR,rx,ry,rho,110,0.1,75*g);
         pushPoly(pp,q,s.obFl,rx,ry,0.05,200,0.3,150*g);floorHard(pp,q,s.obFl,rx,ry);
-        if(j===0||j===1||j===2||j===7||j===9)pushPoly(pp,q,s.obB,f.ox+f.fx*0.25+f.ux*0.3,f.oy+f.fy*0.25+f.uy*0.3,rho,60,0.05,26*g);
-        if(s.obW&&p.drv&&(j===1||j===2||j===7||j===9))hit|=pushPoly(pp,q,s.obW,rx,ry,rho*0.8,140,0.1,110*g);
-        if(j===1||j===2){const bw=p.drv?s.bagW:s.pbagW;if(bw)pushCircle(pp,q,bw[0],bw[1],bw[2]+rho*0.6,TUNE.bagOm);}}
+        if(!DB.back&&(j===0||j===1||j===2||j===7||j===9))pushPoly(pp,q,s.obB,f.ox+f.fx*0.25+f.ux*0.3,f.oy+f.fy*0.25+f.uy*0.3,Math.min(rho,0.085),60,0.05,26*g);
+        if(s.obW&&!DB.wheel&&p.drv&&(j===1||j===2||j===7||j===9))hit|=pushPoly(pp,q,s.obW,rx,ry,rho*0.8,140,0.1,110*g);
+        if(j===1||j===2){const bw=p.drv?s.bagW:s.pbagW;if(bw&&!DB.bag)pushCircle(pp,q,bw[0],bw[1],bw[2]+rho*0.6,TUNE.bagOm);}}
       for(let j=0;j<J;j++){const q=base+j;pp.vx[q]=(pp.x[q]-pp.ox[q])/h;pp.vy[q]=(pp.y[q]-pp.oy[q])/h;}
       // 머리·가슴 충격(g): 0.003초 평균
       if(t>0.12){const hq=base+2,cq=base+1;const tvx=(pp.vx[cq]*2+pp.vx[base])/3,tvy=(pp.vy[cq]*2+pp.vy[base])/3;const ah=hyp(pp.vx[hq]-pp.hv[k*4],pp.vy[hq]-pp.hv[k*4+1])/h/g,ac=hyp(tvx-pp.hv[k*4+2],tvy-pp.hv[k*4+3])/h/g;
-        const al=Math.min(1,h/0.003);pp.hg1[k]+=(ah-pp.hg1[k])*al;pp.cg1[k]+=(ac-pp.cg1[k])*al;pp.hg[k]+=(pp.hg1[k]-pp.hg[k])*al;pp.cg[k]+=(pp.cg1[k]-pp.cg[k])*al;if(car.crashT>=0){if(pp.hg[k]>pp.hmax[k])pp.hmax[k]=pp.hg[k];if(pp.cg[k]>pp.cmax[k])pp.cmax[k]=pp.cg[k];}}
+        const al=Math.min(1,h/0.003);const AC=TUNE.accelClipG;const ah2=Math.min(ah,AC),ac2=Math.min(ac,AC);pp.hg1[k]+=(ah2-pp.hg1[k])*al;pp.cg1[k]+=(ac2-pp.cg1[k])*al;pp.hg[k]+=(pp.hg1[k]-pp.hg[k])*al;pp.cg[k]+=(pp.cg1[k]-pp.cg[k])*al;if(car.crashT>=0){if(pp.hg[k]>pp.hmax[k])pp.hmax[k]=pp.hg[k];if(pp.cg[k]>pp.cmax[k])pp.cmax[k]=pp.cg[k];}}
       pp.hv[k*4]=pp.vx[base+2];pp.hv[k*4+1]=pp.vy[base+2];pp.hv[k*4+2]=(pp.vx[base+1]*2+pp.vx[base])/3;pp.hv[k*4+3]=(pp.vy[base+1]*2+pp.vy[base])/3;
     }
   }
