@@ -165,7 +165,15 @@ const TUNE = {
   staticMargin: 0.14,   // 무게중심이 앞에 있는 정도 (안정성)
   diveTrimMax: 1.45,    // 내려가는 각도에 맞춰 다듬는 속도 한계(시작 속도 × 이 값). 크면 더 곧게 내리꽂힘
   shardMax: 650,        // 쇠조각 최대 개수
-  partMax: 1800,        // 불꽃·먼지 최대 개수
+  partMax: 2600,       // 불꽃·먼지 최대 개수
+  wind: -4,            // 바람(m/s, -는 왼쪽). 검은 연기가 날리는 방향
+  evacSpeed: 1.2,      // 통로를 걷는 빠르기(m/s)
+  slideGap: 1.1,       // 미끄럼대 하나로 다음 사람이 내려가기까지(초)
+  rescueDelay: 4,      // 사고가 나고 소방차가 출발하기까지(초)
+  rescueDist: 420,     // 소방차·구급차가 출발하는 거리(m)
+  leakRate: 0.025,     // 연료 탱크가 찢어지면 1초에 새는 양(처음 연료의 비율)
+  poolBurn: 0.6,       // 땅에 고인 연료가 불탈 때 1초에 타는 양(kg, 0.5 m 칸마다)
+  poolSpread: 0.12,    // 고인 연료가 옆으로 퍼지는 빠르기
 };
 
 /* ===================== 기본 도구 ===================== */
@@ -180,6 +188,15 @@ const shadeCache=new Map();
 function shade(hex,f){const k=hex+f;let c=shadeCache.get(k);if(c)return c;const n=parseInt(hex.slice(1),16);let r=n>>16&255,g=n>>8&255,b=n&255;
   if(f<1){r*=f;g*=f;b=b*f*1.02+4;}else{r=r+(255-r)*(f-1);g=g+(255-g)*(f-1);b=b+(255-b)*(f-1);}
   c='rgb('+(clamp(r,0,255)|0)+','+(clamp(g,0,255)|0)+','+(clamp(b,0,255)|0)+')';shadeCache.set(k,c);return c;}
+
+const toneCache=new Map();
+/* 몸통 색: 위는 햇빛 받아 밝고(쇠 광택), 아래로 갈수록 그늘. 불에 탄 정도(burn)만큼 검게 그을림 */
+function bodyTone(hex,v,inside,burn){const fq=Math.round(v*40)/40,bq=Math.round(burn*20)/20;const k=hex+fq+(inside?'i':'o')+bq;let c=toneCache.get(k);if(c)return c;
+  let f;if(inside)f=1.03-0.1*fq;else f=fq<0.15?1.05+0.47*fq:1.12-0.36*Math.pow((fq-0.15)/0.85,1.2);
+  const n=parseInt(hex.slice(1),16);let r=n>>16&255,g=n>>8&255,b=n&255;
+  if(f<1){r*=f;g*=f;b=b*f*1.02+4;}else{r=r+(255-r)*(f-1);g=g+(255-g)*(f-1);b=b+(255-b)*(f-1);}
+  const t=bq*0.88;r=r+(38-r)*t;g=g+(33-g)*t;b=b+(29-b)*t;
+  c='rgb('+(clamp(r,0,255)|0)+','+(clamp(g,0,255)|0)+','+(clamp(b,0,255)|0)+')';toneCache.set(k,c);return c;}
 
 /* ===================== 비행기 자료 (진짜 크기·무게·좌석) ===================== */
 function rows(u0,pitch,count,n,cls,deck){const a=[];for(let k=0;k<count;k++)a.push({u:u0+k*pitch,n,cls,deck:deck||'main'});return a;}
@@ -448,7 +465,8 @@ function buildPlaneLocal(P,gearDown){
   const fusTot=fusM+(gearNodes.length?0:gearM);
   let wsum=0;G.forEach(c=>c.forEach((n,r)=>{const w=r===0?0.85:(r===BR?1.2:1);wsum+=w;}));
   G.forEach(c=>c.forEach((n,r)=>{const w=r===0?0.85:(r===BR?1.2:1);nodes[n].m+=fusTot*w/wsum;}));
-  return {nodes,beams,G,LONG,VERT,NS,nR,FR,UR,BR,rowY,wn,fn,hn,engines,wheels,cells,seats,boxes,locks,strut,barrierI,fus,L,rotor,skips,stBeams};
+  const tearable=[];beams.forEach((bm,k)=>{if((bm.lon&&!bm.skip)||bm.vert)tearable.push(k);});
+  return {nodes,beams,G,LONG,VERT,NS,nR,FR,UR,BR,rowY,wn,fn,hn,engines,wheels,cells,seats,boxes,locks,strut,barrierI,fus,L,rotor,skips,stBeams,tearable};
 }
 
 /* ===================== 시뮬레이션 상태 ===================== */
@@ -472,7 +490,7 @@ function makeSim(cfg){
     lam:new Float64Array(nb),alive:new Uint8Array(nb),coll:new Uint8Array(nb),bk:new Uint8Array(nb),stress:new Float32Array(nb),bent:new Float32Array(nb),
     broken:[],nComp:1,mainComp:0,compMass:[],locks:B.locks,engines:B.engines,wheels:B.wheels,boxes:B.boxes,
     t:0,impactT:-1,impact:null,maxG:0,gS:0,lastV:null,trail:[],firstTouchX:null,stopT:0,done:false,yieldCount:0,breakCount:0,fires:[],
-    persons:null,surf:[],crk:new Set(),cfg,mir:cfg.mir?-1:1,rotor:B.rotor};
+    persons:null,surf:[],crk:new Set(),burn:new Float32Array(n),leaks:[],fuelKg:P.fuel,evac:null,cfg,mir:cfg.mir?-1:1,rotor:B.rotor};
   for(let i=0;i<n;i++){const d=B.nodes[i];s.x[i]=d.x;s.y[i]=d.y;s.m[i]=Math.max(d.m,1);s.kind[i]=d.k;s.rad[i]=d.r;
     s.buoy[i]=[1.7,1.3,0.35,1.1,0.4,0.6,0.9,0.3,0.5,0.6][d.k]||0.5;}
   for(let b=0;b<nb;b++){const d=B.beams[b];s.ba[b]=d.a;s.bb[b]=d.b;s.coll[b]=d.coll;s.bk[b]=d.k;s.alive[b]=1;
@@ -802,7 +820,8 @@ const HAIRS=['#2a2522','#4a3426','#7a5a3a','#c9b28a','#8c8c8c','#1c1a19'];
 function initPersons(s,list){
   const np=list.length;const pp={n:np,x:new Float64Array(np*J),y:new Float64Array(np*J),ox:new Float64Array(np*J),oy:new Float64Array(np*J),vx:new Float64Array(np*J),vy:new Float64Array(np*J),
     rest:new Float64Array(np*J*2),bl:new Float64Array(np*BONES.length),loose:new Uint8Array(np),maxG:new Float32Array(np),gS:new Float32Array(np),pvx:new Float32Array(np),pvy:new Float32Array(np),
-    hurt:new Uint8Array(np),dead:new Uint8Array(np),list};
+    hurt:new Uint8Array(np),dead:new Uint8Array(np),list,
+    ev:new Uint8Array(np),wait:new Uint8Array(np),eu:new Float32Array(np),erow:new Uint8Array(np),eT:new Float32Array(np),ex:new Int16Array(np).fill(-1),edir:new Int8Array(np),efc:new Int8Array(np),eph:new Float32Array(np),ewx:new Float32Array(np),safe:new Float32Array(np),eraft:new Uint8Array(np),path:new Array(np).fill(null)};
   list.forEach((p,k)=>{
     const sc=p.crew?rr(0.97,1.05):rr(0.86,1.08);p.sc=sc;
     p.shirt=p.crew?'#e9ecef':SHIRTS[(rnd()*SHIRTS.length)|0];p.pants=p.crew?'#1f2a3a':PANTS[(rnd()*PANTS.length)|0];
@@ -837,7 +856,7 @@ function peopleStep(s,h){
   const pp=s.persons;if(!pp||!pp.n)return;const g=TUNE.gravity,hh=h*h;const aMax=TUNE.muscleAcc*hh;
   const seats=s.B.seats;for(let q=0;q<seats.length;q++){const st=seats[q];st.fr=st.torn?null:seatFrame(s,st);}
   for(let k=0;k<pp.n;k++){
-    const p=pp.list[k];const base=k*J;const loose=pp.loose[k];
+    if(pp.ev[k])continue;const p=pp.list[k];const base=k*J;const loose=pp.loose[k];
     const f=loose?null:p.seat.fr;if(!loose&&!f){pp.loose[k]=1;continue;}
     for(let j=0;j<J;j++){const q=base+j;
       if(!loose){pp.vx[q]=f.vx+(pp.vx[q]-f.vx)*0.992;pp.vy[q]=f.vy+(pp.vy[q]-f.vy)*0.992;}else{pp.vx[q]*=0.9995;pp.vy[q]*=0.9995;}
@@ -874,7 +893,7 @@ function peopleStep(s,h){
 function peopleFrame(s,dt){
   const pp=s.persons;if(!pp||!pp.n||dt<=0)return;
   const G=s.B.G;
-  for(let k=0;k<pp.n;k++){const p=pp.list[k];let vx,vy;
+  for(let k=0;k<pp.n;k++){if(pp.ev[k])continue;const p=pp.list[k];let vx,vy;
     if(!pp.loose[k]){const st=p.seat;const A=G[st.i][st.r],B=G[st.i+1][st.r];
       const fl=s.B.LONG[st.i][st.r];
       if(!s.alive[fl]||s.comp[A]!==s.comp[B]){st.torn=true;}
@@ -1077,17 +1096,57 @@ function updateFx(dt){
   for(let k=parts.length-1;k>=0;k--){const p=parts[k];p.life-=dt;if(p.life<=0){parts.splice(k,1);continue;}
     if(p.t===0){p.vy-=9.81*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;const gh=gH(p.x);if(p.y<gh){p.y=gh;p.vy=Math.abs(p.vy)*0.3;p.vx*=0.6;}}
     else if(p.t===1||p.t===2){p.vx*=1-1.6*dt;p.vy=p.vy*(1-1.6*dt)+(p.t===2?1.6:0.25)*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.size+=dt*(p.t===2?2.2:1.4);}
-    else if(p.t===3){p.vx*=1-1.2*dt;p.vy=p.vy*(1-1.2*dt)+5*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.size+=dt*1.2;}
+    else if(p.t===3||p.t===9){p.vx*=1-1.2*dt;p.vy=p.vy*(1-1.2*dt)+5*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.size+=dt*1.2;}
     else if(p.t===4||p.t===5){p.vy-=9.81*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;const gh=p.t===4?-0.3:gH(p.x);if(p.y<gh){p.life=0;}}
+    else if(p.t===6||p.t===7){p.vy-=9.81*dt;p.vx*=1-0.3*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.y<baseY(p.x)+0.05){p.life=0;if(p.t===7&&rnd()<0.3)part(1,p.x,baseY(p.x)+0.2,rr(-0.5,0.5),rr(0.2,0.8),rr(0.8,1.6),rr(0.3,0.6),'#f2f2ee');}}
+    else if(p.t===8){p.vx+=(TUNE.wind-p.vx)*0.5*dt;p.vy+=(5.5-p.vy)*0.45*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.size+=dt*(0.9+p.size*0.05);}
   }
   for(const s of SIMS)for(const f of s.fires){if(f.until<s.t)continue;const i=f.node;if(TER.water&&s.y[i]<0.2&&s.x[i]<TER.waterEnd){f.until=0;continue;}
+    {const R2=(f.r*3.2)**2,bn=s.burn,m=Math.min(bn.length,s.n);for(let j=0;j<m;j++){const dx=s.x[j]-s.x[i],dy=s.y[j]-s.y[i];if(dx*dx+dy*dy<R2)bn[j]=Math.min(1,bn[j]+dt*0.045*f.pow);}}
     let nf=f.pow*dt*60*0.6;while(nf>0){if(nf<1&&rnd()>nf)break;nf--;part(3,s.x[i]+rr(-1,1)*f.r*0.6,s.y[i]+rr(-0.3,0.6)*f.r,s.vx[i]*0.7+rr(-1,1),s.vy[i]*0.7+rr(0.5,2.5),rr(0.4,0.9),rr(0.35,0.8)*f.r,null);}
-    if(rnd()<0.35*dt*60)part(2,s.x[i]+rr(-1,1)*f.r,s.y[i]+f.r*1.2,s.vx[i]*0.5+rr(-1,1)+1,rr(1,3),rr(4,8),f.r*rr(0.7,1.3),null);}
+    if(rnd()<0.22*dt*60)part(8,s.x[i]+rr(-1,1)*f.r,s.y[i]+f.r*1.2,s.vx[i]*0.4+TUNE.wind*0.3,rr(1.5,3.5),rr(8,13),f.r*rr(0.8,1.3),null);
+    if(rnd()<dt*3)ignitePool(s.x[i],1.5,0.25);}
+}
+/* ===================== 연료: 탱크가 찢어지면 새고, 땅에 고이고, 불이 번짐 ===================== */
+function initPools(){TER.pool=new Float32Array(TER.n);TER.pfire=new Float32Array(TER.n);TER.foam=new Float32Array(TER.n);TER.p0=1e9;TER.p1=-1;TER.pacc=0;TER.pscan=0;}
+function addPool(x,kg){if(!TER.pool)return;const i=gIdx(x)|0;if(i<1||i>=TER.n-1)return;TER.pool[i]+=kg;if(i<TER.p0)TER.p0=i;if(i>TER.p1)TER.p1=i;}
+function ignitePool(x,r,pow){if(!TER.pool||!set.fire)return;const a=Math.max(1,gIdx(x-r)|0),b=Math.min(TER.n-2,gIdx(x+r)|0);for(let i=a;i<=b;i++)if(TER.pool[i]>0.05&&TER.foam[i]<0.5)TER.pfire[i]=Math.max(TER.pfire[i],pow||0.25);}
+function startLeak(s,node){if(s.fuelKg<=0||s.leaks.length>=6)return;for(const l of s.leaks)if(l.node===node)return;s.leaks.push({node,rate:s.P.fuel*TUNE.leakRate*rr(0.6,1.4)});}
+function leakStep(s,dt){if(!s.leaks.length)return;const sc=s.P.len/40;
+  for(const l of s.leaks){if(s.fuelKg<=0)break;const i=l.node;const dm=Math.min(s.fuelKg,l.rate*dt);s.fuelKg-=dm;
+    const hgt=s.y[i]-baseY(s.x[i]);addPool(s.x[i]+s.vx[i]*Math.min(1,Math.sqrt(Math.max(0,2*hgt/9.81))),dm);
+    if(rnd()<dt*40)part(6,s.x[i],s.y[i],s.vx[i]*0.7+rr(-1.5,1.5),s.vy[i]*0.7+rr(-1,1.5),rr(0.6,1.4),rr(0.04,0.09)*Math.max(0.6,sc),null);
+    // 새는 곳에 불이 있으면 고인 연료에도 붙음
+    for(const f of s.fires)if(f.until>s.t&&hyp(s.x[f.node]-s.x[i],s.y[f.node]-s.y[i])<4){ignitePool(s.x[i],2,0.3);break;}}
+}
+function poolStep(dt){const P=TER.pool;if(!P||TER.p1<TER.p0)return;const F=TER.pfire,FO=TER.foam,h=TER.h;
+  TER.pacc+=dt;
+  while(TER.pacc>0.1){TER.pacc-=0.1;const a=Math.max(1,TER.p0-1),b=Math.min(TER.n-2,TER.p1+1);
+    for(let i=a;i<=b;i++){const ex=P[i]-0.6;if(ex<=0)continue;const k=ex*TUNE.poolSpread;const sl=clamp((h[i-1]-h[i+1])/(2*TER.dx)*3,-0.45,0.45);
+      const wl=0.5-sl,wr=0.5+sl;P[i]-=k;P[i-1]+=k*wl;P[i+1]+=k*wr;}
+    TER.p0=a;TER.p1=b;while(TER.p0<TER.p1&&P[TER.p0]<0.01)TER.p0++;while(TER.p1>TER.p0&&P[TER.p1]<0.01)TER.p1--;
+    if(TER.water){for(let i=a;i<=b;i++)if(TER.x0+i*TER.dx<TER.waterEnd)P[i]*=0.995;}}
+  let nb=0;
+  for(let i=TER.p0;i<=TER.p1;i++){if(FO[i]>0)FO[i]=Math.max(0,FO[i]-dt*0.01);if(F[i]<=0)continue;
+    if(P[i]<0.04||FO[i]>0.6){F[i]=Math.max(0,F[i]-dt*1.5);if(P[i]<0.04)F[i]=0;continue;}
+    nb++;const burn=Math.min(P[i],TUNE.poolBurn*dt*(0.3+F[i]));P[i]-=burn;F[i]=Math.min(1,F[i]+dt*0.6)*(1-FO[i]*dt*3);
+    if(rnd()<dt*5){if(P[i-1]>0.04&&F[i-1]<=0&&FO[i-1]<0.5)F[i-1]=0.1;if(P[i+1]>0.04&&F[i+1]<=0&&FO[i+1]<0.5)F[i+1]=0.1;}}
+  TER.nburn=nb;if(!nb)return;
+  // 불꽃·검은 연기
+  const pick=()=>{for(let t=0;t<6;t++){const i=TER.p0+((rnd()*(TER.p1-TER.p0+1))|0);if(F[i]>0.05)return i;}return -1;};
+  let ef=Math.min(26,nb*0.4)*dt*60;while(ef>0){if(ef<1&&rnd()>ef)break;ef--;const i=pick();if(i<0)break;const x=TER.x0+i*TER.dx+rr(0,TER.dx);const gy=Math.max(h[i],TER.water&&x<TER.waterEnd?0:-1e9);
+    part(9,x,gy+0.15,TUNE.wind*0.25+rr(-0.6,0.6),rr(1.5,4.5)*F[i],rr(0.5,1.1),rr(0.4,1.0)*(0.5+F[i]),null);}
+  let es=Math.min(5,nb*0.05+0.4)*dt*60;while(es>0){if(es<1&&rnd()>es)break;es--;const i=pick();if(i<0)break;const x=TER.x0+i*TER.dx;
+    part(8,x,h[i]+1.5+rr(0,1.5),TUNE.wind*0.3,rr(2,4),rr(9,15),rr(1.0,2.0),null);}
+  // 고인 불 위에 있는 비행기도 불붙고 그을림
+  TER.pscan+=dt;if(TER.pscan>0.25){TER.pscan=0;for(const z of SIMS){const sc=z.P.len/40;const m=Math.min(z.burn.length,z.n);
+    for(let j=0;j<m;j+=2){const x=z.x[j];const gi=gIdx(x)|0;if(F[gi]<0.3)continue;const hg=z.y[j]-h[gi];if(hg>3)continue;
+      z.burn[j]=Math.min(1,z.burn[j]+0.012*F[gi]);if(rnd()<0.02*F[gi]&&z.kind[j]<6)addFire(z,j,0.9,Math.max(0.5,sc*0.8));}}}
 }
 function addFire(s,i,pow,r){if(!set.fire)return;for(const f of s.fires)if(f.node===i){f.until=Math.max(f.until,s.t+rr(15,35));return;}if(s.fires.length>24)return;s.fires.push({node:i,until:s.t+rr(15,40),pow,r});}
 function fireball(s,x,y,vx,vy,r){if(!set.fire)return;for(let k=0;k<34;k++){const a=rr(0,6.28),v=rr(2,10)*r/3;part(3,x,y,vx*0.5+Math.cos(a)*v,vy*0.3+Math.sin(a)*v+3,rr(0.4,1.1),rr(0.5,1.3)*r/2,null);}
   for(let k=0;k<14;k++)part(2,x+rr(-r,r),y+rr(0,r),vx*0.3+rr(-3,3),rr(1,5),rr(5,10),r*rr(0.5,1.0),null);
-  SND.boom(clamp(r/6,0.3,1));Shake.add(0.5);}
+  ignitePool(x,r*1.5,0.6);SND.boom(clamp(r/6,0.3,1));Shake.add(0.5);}
 function frameEffects(s,dt){
   const sc=s.P.len/40;
   if(s.rotor){const R=s.rotor;R.tips.forEach((t,k)=>{const tbm=R.tipBeams[k];if(!s.alive[tbm[0]])return;
@@ -1102,6 +1161,7 @@ function frameEffects(s,dt){
       for(let k=0;k<3;k++)part(0,x,y,vx*0.7+rr(-6,6),vy*0.7+rr(-2,6),rr(0.2,0.5),0,null);
       snaps++;if(s.bk[b]===7){s.obsBreak=(s.obsBreak||0)+1;}else s.breakCount++;
       const fuel=(s.kind[a]===1&&s.kind[c]===1)||s.bk[b]===2,pyl=s.bk[b]===4;
+      if(fuel){startLeak(s,s.kind[a]===1?a:c);}
       if((fuel&&sp>22)||(pyl&&sp>45&&rnd()<0.35)){const node=s.kind[a]===1?a:c;addFire(s,node,sp>45?2.2:1.2,Math.max(0.6,sc*1.2));if(fuel&&sp>40&&(!s.lastBall||s.t-s.lastBall>0.6)&&!(TER.water&&s.y[node]<1&&s.x[node]<TER.waterEnd)){s.lastBall=s.t;fireball(s,s.x[node],s.y[node],s.vx[node],s.vy[node],Math.max(1.5,sc*3.2));}}
     }
     if(snaps)SND.snap(Math.min(1,snaps/4));
@@ -1114,7 +1174,7 @@ function frameEffects(s,dt){
     const kd=gKind(s.x[i]);const onGround=s.y[i]-s.rad[i]<gH(s.x[i])+0.3;
     if(s.kind[i]===5&&sp>0){continue;}
     if(sp>8){scrape+=Math.min(sp,80);
-      if(!onGround||kd===0||kd===3){if(rnd()<sp/40*dt*60)for(let k=0;k<2;k++)part(0,s.x[i],s.y[i]-s.rad[i]+0.05,s.vx[i]*rr(0.3,0.9)+rr(-3,3),rr(1,7)+Math.abs(s.vy[i])*0.2,rr(0.25,0.7),0,null);}
+      if(!onGround||kd===0||kd===3){if(TER.pool&&TER.pool[gIdx(s.x[i])|0]>0.1&&rnd()<dt*4)ignitePool(s.x[i],1,0.2);if(rnd()<sp/40*dt*60)for(let k=0;k<2;k++)part(0,s.x[i],s.y[i]-s.rad[i]+0.05,s.vx[i]*rr(0.3,0.9)+rr(-3,3),rr(1,7)+Math.abs(s.vy[i])*0.2,rr(0.25,0.7),0,null);}
       else if(TER.water&&s.x[i]<TER.waterEnd){}
       else{if(rnd()<sp/30*dt*60){part(1,s.x[i],gH(s.x[i])+0.3,s.vx[i]*0.25+rr(-1,1),rr(0.5,2.5),rr(1.2,2.6),rr(0.3,0.8)*Math.max(0.5,sc),kd===2?'#8a6a48':'#7d6f55');}
         if(rnd()<sp/60*dt*60)part(5,s.x[i],gH(s.x[i])+0.2,s.vx[i]*rr(0.3,0.7),rr(2,7),rr(0.6,1.5),rr(0.08,0.22),kd===1?'#4d6b33':'#6b4f35');}}
@@ -1129,6 +1189,146 @@ function frameEffects(s,dt){
   if(maxHit>4){SND.thud(Math.min(1,maxHit/30));Shake.add(Math.min(0.6,maxHit/60));}
   SND.scrape(Math.min(1,scrape/600));
 }
+
+/* ===================== 대피: 멈추면 비상구·찢어진 틈으로 나와 미끄럼대를 타고 멀리 대피 ===================== */
+function floorFrame(s,row,u){const L=s.P.len,NS=s.B.NS;const fi=clamp(u/L*NS,0,NS-0.001);const i=fi|0;return seatFrame(s,{i,r:row,t:fi-i});}
+function evacShould(s,dt){const pp=s.persons;if(!pp||!pp.n||s.impactT<0)return false;
+  const c=mainCG(s);if(hyp(c.vx,c.vy)>1.2){s.evStill=0;return false;}s.evStill=(s.evStill||0)+dt;if(s.evStill<2.5)return false;
+  return s.breakCount>3||s.leaks.length>0||s.fires.some(f=>f.until>s.t)||(!!s.impact&&!s.impact.byWheel&&!s.cfg.park);}
+function evacStart(s){const P=s.P,B=s.B,L=P.len,NS=B.NS;const ex=[];
+  const us=B.seats.map(st=>st.u);const uMin=Math.min(...us),uMax=Math.max(...us);
+  const add=(u,row,kind,fw)=>{u=clamp(u,0.4,L-0.4);if(ex.some(e=>e.row===row&&Math.abs(e.u-u)<2))return;ex.push({u,row,kind,free:0,deploy:0,fw:fw!=null?fw:(u<L*0.45?1:-1),n:0});};
+  if(L<12)add(B.seats[0].u+(P.heli?1.2:0.4),B.FR,'step',1);
+  else{add(uMin-1.0,B.FR,'door');add(uMax+1.0,B.FR,'door');
+    if(P.wing&&L>20)add(P.wing.rLE[0]+(P.wing.rTE[0]-P.wing.rLE[0])*0.4,B.FR,'wing',-1);
+    if(L>35)for(let u=uMin+11;u<uMax-7;u+=12)add(u,B.FR,'door');
+    if(B.UR>=0&&P.upper)add(P.upper.from+1.2,B.UR,'door',1);}
+  for(let i=0;i<NS;i++){if(!s.alive[B.LONG[i][B.FR]])ex.push({u:(i+0.5)*L/NS,row:B.FR,kind:'break',free:0,deploy:1,fw:0,n:0,st:i});}
+  s.evac={ex,t:0,chk:0,ok:null};const pp=s.persons;
+  for(let k=0;k<pp.n;k++){if(pp.dead[k])continue;const p=pp.list[k];pp.safe[k]=rr(22,55);
+    if(!pp.loose[k]){pp.wait[k]=1;pp.eu[k]=p.seat.u;pp.erow[k]=p.seat.r;pp.eT[k]=rr(1,8)+(pp.hurt[k]?5:0);pp.ex[k]=-1;}
+    else{const b=k*J;const hg=pp.y[b]-baseY(pp.x[b]);if(hg<1.0&&!(TER.water&&pp.x[b]<TER.waterEnd)){pp.ev[k]=3;pp.ewx[k]=pp.x[b];pp.eT[k]=rr(2,7);pp.edir[k]=0;}
+      else{// 의자에서 튕겨 나갔지만 기체 안 바닥 근처에 있으면 일어나서 출구로
+        let bi=-1,bd=1.6;for(let i=0;i<=NS;i++){const n0=B.G[Math.min(i,NS)][B.FR];const d=hyp(s.x[n0]-pp.x[b],s.y[n0]-pp.y[b]);if(d<bd){bd=d;bi=i;}}
+        if(bi>=0){pp.wait[k]=1;pp.eu[k]=clamp(bi,0.2,NS-0.2)*L/NS;pp.erow[k]=B.FR;pp.eT[k]=rr(3,10);pp.ex[k]=-1;pp.uploose=1;}}}}
+}
+function exitOK(s,e){const B=s.B,L=s.P.len,NS=B.NS;const i=clamp((e.u/L*NS)|0,0,NS-1);
+  const f=floorFrame(s,e.row,e.u);const h=f.oy-baseY(f.ox);
+  if(TER.water&&f.ox<TER.waterEnd&&f.oy<-0.5)return false;
+  if(e.kind==='break'||e.kind==='step'){if(h>3.2)return false;}else if(h>10)return false;
+  if(e.kind==='wing'){const w=B.wn[0];if(s.comp[w]!==s.comp[B.G[i][e.row]])return false;}
+  for(const q of s.fires)if(q.until>s.t&&hyp(s.x[q.node]-f.ox,s.y[q.node]-f.oy)<3.5)return false;
+  if(TER.pfire){const gi=gIdx(f.ox)|0;for(let d=-6;d<=6;d++)if((TER.pfire[gi+d]||0)>0.3)return false;}
+  if(e.kind!=='break'&&e.row>0){const vb=B.VERT[i][e.row-1];if(s.rest[vb]<s.rest0[vb]*0.55)return false;}
+  return true;}
+function reach(s,row,u1,e){const B=s.B,L=s.P.len,NS=B.NS;const i1=clamp((u1/L*NS)|0,0,NS-1),i2=e.kind==='break'?e.st:clamp((e.u/L*NS)|0,0,NS-1);
+  const lo=Math.min(i1,i2),hi=Math.max(i1,i2);for(let i=lo;i<=hi;i++){if(e.kind==='break'&&i===e.st)continue;if(!s.alive[B.LONG[i][row]])return false;}return true;}
+function mkPath(pts,spd,raft){let len=0;const seg=[];for(let i=1;i<pts.length;i++){const l=hyp(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(l);len+=l;}return{pts,seg,len:Math.max(0.3,len),spd,raft};}
+function pathAt(P,t){let d=t*P.len;for(let i=0;i<P.seg.length;i++){if(d<=P.seg[i]||i===P.seg.length-1){const u=P.seg[i]>0?Math.min(1,d/P.seg[i]):1;const a=P.pts[i],b=P.pts[i+1];return[lerp(a[0],b[0],u),lerp(a[1],b[1],u),b[0]-a[0],b[1]-a[1],i];}d-=P.seg[i];}const q=P.pts[P.pts.length-1];return[q[0],q[1],1,0,0];}
+function exitPath(s,e){const f=floorFrame(s,e.row,e.u);const top=[f.ox,f.oy];const dirX=(f.fx<0?-1:1)*(e.fw||1);
+  if(e.kind==='break'||e.kind==='step'){const gx=f.ox+dirX*0.7;return mkPath([top,[gx,baseY(gx)]],1.5,false);}
+  const pts=[top];let st=top;if(e.kind==='wing'){const te=s.B.wn[1];st=[s.x[te],s.y[te]+0.1];pts.push(st);}
+  const h=st[1]-baseY(st[0]);const bx=st[0]+dirX*clamp(h*1.5,2,9);const wet=!!(TER.water&&bx<TER.waterEnd);pts.push([bx,wet?0.25:baseY(bx)+0.1]);
+  return mkPath(pts,4,wet);}
+/* 사람 자세(걷기·뛰기·앉기)를 바로 정해서 그림 */
+function setPose(pp,k,ox,oy,fx,fy,ux,uy,face,mode,ph){const sc=pp.list[k].sc;const b=k*J;
+  const put=(j,lx,ly)=>{lx*=sc*face;ly*=sc;pp.x[b+j]=ox+fx*lx+ux*ly;pp.y[b+j]=oy+fy*lx+uy*ly;};
+  if(mode==='sit'){put(0,0,0.12);put(1,-0.12,0.62);put(2,-0.1,0.86);put(3,0.42,0.24);put(4,0.86,0.12);put(5,0.4,0.22);put(6,0.84,0.1);put(7,-0.02,0.4);put(8,0.2,0.32);put(9,0.0,0.38);put(10,0.22,0.3);return;}
+  const run=mode==='run';const sw=run?0.62:mode==='walk'?0.36:0;const a=Math.sin(ph)*sw;const kb=run?0.8:0.35;const hip=run?0.86:0.92;const lean=run?0.13:0.03;
+  put(0,0,hip);put(1,lean,hip+0.5);put(2,lean+0.03,hip+0.74);
+  const leg=(jk,jf,ang,phs)=>{const kx=Math.sin(ang)*0.44,ky=hip-Math.cos(ang)*0.44;const fa=ang-Math.max(0,Math.sin(phs))*kb;put(jk,kx,ky);put(jf,kx+Math.sin(fa)*0.47,ky-Math.cos(fa)*0.47);};
+  leg(3,4,a,ph);leg(5,6,-a,ph+Math.PI);
+  const arm=(je,jh,ang)=>{const ex=lean+Math.sin(ang)*0.28,ey=hip+0.5-Math.cos(ang)*0.28;put(je,ex,ey);const h2=ang+(run?1.2:0.25);put(jh,ex+Math.sin(h2)*0.27,ey-Math.cos(h2)*0.27);};
+  arm(7,8,-a*0.9);arm(9,10,a*0.9);}
+function evacStep(s,dt){if(!s.evac){if(!evacShould(s,dt))return;evacStart(s);}const E=s.evac;E.t+=dt;const pp=s.persons;
+  E.chk-=dt;let rechk=false;if(E.chk<=0||!E.ok){E.chk=2;rechk=true;
+    for(let i=0;i<s.B.NS;i++){if(!s.alive[s.B.LONG[i][s.B.FR]]&&!E.ex.some(e=>e.kind==='break'&&e.st===i))E.ex.push({u:(i+0.5)*s.P.len/s.B.NS,row:s.B.FR,kind:'break',free:0,deploy:1,fw:0,n:0,st:i});}
+    E.ok=E.ex.map(e=>exitOK(s,e));}
+  E.ex.forEach((e,j)=>{if((e.kind==='door'||e.kind==='wing')&&(E.ok[j]||e.deploy>0)&&E.t>1.5)e.deploy=Math.min(1,e.deploy+dt/5);});
+  const amb=RESC.v.find(v=>v.t==='amb'&&v.arr);const W=RESC.span;
+  // 출구마다 줄 세우기: 가까운 사람부터 0.55 m 간격
+  if(!E.q)E.q=new Float32Array(pp.n);{const lists=E.ex.map(()=>[]);for(let k=0;k<pp.n;k++)if(pp.ev[k]===1&&pp.ex[k]>=0)lists[pp.ex[k]].push(k);
+    lists.forEach((L,j)=>{const e=E.ex[j];L.sort((a,b)=>Math.abs(pp.eu[a]-e.u)-Math.abs(pp.eu[b]-e.u));const c={'-1':0,'1':0};L.forEach((k,ix)=>{if(ix===0){E.q[k]=0;return;}const sd=pp.eu[k]<e.u?-1:1;c[sd]++;E.q[k]=sd*c[sd]*0.55;});});}
+  for(let k=0;k<pp.n;k++){
+    if(pp.wait[k]){pp.eT[k]-=dt;if(pp.eT[k]<=0){pp.wait[k]=0;if(!pp.dead[k])pp.ev[k]=1;}continue;}
+    const st=pp.ev[k];if(!st)continue;const hurt=pp.hurt[k];
+    if(st===1){let ei=pp.ex[k];
+      if(ei<0||!E.ok[ei]||rechk){let best=-1,bd=1e9;E.ex.forEach((e,j)=>{if(!E.ok[j]||e.row!==pp.erow[k]||!reach(s,pp.erow[k],pp.eu[k],e))return;const d=Math.abs(e.u-pp.eu[k])+e.n*0.5;if(d<bd){bd=d;best=j;}});
+        if(best!==ei){if(ei>=0)E.ex[ei].n--;pp.ex[k]=best;if(best>=0)E.ex[best].n++;}ei=best;}
+      if(ei<0){pp.efc[k]=0;continue;}
+      const e=E.ex[ei];const slot=E.q[k]||0;const d=e.u+slot-pp.eu[k];const sp=hurt?0.5:TUNE.evacSpeed;
+      if(Math.abs(d)>0.08){pp.eu[k]+=Math.sign(d)*Math.min(Math.abs(d),sp*dt);pp.edir[k]=Math.sign(d);pp.efc[k]=1;pp.eph[k]+=dt*sp*5;}
+      else{pp.efc[k]=0;if(Math.abs(slot)<0.01&&(e.kind==='break'||e.kind==='step'||e.deploy>=1)&&s.t>=e.free){e.free=s.t+TUNE.slideGap*(hurt?2.2:1)*(e.kind==='door'||e.kind==='wing'?1:1.5);e.n--;pp.ev[k]=2;pp.path[k]=exitPath(s,e);pp.eT[k]=0;}}}
+    else if(st===2){const P=pp.path[k];if(!P){pp.ev[k]=3;continue;}const seg=pathAt(P,pp.eT[k])[4];const spd=(P.pts.length>2&&seg===0)?1.6:P.spd;pp.eT[k]+=dt*spd/P.len;
+      if(pp.eT[k]>=1){const end=P.pts[P.pts.length-1];pp.path[k]=pp.path[k];if(P.raft){pp.ev[k]=4;pp.ewx[k]=end[0]+rr(-1.6,1.6);pp.eraft[k]=1;}else{pp.ev[k]=3;pp.ewx[k]=end[0];pp.eT[k]=rr(0,0.5);pp.edir[k]=0;}}}
+    else if(st===3){if(pp.eT[k]>0){pp.eT[k]-=dt;continue;}
+      let tx;if(hurt&&amb)tx=amb.x-amb.dir*3.5+((k%7)-3)*0.7;
+      else{const away=pp.edir[k]||(pp.ewx[k]<(W[0]+W[1])/2?-1:1);pp.edir[k]=away;tx=away<0?W[0]-pp.safe[k]:W[1]+pp.safe[k];
+        if(TER.water&&tx<TER.waterEnd){pp.edir[k]=1;tx=Math.max(W[1],TER.waterEnd)+pp.safe[k];}}
+      const d=tx-pp.ewx[k];const sp=hurt?0.8:3.2*pp.list[k].sc;
+      if(Math.abs(d)<0.3)pp.ev[k]=4;else{const nx=pp.ewx[k]+Math.sign(d)*Math.min(Math.abs(d),sp*dt);if(TER.water&&nx<TER.waterEnd)pp.ev[k]=4;else{pp.ewx[k]=nx;pp.efc[k]=Math.sign(d);pp.eph[k]+=dt*sp*3.0;}}}
+    else if(st===4){if(hurt&&amb&&!pp.eraft[k]&&Math.abs(pp.ewx[k]-(amb.x-amb.dir*3.5))>6)pp.ev[k]=3;}
+  }
+  // 자세
+  for(let k=0;k<pp.n;k++){const st=pp.ev[k];if(!st)continue;
+    if(st===1){const f=floorFrame(s,pp.erow[k],pp.eu[k]);const fc=pp.efc[k]?(pp.edir[k]<0?1:-1):1;setPose(pp,k,f.ox,f.oy,f.fx,f.fy,f.ux,f.uy,fc,pp.efc[k]?'walk':'stand',pp.eph[k]);}
+    else if(st===2){const P=pp.path[k];if(!P)continue;const q=pathAt(P,Math.min(1,pp.eT[k]));let dx=q[2],dy=q[3];const l=hyp(dx,dy)||1;dx/=l;dy/=l;
+      const sliding=P.spd>=4&&!(P.pts.length>2&&q[4]===0);
+      if(sliding){let ux=-dy,uy=dx;if(uy<0){ux=-ux;uy=-uy;}setPose(pp,k,q[0],q[1],dx,dy,ux,uy,1,'sit',0);}
+      else{pp.eph[k]+=0.15;setPose(pp,k,q[0],q[1],1,0,0,1,dx<0?-1:1,'walk',pp.eph[k]);}}
+    else if(st===3){const gy=baseY(pp.ewx[k]);setPose(pp,k,pp.ewx[k],gy,1,0,0,1,pp.efc[k]||1,pp.eT[k]>0?'stand':(pp.hurt[k]?'walk':'run'),pp.eph[k]);}
+    else{const x=pp.ewx[k];const gy=pp.eraft[k]?waveY(x,STATE.t)+0.3:baseY(x);setPose(pp,k,x,gy,1,0,0,1,pp.efc[k]||1,(pp.hurt[k]||pp.eraft[k])?'sit':'stand',0);}}
+}
+function drawEvac(s){const E=s.evac;if(!E)return;const S0=scale();const px=DPR/S0;ctx.lineCap='round';
+  E.ex.forEach(e=>{if(e.deploy<=0||(e.kind!=='door'&&e.kind!=='wing'))return;const P=exitPath(s,e);const pts=P.pts;const a=pts[pts.length-2],b=pts[pts.length-1];const k=e.deploy;
+    const ex=lerp(a[0],b[0],k),ey=lerp(a[1],b[1],k)-(1-k)*(1-k)*1.5;
+    if(e.kind==='wing'){ctx.strokeStyle='rgba(255,210,80,.7)';ctx.lineWidth=Math.max(0.06,1.5*px);ctx.setLineDash([0.4,0.3]);ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(a[0],a[1]);ctx.stroke();ctx.setLineDash([]);}
+    ctx.strokeStyle='#a9841a';ctx.lineWidth=Math.max(0.62,3.4*px);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo(lerp(a[0],ex,0.55),lerp(a[1],ey,0.55)-0.25,ex,ey);ctx.stroke();
+    ctx.strokeStyle='#f0c22e';ctx.lineWidth=Math.max(0.46,2.5*px);ctx.stroke();
+    ctx.strokeStyle='rgba(255,250,220,.55)';ctx.lineWidth=Math.max(0.06,0.8*px);ctx.beginPath();ctx.moveTo(a[0],a[1]+0.14);ctx.quadraticCurveTo(lerp(a[0],ex,0.55),lerp(a[1],ey,0.55)-0.1,ex,ey+0.14);ctx.stroke();
+    if(P.raft&&k>=1){const wy=waveY(b[0],STATE.t);ctx.fillStyle='#e39a1f';ctx.beginPath();ctx.ellipse(b[0],wy+0.18,2.8,0.42,0,0,7);ctx.fill();ctx.fillStyle='#c27c10';ctx.fillRect(b[0]-2.6,wy+0.1,5.2,0.08);}});
+  const pp=s.persons;for(let k=0;k<pp.n;k++)if(pp.ev[k]>=2)drawPerson(s,k,1);}
+
+/* ===================== 구조: 소방차·구급차가 달려와 거품을 뿌려 불을 끔 ===================== */
+const RESC={on:false,t0:0,v:[],span:[0,0],side:1};
+function wreckSpan(){let a=1e9,b=-1e9;for(const z of SIMS){if(z.impactT<0)continue;if(z.cfg.park&&z.breakCount<=3&&!z.fires.length)continue;const m=Math.min(z.n,z.burn.length);for(let i=0;i<m;i++){const x=z.x[i];if(x<a)a=x;if(x>b)b=x;}}
+  if(a>b){const c=mainCG(S);a=c.x-10;b=c.x+10;}return[a,b];}
+function rescueStep(dt){if(!S)return;RESC.span=wreckSpan();
+  if(!RESC.on){const bad=SIMS.some(z=>z.impactT>=0&&!(z.cfg.park&&z.breakCount<=3&&!z.fires.length)&&(z.breakCount>3||z.leaks.length||z.fires.some(f=>f.until>z.t)||(z.impact&&!z.impact.byWheel)));
+    if(!bad)return;RESC.on=true;RESC.t0=S.t;return;}
+  if(!RESC.v.length){if(S.t-RESC.t0<TUNE.rescueDelay)return;const [a,b]=RESC.span;const side=1;const x0=b+side*TUNE.rescueDist;let hurt=0;for(const z of SIMS){const q=z.persons;for(let k=0;k<q.n;k++)hurt+=q.hurt[k];}
+    const mk=(t,off,stop)=>RESC.v.push({t,x:x0+side*off,v:0,dir:-side,stop,arr:false,aim:null,ph:rnd()*6});
+    mk('fire',0,24);mk('fire',18,40);mk('amb',36,64);if(hurt>6)mk('amb',50,74);RESC.side=side;}
+  for(const v of RESC.v){const [a,b]=RESC.span;let tx=(RESC.side>0?b:a)+RESC.side*v.stop;if(TER.water&&tx<TER.waterEnd+8)tx=TER.waterEnd+8+(v.stop-24)*0.7;
+    const d=tx-v.x,dist=Math.abs(d);const vmax=Math.min(20,Math.sqrt(2*3.5*dist));v.v+=clamp(vmax-v.v,-7*dt,3*dt);if(v.v<0)v.v=0;
+    v.x+=Math.sign(d)*Math.min(dist,v.v*dt);v.arr=dist<1.5;if(v.t==='fire')spray(v,dt);}
+}
+function nozzle(v){const y=gH(v.x);return[v.x+v.dir*3.6,y+0.5+3.45];}
+function spray(v,dt){if(!v.arr){v.aim=null;return;}const nz=nozzle(v);
+  // 제일 가까운 불 찾기
+  let best=null,bd=75;
+  for(const z of SIMS)for(const f of z.fires){if(f.until<=z.t)continue;const x=z.x[f.node],y=z.y[f.node];const d=Math.abs(x-nz[0]);if(d<bd){bd=d;best=[x,y];}}
+  if(TER.pfire&&TER.p1>=TER.p0){for(let i=TER.p0;i<=TER.p1;i++){if(TER.pfire[i]<0.08)continue;const x=TER.x0+i*TER.dx;const d=Math.abs(x-nz[0]);if(d<bd-0.5){bd=d;best=[x,TER.h[i]+0.3];}}}
+  v.aim=best;if(!best)return;
+  const dx=best[0]-nz[0],dy=best[1]-nz[1];const adx=Math.abs(dx);let th=0.5;let den=2*Math.cos(th)**2*(adx*Math.tan(th)-dy);if(den<=0.5){th=0.9;den=2*Math.cos(th)**2*(adx*Math.tan(th)-dy);}
+  const v0=Math.min(60,Math.sqrt(Math.max(1,9.81*adx*adx/Math.max(0.5,den))));const sg=Math.sign(dx)||v.dir;
+  let n=dt*110;while(n>0){if(n<1&&rnd()>n)break;n--;const j=1+rr(-0.05,0.05);part(7,nz[0],nz[1],sg*v0*Math.cos(th)*j,v0*Math.sin(th)*j,3.5,rr(0.1,0.22),null);}
+  // 맞은 곳 불이 줄어듦
+  const R=7;for(const z of SIMS)for(const f of z.fires){if(f.until<=z.t)continue;if(hyp(z.x[f.node]-best[0],z.y[f.node]-best[1])<R){f.until-=dt*3;if(f.until<=z.t)f.until=0;}}
+  if(TER.pfire){const a=Math.max(1,gIdx(best[0]-R)|0),b=Math.min(TER.n-2,gIdx(best[0]+R)|0);for(let i=a;i<=b;i++){TER.foam[i]=Math.min(1,TER.foam[i]+dt*0.45);TER.pfire[i]=Math.max(0,TER.pfire[i]-dt*0.35);}}}
+function drawRescue(){if(!RESC.v.length)return;
+  for(const v of RESC.v){const V=VEH[v.t];const L=v.t==='fire'?10:6.2;const y=gH(v.x);const ang=Math.atan(gSlope(v.x));
+    ctx.save();ctx.translate(v.x,y+V.wr);ctx.rotate(ang);ctx.scale(v.dir,1);ctx.translate(-L/2,0);
+    const col=V.col;ctx.fillStyle=col;ctx.beginPath();V.p.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();ctx.strokeStyle=shade(col,0.6);ctx.lineWidth=0.05;ctx.stroke();
+    const quad=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();};
+    const on=Math.sin(STATE.t*11+v.ph)>0;
+    if(v.t==='fire'){quad([[0,1.3],[7.3,1.3],[7.3,1.5],[0,1.5]],'#f0f0ea');quad([[7.7,1.7],[9.7,1.7],[9.75,2.7],[7.8,2.8]],'#2f3d4a');
+      ctx.fillStyle='#9ea3a8';ctx.fillRect(1,2.85,6,0.25);ctx.fillStyle='#55595e';ctx.fillRect(8.2,3.0,0.35,0.5);ctx.save();ctx.translate(8.4,3.45);ctx.rotate(v.aim?0.55:0.1);ctx.fillRect(0,-0.09,1.3,0.18);ctx.restore();
+      quad([[7.9,3.05],[8.5,3.05],[8.5,3.3],[7.9,3.3]],on?'#ff3b30':'#7a1a16');quad([[9.0,3.05],[9.6,3.05],[9.6,3.3],[9.0,3.3]],on?'#7a1a16':'#ff3b30');}
+    else{quad([[0,1.05],[6.2,1.05],[6.2,1.35],[0,1.35]],'#d9472b');quad([[5.0,1.45],[5.55,1.4],[4.85,2.4],[4.6,2.4]],'#2f3d4a');quad([[3.3,1.5],[4.3,1.5],[4.3,2.2],[3.3,2.2]],'#2f3d4a');
+      quad([[4.2,2.62],[4.6,2.62],[4.6,2.85],[4.2,2.85]],on?'#ff3b30':'#2a6bff');quad([[0.3,2.62],[0.7,2.62],[0.7,2.8],[0.3,2.8]],on?'#2a6bff':'#ff3b30');}
+    for(const wx of V.wheels){ctx.fillStyle='#1d1f22';ctx.beginPath();ctx.arc(wx,0,V.wr,0,7);ctx.fill();ctx.fillStyle='#8b9097';ctx.beginPath();ctx.arc(wx,0,V.wr*0.45,0,7);ctx.fill();}
+    ctx.restore();}}
 
 /* ===================== 소리 (직접 만든 소리) ===================== */
 const SND=(()=>{
@@ -1203,6 +1403,11 @@ function drawTerrain(){
     ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(x,gH(x)-lw/2);let x2=x;
     while(x2<=xR){x2+=step;const f2=gIdx(x2)|0;const c2=colOf(TER.kind[f2],TER.scar[f2]);ctx.lineTo(x2,gH(x2)-lw/2);if(c2!==col)break;}
     ctx.stroke();x=x2;}
+  if(TER.pool&&TER.p1>=TER.p0){const a=Math.max(TER.p0,gIdx(xL)|0),b=Math.min(TER.p1,gIdx(xR)|0);const Pl=TER.pool,FO=TER.foam;
+    for(let i=a;i<=b;i++){const x=TER.x0+i*TER.dx;const wet=TER.water&&x<TER.waterEnd;const y=wet?waveY(x,STATE.t)+0.02:TER.h[i];
+      if(Pl[i]>0.03){const th=Math.min(0.14,0.025+Pl[i]*0.006);ctx.fillStyle=wet?'rgba(90,70,110,0.45)':'rgba(24,21,19,0.88)';ctx.fillRect(x,y-th*0.3,TER.dx+0.02,th);
+        if(!wet){ctx.fillStyle='rgba(150,120,190,0.28)';ctx.fillRect(x,y+th*0.55,TER.dx+0.02,Math.max(0.015,th*0.18));}}
+      if(FO[i]>0.05){ctx.fillStyle='rgba(244,246,246,'+Math.min(0.95,FO[i]).toFixed(2)+')';const th=0.08+FO[i]*0.35;ctx.fillRect(x,y-0.02,TER.dx+0.02,th);}}}
   if(sc==='runway'){ // 활주로 아래층
     const a=Math.max(xL,TER.rwA),b=Math.min(xR,TER.rwB);if(b>a){ctx.fillStyle='#7c7a74';ctx.fillRect(a,-0.9,b-a,0.55);}}
   drawDecor(xL,xR,S0,true);
@@ -1245,8 +1450,14 @@ function drawPlane(s){
   for(const e of s.engines){if(e.nose||e.internal)continue;drawEngine(s,e,-far[1],far[0],0.62);}
   drawGear(s,-far[1]*0.6,far[0]*0.5,0.6);
   // 몸통 칸
+  const bn=s.burn,nRm=B.nR-1;
   for(const c of B.cells){const n=c.n;
-    const fs=inside?(c.hold?'#6b7078':(P.interior||'#d9dcdf')):(c.hold?col.belly:col.body);ctx.fillStyle=fs;ctx.strokeStyle=fs;ctx.lineWidth=px*0.8;
+    const base=inside?(c.hold?'#6b7078':(P.interior||'#d9dcdf')):(c.hold?col.belly:col.body);
+    const bu=Math.min(1,((bn[n[0]]||0)+(bn[n[1]]||0)+(bn[n[2]]||0)+(bn[n[3]]||0))/4);
+    const tx=(s.x[n[0]]+s.x[n[1]])/2,ty=(s.y[n[0]]+s.y[n[1]])/2,bx=(s.x[n[3]]+s.x[n[2]])/2,by=(s.y[n[3]]+s.y[n[2]])/2;
+    let fs;if(hyp(tx-bx,ty-by)>0.05){fs=ctx.createLinearGradient(tx,ty,bx,by);fs.addColorStop(0,bodyTone(base,c.r/nRm,inside,bu));fs.addColorStop(1,bodyTone(base,(c.r+1)/nRm,inside,bu));}
+    else fs=bodyTone(base,(c.r+0.5)/nRm,inside,bu);
+    ctx.fillStyle=fs;ctx.strokeStyle=fs;ctx.lineWidth=px*0.8;
     if(vis(s,n)){poly(s,n);ctx.fill();ctx.stroke();continue;}
     const tri=(a,b,d)=>{const t=[n[a],n[b],n[d]];if(!vis(s,t))return false;poly(s,t);ctx.fill();ctx.stroke();return true;};
     if(!(tri(0,1,2)|tri(0,2,3))){tri(0,1,3);tri(1,2,3);}}
@@ -1268,6 +1479,9 @@ function drawPlane(s){
   for(let i=0;i<B.NS;i++)for(const r of [0,B.BR]){const b=B.LONG[i][r];if(!s.alive[b])continue;const a=s.ba[b],c=s.bb[b];ctx.moveTo(s.x[a],s.y[a]);ctx.lineTo(s.x[c],s.y[c]);}
   for(const i of [0,B.NS]){for(let r=0;r<B.nR-1;r++){const b=B.VERT[i][r];if(!s.alive[b])continue;ctx.moveTo(s.x[s.ba[b]],s.y[s.ba[b]]);ctx.lineTo(s.x[s.bb[b]],s.y[s.bb[b]]);}}ctx.stroke();
   if(!inside){
+    // 판 이음 선(진짜 비행기 껍데기 판 경계)
+    ctx.strokeStyle='rgba(20,24,30,0.13)';ctx.lineWidth=Math.max(0.015,0.7*px);ctx.beginPath();
+    for(let i=1;i<B.NS;i+=2)for(let r=0;r<B.nR-1;r++){const b=B.VERT[i][r];if(!s.alive[b])continue;const a=s.ba[b],c=s.bb[b];ctx.moveTo(s.x[a],s.y[a]);ctx.lineTo(s.x[c],s.y[c]);}ctx.stroke();
     // 줄무늬와 창문
     for(const c of B.cells){if(!c.win||!vis(s,c.n))continue;const f=(c.win.fa+c.win.fb)/2;
       const a1=bil(s,c,0,f-0.18),a2=bil(s,c,1,f-0.18);ctx.strokeStyle=col.stripe;ctx.lineWidth=Math.max(0.12,0.16*P.len/40);ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();
@@ -1295,7 +1509,28 @@ function drawPlane(s){
   if(P.canopy){for(const c of B.cells){if(c.r!==0||!vis(s,c.n))continue;if(c.uB<P.canopy[0]||c.uA>P.canopy[1])continue;
     const q=[bil(s,c,0,0.55),bil(s,c,1,0.55),bil(s,c,1,1),bil(s,c,0,1)];ctx.fillStyle='rgba(150,190,215,0.75)';ctx.beginPath();ctx.moveTo(q[0][0],q[0][1]);for(let k=1;k<4;k++)ctx.lineTo(q[k][0],q[k][1]);ctx.fill();}}
   if(s.rotor)drawRotor(s);
+  drawTears(s);
 }
+function drawTears(s){const B=s.B;if(!B.tearable)return;const S0=scale();const px=DPR/S0;let cnt=0;
+  const WC=['#c9a43a','#b8392c','#3a72c0','#2c2c2c'];
+  for(const b of B.tearable){if(s.alive[b])continue;if(++cnt>260)break;const a=s.ba[b],c=s.bb[b];const L0=s.rest0[b];
+    for(const [e,o] of [[a,c],[c,a]]){let dx=s.x[o]-s.x[e],dy=s.y[o]-s.y[e];const l=hyp(dx,dy)||1;dx/=l;dy/=l;const nx=-dy,ny=dx;
+      const len=Math.min(0.55,L0*0.28)*(0.6+((b*37+e)%7)/10);
+      // 뾰족뾰족한 찢어진 쇠
+      ctx.strokeStyle='#9aa1a8';ctx.lineWidth=Math.max(0.05,2.2*px);ctx.beginPath();ctx.moveTo(s.x[e],s.y[e]);
+      for(let q=1;q<=4;q++){const t=q/4,z=((q+b)%2?1:-1)*0.07*(1-t*0.4);ctx.lineTo(s.x[e]+dx*len*t+nx*z,s.y[e]+dy*len*t+ny*z);}ctx.stroke();
+      ctx.strokeStyle='rgba(30,32,36,.55)';ctx.lineWidth=Math.max(0.02,0.8*px);ctx.stroke();
+      // 늘어진 전선 다발 (몇 군데만)
+      if((b+e)%3===0){for(let w=0;w<2;w++){const ex=s.x[e]+dx*len*(1.1+w*0.3),ey=s.y[e]+dy*len*(1.1+w*0.3);
+        ctx.strokeStyle=WC[(b+w)%4];ctx.lineWidth=Math.max(0.02,1.1*px);ctx.beginPath();ctx.moveTo(s.x[e],s.y[e]);
+        ctx.quadraticCurveTo((s.x[e]+ex)/2,(s.y[e]+ey)/2-0.35-w*0.15,ex,ey-0.25-w*0.2);ctx.stroke();}}
+    }}
+}
+/* 땅에 비치는 그림자 (해가 위에 있음) */
+function drawShadows(){const S0=scale();for(const s of SIMS){let x0=1e9,x1=-1e9;for(let i=0;i<s.n;i++){if(s.comp[i]!==s.mainComp||s.kind[i]>=6)continue;const x=s.x[i];if(x<x0)x0=x;if(x>x1)x1=x;}
+  if(x0>x1)continue;const c=mainCG(s);const gy=baseY(c.x);const h=c.y-gy;const L=s.P.len;if(h>L*2.5)continue;
+  const a=0.32*clamp(1-h/(L*2.5),0,1);const rx=(x1-x0)/2*(1+h/L*0.25);
+  ctx.fillStyle='rgba(10,8,6,'+a.toFixed(3)+')';ctx.beginPath();ctx.ellipse((x0+x1)/2,gy+0.06,rx,Math.max(0.25,L*0.012+h*0.02),0,0,7);ctx.fill();}}
 function drawAfterburner(s,e){const n=e.n;if(!e.alive||s.cfg.pow<5||s.comp[n[2]]!==s.mainComp)return;
   const rx=(s.x[n[2]]+s.x[n[3]])/2,ry=(s.y[n[2]]+s.y[n[3]])/2,fx=(s.x[n[0]]+s.x[n[1]])/2,fy=(s.y[n[0]]+s.y[n[1]])/2;let ax=rx-fx,ay=ry-fy;const l=hyp(ax,ay)||1;ax/=l;ay/=l;
   const ab=s.cfg.pow>80;const L=(ab?3.2:1.2)*(0.85+0.15*Math.sin(STATE.t*40));const r=0.42;
@@ -1383,9 +1618,10 @@ function drawCabin(s){
       const dx=st.n>1?span*c/(st.n-1):0,dy=st.n>1?0.13*c/(st.n-1):0;const dim=st.n>1?1-0.36*c/(st.n-1):1;
       drawSeatAt(f.ox,f.oy,f.fx,f.fy,f.ux,f.uy,dx,dy,shade(SEATCOL[st.cls]||SEATCOL.eco,dim));
       const k=s._pidx.get(st.i*100000+st.r*1000+Math.round(st.t*100)+'_'+c+'_'+st.u);
-      if(k!=null&&!pp.loose[k])drawPerson(s,k,dim);
+      if(k!=null&&!pp.loose[k]&&!pp.ev[k])drawPerson(s,k,dim);
     }}
-  for(let k=0;k<pp.n;k++)if(pp.loose[k]){const p=pp.list[k];const b=k*J;
+  for(let k=0;k<pp.n;k++)if(pp.ev[k]===1)drawPerson(s,k,1);
+  for(let k=0;k<pp.n;k++)if(pp.loose[k]&&!pp.ev[k]){const p=pp.list[k];const b=k*J;
     const ux=pp.x[b+1]-pp.x[b],uy=pp.y[b+1]-pp.y[b];const l=hyp(ux,uy)||1;const Ux=ux/l,Uy=uy/l;const Fx=Uy*s.mir,Fy=-Ux*s.mir;
     if(p.seatTorn)drawSeatAt(pp.x[b]-Ux*0.5+Fx*0.05,pp.y[b]-Uy*0.5+Fy*0.05,Fx,Fy,Ux,Uy,0,0,shade(SEATCOL[p.seat.cls]||SEATCOL.eco,1));
     drawPerson(s,k,1);}
@@ -1422,8 +1658,13 @@ function drawFx(back){
   for(const p of parts){const a=p.life/p.max;
     if(p.t===1||p.t===5){if((p.t===1)!==back)continue;ctx.fillStyle=p.col;ctx.globalAlpha=p.t===1?a*0.32:1;ctx.beginPath();ctx.arc(p.x,p.y,p.t===5?p.size:p.size,0,7);ctx.fill();}
     else if(p.t===2){if(!back)continue;ctx.fillStyle='rgb(70,68,66)';ctx.globalAlpha=Math.min(1,a*1.6)*0.32;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill();}
+    else if(p.t===8){if(!back)continue;const age=1-a;const g=(24+age*40)|0;ctx.fillStyle='rgb('+g+','+(g-2)+','+(g-4)+')';ctx.globalAlpha=Math.min(1,age*8)*Math.min(1,a*1.4)*0.5;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill();}
+    else if(p.t===6){if(back)continue;ctx.fillStyle='rgb(176,140,70)';ctx.globalAlpha=0.75;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill();}
+    else if(p.t===7){if(back)continue;ctx.fillStyle='rgb(246,248,250)';ctx.globalAlpha=Math.min(1,a*2)*0.9;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill();}
     else if(p.t===4){if(back)continue;ctx.fillStyle='rgb(235,245,250)';ctx.globalAlpha=Math.min(1,a*2)*0.85;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill();}}
-  ctx.globalAlpha=1;if(back)return;ctx.globalCompositeOperation='lighter';
+  ctx.globalAlpha=1;
+  if(back){for(const p of parts){if(p.t!==9)continue;const a=p.life/p.max;const g=(60+a*150)|0,b=(10+a*50)|0;ctx.fillStyle='rgba(255,'+g+','+b+','+(0.25+a*0.55)+')';ctx.beginPath();ctx.arc(p.x,p.y,p.size*(0.5+a*0.6),0,7);ctx.fill();}return;}
+  ctx.globalCompositeOperation='lighter';
   for(const p of parts){const a=p.life/p.max;
     if(p.t===0){ctx.strokeStyle='rgba(255,'+(170+a*80|0)+',90,'+a+')';ctx.lineWidth=Math.max(0.03,1.3*px);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-p.vx*0.025,p.y-p.vy*0.025);ctx.stroke();}
   }
@@ -1438,7 +1679,7 @@ function draw(){
   const [sx,sy]=Shake.off(STATE.t);
   setWorld(sx,sy);
   drawTerrain();
-  if(S){for(const s of SIMS)drawTrail(s);drawFx(true);drawObstacles(S);for(const s of SIMS)drawPlane(s);drawFx(false);if(STATE.stress)for(const s of SIMS)drawStress(s);}
+  if(S){drawShadows();for(const s of SIMS)drawTrail(s);drawFx(true);drawObstacles(S);drawRescue();for(const s of SIMS)drawPlane(s);for(const s of SIMS)drawEvac(s);drawFx(false);if(STATE.stress)for(const s of SIMS)drawStress(s);}
   drawWater();
   drawGlide();
   if(S&&STATE.ready)drawArrows(S);
@@ -1504,7 +1745,7 @@ function updateHud(){
   const A=B.G[0][B.FR],Z=B.G[B.NS][B.FR];let pitch=NaN;if(S.comp[A]===S.comp[Z])pitch=Math.atan2(S.y[A]-S.y[Z],S.x[A]-S.x[Z])/DEG;
   const alt=c.y-baseY(c.x);
   const sf=S.wingS||S.hsS;const aoa=(!S.wingS||sf.dead)?NaN:(sf.lastA||0)/DEG;
-  let hurt=0,loose=0,dead=0,np=0;for(const s of SIMS){const q=s.persons;np+=q.n;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;}}const pp={n:np};
+  let hurt=0,loose=0,dead=0,np=0,outN=0;for(const s of SIMS){const q=s.persons;np+=q.n;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;if(q.ev[k]>=2)outN++;}}const pp={n:np};
   const slowV=V<25;const stall=!slowV&&!sf.dead&&Math.abs(sf.lastA||0)>sf.stall;
   hudEl.innerHTML='<div class="t">'+S.P.name+'</div><div class="g">'+
    '<span>속도</span><b>'+fmt(V*3.6)+' km/h</b>'+
@@ -1519,12 +1760,15 @@ function updateHud(){
    '<span>탑승'+(SIMS.length>1?' (전체)':'')+'</span><b>'+pp.n+'명</b>'+
    '<span>의자 뜯김</span><b>'+loose+'명</b>'+
    '<span>크게 다침</span><b'+(hurt?' class="warn"':'')+'>'+hurt+'명</b>'+
-   '<span>사망</span><b'+(dead?' class="warn"':'')+'>'+dead+'명</b></div>'+perCraftHtml();
+   '<span>사망</span><b'+(dead?' class="warn"':'')+'>'+dead+'명</b>'+
+   '<span>밖으로 대피</span><b>'+outN+'명</b>'+
+   '<span>구조</span><b>'+rescueText()+'</b></div>'+perCraftHtml();
 }
 function peopleCount(z){const q=z.persons;let hurt=0,dead=0,loose=0;for(let k=0;k<q.n;k++){if(q.hurt[k])hurt++;if(q.dead[k])dead++;if(q.loose[k])loose++;}return{n:q.n,hurt,dead,loose};}
 function perCraftHtml(){if(SIMS.length<2)return'';let h='<div class="t" style="margin-top:8px">기체별</div><div class="g">';
   SIMS.forEach((z,i)=>{const c=peopleCount(z);h+='<span>'+(i+1)+'. '+z.P.name+(z.cfg.park?' (세워 둠)':'')+'</span><b>'+c.n+'명</b><span style="padding-left:10px">무사 · 다침 · 사망</span><b>'+(c.n-c.hurt-c.dead)+' · '+c.hurt+' · <i style="font-style:normal'+(c.dead?';color:#ff8a7a':'')+'">'+c.dead+'</i></b>';});
   return h+'</div>';}
+function rescueText(){if(!RESC.on)return'-';if(!RESC.v.length)return'신고됨';const f=RESC.v.filter(v=>v.t==='fire');if(f.some(v=>v.aim))return'불 끄는 중';if(RESC.v.every(v=>v.arr))return'도착';return'출동 중';}
 function countBent(s){let n=0;for(let b=0;b<s.nb;b++)if(s.bent[b]>0.01)n++;return n;}
 function frameStats(s,dt){
   const c=mainCG(s);
@@ -1588,6 +1832,7 @@ function restart(run){
   S=makeSim();
   if(set.scene==='seawall'){const w=predictWall(S);if(w!=null)buildTerrain('seawall',xEstimate(),w);}
   placeObstacles(S);
+  initPools();RESC.on=false;RESC.v=[];
   if(set.mode==='land'&&S.wingS&&run!==false&&!STATE.keepPow){const P=S.P,V=set.spd/3.6,Wt=S.tb.Mt*9.81,Sw=S.wingS.area,g=set.gam*DEG;const q=0.5*TUNE.rho*V*V;const CL=Wt*Math.cos(g)/(q*Sw);
     const D=q*Sw*(S.wingS.cd0+0.022+0.02*P.hs.area/Sw+S.wingS.k*CL*CL);let Tm=0;for(const e of P.engines)Tm+=e.jet?e.thrust*Math.max(0.35,1-V*0.0016):Math.min(e.thrust,e.power*e.eta/Math.max(V,1));
     set.pow=Math.round(clamp((D-Wt*Math.sin(-g))/Tm*100,0,100));S.cfg.pow=set.pow;applyFlight(S);}
@@ -1600,7 +1845,7 @@ function restart(run){
 
 /* ===================== 메인 루프 ===================== */
 let SIMS=[];
-function simFrame(d){stepWorld(SIMS,d);for(const s of SIMS){peopleFrame(s,d);frameEffects(s,d);frameStats(s,d);}}
+function simFrame(d){stepWorld(SIMS,d);for(const s of SIMS){peopleFrame(s,d);frameEffects(s,d);leakStep(s,d);frameStats(s,d);}poolStep(d);rescueStep(d);for(const s of SIMS)evacStep(s,d);}
 let last=performance.now();
 function loop(now){
   try{
