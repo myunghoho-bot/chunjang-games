@@ -6,7 +6,7 @@
 (function () {
   const BITS = ['airplane', 'block', 'factory', 'cruise', 'airline', 'sailor', 'star-life', 'observatory',
     'microbe-evolution', 'sapling2d', 'solar-timeline', 'microbe-sandbox', 'microbe-genetics', 'microbe-family',
-    'monkey-clicker', 'dot-baseball', 'terraform', 'sapling3d', 'random-life', 'small-station', 'random-system', 'small-business', 'sandcastle', 'ssuksu', 'haiyen', 'stellar', 'dragon', 'cosmos', 'rocket', 'galaxy', 'airplane3d', 'impact', 'antwar', 'firewater', 'baduk', 'taxi3d', 'siege', 'crash'];
+    'monkey-clicker', 'dot-baseball', 'terraform', 'sapling3d', 'random-life', 'small-station', 'random-system', 'small-business', 'sandcastle', 'ssuksu', 'haiyen', 'stellar', 'dragon', 'cosmos', 'rocket', 'galaxy', 'airplane3d', 'impact', 'antwar', 'firewater', 'baduk', 'taxi3d', 'siege', 'crash', 'carcrash'];
   window.CHUNJANG_BITS = BITS;
   if (location.protocol === 'file:') return;
   // 오프라인 놀이: 어느 페이지로 들어와도 사이트 전체를 기기에 저장해 두는 sw.js를 켠다(2026-11-20)
